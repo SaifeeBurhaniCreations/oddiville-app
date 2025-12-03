@@ -1,0 +1,658 @@
+.navbar-vertical.navbar-expand-xs .navbar-collapse {
+    height: 100% !important;
+}
+
+/* Scrollbar container */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    border-radius: 10px; 
+    background-color: #f1f1f1;
+}
+
+/* Scrollbar track (the area the thumb slides in) */
+::-webkit-scrollbar-track {
+    background-color: #f1f1f1;
+    border-radius: 10px;
+}
+
+/* Scrollbar thumb (the draggable part) */
+::-webkit-scrollbar-thumb {
+    background-color: #aaa;
+    border-radius: 10px;
+    border: 2px solid #f1f1f1;
+}
+
+/* Hover effect for thumb */
+::-webkit-scrollbar-thumb:hover {
+    background-color: #888;
+}
+
+/* Scrollbar corner (where vertical and horizontal meet) */
+::-webkit-scrollbar-corner {
+    background-color: #f1f1f1;
+}
+
+.main-layout {
+    display: grid;
+    grid-template-columns: 1fr 5fr;
+}
+
+/* .navbar-vertical.navbar-expand-xs {
+    position: static !important
+} */
+
+.sidenav.fixed-start~.main-content {
+    margin-left: 0 !important;
+    max-width: 100%;
+    overflow-x: clip;
+}
+
+.navbar-vertical.navbar-expand-xs.fixed-start {
+     ::-webkit-scrollbar {
+        display: none !important;
+    }
+}
+
+.navbar-expand-lg .navbar-collapse {
+    justify-content: end;
+}
+
+.flex-cs {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.flex-cs.header {
+    justify-content: space-between !important;
+}
+
+.project-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    padding: 8px;
+    border-radius: 10px;
+    text-decoration: none !important;
+    img {
+        width: 100%;
+        height: 500px;
+        object-fit: cover;
+        border-radius: 10px;
+    }
+    .img {
+        border-radius: 10px;
+        border: 1px dashed #aaaaaab6;
+        width: 100%;
+        height: 500px;
+    }
+    .footer {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 5px;
+        padding: 10px;
+    }
+}
+
+.w-100 {
+    width: 100% !important;
+}
+.is-dry{
+    background-color: rgb(210.8, 243.4, 222.8);
+}
+.is-frozen{
+    background-color: rgb(206.8, 237, 250.6);;
+}
+.fs-error{
+    font-size: 20px;
+}
+
+.projects-banners {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: end;
+    /* gap: 20px; */
+    .layout {
+        border: 1px dashed #aaaaaab6;
+        position: relative;
+        border-radius: 16px;
+        height: 200px;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        img {
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+            object-fit: cover;
+        }
+        &.fade-cs {
+            opacity: 0.5;
+        }
+        .remove-btn-cs {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+        }
+    }
+}
+
+.projects-banners-xs {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: end;
+    /* gap: 20px; */
+    .layout {
+        border: 1px dashed #aaaaaab6;
+        border-radius: 16px;
+        height: 64px;
+        width: 64px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        img {
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+            object-fit: cover;
+        }
+        &.fade-cs {
+            opacity: 0.5;
+        }
+    }
+
+
+}
+
+.with-100{
+    width: 100% !important;
+}
+
+.gap-12 {
+    gap: 12px;
+}
+
+.cs-btn {
+    border: none;
+    border-radius: 50%;
+    background-color: transparent;
+}
+
+.projects-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: end;
+    gap: 20px;
+    .layout {
+        width: 100%;
+    }
+}
+
+.divider {
+    background-color: #aaaaaab6;
+    width: 100%;
+    height: 1px;
+    margin: 30px 0;
+}
+
+.m-0 {
+    margin: 0 !important;
+}
+
+
+/* Add this attribute to the element that needs a tooltip */
+
+[data-tooltip] {
+    position: relative;
+    z-index: 2;
+    cursor: pointer;
+}
+
+
+/* Hide the tooltip content by default */
+
+[data-tooltip]:before,
+[data-tooltip]:after {
+    visibility: hidden;
+    -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=0)";
+    filter: progid: DXImageTransform.Microsoft.Alpha(Opacity=0);
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+/* Position tooltip above the element */
+
+[data-tooltip]:before {
+    position: absolute;
+    bottom: 150%;
+    left: 50%;
+    margin-bottom: 5px;
+    margin-left: -80px;
+    padding: 7px;
+    width: 160px;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+    background-color: #000;
+    background-color: hsla(0, 0%, 20%, 0.9);
+    color: #fff;
+    content: attr(data-tooltip);
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+
+/* Triangle hack to make tooltip look like a speech bubble */
+
+[data-tooltip]:after {
+    position: absolute;
+    bottom: 150%;
+    left: 50%;
+    margin-left: -5px;
+    width: 0;
+    border-top: 5px solid #000;
+    border-top: 5px solid hsla(0, 0%, 20%, 0.9);
+    border-right: 5px solid transparent;
+    border-left: 5px solid transparent;
+    content: " ";
+    font-size: 0;
+    line-height: 0;
+}
+
+
+/* Show tooltip content on hover */
+
+[data-tooltip]:hover:before,
+[data-tooltip]:hover:after {
+    visibility: visible;
+    -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=100)";
+    filter: progid: DXImageTransform.Microsoft.Alpha(Opacity=100);
+    opacity: 1;
+}
+
+.hide-me {
+    position: absolute;
+    right: -400%;
+}
+
+.grid-cs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 20px;
+}
+
+.gtc-1-2 {
+    grid-template-columns: 1fr 2fr !important;
+}
+.gtc-1 {
+    grid-template-columns: 1fr !important;
+}
+
+.preview-img {
+    width: 100%;
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+}
+
+.cs-modal-width {
+    max-width: 2000px !important;
+    width: 1000px !important;
+}
+
+.work-process-card {
+    padding: 10px 0;
+    display: grid;
+    align-items: center;
+    grid-template-columns: 1fr 3fr;
+    gap: 10px;
+    .part1 {
+        cursor: pointer;
+        border: 1px dashed #aaaaaab6;
+        min-height: 200px;
+        border-radius: 10px;
+        img {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+    }
+}
+
+.slider-img {
+    cursor: pointer;
+    border: 1px dashed #aaaaaab6;
+    height: 350px;
+    width: 280px;
+    border-radius: 10px;
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 10px;
+    }
+}
+
+.main-slider-layout {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    gap: 30px;
+}
+
+.gtc-3 {
+    grid-template-columns: 1fr 1fr 1fr !important;
+}
+
+
+/* Category Component Styles */
+
+.categories-list {
+    padding: 15px 0;
+}
+
+.categories-list .badge {
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    margin: 4px;
+    cursor: default;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.categories-list .badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.categories-list .btn-link {
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    line-height: 1;
+    transition: all 0.2s ease;
+}
+
+.categories-list .btn-link:hover {
+    color: white;
+    transform: scale(1.1);
+}
+
+.categories-list .btn-link:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+
+/* Form Styles */
+
+.category-form {
+    margin-bottom: 20px;
+}
+
+.category-form .form-control {
+    border-radius: 6px;
+    padding: 10px 15px;
+    font-size: 0.9rem;
+}
+
+.category-form .form-control:focus {
+    box-shadow: 0 0 0 2px rgba(50, 151, 211, 0.25);
+}
+
+
+/* Empty State */
+
+.categories-list .text-muted {
+    font-size: 0.9rem;
+    font-style: italic;
+    padding: 10px 0;
+}
+
+
+/* Loading State */
+
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+
+/* Animation for new categories */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.categories-list .badge {
+    animation: fadeIn 0.3s ease-out;
+}
+
+
+/* Category Component Styles */
+
+/* Desktop layout */
+@media (min-width: 992px) {
+    .main-layout {
+        grid-template-columns: 1fr 5fr !important;
+        transition: grid-template-columns 0.3s !important;
+    }
+
+    .main-layout.sidebar-closed {
+        grid-template-columns: 0 1fr !important;
+    }
+
+    .sidenav {
+        position: static !important;
+        transform: none !important;
+    }
+}
+
+@media (min-width: 640px) {
+    .main-layout {
+        grid-template-columns: 1fr 5fr !important;
+        transition: grid-template-columns 0.3s !important;
+    }
+
+    .main-layout.sidebar-closed {
+        grid-template-columns: 0 1fr !important;
+    }
+
+    .sidenav {
+        position: static !important;
+        transform: none !important;
+        width: 500px!important;
+    }
+}
+
+/* Mobile overlay */
+@media (max-width: 768px) {
+    .main-layout {
+        display: flex !important;
+    }
+
+    .sidenav {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 95vh !important;
+        z-index: 1050 !important;
+        width: 250px !important;
+        background: #fff !important;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .sidenav.closed {
+        transform: translateX(-100%) !important;
+    }
+
+    .sidenav.open {
+        transform: translateX(0) !important;
+    }
+
+    .sidebar-backdrop {
+        display: block !important;
+        position: fixed !important;
+        z-index: 1040 !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .sidebar-backdrop.hide {
+        display: none !important;
+    }
+}
+@media (min-width: 992px) {
+    .main-layout {
+        grid-template-columns: 1fr 5fr !important;
+        transition: grid-template-columns 0.3s !important;
+    }
+
+    .main-layout.sidebar-closed {
+        grid-template-columns: 0 1fr !important;
+    }
+
+    .sidenav {
+        position: static !important;
+        transform: none !important;
+    }
+}
+
+
+/* Hide scrollbar for Chrome, Safari and Edge */
+.sidenav {
+  overflow-y: auto;          
+  scrollbar-width: none;     
+  -ms-overflow-style: none;  
+}
+
+/* Chrome, Safari and Opera */
+.sidenav::-webkit-scrollbar {
+  display: none;
+}
+
+.illustration {
+    object-fit: contain;
+    width: 100%;
+    height: 100px;
+}
+
+/* === Quantity controls alignment fix ===
+   Make buttons and input share same height/line-height/padding,
+   restore subtle separators, and vertically center everything.
+*/
+
+.qty-group,
+.qty-group .btn,
+.qty-group .form-control {
+  box-sizing: border-box;
+  height: 32px !important;         /* match your other inputs (32px) */
+  line-height: 1 !important;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* make the small input visually centered */
+.qty-group .form-control {
+  padding-top: 0.35rem !important;   /* tune vertical padding so text centers */
+  padding-bottom: 0.35rem !important;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  border-radius: 0 !important;
+  border-left: 1px solid #dee2e6 !important;  /* light separator so UI reads well */
+  border-right: 1px solid #dee2e6 !important;
+  box-shadow: none !important;
+}
+
+/* make +/- buttons square and vertically centered */
+.qty-group .btn {
+  min-width: 36px !important;
+  padding: 0 8px !important;
+  border-radius: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 32px !important;
+}
+
+.qty-group .btn  {
+  border: 1px solid #dee2e6 !important;
+}
+
+
+.input-group-sm .btn,
+.input-group-sm .form-control {
+  height: 32px !important;
+}
+
+.d-flex.align-items-center.mb-2,
+.d-flex.gap-2.align-items-center.mb-2 {
+  align-items: center !important;
+}
+
+.qty-group > button.horizontal-rounded:nth-of-type(1) {
+  border-radius: 24px 0 0 24px !important;  
+}
+
+.qty-group > button.horizontal-rounded:nth-of-type(2) {
+  border-radius: 0 24px 24px 0 !important;  
+}
+
+.qty-group > button.horizontal-rounded {
+  border-radius: 0 !important;
+}
+
+.form-addon {
+    display: flex;
+}
+
+.kg-box {
+    position: absolute;
+    right: 0px;        /* matches input padding */
+    top: 50%;
+    transform: translateY(-50%);
+    background: #6c757d;        /* bootstrap secondary */
+    color: white;
+    padding: 6px 12px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    pointer-events: none;       /* allows input click */
+}
+
+.form-control {
+    padding-right: 60px !important;
+}

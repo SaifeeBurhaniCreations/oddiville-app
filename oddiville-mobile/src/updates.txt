@@ -1,0 +1,33 @@
+raw-material-reached -> take truck details like Number and driver name --------------- completed
+
+raw-material-reached-notification -> show truck details like Number and driver name --------------- completed
+
+production-start -> goto detail page of inner production on inner start 
+
+production-start-notification -> no vendor details and truck details needed --------------- completed
+
+jer.a.ldn.ac.ar11.2233@gmail.com
+vi.nced.e.r.m.i.na@gmail.com
+p.a.ntherk.a.lsen@gmail.com
+
+
+clicked - main filter -> sub filter(multiple options) = press add button -> open main filter
+
+redux global filter - 
+main filter name : a filter array contain object of array where list for all selected sub fitlers
+
+
+User opens "add filter", selects main+subfilters, presses "Add".
+→ Dispatch:
+
+js
+dispatch(applyFilter({ main: "status", sub: ["pending", "in-progress"] }));
+To clear a filter:
+
+js
+dispatch(clearMainFilter("status"));
+To clear all:
+
+js
+dispatch(clearAllFilters());
+

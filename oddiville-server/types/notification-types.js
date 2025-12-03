@@ -1,0 +1,20 @@
+module.exports = {
+  "order-ready": ["order-ready", "actionable"],
+  "package-comes-to-end": ["package-comes-to-end", "actionable"],
+  "verify-material": ["verify-material", "actionable"],
+  "raw-material-reached": ["raw-material-reached", "informative"],
+  "raw-material-ordered": ["raw-material-ordered", "informative"],
+  "edit-order": ["edit-order", "informative"],
+  "worker-multiple": ["worker-multiple", "informative"],
+  "worker-single": ["worker-single", "informative"],
+  "order-shipped": ["order-shipped", "actionable"],
+  "order-reached": ["order-reached", "actionable"],
+  "production-completed": ["production-completed", "informative"],
+  "lane-occupied": ["lane-occupied", "informative"],
+  "cancel-order": ["cancel-order", "informative"],
+  "lane-empty": ["lane-empty", "actionable"],
+  "production-start": ["production-start", "informative"],
+  "product-alert": ["product-alert", "actionable"],
+  "calendar-event-scheduled": ["calendar-event-scheduled", "today"],
+};
+  

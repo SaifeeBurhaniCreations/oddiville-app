@@ -1,0 +1,18 @@
+@media screen and (max-width: 767px) {
+    .main-content {
+        width: 100vw;
+    }
+
+    .main-layout {
+        grid-template-columns: 1fr;
+        height: 100vh;
+    }
+    .grid-cs{
+        /* display: block; */
+        grid-template-columns: 1fr;
+    }
+    .reverse{
+        flex-direction: column-reverse !important;
+        gap: 24px;
+    }
+}

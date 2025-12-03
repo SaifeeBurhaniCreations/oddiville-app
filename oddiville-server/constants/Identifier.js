@@ -1,0 +1,21 @@
+module.exports = [
+    "order-ready",
+    "package-comes-to-end",
+    "verify-material",
+    "raw-material-reached",
+    "raw-material-ordered",
+    "edit-order",
+    "worker-multiple",
+    "worker-single",
+    "order-shipped",
+    "order-reached",
+    "product-updated",
+    "lane-occupied",
+    "lane-empty",
+    "cancel-order",
+    "production-start",
+    "production-completed",
+    "calendar-event-scheduled",
+    "scheduled-date-event",
+];
+  
