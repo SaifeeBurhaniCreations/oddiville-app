@@ -183,6 +183,8 @@ export function getEmptyStateData(listKey: string) {
             return { title: "No Lanes Found", description: "You have 0 lanes!" };
         case "global_search":
             return { title: "No search Found", description: "No search result Found!" };
+        case "truck_details":
+            return { title: "No trucks Found", description: "No trucks available!" };
 
         default:
             return { title: "No active batches", description: "No active batches right now. Enjoy the calm!" };

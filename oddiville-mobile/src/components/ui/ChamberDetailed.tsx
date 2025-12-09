@@ -53,11 +53,10 @@ const ChamberDetailed = ({
 
   const { data: chamberData } = useChamberByName(selectedChamber);
 
-
-const flatStockData =
-  stockData?.pages.flatMap(
-    (page: ChamberStockPage) => (page as ChamberStockPage).data
-  ) || [];
+  const flatStockData =
+    stockData?.pages.flatMap(
+      (page: ChamberStockPage) => (page as ChamberStockPage).data
+    ) || [];
 
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const [isLoading, setIsLoading] = useState(false);
@@ -68,7 +67,6 @@ const flatStockData =
       return;
     }
     if (!selectedChamber && chambers?.length) {
-        
       dispatch(selectChamber(chambers[0].chamber_name));
     }
   }, [selectedChamber, chambers, dispatch]);
@@ -98,33 +96,33 @@ const flatStockData =
 
   const parsedStock: RawMaterialProps[] = useMemo(() => {
     if (!chamberData?.id || flatStockData?.length === 0) return [];
-// console.log("flatStockData", flatStockData);
 
     return flatStockData
       .map((item) => {
         const matchingChamberData = item.chamber?.filter(
           (entry) => entry.id === chamberData.id
         );
-        if (!matchingChamberData || matchingChamberData?.length === 0)
+        if (!matchingChamberData || matchingChamberData.length === 0)
           return null;
 
         const detailByRating = matchingChamberData.map((entry) => ({
-          rating: entry.rating,
+          rating: item.category === "packed" ? "packed" : entry.rating,
           quantity: `${entry.quantity}${item.unit}`,
         }));
 
-        const ratingStrings = matchingChamberData
-          .map((entry) => entry.rating)
-          .filter(Boolean);
+        const ratingStrings =
+          item.category === "packed"
+            ? []
+            : matchingChamberData.map((entry) => entry.rating).filter(Boolean);
 
         const ratingNumbers = ratingStrings
           .map((r) => parseFloat(r))
           .filter((n) => !isNaN(n));
 
-        const minRating = ratingNumbers?.length
+        const minRating = ratingNumbers.length
           ? Math.min(...ratingNumbers).toFixed(1)
           : "";
-        const maxRating = ratingNumbers?.length
+        const maxRating = ratingNumbers.length
           ? Math.max(...ratingNumbers).toFixed(1)
           : "";
 
@@ -133,12 +131,12 @@ const flatStockData =
           0
         );
 
-        const disabled = matchingChamberData.some(
-          (entry) => parseFloat(entry.quantity ?? "0") === 0
-        );
+        const disabled = totalQuantity <= 0;
 
         const ratingDisplay =
-          item.category === "other"
+          item.category === "packed"
+            ? "packed"
+            : item.category === "other"
             ? ratingStrings.join(", ")
             : minRating && maxRating
             ? `${minRating} - ${maxRating}`
@@ -150,29 +148,28 @@ const flatStockData =
             item.product_name?.trim().toLowerCase()
         );
 
+        const image = matchedMaterial?.sample_image?.url
+          ? matchedMaterial.sample_image.url
+          : item.category === "other"
+          ? require("@/src/assets/images/fallback/others-stock-fallback.png")
+          : require("@/src/assets/images/fallback/chamber-stock-fallback.png");
+
         return {
           name: item.product_name,
           description: `${totalQuantity}${item.unit}`,
           rating: ratingDisplay,
-          disabled: disabled,
-          href:
-            item.category === "other"
-              ? "other-products-detail"
-              : "",
-          // href:
-          //   item.category === "other"
-          //     ? "other-products-detail"
-          //     : "raw-material-detail",
+          disabled,
+          href: item.category === "other" ? "other-products-detail" : "",
           quantity: detailByRating[0]?.quantity ?? "",
           detailByRating,
           category: item.category,
           chambers: item.category === "other" ? item.chamber : null,
           id: item.category === "other" ? item.id : null,
-          image: matchedMaterial?.sample_image?.url ?? "",
+          image,
         };
       })
       .filter(Boolean) as RawMaterialProps[];
-  }, [stockData, chamberData]);
+  }, [flatStockData, chamberData, rawMaterial]);
 
   const filters = useMemo(
     () => flattenFilters(nestedFilters) as Record<FilterEnum, string[]>,

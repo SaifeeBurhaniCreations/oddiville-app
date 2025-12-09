@@ -489,7 +489,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
       source !== "add" &&
       source !== "vendor";
     const shouldOpenStoreProduct =
-      btn.closeOnPress !== false && btn.actionKey === "choose-chamber";
+      btn.closeOnPress !== false && btn.actionKey === "choose-chamber" && source === "chamber";
     
     // const shouldOpenStoreProduct =
     //   btn.closeOnPress !== false && btn.actionKey === "store-product";
@@ -601,6 +601,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
                 "supervisor-production",
                 supervisorProduction
               );
+            } else if (source === "product-chamber") {
+              dispatch(closeBottomSheet());
             } else {
               // dispatch(clearRawMaterials());
               dispatch(closeBottomSheet());

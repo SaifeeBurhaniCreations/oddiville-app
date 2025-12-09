@@ -1,477 +1,545 @@
 // 1. React and React Native core
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { ScrollView, StyleSheet, View, Alert } from 'react-native';
 
 // 2. Third-party dependencies
-import { formatDate } from "date-fns";
-import { useDispatch, useSelector } from "react-redux";
+import { formatDate, isValid as isValidDate } from 'date-fns';
 
 // 3. Project components
-import BottomSheet from "@/src/components/ui/BottomSheet";
-import PageHeader from "@/src/components/ui/PageHeader";
-import SupervisorOrderDetailsCard from "@/src/components/ui/Supervisor/SupervisorOrderDetailsCard";
-import DatabaseIcon from "@/src/components/icons/page/DatabaseIcon";
-import BackButton from "@/src/components/ui/Buttons/BackButton";
-import ChipGroup from "@/src/components/ui/ChipGroup";
-import FileUploadGallery from "@/src/components/ui/FileUploadGallery";
-import Button from "@/src/components/ui/Buttons/Button";
-import DetailsToast from "@/src/components/ui/DetailsToast";
-import Loader from "@/src/components/ui/Loader";
+import PageHeader from '@/src/components/ui/PageHeader';
+import BackButton from '@/src/components/ui/Buttons/BackButton';
+import SupervisorOrderDetailsCard from '@/src/components/ui/Supervisor/SupervisorOrderDetailsCard';
+import TruckWeightCard from '@/src/components/ui/TruckWeightCard';
+import PriceInput from '@/src/components/ui/Inputs/PriceInput';
+import RatingCard from '@/src/components/ui/RatingCard/RatingCard';
+import FileUpload from '@/src/components/ui/FileUpload';
+import Button from '@/src/components/ui/Buttons/Button';
+import LinkButton from '@/src/components/ui/Buttons/LinkButton';
+import DatabaseIcon from '@/src/components/icons/page/DatabaseIcon';
+import Loader from '@/src/components/ui/Loader';
 
 // 4. Project hooks
-import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
-import { useLanes } from "@/src/hooks/useFetchData";
-import { useParams } from "@/src/hooks/useParams";
-import { useProductionById, useUpdateProduction } from "@/src/hooks/production";
-import { useRawMaterialOrderById } from "@/src/hooks/rawMaterialOrders";
-import { useAppNavigation } from "@/src/hooks/useAppNavigation";
+import { useParams } from '@/src/hooks/useParams';
+import { useProductionById, useStartProduction } from '@/src/hooks/production';
+import { useRawMaterialOrderById } from '@/src/hooks/rawMaterialOrders';
+import { useAppNavigation } from '@/src/hooks/useAppNavigation';
+import { useAdmin } from '@/src/hooks/useAdmin';
 
 // 5. Project constants/utilities
-import { getColor } from "@/src/constants/colors";
-import { useFormValidator } from "@/src/sbc/form";
-import FormField from "@/src/sbc/form/FormField";
+import { getColor } from '@/src/constants/colors';
+import FormField from '@/src/sbc/form/FormField';
+import { useFormValidator } from '@/src/sbc/form';
 
 // 6. Types
-import { OrderProps } from "@/src/types";
-import { RootState } from "@/src/redux/store";
+import { OrderProps, RootStackParamList } from '@/src/types';
+import DetailsToast from '@/src/components/ui/DetailsToast';
+import { productionStartBackRoute } from '@/src/constants/backRoute';
+import { useAuth } from '@/src/context/AuthContext';
 
-// 7. Schemas & Redux slices
-import { setCurrentProduct } from "@/src/redux/slices/store-product.slice";
-import { initFromSelection } from "@/src/redux/slices/bottomsheet/chamber-ratings.slice";
-import { setId } from "@/src/redux/slices/bottomsheet/store-productId.slice";
-import { setProductName } from "@/src/redux/slices/production-begin.slice";
-import { Chamber, useChamber } from "@/src/hooks/useChambers";
-import { options } from "axios";
-
-// 8. Assets
-// No items of this type
-
-type DuringProduction = {
-  lane: string;
-  sample_images: File[] | null | string[];
+type RNImageFile = {
+    uri: string;
+    type?: string;
+    fileName?: string;
+    name?: string;
 };
 
-function toUrlArray(sample: any): string[] {
-  if (!sample) return [];
+type ProductionStart = {
+    sample_quantity: string;
+    rating: string;
+    sample_image: string | RNImageFile | null;
+    supervisor: string;
+};
 
-  if (Array.isArray(sample)) {
-    return sample
-      .map((x: any) => (typeof x === "string" ? x : x?.url))
-      .filter(Boolean);
-  }
-
-  if (Array.isArray(sample.urls)) {
-    return sample.urls.filter(Boolean);
-  }
-  if (Array.isArray(sample.files)) {
-    return sample.files
-      .map((f: any) => (typeof f === "string" ? f : f?.url))
-      .filter(Boolean);
-  }
-
-  return [];
-}
-
-const getChamberName = (chambers: Chamber[]) => chambers?.filter(ch => ch.tag !== "dry").map(ch => ch.chamber_name)
+// Constants
+const DEFAULT_VALUE = "--";
+const KG_TO_TONS = 1000;
+const DATE_FORMAT = "MMM d, yyyy";
 
 const ProductionStartScreen = () => {
-  const selectedChambers = useSelector(
-    (state: RootState) => state.rawMaterial.selectedChambers
-  );
-  const { data: chambersRaw } = useChamber();
-  const chambers = chambersRaw ?? [];
-  const { isLoading: productionLoading } = useSelector(
-    (state: RootState) => state.production
-  );
+    const { role } = useAuth();
 
-  const dispatch = useDispatch();
-  const { validateAndSetData } = useValidateAndOpenBottomSheet();
-  const [isLoading, setIsLoading] = useState(false);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastType, setToastType] = useState<"success" | "error" | "info">(
-    "info"
-  );
-  const [toastMessage, setToastMessage] = useState("");
-  const [existingImage, setExistingImage] = useState<string[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [toastVisible, setToastVisible] = useState(false);
+    const [toastType, setToastType] = useState<"success" | "error" | "info">("info");
+    const [toastMessage, setToastMessage] = useState("");
 
-  const { id } = useParams("production-start", "id");
+    // Hooks
+    const { rmId: id } = useParams('raw-material-receive', 'rmId');
+    const { goTo } = useAppNavigation();
+    const adminData = useAdmin();
 
-  const { data: productionData } = useProductionById(id!);
-  const rawOrderId = productionData?.raw_material_order_id;
-  const { data: rawMaterialOrderData } = useRawMaterialOrderById(rawOrderId);
+    const {
+        data: productionData,
+        isFetching: productFetching,
+        error: productionError,
+        isError: isProductionError
+    } = useProductionById(id!);
 
-  const { goTo } = useAppNavigation();
+    const rawOrderId = productionData?.raw_material_order_id;
+    const {
+        data: rawMaterialOrderData,
+        isFetching: dataFetching,
+        error: rawMaterialError,
+        isError: isRawMaterialError
+    } = useRawMaterialOrderById(rawOrderId);
 
-  const { data: lanesRaw = [] } = useLanes();
-  const formattedLanes = lanesRaw.map((lane: any) => ({
-    ...lane,
-    value: lane.id,
-    label: lane.name,
-  }));
+    const startProduction = useStartProduction();
 
-  const disabledLaneIds = formattedLanes
-    .filter((lane: any) => !!lane.production_id && lane.production_id !== id)
-    .map((lane: any) => lane.value);
-
-  // console.log("productionLoading", productionLoading);
-
-  const orderDetail: OrderProps = useMemo(() => {
-    return {
-      title: productionData?.product_name || "--",
-      name: rawMaterialOrderData?.vendor || "--",
-      description: [
-        {
-          name: "Quantity",
-          value: rawMaterialOrderData
-            ? `${rawMaterialOrderData.quantity_received ?? "--"} ${
-                rawMaterialOrderData.unit ?? ""
-              }`
-            : "--",
-          icon: <DatabaseIcon color={getColor("green", 700)} size={16} />,
-        },
-      ],
-      helperDetails: [
-        {
-          name: "Order",
-          value: rawMaterialOrderData?.order_date
-            ? formatDate(
-                new Date(rawMaterialOrderData.order_date),
-                "MMM d, yyyy"
-              )
-            : "--",
-          icon: null,
-        },
-        {
-          name: "Arrival",
-          value: rawMaterialOrderData?.arrival_date
-            ? formatDate(
-                new Date(rawMaterialOrderData.arrival_date),
-                "MMM d, yyyy"
-              )
-            : "--",
-          icon: null,
-        },
-      ],
+    const showToast = (type: "success" | "error" | "info", message: string) => {
+        setToastType(type);
+        setToastMessage(message);
+        setToastVisible(true);
     };
-  }, [productionData, rawMaterialOrderData]);
 
-  useEffect(() => {
-    dispatch(setProductName(productionData?.product_name));
-  }, [productionData]);
+    useEffect(() => {
+        if (isProductionError && productionError) {
+            showToast("error", "Failed to load production data. Please try again!");
 
-  useEffect(() => {
-    dispatch(initFromSelection(selectedChambers));
-  }, [selectedChambers, dispatch]);
+            goTo('production')
+        }
+        if (isRawMaterialError && rawMaterialError) {
+            showToast("error", "Failed to load raw material order data!");
+        }
+    }, [isProductionError, productionError, isRawMaterialError, rawMaterialError, goTo]);
 
-  useEffect(() => {
-    id && dispatch(setId(id));
-  }, [id, dispatch]);
+    const {
+        values,
+        setField,
+        errors,
+        validateForm,
+        resetForm,
+        isValid,
+    } = useFormValidator<ProductionStart>(
+        {
+            sample_quantity: '0',
+            rating: '',
+            sample_image: null,
+            supervisor: adminData?.name || '',
+        },
+        {
+            sample_quantity: [],
+            rating: [
+                {
+                    type: 'custom',
+                    validate: (value: number) => {
+                        if (!value || value === 0) return false;
+                        const ratings = [1, 2, 3, 4, 5];
+                        console.log(value);
 
-  const { values, setField, errors, validateForm, resetForm } =
-    useFormValidator<DuringProduction>(
-      {
-        lane: productionData?.lane || "",
-        sample_images: [],
-      },
-      {
-        lane: [],
-        sample_images: [],
-      },
-      {
-        validateOnChange: true,
-        debounce: 300,
-      }
+                        if (!ratings.includes(value)) return false;
+                        return true;
+                    },
+                    message: "Rating is required and must be one of 1, 2, 3, 4, 5."
+                }
+            ],
+            sample_image: [
+                {
+                    type: 'custom',
+                    validate: (value: any) => {
+                        if (!value) return false;
+                        if (typeof value === 'string' && !value.trim()) return false;
+                        if (typeof value === 'object' && (!value.uri || !value.uri.trim())) return false;
+                        return true;
+                    },
+                    message: "Sample image is required and must be a valid image file."
+                }
+            ],
+        },
+        {
+            validateOnChange: true,
+            debounce: 300,
+        }
     );
+   
+    const orderDetail = useMemo<OrderProps>(() => {
+        const safeProductName = productionData?.product_name || DEFAULT_VALUE;
+        const safeVendor = rawMaterialOrderData?.vendor || DEFAULT_VALUE;
 
-  const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setToastVisible(true);
-  };
-  useEffect(() => {
-    if (!productionData) return;
-    setField("lane", productionData.lane || "");
+        const quantityReceived = rawMaterialOrderData?.quantity_received;
+        const unit = rawMaterialOrderData?.unit;
+        const quantityText = quantityReceived && unit
+            ? `${quantityReceived} ${unit}`
+            : DEFAULT_VALUE;
 
-    const urls = toUrlArray(productionData.sample_images);
-    setExistingImage(urls);
-  }, [productionData]);
+        const orderDate = rawMaterialOrderData?.order_date;
+        const arrivalDate = rawMaterialOrderData?.arrival_date;
 
-  const openBottomSheet = () => {
-    const supervisorProduction = {
-      sections: [
-        {
-          type: "title-with-details-cross",
-          data: {
-            title: "Store material",
-            description: "Pick chambers to store your materials in",
-            details: {
-              label: "Quantity",
-              value: `${rawMaterialOrderData?.quantity_received} ${rawMaterialOrderData?.unit}`,
-              icon: "database",
-            },
-          },
-        },
-        {
-          type: "select",
-          data: {
-            placeholder: "Select chambers",
-            label: "Select chambers",
-            options: getChamberName(chambers),
-            key: "supervisor-production"
-          },
-        },
-        ...selectedChambers.map((chamberName) => ({
-          type: "input-with-select",
-          conditionKey: "hideUntilChamberSelected",
-          hasUniqueProp: {
-            identifier: "addonInputQuantity",
-            key: "label",
-          },
-          data: {
-            placeholder: "Quantity",
-            image: "",
-            label: chamberName,
-            label_second: "Rating",
-            value: "",
-            addonText: "Kg",
-            key: "supervisor-production",
-            formField_1: chamberName,
-            source: "supervisor-production",
-          },
-        })),
-        {
-          type: "addonInput",
-          conditionKey: "hideUntilChamberSelected",
-          data: {
-            placeholder: "Enter quantity",
-            label: "Discard quantity",
-            value: "0",
-            addonText: "Kg",
-            formField: "discard_quantity",
-          },
-        },
-      ],
-      buttons: [
-        {
-          text: "Cancel",
-          variant: "outline",
-          color: "green",
-          alignment: "half",
-          disabled: false,
-        },
-        {
-          text: "Store",
-          variant: "fill",
-          color: "green",
-          alignment: "half",
-          disabled: false,
-          actionKey: "store-product",
-        },
-      ],
-    };
+        const formatDateSafely = (dateInput: any) => {
+            if (!dateInput) return DEFAULT_VALUE;
+            try {
+                const date = new Date(dateInput);
+                return isValidDate(date) ? formatDate(date, DATE_FORMAT) : DEFAULT_VALUE;
+            } catch {
+                return DEFAULT_VALUE;
+            }
+        };
 
-    dispatch(setCurrentProduct(productionData));
+        return {
+            title: safeProductName,
+            name: safeVendor,
+            description: [
+                {
+                    name: "Quantity",
+                    value: quantityText,
+                    icon: <DatabaseIcon color={getColor("green", 700)} size={16} />,
+                },
+            ],
+            helperDetails: [
+                {
+                    name: "Order",
+                    value: formatDateSafely(orderDate),
+                    icon: null,
+                },
+                {
+                    name: "Arrival",
+                    value: formatDateSafely(arrivalDate),
+                    icon: null,
+                },
+            ],
+        };
+    }, [productionData, rawMaterialOrderData]);
+    const truckDetails = useMemo(() => {
+        const truckDetailsData = rawMaterialOrderData?.truck_details;
 
-    setIsLoading(true);
-
-    if (id) {
-      validateAndSetData(id, "supervisor-production", supervisorProduction);
-      setIsLoading(false);
-    }
-  };
-
-  const buildFormData = useCallback((form: DuringProduction) => {
-    const formData = new FormData();
-    formData.append("lane", form.lane);
-
-    const existingUrls = toUrlArray(productionData?.sample_images);
-    if (existingUrls.length > 0) {
-      formData.append("existing_sample_images", JSON.stringify(existingUrls));
-    }
-
-    form.sample_images &&
-      Array.isArray(form.sample_images) &&
-      form.sample_images.forEach((img: any, idx: number) => {
-        let fileData: any;
-        if (typeof img === "string") {
-          const name = img.split("/").pop() || `sample_image_${idx}.jpg`;
-          const type = name.endsWith(".pdf") ? "application/pdf" : "image/jpeg";
-          fileData = { uri: img, name, type };
-        } else if (img instanceof File) {
-          fileData = img;
+        if (!truckDetailsData) {
+            return {
+                title: DEFAULT_VALUE,
+                description: "Product weight",
+                truckWeight: DEFAULT_VALUE,
+                otherDescription: "Truck weight",
+            };
         }
-        if (fileData) formData.append("sample_images", fileData);
-      });
 
-    return formData;
-  }, []);
+        const parseTruckWeight = (weight: any): number => {
+            if (typeof weight === 'number') return weight;
+            if (typeof weight === 'string') {
+                const parsed = parseFloat(weight);
+                return isNaN(parsed) ? 0 : parsed;
+            }
+            return 0;
+        };
 
-  const updateProduction = useUpdateProduction();
+        const truckWeight = parseTruckWeight(truckDetailsData.truck_weight);
+        const tareWeight = parseTruckWeight(truckDetailsData.tare_weight);
 
-  const saved = async () => {
-    const result = validateForm();
-    if (!result.success) return;
+        const netWeight = truckWeight > 0 && tareWeight > 0
+            ? truckWeight - tareWeight
+            : 0;
 
-    try {
-      setIsLoading(true);
-      const formData = buildFormData(result.data);
+        return {
+            title: netWeight > 0 ? `${(netWeight)} Kg` : DEFAULT_VALUE,
+            description: "Product weight",
+            truckWeight: truckWeight > 0 ? `${(truckWeight / KG_TO_TONS).toFixed(2)} Tons` : DEFAULT_VALUE,
+            otherDescription: "Truck weight",
+        };
+    }, [rawMaterialOrderData]);
 
-      updateProduction.mutate(
-        { id: id!, data: formData },
-        {
-          onSuccess: (result) => {
-            goTo("supervisor-production");
-            resetForm();
-          },
-          onError: (error) => {
-            showToast("error", "Failed to update production");
-          },
+    const buildFormData = useCallback((form: ProductionStart, status: string): FormData => {
+        const formData = new FormData();
+
+        formData.append("sample_quantity", form.sample_quantity.trim());
+        formData.append("rating", form.rating);
+        formData.append("status", status);
+        formData.append("start_time", new Date().toISOString());
+
+        if (status === 'in-progress' && adminData?.name) {
+            formData.append("supervisor", adminData.name.trim());
         }
-      );
-    } catch (err) {
-      console.error("Production submission failed", err);
-    } finally {
-      setIsLoading(false);
+
+        if (form.sample_image) {
+            try {
+                let fileData: any = null;
+
+                if (typeof form.sample_image === 'string') {
+                    const uri = form.sample_image.trim();
+                    if (uri) {
+                        const fileName = uri.split('/').pop() || 'sample_image.jpg';
+                        const fileExtension = fileName.split('.').pop()?.toLowerCase();
+
+                        let mimeType = 'application/octet-stream';
+                        if (fileExtension === 'jpg' || fileExtension === 'jpeg') {
+                            mimeType = 'image/jpeg';
+                        } else if (fileExtension === 'png') {
+                            mimeType = 'image/png';
+                        } else if (fileExtension === 'pdf') {
+                            mimeType = 'application/pdf';
+                        }
+
+                        fileData = {
+                            uri,
+                            name: fileName,
+                            type: mimeType,
+                        };
+                    }
+                } else if (form.sample_image && typeof form.sample_image === 'object' && 'uri' in form.sample_image) {
+                    const { uri, name, fileName, type } = form.sample_image;
+                    if (uri?.trim()) {
+                        fileData = {
+                            uri: uri.trim(),
+                            name: (fileName || name || 'sample_image.jpg').trim(),
+                            type: type || 'application/octet-stream',
+                        };
+                    }
+                }
+
+                if (fileData && fileData.uri) {
+                    formData.append("sample_image", fileData);
+                }
+            } catch (error) {
+                console.error("Error processing sample image:", error);
+                showToast("error", "Failed to process the selected image file!");
+            }
+        }
+
+        return formData;
+    }, [adminData]);
+
+    const onSubmit = useCallback(async (status: 'in-progress' | 'in-queue') => {
+        if (isSubmitting || startProduction.isPending) {
+            return;
+        }
+
+        if (!id) {
+            showToast("error", "Production ID is missing!");
+            return;
+        }
+
+        if (!adminData?.name && status === 'in-progress') {
+            showToast("error", "Supervisor information is missing!");
+            return;
+        }
+
+        const result = validateForm();
+        if (!result.success) {
+            const firstError = Object.values(result.errors)[0];
+            if (firstError) {
+                showToast("error", firstError);
+            }
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            const formData = buildFormData(result.data, status);
+
+            await new Promise((resolve, reject) => {
+                startProduction.mutate(
+                    { id: id, data: formData },
+                    {
+                        onSuccess: (response) => {
+                            console.log("Production started successfully:", response);
+
+                            if (status === 'in-progress') {
+                                goTo("production-complete", { id: id });
+                            } else {
+                                goTo('production');
+                            }
+
+                            setTimeout(() => {
+                                resetForm();
+                            }, 100);
+
+                            resolve(response);
+                        },
+                        onError: (error) => {
+                            console.error("Production start failed:", error);
+
+                            let errorMessage = "Failed to start production. Please try again.";
+
+                            if (error instanceof Error) {
+                                if (error.message.includes('network')) {
+                                    errorMessage = "Network error. Please check your connection and try again.";
+                                } else if (error.message.includes('validation')) {
+                                    errorMessage = "Invalid data provided. Please check your inputs.";
+                                }
+                            }
+                            showToast("error", errorMessage);
+                            reject(error);
+                        }
+                    }
+                );
+            });
+
+        } catch (error) {
+            console.error("Production submission failed:", error);
+
+            if (error instanceof Error && error.message === "File processing failed") {
+                return;
+            }
+            showToast("error", "An unexpected error occurred. Please try again!");
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [id, adminData, isSubmitting, startProduction, validateForm, buildFormData, goTo, resetForm]);
+
+    const isLoading = productFetching || dataFetching;
+    const isFormDisabled = isLoading || isSubmitting || startProduction.isPending || !productionData;
+
+    if (isProductionError && !productionData) {
+        return (
+            <View style={styles.pageContainer}>
+                <PageHeader page="Production" />
+                <View style={styles.errorContainer}>
+                    <Loader />
+                </View>
+            </View>
+        );
     }
-  };
 
-  console.log("productionData", productionData);
-  
+    return (
+        <View style={styles.pageContainer}>
+            <PageHeader page="Production" />
+            <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={styles.wrapper}>
+                    <View style={[styles.VStack, styles.gap16]}>
+                        <BackButton
+                            label="Production Start"
+                            backRoute={productionStartBackRoute[role ?? "supervisor"] as keyof RootStackParamList}
+                        />
 
-  return (
-    <View style={styles.pageContainer}>
-      <PageHeader page={"Production"} />
-      <View style={styles.wrapper}>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={[styles.VStack, styles.gap16]}>
-            <BackButton label="Detail" backRoute="supervisor-production" />
+                        <SupervisorOrderDetailsCard
+                            order={orderDetail}
+                            color="green"
+                            bgSvg={DatabaseIcon}
+                        />
 
-            <SupervisorOrderDetailsCard
-              order={orderDetail}
-              color="green"
-              bgSvg={DatabaseIcon}
+                        <TruckWeightCard {...truckDetails} />
+
+                        <FormField name="sample_quantity" form={{ values, setField, errors }}>
+                            {({ value, onChange, error }) => (
+                                <PriceInput
+                                    value={value}
+                                    onChangeText={onChange}
+                                    placeholder="Enter quantity"
+                                    addonText="Kg"
+                                    error={error}
+                                    editable={!isFormDisabled}
+                                >
+                                    Sample quantity
+                                </PriceInput>
+                            )}
+                        </FormField>
+
+                        <FormField name="rating" form={{ values, setField, errors }}>
+                            {({ value, onChange, error }) => (
+                                <RatingCard
+                                    active={value}
+                                    onChange={onChange}
+                                >
+                                    Select rating
+                                </RatingCard>
+                            )}
+                        </FormField>
+
+                        <FormField name="sample_image" form={{ values, setField, errors }}>
+                            {({ value, onChange, error }) => (
+                                <FileUpload
+                                    fileState={[value, onChange]}
+                                    error={error}
+                                // disabled={isFormDisabled}
+                                />
+                            )}
+                        </FormField>
+                    </View>
+
+                    <View style={styles.gap16}>
+                        <Button
+                            variant="fill"
+                            disabled={isFormDisabled}
+                            onPress={() => onSubmit('in-progress')}
+                        // loading={isSubmitting && startProduction.isPending}
+                        >
+                            {isSubmitting || startProduction.isPending
+                                ? "Starting production..."
+                                : "Start production"
+                            }
+                        </Button>
+
+                        <LinkButton
+                            disabled={isFormDisabled}
+                            onPress={() => onSubmit('in-queue')}
+                        >
+                            {isSubmitting || startProduction.isPending
+                                ? "Adding to queue..."
+                                : "Add to production queue"
+                            }
+                        </LinkButton>
+                    </View>
+                </View>
+            </ScrollView>
+            <DetailsToast
+                type={toastType}
+                message={toastMessage}
+                visible={toastVisible}
+                onHide={() => setToastVisible(false)}
             />
 
-            <FormField name="lane" form={{ values, setField, errors }}>
-              {({ value, onChange, error }) => (
-                <ChipGroup
-                  type="radio"
-                  data={formattedLanes}
-                  activeValue={value}
-                  onChange={(selectedLaneId) => {
-                    onChange(selectedLaneId);
-                  }}
-                  disabledValues={disabledLaneIds}
-                >
-                  Select lane
-                </ChipGroup>
-              )}
-            </FormField>
-
-            <FormField name="sample_images" form={{ values, setField, errors }}>
-              {({ value = [], onChange }) => (
-                <FileUploadGallery
-                  fileStates={[Array.isArray(value) ? value : [], onChange]}
-                  existingStates={[existingImage, setExistingImage]}
-                  maxImage={10}
-                >
-                  Capture photo
-                </FileUploadGallery>
-              )}
-            </FormField>
-            
-          </View>
-        </ScrollView>
-        <View style={styles.buttonContainer}>
-          <Button
-            onPress={saved}
-            disabled={updateProduction.isPending || productionLoading}
-            variant="outline"
-          >
-            {updateProduction.isPending ? "Saving..." : updateProduction.data?.isStarted ? "Update" : "Save"}
-          </Button>
-          <Button
-            onPress={openBottomSheet}
-            disabled={updateProduction.isPending || productionLoading}
-            style={styles.flexGrow}
-          >
-            {productionLoading
-              ? "Production completing..."
-              : "Production completed"}
-          </Button>
+            {/* Loading overlay */}
+            {isLoading && (
+                <View style={styles.overlay}>
+                    <View style={styles.loaderContainer}>
+                        <Loader />
+                    </View>
+                </View>
+            )}
         </View>
-      </View>
-      <BottomSheet color="green" />
-      {(isLoading || productionLoading) && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <Loader />
-          </View>
-        </View>
-      )}
-      <DetailsToast
-        type={toastType}
-        message={toastMessage}
-        visible={toastVisible}
-        onHide={() => setToastVisible(false)}
-      />
-    </View>
-  );
+    );
 };
 
-const styles = StyleSheet.create({
-  pageContainer: {
-    flex: 1,
-    backgroundColor: getColor("green", 500),
-    position: "relative",
-  },
-  wrapper: {
-    flex: 1,
-    backgroundColor: getColor("light", 200),
-    borderTopStartRadius: 16,
-    borderTopEndRadius: 16,
-    padding: 16,
-  },
-  flexGrow: {
-    flex: 1,
-  },
-  searchinputWrapper: {
-    height: 44,
-    marginTop: 24,
-    marginBottom: 24,
-  },
-  HStack: {
-    flexDirection: "row",
-  },
-  VStack: {
-    flexDirection: "column",
-  },
-  justifyBetween: {
-    justifyContent: "space-between",
-  },
-  alignCenter: {
-    alignItems: "center",
-  },
-  gap8: {
-    gap: 8,
-  },
-  gap16: {
-    gap: 16,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: getColor("green", 500, 0.005),
-    zIndex: 2,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-});
-
 export default ProductionStartScreen;
+
+const styles = StyleSheet.create({
+    pageContainer: {
+        flex: 1,
+        backgroundColor: getColor('green', 500),
+    },
+    wrapper: {
+        flex: 1,
+        backgroundColor: getColor('light', 200),
+        borderTopStartRadius: 16,
+        borderTopEndRadius: 16,
+        padding: 16,
+        gap: 12,
+        justifyContent: "space-between",
+        minHeight: '100%',
+    },
+    HStack: {
+        flexDirection: "row"
+    },
+    VStack: {
+        flexDirection: "column"
+    },
+    justifyBetween: {
+        justifyContent: "space-between",
+    },
+    alignCenter: {
+        alignItems: "center"
+    },
+    gap8: {
+        gap: 8,
+    },
+    gap16: {
+        gap: 16,
+    },
+    p16: {
+        padding: 16,
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        zIndex: 999,
+    },
+    loaderContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: getColor('light', 200),
+        borderTopStartRadius: 16,
+        borderTopEndRadius: 16,
+    },
+});

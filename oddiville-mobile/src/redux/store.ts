@@ -33,6 +33,8 @@ import rawMaterialSearchReducer from "./slices/bottomsheet/rawMaterialSearch.sli
 import productSearchReducer from "./slices/bottomsheet/product-search.slice";
 import packageSizeSearchReducer from "./slices/bottomsheet/package-size-search.slice";
 import deleteUserPopupReducer from "./slices/delete-popup-slice";
+import storageReducer from "./slices/bottomsheet/storage.slice";
+import policiesReducer from "./slices/bottomsheet/policies.slice";
 
 export const store = configureStore({
   reducer: {
@@ -69,6 +71,8 @@ export const store = configureStore({
     productSearch: productSearchReducer,
     packageSizeSearch: packageSizeSearchReducer,
     deletePopup: deleteUserPopupReducer,
+    StorageRMRating: storageReducer,
+    policies: policiesReducer,
   },
 });
 

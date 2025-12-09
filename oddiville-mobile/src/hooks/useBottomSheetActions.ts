@@ -31,8 +31,12 @@ import { setProductionLoading } from "../redux/slices/production.slice";
 import { useChamberStock } from "./useChamberStock";
 import { setChambersAndTotal } from "../redux/slices/production-begin.slice";
 import { clearFilter } from "../redux/slices/bottomsheet/filters.slice";
+import { clearPolicies, setSelectionDone } from "../redux/slices/bottomsheet/policies.slice";
 
 export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
+  const source = useSelector(
+    (state: RootState) => state.rawMaterial.source
+  );
   const { packages } = useSelector(
     (state: RootState) => state.packageSizePackaging
   );
@@ -172,15 +176,16 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
     },
 
     "add-product-package": async () => {
-      try {
+      try { 
         const quantity = Number(productPackageForm.values.quantity);
-        const sizeValue = Number(productPackageForm.values.size.trim());
 
-        const finalQty = !isNaN(sizeValue) ? quantity * sizeValue : quantity;
+        const emptyBagWeightGram = Number(productPackageForm.values.empty_bag_weight_g || "1");
+
+        const finalQtyKg = (quantity * emptyBagWeightGram) / 1000;
 
         const productPackagePayload = {
           ...productPackageForm.values,
-          quantity: String(finalQty),
+          quantity: String(finalQtyKg),
         };
 
         const result = productPackageForm?.validateForm(productPackagePayload);
@@ -231,62 +236,78 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
     },
 
     "add-package": async () => {
+      
       if (!meta?.id) {
         console.warn("No ID for this action");
         return;
       }
       try {
-        const quantity = Number(packageSizeForm.values.quantity);
-        const sizeValue = Number(packageSizeForm.values.size.trim());
+        const [id, product_name] = meta.id.split(":");
+        
+          const count = Number(packageSizeForm.values.quantity);
 
-        const finalQty = !isNaN(sizeValue) ? quantity * sizeValue : quantity;
+          const emptyBagWeightGram = Number(
+            packageSizeForm.values.empty_bag_weight_g || "1"
+          );``
 
-        const packageSizePayload = {
-          ...packageSizeForm.values,
-          quantity: String(finalQty),
-        };
+          const finalQtyKg = (count * emptyBagWeightGram) / 1000;
 
-        const result_package_form = packageSizeForm?.validateForm(packageSizePayload);
+          const packageSizePayload = {
+            ...packageSizeForm.values,
+            quantity: String(finalQtyKg),
+          };
 
-        if (result_package_form.success) {
-          dispatch(setIsLoadingPackageSize(true));
+          const result_package_form =
+            packageSizeForm?.validateForm(packageSizePayload);
 
-          let unit: string | null;
-          let rest: any;
+          if (result_package_form.success) {
+            dispatch(setIsLoadingPackageSize(true));
 
-          if (
-            result_package_form?.data &&
-            result_package_form?.data.unit !== "null"
-          ) {
-            ({ unit, ...rest } = result_package_form.data);
-          } else {
-            unit = null;
-            rest = result_package_form?.data || {};
-          }
-          updatePackage.mutate(
-            { id: meta?.id, data: { ...rest, unit } },
-            {
-              onSuccess: (result) => {
-                packageSizeForm.resetForm();
-                dispatch(clearUnit());
-                dispatch(setIsLoadingPackageSize(false));
-              },
-              onError: (error) => {
-                console.log("error in onSuccess update [add-package]", error);
-              },
+            let unit: string | null;
+            let rest: any;
+
+            if (
+              result_package_form?.data &&
+              result_package_form?.data.unit !== "null"
+            ) {
+              ({ unit, ...rest } = result_package_form.data);
+            } else {
+              unit = null;
+              rest = result_package_form?.data || {};
             }
-          );
-        } else {
-          console.log("validation failed");
+
+            updatePackage.mutate(
+              {
+                id,
+                data: {
+                  ...rest,
+                  product_name,
+                  unit,
+                  quantity: String(finalQtyKg),
+                },
+              },
+              {
+                onSuccess: () => {
+                  dispatch(setIsLoadingPackageSize(false));
+                },
+                onError: (error) => {
+                  console.log("error in onSuccess update [add-package]", error);
+                  dispatch(setIsLoadingPackageSize(false));
+                },
+              }
+            );
+          } else {
+            console.log("validation failed");
+          }
+        } catch (error: any) {
+          console.log("error in add-product-size", error.message);
         }
-      } catch (error: any) {
-        console.log("error in add-product-size", error.message);
-      }
     },
 
     "add-package-quantity": async () => {
       try {
         dispatch(setIsLoadingPackage(true));
+
         const { weight, id } = packages;
         if (!id) {
           console.warn("No ID for this action");
@@ -295,16 +316,20 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
 
         const { number, unit } = splitValueAndUnit(weight);
 
-         const quantity = Number(packageQuantityForm.values.quantity);
-        const sizeValue = Number(packageQuantityForm.values.size.trim());
+        const count = Number(packageQuantityForm.values.quantity);
 
-        const finalQty = !isNaN(sizeValue) ? quantity * sizeValue : quantity;
+        const emptyBagWeightGram = Number(
+          packageQuantityForm.values.empty_bag_weight_g || "1"
+        );
+
+        const finalQtyKg = (count * emptyBagWeightGram) / 1000;
 
         const packageQuantityPayload = {
-          quantity: String(finalQty),
+          quantity: String(finalQtyKg),
         };
 
-        const result = packageQuantityForm?.validateForm(packageQuantityPayload);
+        const result =
+          packageQuantityForm?.validateForm(packageQuantityPayload);
 
         if (result.success) {
           await new Promise((resolve, reject) => {
@@ -312,9 +337,9 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
               {
                 id,
                 data: {
-                  quantity: packageQuantityForm?.values?.quantity,
-                  size: String(number),
-                  unit,
+                  product_name: "",
+                  quantity: String(finalQtyKg), size: String(number),
+                  unit: unit as "kg" | "gm" | null,
                 },
               },
               {
@@ -347,20 +372,23 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
         return;
       }
 
-      dispatch(
-        setChambersAndTotal({
-          productName,
-          chambers: chambersSummary,
-          chamberCapacityWithName,
-          total: total,
-          ...(message ? { message } : {}),
-        })
-      );
+      if(source === "product-chamber") {} else {
+        dispatch(
+          setChambersAndTotal({
+            productName,
+            chambers: chambersSummary,
+            chamberCapacityWithName,
+            total: total,
+            ...(message ? { message } : {}),
+          })
+        );
+  
+        try {
+          dispatch(setIsChamberSelected(true));
+        } catch (error: any) {
+          console.log("error in add-raw-material", error.message);
+        }
 
-      try {
-        dispatch(setIsChamberSelected(true));
-      } catch (error: any) {
-        console.log("error in add-raw-material", error.message);
       }
     },
 
@@ -404,7 +432,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
             dispatch(chamberRatingReset());
             dispatch(chamberReset());
             storeQuantityForm.resetForm();
-            goTo("supervisor-production");
+            goTo("production");
           } catch (e) {
             dispatch(setProductionLoading(false));
           }
@@ -455,11 +483,25 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
       }
     },
 
+    "select-policies": async () => {
+      if (!meta?.id) {
+        console.warn("No selection policy ID provided for select-policies action");
+        return;
+      }
+      try {
+     dispatch(setSelectionDone());
+     
+      } catch (error: any) {
+        console.log("error in order-reached", error.message);
+      }
+    },
+
     "clear-filter": () => {
       const { mainSelection, subSelection } = metaBottomSheet || {};
       // dispatch(clearFilter())
       console.log("mainSelection, subSelection", mainSelection, subSelection);
     },
+
     "edit-order": () => {
       if (meta?.id) {
         // goTo("Packaging", { id: meta.id });

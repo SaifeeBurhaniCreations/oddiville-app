@@ -1,26 +1,37 @@
 import { IconProps } from "@/src/types"
 import React from "react"
-import Svg, { Path } from "react-native-svg"
+import Svg, { ClipPath, Defs, G, Path } from "react-native-svg"
 
 const ProductionIcon: React.FC<IconProps> = ({ color = "#0A493B", size = 24, style, ...props }) => {
   return (
     <Svg
       width={size}
       height={size}
-      viewBox="0 0 24 24"
+      viewBox="0 0 20 20"
       fill="none"
-      className="injected-svg"
       style={style}
-      color={color}
       {...props}
     >
-      <Path
-        d="M2.057 19.874L4.005 4.701C4.183 3.314 4.535 3 5.956 3c1.422 0 1.774.314 1.952 1.7L10 21H3.06c-.535 0-.802 0-.953-.17-.151-.169-.117-.431-.05-.956zM10.154 21H21c.471 0 .707 0 .854-.146C22 20.707 22 20.47 22 20V7l-4.36 3.633c-.71.592-1.064.887-1.352.752C16 11.25 16 10.79 16 9.865V7l-4.448 3.235c-.522.38-.782.569-1.084.667C10.167 11 9.844 11 9.2 11H9M4 6h4M12 15h2M17 15h2"
-        stroke={color}
-        strokeWidth={1.5}
+      <G
+        clipPath="url(#clip0_2968_13130)"
+        strokeWidth={1.42857}
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
+      >
+        <Path
+          d="M.714.714h18.572M.714 5.357h1.548M17.738 5.357h1.547M.714 14.643h1.548M17.738 14.643h1.547M.714 10h1.548M17.738 10h1.547M.714 19.286h18.572"
+          stroke="#3D874C"
+        />
+        <Path
+          d="M5.513 12.427a2.326 2.326 0 002.046 2.05c.794.09 1.61.166 2.441.166.832 0 1.648-.076 2.442-.165a2.327 2.327 0 002.045-2.05c.085-.79.156-1.601.156-2.428s-.071-1.638-.156-2.429a2.327 2.327 0 00-2.045-2.05c-.795-.088-1.61-.164-2.442-.164-.832 0-1.647.076-2.441.165a2.327 2.327 0 00-2.046 2.05c-.084.79-.156 1.6-.156 2.428 0 .827.072 1.638.156 2.427z"
+          stroke={color}
+        />
+      </G>
+      <Defs>
+        <ClipPath id="clip0_2968_13130">
+          <Path fill="#fff" d="M0 0H20V20H0z" />
+        </ClipPath>
+      </Defs>
     </Svg>
   )
 }

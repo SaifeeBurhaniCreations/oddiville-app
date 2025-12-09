@@ -27,7 +27,6 @@ import {
 } from "@/src/redux/slices/bottomsheet/raw-material.slice";
 import { useFormValidator } from "@/src/sbc/form";
 import FormField from "@/src/sbc/form/FormField";
-import { addVendor } from "@/src/services/vendor.service";
 import DetailsToast from "@/src/components/ui/DetailsToast";
 import {
   clearCity,
@@ -41,6 +40,7 @@ import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { getLimitedMaterialNames } from "@/src/utils/arrayUtils";
 import {
   updateAllVendorLists,
+  useAddVendor,
   useUpdateVendor,
   useVendorById,
 } from "@/src/hooks/vendor";
@@ -75,6 +75,9 @@ const VendorCreateScreen = () => {
   const { data: fetchedVendor, isLoading: isFetchingVendor } = useVendorById(
     userId ?? null
   );
+
+  const addVendorMutation = useAddVendor();
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
@@ -243,54 +246,68 @@ const VendorCreateScreen = () => {
     }
   }, [userId, fetchedVendor]);
 
-  const onSubmit = async (userId: string | null) => {
-    const updatedValues = {
-      ...values,
-      state: selectedState.name,
-      city: selectedCity,
-    };
-    const result = validateForm(updatedValues);
 
-    if (!result.success) return;
+const onSubmit = async (userId: string | null) => {
+  const updatedValues = {
+    ...values,
+    state: selectedState.name,
+    city: selectedCity,
+  };
+  const result = validateForm(updatedValues);
 
-    setIsSubmitting(true);
-    try {
-      if (userId) {
-        await updateVendor.mutateAsync({
-          id: userId,
-          data: {
-            ...result.data,
-            state: {
-              name: selectedState.name,
-              isoCode: selectedState.isoCode,
-            },
+  if (!result.success) return;
+
+  setIsSubmitting(true);
+  try {
+    if (userId) {
+      // UPDATE vendor
+      await updateVendor.mutateAsync({
+        id: userId,
+        data: {
+          ...result.data,
+          state: {
+            name: selectedState.name,
+            isoCode: selectedState.isoCode,
           },
-        });
+        },
+      });
 
-        showToast("info", "Vendor Updated");
+      showToast("info", "Vendor Updated");
+      resetForm();
+      dispatch(clearRawMaterials());
+      dispatch(clearLocations());
+      goTo("vendors");
+    } else {
+      // CREATE vendor
+      const createdVendor = await addVendorMutation.mutateAsync({
+        data: {
+          ...result.data,
+          state: {
+            name: selectedState.name,
+            isoCode: selectedState.isoCode,
+          },
+        },
+      });
+
+      // if mutateAsync didn't throw, it succeeded
+      if (createdVendor) {
+        showToast("info", "New Vendor Added");
         resetForm();
         dispatch(clearRawMaterials());
         dispatch(clearLocations());
         goTo("vendors");
       } else {
-        const response = await addVendor(result.data);
-        if (response.status === 201) {
-          showToast("info", "New Vendor Added");
-          resetForm();
-          dispatch(clearRawMaterials());
-          dispatch(clearLocations());
-          goTo("vendors");
-        } else {
-          showToast("error", "Failed to add vendor");
-        }
+        showToast("error", "Failed to add vendor");
       }
-    } catch (err) {
-      console.error("update vendor failed", err);
-      showToast("error", "Failed to update vendor");
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  } catch (err) {
+    console.error("vendor create/update failed", err);
+    showToast("error", "Failed to update vendor");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   const handleDeactivateToggle = () => {
     const hasPendingOrders = vendorData?.orders?.some((order) => {

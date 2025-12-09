@@ -1,6 +1,6 @@
 // 1. React and React Native core
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
 // 2. Third-party dependencies
 import { ScrollView } from 'react-native-gesture-handler';
@@ -21,12 +21,14 @@ import Tag from '@/src/components/ui/Tag';
 // 4. Project hooks
 import { useAppNavigation } from '@/src/hooks/useAppNavigation';
 import { useParams } from '@/src/hooks/useParams';
-import { useOrderById, useUpdateOrder } from '@/src/hooks/dispatchOrder';
+import { DispatchOrderProduct, useOrderById, useUpdateOrder } from '@/src/hooks/dispatchOrder';
 import { useTrucks } from '@/src/hooks/truck';
 
 // 5. Project constants/utilities
 import { useFormValidator } from '@/src/sbc/form';
 import { getColor } from '@/src/constants/colors';
+import EmptyState from '@/src/components/ui/EmptyState';
+import { getEmptyStateData } from '@/src/utils/common';
 
 // 6. Types
 // No items of this type
@@ -49,6 +51,7 @@ type ShippingOrder = {
 };
 
 const ShippingDetailsForm = () => {
+    const { height: screenHeight } = useWindowDimensions();
     const { goTo } = useAppNavigation();
     const { orderId } = useParams('shipping-details', 'orderId');
     const { data: truckData, isFetching: truckLoading } = useTrucks();
@@ -180,10 +183,18 @@ const ShippingDetailsForm = () => {
         }
 
         updateOrder.mutate({ id: orderId!, data: formData }, {
-            onSuccess: (result) => { showToast('success', 'Shipping details updated successfully!'); goTo('admin-orders') },
+            onSuccess: (result) => { showToast('success', 'Shipping details updated successfully!'); goTo('sales') },
             onError: (error) => { showToast('error', 'Failed to update shipping details'); }
         });
     };
+  const emptyStateData = getEmptyStateData("truck_details");
+
+  const totalProductWeight = orderData?.products?.reduce((acc: number, product: DispatchOrderProduct) => product.chambers.reduce((acc: number, chamber: {
+        id: string;
+        name: string;
+        stored_quantity: number | string;
+        quantity: number | string;
+    }) => acc + Number(chamber.quantity), 0), 0);
 
     return (
         <View style={styles.pageContainer}>
@@ -191,7 +202,7 @@ const ShippingDetailsForm = () => {
             <ScrollView>
                 <View style={styles.wrapper}>
                     <View style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}>
-                        <BackButton label="Update Shipping Details" backRoute="admin-home" />
+                        <BackButton label="Update Shipping Details" backRoute="home" />
                     </View>
 
                     <FormField name="sample_images" form={{ values, setField, errors }}>
@@ -209,10 +220,9 @@ const ShippingDetailsForm = () => {
                         }
                     </FormField>
 
-                    <ScrollView>
                         <View style={{ flexDirection: 'column', flex: 1, gap: 16 }}>
                             {
-                                !truckLoading && truckData?.map((truck, index: number) => {
+                                !truckLoading && truckData && truckData?.length > 0 ? truckData?.map((truck, index: number) => {
                                     return (
                                         <TouchableOpacity
                                             style={styles.container}
@@ -229,7 +239,7 @@ const ShippingDetailsForm = () => {
                                                             <View style={styles.nameRow}>
                                                                 <H3 color={getColor('green', 700)}>{truck.number}</H3>
                                                             </View>
-                                                            <C1 color={getColor('green', 400)}>{truck.agency_name || "Unknown Agency"}</C1>
+                                                            <C1 color={getColor('green', 400)}>{truck.agency_name || "Unknown Agency"} | Capacity: {truck.size} kg | Remaining: {Number(truck.size)- Number(totalProductWeight)} kg</C1>
                                                         </View>
                                                     </View>
                                                     <View style={styles.headerRow}>
@@ -241,10 +251,11 @@ const ShippingDetailsForm = () => {
                                             </View>
                                         </TouchableOpacity>
                                     )
-                                })
+                                }) :  <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                                    <EmptyState stateData={emptyStateData} style={{marginTop: -(screenHeight/ 7)}} />
+                                </View>
                             }
                         </View>
-                    </ScrollView>
 
                     <Button onPress={onSubmit} disabled={!isValid || updateOrder.isPending}>
                         {updateOrder.isPending ? 'Proceeding...' : 'Proceed'}

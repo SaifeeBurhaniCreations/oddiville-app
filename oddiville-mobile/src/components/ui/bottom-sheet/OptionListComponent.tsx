@@ -5,12 +5,11 @@ import { SubHeading } from "@/src/components/typography/Typography";
 import CustomCheckbox from "@/src/components/ui/Checkbox";
 import { getColor } from "@/src/constants/colors";
 import { selectChamber } from "@/src/redux/slices/chamber.slice";
-import { clearRole, selectRole } from "@/src/redux/slices/select-role";
+import { selectRole } from "@/src/redux/slices/select-role";
 import { closeBottomSheet } from "@/src/redux/slices/bottomsheet.slice";
 import { applyFilter } from "@/src/redux/slices/bottomsheet/filters.slice";
 import { RootState } from "@/src/redux/store";
 import { setReduxRoute } from "@/src/utils/routeUtils";
-import { runFilter } from "@/src/utils/bottomSheetUtils";
 import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
 import type {
   OptionListComponentProps,
@@ -18,13 +17,15 @@ import type {
 } from "@/src/types";
 import { AddProductPackageForm } from "./InputWithSelectComponent";
 import { useGlobalFormValidator } from "@/src/sbc/form/globalFormInstance";
-import { Chamber, useDryChambers } from "@/src/hooks/useChambers";
+import { useDryChambers } from "@/src/hooks/useChambers";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { setDeleteUserPopup, setVendorDeletePopup } from "@/src/redux/slices/delete-popup-slice";
 import Modal from "../modals/Modal";
 import { useDeleteVendor } from "@/src/hooks/vendor";
+import { FilterEnum } from "@/src/schemas/BottomSheetSchema";
 
 const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
+  
   const meta = useSelector((state: RootState) => state.bottomSheet.meta);
   const id = useSelector((state: RootState) => state.idStore.id);
   const isChoosingChambers = useSelector(
@@ -35,6 +36,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
     );
   const dispatch = useDispatch();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
+
   const productPackageForm = useGlobalFormValidator<AddProductPackageForm>(
     "add-product-package"
   );
@@ -47,24 +49,26 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
   const { goTo } = useAppNavigation();
   const deleteVendorMutation = useDeleteVendor();
 
-  const handlePress = useCallback(
+   const handlePress = useCallback(
     async (
       route: validRouteOptionList | undefined,
       item: string | { name: string; isoCode: string },
       key?: "user-action" | "vendor-action" | "supervisor-production" | "product-package" | string
     ) => {
       const value = typeof item === "object" ? item.name : item;
+      console.log("meta?.type", meta?.type, "meta?.mode", meta?.mode);
 
-      if (meta?.mode === "select-detail") {
-        const { mainSelection, subSelection } = meta;
-        if (mainSelection && subSelection) {
-          dispatch(applyFilter({ path: [mainSelection, subSelection], value }));
-          runFilter({
-            key: mainSelection,
-            validateAndSetData,
-            mode: "select-main",
-          });
-        }
+      if (meta?.type === "filter") {
+        const filterKey = meta.id as FilterEnum; 
+
+        dispatch(
+          applyFilter({
+            path: [filterKey, value],
+            value,
+          })
+        );
+
+        dispatch(closeBottomSheet());
         return;
       }
 
@@ -111,81 +115,81 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
         }
       }
 
-      if (isChoosingChambers) {
-        setField("chamber_name", value);
-        const addProductPackage = {
-          sections: [
-            {
-              type: "title-with-details-cross",
-              data: {
-                title: "Add new Package",
-              },
-            },
-            {
-              type: "input-with-select",
-              data: {
-                placeholder: "Enter Product",
-                label: "Product name",
-                placeholder_second: "Enter RM",
-                label_second: "Raw Material",
-                alignment: "half",
-                key: "add-raw-material",
-                formField_1: "product_name",
-                source: "add-product-package",
-                source2: "product-package",
-              },
-            },
-            {
-              type: "input-with-select",
-              data: {
-                placeholder: "Enter title",
-                label: "Package title",
-                key: "package-weight",
-                formField_1: "size",
-                label_second: "Unit",
-                source: "add-product-package",
-              },
-            },
-            {
-              type: "input",
-              data: {
-                placeholder: "Enter counts",
-                label: "Add package",
-                keyboardType: "number-pad",
-                formField: "quantity",
-              },
-            },
-            {
-              type: "select",
-              data: {
-                placeholder: typeof item === "string" ? item : "Select Chamber",
-                label: "Select Chamber",
-                options:
-                  DryChambers && DryChambers.length === 0
-                    ? []
-                    : DryChambers.map((dch: Chamber) => dch.chamber_name),
-                key: "product-package",
-              },
-            },
-          ],
-          buttons: [
-            {
-              text: "Add package",
-              variant: "fill",
-              color: "green",
-              alignment: "full",
-              disabled: false,
-              actionKey: "add-product-package",
-            },
-          ],
-        };
-        await validateAndSetData(
-          "temp123",
-          "add-product-package",
-          addProductPackage
-        );
-        return;
-      }
+      // if (isChoosingChambers) {
+      //   setField("chamber_name", value);
+      //   const addProductPackage = {
+      //     sections: [
+      //       {
+      //         type: "title-with-details-cross",
+      //         data: {
+      //           title: "Add new Package",
+      //         },
+      //       },
+      //       {
+      //         type: "input-with-select",
+      //         data: {
+      //           placeholder: "Enter Product",
+      //           label: "Product name",
+      //           placeholder_second: "Enter RM",
+      //           label_second: "Raw Material",
+      //           alignment: "half",
+      //           key: "add-raw-material",
+      //           formField_1: "product_name",
+      //           source: "add-product-package",
+      //           source2: "product-package",
+      //         },
+      //       },
+      //       {
+      //         type: "input-with-select",
+      //         data: {
+      //           placeholder: "Enter title",
+      //           label: "Package title",
+      //           key: "package-weight",
+      //           formField_1: "size",
+      //           label_second: "Unit",
+      //           source: "add-product-package",
+      //         },
+      //       },
+      //       {
+      //         type: "input",
+      //         data: {
+      //           placeholder: "Enter counts",
+      //           label: "Add package",
+      //           keyboardType: "number-pad",
+      //           formField: "quantity",
+      //         },
+      //       },
+      //       {
+      //         type: "select",
+      //         data: {
+      //           placeholder: typeof item === "string" ? item : "Select Chamber",
+      //           label: "Select Chamber",
+      //           options:
+      //             DryChambers && DryChambers.length === 0
+      //               ? []
+      //               : DryChambers.map((dch: Chamber) => dch.chamber_name),
+      //           key: "product-package",
+      //         },
+      //       },
+      //     ],
+      //     buttons: [
+      //       {
+      //         text: "Add package",
+      //         variant: "fill",
+      //         color: "green",
+      //         alignment: "full",
+      //         disabled: false,
+      //         actionKey: "add-product-package",
+      //       },
+      //     ],
+      //   };
+      //   await validateAndSetData(
+      //     "temp123",
+      //     "add-product-package",
+      //     addProductPackage
+      //   );
+      //   return;
+      // }
 
       dispatch(closeBottomSheet());
     },

@@ -63,14 +63,14 @@ const ORDER_READY = {
                     {
                         title: "",
                         image: "box",
-                        packages: [
-                            { size: null, unit: '', quantity: '' },
-                        ],
+                        // packages: [
+                        //     { size: null, unit: '', quantity: '' },
+                        // ],
                         chambers: [
                             { id: '', name: '', quantity: '' }
                         ],
                         description: "",
-                        packagesSentence: "",
+                        // packagesSentence: "",
                         weight: "",
                         price: ""
                     },
@@ -163,14 +163,14 @@ const ORDER_SHIPPED = {
                     {
                         title: "",
                         image: "",
-                        packages: [
-                            { size: "", unit: '', quantity: '' },
-                        ],
+                        // packages: [
+                        //     { size: "", unit: '', quantity: '' },
+                        // ],
                         chambers: [
                             { name: '', quantity: '' }
                         ],
                         description: "",
-                        packagesSentence: "",
+                        // packagesSentence: "",
                         weight: "",
                         price: ""
                     },
@@ -252,14 +252,14 @@ const ORDER_REACHED = {
                     {
                         title: "",
                         image: "",
-                        packages: [
-                            { size: "", unit: '', quantity: '' },
-                        ],
+                        // packages: [
+                        //     { size: "", unit: '', quantity: '' },
+                        // ],
                         chambers: [
                             { name: '', quantity: '' }
                         ],
                         description: "",
-                        packagesSentence: "",
+                        // packagesSentence: "",
                         weight: "",
                         price: ""
                     },

@@ -37,20 +37,14 @@ export default function useInventoryValidator() {
       },
     },
     2: {
-      name: "Production",
+      name: "Vendor",
       requiredColumns: [
-        "product_name",
-        "raw_material_name",
-        "quantity",
-        "unit",
-        "status",
-        "start_time",
-        "end_time",
-        "wastage_quantity",
-        "supervisor",
-        "lane",
-        "recovery",
-        "rating",
+        "name",
+        "phone",
+        "state",
+        "city",
+        "address",
+        "materials",
       ],
       validators: {
         Quantity: (v) =>
@@ -61,6 +55,31 @@ export default function useInventoryValidator() {
             : "Quantity must be a number",
       },
     },
+    // 2: {
+    //   name: "Production",
+    //   requiredColumns: [
+    //     "product_name",
+    //     "raw_material_name",
+    //     "quantity",
+    //     "unit",
+    //     "status",
+    //     "start_time",
+    //     "end_time",
+    //     "wastage_quantity",
+    //     "supervisor",
+    //     "lane",
+    //     "recovery",
+    //     "rating",
+    //   ],
+    //   validators: {
+    //     Quantity: (v) =>
+    //       v === "" || v == null
+    //         ? "Quantity is required"
+    //         : isFinite(Number(v))
+    //         ? null
+    //         : "Quantity must be a number",
+    //   },
+    // },
     3: {
       name: "Chamber Stock",
       requiredColumns: [

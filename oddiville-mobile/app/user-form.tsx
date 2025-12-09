@@ -26,91 +26,136 @@ import { useParams } from "@/src/hooks/useParams";
 import { useUpdateUser, useUserByUsername } from "@/src/hooks/user";
 import { selectRole } from "@/src/redux/slices/select-role";
 import DetailsToast from "@/src/components/ui/DetailsToast";
+import ChipGroup from "@/src/components/ui/ChipGroup";
+import { allowedPolicies } from "@/src/constants/allowedPolicies";
+import { clearPolicies } from "@/src/redux/slices/bottomsheet/policies.slice";
 
 const EditUserScreen = () => {
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const selectedRole = useSelector(
     (state: RootState) => state.selectRole.selectedRole
   );
+
+  const { selectedPolicies, isSelectionDone } = useSelector(
+    (state: RootState) => state.policies
+  );
+
   const dispatch = useDispatch();
   const { goTo } = useAppNavigation();
   const [loading, setLoading] = useState(false);
-const { username } = useParams("user-form", "username")
-const { data: user, isLoading: userLoading } = useUserByUsername(username);
-const updateUserMutation = useUpdateUser();
-const [toastVisible, setToastVisible] = useState(false);
-const [toastType, setToastType] = useState<"success" | "error" | "info">(
-  "info"
-);
-const [toastMessage, setToastMessage] = useState("");
-  const { values, setField, setFields, errors, resetForm, validateForm, isValid } =
-    useFormValidator<addUserTypes>(
-      addUserInitialValues,
-      {
-        username: [
-          { type: "required", message: "Username required!" },
-          {
-            type: "minLength",
-            length: 3,
-            message: "Username have atleast 3 digit!",
-          },
-        ],
-        email: [
-          { type: "required", message: "Email required!" },
-          { type: "email", message: "It must be valid email!" },
-        ],
-        name: [{ type: "required", message: "Name required!" }],
-        phone: [
-          {
-            type: "minLength",
-            length: 10,
-            message: "Phone number must be 10 digit!",
-          },
-        ],
-        profilepic: [],
-        role: [
-          { type: "required", message: "role required!" },
-          {
-            type: "custom",
-            message: "role must be admin or supervisor!",
-            validate: (role) => ["admin", "supervisor"].includes(role),
-          },
-        ],
-      },
-      {
-        validateOnChange: true,
-        debounce: 300,
-      }
-    );
-    const isEdit = Boolean(username);
+  const { username } = useParams("user-form", "username");
+  const { data: user, isLoading: userLoading } = useUserByUsername(username);
+  const updateUserMutation = useUpdateUser();
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastType, setToastType] = useState<"success" | "error" | "info">(
+    "info"
+  );
+  const [toastMessage, setToastMessage] = useState("");
+  const {
+    values,
+    setField,
+    setFields,
+    errors,
+    resetForm,
+    validateForm,
+    isValid,
+  } = useFormValidator<addUserTypes>(
+    addUserInitialValues,
+    {
+      username: [
+        { type: "required", message: "Username required!" },
+        {
+          type: "minLength",
+          length: 3,
+          message: "Username have atleast 3 digit!",
+        },
+      ],
+      email: [
+        { type: "required", message: "Email required!" },
+        { type: "email", message: "It must be valid email!" },
+      ],
+      name: [{ type: "required", message: "Name required!" }],
+      phone: [
+        {
+          type: "minLength",
+          length: 10,
+          message: "Phone number must be 10 digit!",
+        },
+      ],
+      profilepic: [],
+      role: [
+        { type: "required", message: "role required!" },
+        {
+          type: "custom",
+          message: "role must be admin or supervisor!",
+          validate: (role) => ["admin", "supervisor"].includes(role),
+        },
+      ],
+     policies: [
+  {
+    type: "custom",
+    message: "Policies required!",
+    validate: (policies) =>
+      Array.isArray(policies) && policies.length > 0,
+  },
+  {
+    type: "custom",
+    message: "Policies must be purchase, production, packaging or sales!",
+    validate: (policies) => {
+      if (!Array.isArray(policies)) return false;
+      return policies.every((p) => allowedPolicies.includes(p));
+    },
+  },
+],
+    },
+    {
+      validateOnChange: true,
+      debounce: 300,
+    }
+  );
+  const isEdit = Boolean(username);
 
-    useEffect(() => {
-      if (!isEdit) return;
-      if (userLoading) return;
-      if (!user) return;
-      
-      setFields({
-        username: user.username ?? "",
-        email: user.email ?? "",
-        name: user.name ?? "",
-        phone: user.phone ?? "",
-        role: user.role ?? "",
-        profilepic: user.profilepic ?? "",
-      });
-      dispatch(selectRole(user.role))
-    }, [isEdit, userLoading]);
-  
-    useEffect(() => {
-      if (selectedRole && values.role !== selectedRole) {
-        setField("role", selectedRole ? selectedRole : values.role);
-      }
-    }, [setFields]);
+  useEffect(() => {
+    if (!isEdit) return;
+    if (userLoading) return;
+    if (!user) return;
 
-    const showToast = (type: "success" | "error" | "info", message: string) => {
-      setToastType(type);
-      setToastMessage(message);
-      setToastVisible(true);
-    };
+    setFields({
+      username: user.username ?? "",
+      email: user.email ?? "",
+      name: user.name ?? "",
+      phone: user.phone ?? "",
+      role: user.role ?? "",
+      profilepic: user.profilepic ?? "",
+    });
+    dispatch(selectRole(user.role));
+  }, [isEdit, userLoading]);
+
+  useEffect(() => {
+    if (selectedRole && values.role !== selectedRole) {
+      setField("role", selectedRole ? selectedRole : values.role);
+    }
+  }, [setFields]);
+
+useEffect(() => {
+  if (!isSelectionDone) return;
+
+  const names = selectedPolicies.map((sp) => sp.name.toLowerCase());
+
+  if (
+    !Array.isArray(values.policies) ||
+    values.policies.length !== names.length ||
+    values.policies.some((v, i) => v !== names[i])
+  ) {
+    setField("policies", names);
+  }
+}, [isSelectionDone, selectedPolicies, setField, values.policies]);
+
+  const showToast = (type: "success" | "error" | "info", message: string) => {
+    setToastType(type);
+    setToastMessage(message);
+    setToastVisible(true);
+  };
 
   const handleSubmit = async () => {
     try {
@@ -121,9 +166,9 @@ const [toastMessage, setToastMessage] = useState("");
       if (isEdit) {
         if (!username) {
           console.error("username missing for edit");
-          return; 
+          return;
         }
-      
+
         updateUserMutation.mutate(
           { username, data: result.data },
           {
@@ -144,6 +189,7 @@ const [toastMessage, setToastMessage] = useState("");
           ...result.data,
           username: result.data.username.toLowerCase(),
         });
+        dispatch(clearPolicies())
       }
       goTo("user");
     } catch (error: any) {
@@ -152,7 +198,7 @@ const [toastMessage, setToastMessage] = useState("");
       setLoading(false);
     }
   };
-  
+
   return (
     <View style={styles.pageContainer}>
       <PageHeader page={"Users"} />
@@ -164,6 +210,7 @@ const [toastMessage, setToastMessage] = useState("");
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, gap: 16 }}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <BackButton label="User details" backRoute="user" />
 
@@ -188,6 +235,7 @@ const [toastMessage, setToastMessage] = useState("");
                 onChangeText={onChange}
                 //   onBlur={onBlur}
                 error={error}
+                keyboardType="email-address"
               >
                 Email
               </Input>
@@ -213,7 +261,7 @@ const [toastMessage, setToastMessage] = useState("");
                 options={[]}
                 onPress={async () => {
                   setLoading(true);
-                  await validateAndSetData("Abc123", "select-role");
+                  await validateAndSetData("role", "select-role");
                   setLoading(false);
                 }}
                 showOptions={false}
@@ -223,6 +271,32 @@ const [toastMessage, setToastMessage] = useState("");
               </Select>
             )}
           </FormField>
+
+          <View style={{flexDirection: "column", gap: 8}}>
+            <FormField name="policies" form={{ values, setField, errors }}>
+              {({ value, onChange, error }) => (
+                <Select
+                  value={selectedPolicies[0]?.name || "Select Policies"}
+                  options={[]}
+                  onPress={async () => {
+                    setLoading(true);
+                    await validateAndSetData(
+                      "policies",
+                      "select-policies"
+                    );
+                    setLoading(false);
+                  }}
+                  showOptions={false}
+                  error={error}
+                >
+                  Policies
+                </Select>
+              )}
+            </FormField>
+
+            {isSelectionDone && <ChipGroup blockSelection={true} data={selectedPolicies || []} />}
+          </View>
+
           <FormField name="phone" form={{ values, setField, errors }}>
             {({ value, onChange, error }) => (
               <Input
@@ -255,11 +329,11 @@ const [toastMessage, setToastMessage] = useState("");
         )}
       </KeyboardAvoidingView>
       <DetailsToast
-          type={toastType}
-          message={toastMessage}
-          visible={toastVisible}
-          onHide={() => setToastVisible(false)}
-        />
+        type={toastType}
+        message={toastMessage}
+        visible={toastVisible}
+        onHide={() => setToastVisible(false)}
+      />
     </View>
   );
 };

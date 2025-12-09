@@ -11,16 +11,18 @@ import SearchWithFilter from '@/src/components/ui/Inputs/SearchWithFilter';
 import BackButton from '@/src/components/ui/Buttons/BackButton';
 import TruckFlatList from '@/src/components/ui/TruckComps/TruckFlatList';
 import Loader from '@/src/components/ui/Loader';
+import { truckBackRoute } from '@/src/constants/backRoute';
 
 // 4. Project hooks
 import { useAppNavigation } from '@/src/hooks/useAppNavigation';
 import { TruckDetailsProps, useTrucks } from '@/src/hooks/truck';
+import { useAuth } from '@/src/context/AuthContext';
 
 // 5. Project constants/utilities
 import { getColor } from '@/src/constants/colors';
 
 // 6. Types
-import { TruckProps } from '@/src/types';
+import { RootStackParamList, TruckProps } from '@/src/types';
 
 // 7. Schemas
 // No items of this type
@@ -39,7 +41,7 @@ const formatTruckData = (truckData: TruckDetailsProps[]): TruckProps[] => {
         extra_details: truck.agency_name || "Unknown Agency",
         bottomConfig: {
             title: 'Truck details',
-            description: `${truck.type || 'Truck'} • ${truck.size || '0'} Tons`
+            description: `${truck.type || 'Truck'} • ${truck.size || '0'} Kg`
         },
         disabled: false,
         href: 'truck-detail'
@@ -47,6 +49,7 @@ const formatTruckData = (truckData: TruckDetailsProps[]): TruckProps[] => {
 };
 
 const TrucksScreen = () => {
+    const { role } = useAuth();
 
     const { goTo } = useAppNavigation()
     const { data: trucksData, isLoading: trucksLoading } = useTrucks();
@@ -59,7 +62,7 @@ const TrucksScreen = () => {
             <View style={styles.wrapper}>
                 <View style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}>
 
-                    <BackButton label={`Trucks (${formattedTrucks.length ?? 0})`} backRoute="supervisor-raw-material" />
+                    <BackButton label={`Trucks (${formattedTrucks.length ?? 0})`} backRoute={truckBackRoute[role ?? "supervisor"] as keyof RootStackParamList} />
 
                     <Button variant='outline' onPress={() => goTo('truck-create')} size='md'>Add Truck</Button>
                 </View>

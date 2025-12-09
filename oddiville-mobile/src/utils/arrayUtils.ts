@@ -6,6 +6,8 @@ import WarehouseBg from '@/src/components/icons/card-bg/Warehouse-bg';
 import TractorBg from '@/src/components/icons/card-bg/Tractor-bg';
 import FarmhouseBg from '@/src/components/icons/card-bg/Farmhouse-bg';
 import { BottomSheetSchemaKey } from '../schemas/BottomSheetSchema';
+import chamberDefaultImg from "@/src/assets/images/warehouse/chamber-default.png"
+import productionDefaultImg from "@/src/assets/images/fallback/colourful/product.png"
 
 export function chunkArray<T,>(array: T[], size: number): T[][] {
   const result = [];
@@ -52,12 +54,22 @@ export const labelMap: Record<string, string> = {
   notNeeded: 'Not needed',
 };
 
-export const getImageSource = (image: string | undefined, bg: boolean = true) => {
-  if (typeof image === 'string' && image.includes("http")) {
-      return { image, isRawMaterial: bg ? true : false };
-  } else {
-      return { image: require('@/src/assets/images/item-icons/Carrot.png'), isRawMaterial: false };
+export const getImageSource = ({ image, bg = true, options }: { image?: string | number; bg?: boolean, options?: { isProductionItem?: boolean, isChamberItem?: boolean }}) => {
+  const isValidUrl = typeof image === 'string' && image.startsWith("http");
+
+  if (isValidUrl) {
+    return { image, isRawMaterial: bg ? true : false };
   }
+
+  if (options?.isChamberItem) {
+    return { image: productionDefaultImg, isRawMaterial: false };
+  }
+
+  if (options?.isProductionItem) {
+    return { image: productionDefaultImg, isRawMaterial: false };
+  }
+
+  return { image: chamberDefaultImg, isRawMaterial: false };
 }
 
 export function chunkCards<T>(arr: T[], size: number): T[][] {

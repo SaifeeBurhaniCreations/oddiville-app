@@ -32,7 +32,7 @@ const RawMaterialDetail = () => {
               backRoute={
                 source === "raw_material"
                   ? "raw-material-overview"
-                  : "admin-home"
+                  : "home"
               }
               backParams={{ screen: source === "chamber" && "Chamber" }}
             />
@@ -50,7 +50,7 @@ const RawMaterialDetail = () => {
                   key={index}
                   id={id}
                   name={name}
-                  image={getImageSource(image).image}
+                  image={getImageSource({image}).image}
                   description={description}
                   rating={"6.0"}
                   detailByRating={[{ rating: "4.0", quantity: "643" }]}

@@ -37,6 +37,9 @@ import FullWidthSliderComponent from "../components/ui/bottom-sheet/full-width-s
 import { FilterEnum } from "../schemas/BottomSheetSchema";
 import { BottomSheetMeta } from "./redux";
 import type {sourceEnum as rmSourceEnum} from "@/src/redux/slices/bottomsheet/raw-material.slice"
+import StorageRMRatingComponent from "../components/ui/bottom-sheet/StorageRMRating";
+import PoliciesCardComponent from "../components/ui/bottom-sheet/PoliciesComponent";
+
 export type BottomSheetActionKey =
     | 'add-raw-material'
     | 'add-product-package'
@@ -53,6 +56,8 @@ export type BottomSheetActionKey =
     | 'store-product'
     | 'order-reached'
     | 'choose-chamber'
+    | 'select-policies'
+    | 'cancel-policies'
 
 // ButtonConfig interface
 export interface ButtonConfig {
@@ -379,6 +384,19 @@ export type SectionConfig =
             count: number;
             isChecked: boolean;
         }
+    } | {
+        type: 'storage-rm-rating';
+        data: {
+            name: string;
+            rating: string;
+            message: string;
+        }[];
+    } | {
+        type: 'policies-card';
+        data: {
+            name: string;
+            description?: string;
+        }[]
     }
 
 
@@ -628,6 +646,15 @@ export interface TitleWithCheckboxProps {
     color: "red" | "green" | "blue" | "yellow";
 }
 
+
+export interface PoliciesCardProps {
+    data: {
+        name: string;
+        description?: string;
+    }[];
+    color: "red" | "green" | "blue" | "yellow";
+}
+
 export interface ProductDetailsAccordionProps {
     data: {
         title: string;
@@ -785,4 +812,6 @@ export const sectionComponents: Record<SectionConfig['type'], React.FC<{ data: a
     "titleCheckCount": TitleCheckCountComponent,
     'optionList': OptionListComponent,
     "addonInput": AddonInputComponent,
+    "storage-rm-rating": StorageRMRatingComponent,
+    "policies-card": PoliciesCardComponent,
 };

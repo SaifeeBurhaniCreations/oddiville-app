@@ -426,7 +426,7 @@ const useValidateAndOpenBottomSheet = () => {
         type: 'optionList',
         data: {
           isCheckEnable: false,
-          options: []
+          options: ["sample", "production"]
         }
       },
     ],
@@ -725,6 +725,66 @@ const useValidateAndOpenBottomSheet = () => {
     ]
   }
 
+  const storageRmRating = {
+    sections: [
+      {
+        type: 'title-with-details-cross',
+        data: {
+          title: 'Select rating'
+        },
+      },
+      {
+        type: 'storage-rm-rating',
+        data: [
+          {
+          rating: "5",
+          message: "Excellent",
+        },
+        {
+          rating: "4",
+          message: "Good",
+        },
+        {
+          rating: "3",
+          message: "Neutral",
+        },
+        {
+          rating: "2",
+          message: "Poor",
+        },
+        {
+          rating: "1",
+          message: "Very poor",
+        },
+        ]
+      },
+    ]
+  }
+
+  const selectPolicies = {
+    sections: [
+      {
+        type: 'title-with-details-cross',
+        data: {
+          title: 'Select policies'
+        },
+      },
+      {
+        type: 'policies-card',
+        data: [
+         { name: 'Purchase', description: 'Source raw materials' },
+         { name: 'Production', description: 'Convert materials into frozen goods' },
+         { name: 'Package', description: 'Pack and label products for delivery' },
+         { name: 'Sales', description: 'Deliver products to customers' },
+        ]
+      },
+    ],
+    buttons: [
+      { text: 'Cancel', variant: 'outline', color: 'green', alignment: "half", disabled: false, actionKey: 'cancel-policies' },
+      { text: 'Select', variant: 'fill', color: 'green', alignment: "half", disabled: false, actionKey: 'select-policies' },
+    ],
+  }
+
   const validateAndSetData = async (id: string, type: BottomSheetSchemaKey, overrideConfig?: any) => {
     if (!type || !(type in bottomSheetSchemas)) {
       console.log(`[validateAndSetData] No bottom sheet configured for type: ${type}`);
@@ -751,8 +811,8 @@ const useValidateAndOpenBottomSheet = () => {
         case "package-comes-to-end":
           data = packageComesToEnd;
           break;
-        case "verify-material":
-          data = verifyMaterial;
+        // case "verify-material":
+        //   data = verifyMaterial;
         case "filter":
           data = filter;
           break;
@@ -792,6 +852,12 @@ const useValidateAndOpenBottomSheet = () => {
         case "user-action":
           data = UserAction;
           break;
+        case "storage-rm-rating":
+          data = storageRmRating;
+          break;
+        case "select-policies":
+          data = selectPolicies;
+          break;
         // case "calendar-event":
         //   data = calendarEvent;
         //   break;
@@ -819,6 +885,7 @@ const useValidateAndOpenBottomSheet = () => {
       console.error('Validation failed:', validationResult.error.errors);
       return;
     }
+
     const currentActionsType = getBottomSheetActions(type);
 
     const parsedData = validationResult.data as UpcomingOrderBottomSheetConfig;

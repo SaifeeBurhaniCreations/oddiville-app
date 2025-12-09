@@ -11,16 +11,7 @@ import { RawMaterialProps } from "@/src/types/ui";
 import ShopIcon from "../icons/menu/ShopIcon";
 import defaultImage from "@/src/assets/images/item-icons/Warehouse.png";
 import { getRatingColor } from "@/src/utils/common";
-
-const imageMap: Record<string, any> = {
-  Carrot: require("@/src/assets/images/item-icons/Carrot.png"),
-  Peas: require("@/src/assets/images/item-icons/Peas.png"),
-  Potato: require("@/src/assets/images/item-icons/Potato.png"),
-  Okra: require("@/src/assets/images/item-icons/Okra.png"),
-  Onion: require("@/src/assets/images/item-icons/Onion.png"),
-  Radish: require("@/src/assets/images/item-icons/Radish.png"),
-  Tomato: require("@/src/assets/images/item-icons/Tomato.png"),
-};
+import { getImageSource } from "@/src/utils/arrayUtils";
 
 const ChamberCard = ({
   id,
@@ -79,6 +70,9 @@ const ChamberCard = ({
   if (category === "other") {
     color = "blue";
     Icon = ShopIcon;
+  } else if (category === "packed") {
+    color = "blue";
+    Icon = ShopIcon;
   } else {
     const ratingNumber = Math.round(Number(resultRating));
     const clampedRating = Math.min(5, Math.max(1, ratingNumber));
@@ -86,6 +80,14 @@ const ChamberCard = ({
   }
 
   const tagIcon = <Icon size={12} color={getColor("light")} />;
+
+const resolvedImage = 
+  typeof image === 'string' && image.startsWith("http")
+    ? image
+    : getImageSource({
+        image: name,
+        options: { isChamberItem: true }
+      }).image;
 
   return (
     <TouchableOpacity
@@ -99,16 +101,16 @@ const ChamberCard = ({
     >
       {category === "other" ? (
         <CustomImage
-          src={image ?? imageMap[name] ?? defaultImage}
+          src={resolvedImage}
           width={48}
           height={48}
           resizeMode="contain"
           style={[styles.image, disabled && styles.imageDisabled]}
         />
       ) : (
-        <View style={styles.productImage}>
+        <View style={[styles.productImage, { backgroundColor: typeof image === 'string' && image.startsWith("http") ? getColor("green", 300) : "#f3e6d0", borderRadius: 8, }]}>
           <CustomImage
-            src={imageMap[name] ?? defaultImage}
+            src={resolvedImage}
             width={40}
             height={40}
             resizeMode="contain"
@@ -168,8 +170,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   productImage: {
-    backgroundColor: getColor("green", 300),
-    borderRadius: 8,
     padding: 4,
     marginRight: 8,
     justifyContent: "center",

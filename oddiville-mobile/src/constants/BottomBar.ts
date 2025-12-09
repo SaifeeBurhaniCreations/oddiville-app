@@ -7,10 +7,14 @@ import OrderIcon from "@/src/components/icons/bottom-bar/OrderIcon";
 import OrderIconActive from "@/src/components/icons/bottom-bar/OrderActiveIcon";
 import ProductionIcon from "@/src/components/icons/bottom-bar/ProductionIcon";
 import ProductionActiveIcon from "../components/icons/bottom-bar/ProductionActiveIcon";
-import RawMaterialIcon from "../components/icons/bottom-bar/RawMaterialIcon";
-import RawMaterialActiveIcon from "../components/icons/bottom-bar/RawMaterialActiveIcon";
+import RawMaterialIcon from "../components/icons/bottom-bar/PurchaseIcon";
+import RawMaterialActiveIcon from "../components/icons/bottom-bar/PurchaseActiveIcon";
 import ContractorIcon from "../components/icons/bottom-bar/ContractorIcon";
 import ContractorActiveIcon from "../components/icons/bottom-bar/ContractorActiveIcon";
+import PackagingIcon from "../components/icons/bottom-bar/PackagingIcon";
+import PackagingActiveIcon from "../components/icons/bottom-bar/PackagingActiveIcon";
+import PurchaseIcon from "../components/icons/bottom-bar/PurchaseIcon";
+import PurchaseActiveIcon from "../components/icons/bottom-bar/PurchaseActiveIcon";
 
 export const BOTTOM_BAR_ITEMS: BottomBarProps = [
   {
@@ -22,8 +26,8 @@ export const BOTTOM_BAR_ITEMS: BottomBarProps = [
     {
     name: "Purchase",
     component: "purchase",
-    icon: WarehouseIcon,
-    activeIcon: WarehouseIconActive,
+    icon: PurchaseIcon,
+    activeIcon: PurchaseActiveIcon,
   },
     {
     name: "Production",
@@ -34,8 +38,8 @@ export const BOTTOM_BAR_ITEMS: BottomBarProps = [
   {
     name: "Package",
     component: "package",
-    icon: ProductionIcon,
-    activeIcon: ProductionActiveIcon,
+    icon: PackagingIcon,
+    activeIcon: PackagingActiveIcon,
   },
   {
     name: "Sales",

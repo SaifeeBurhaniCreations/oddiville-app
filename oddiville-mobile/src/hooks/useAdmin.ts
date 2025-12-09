@@ -17,6 +17,7 @@ export const useAdmin = () => {
 
       try {
         const res = await getAdminProfile(token);
+        
         if (res.status === 200) {
           dispatch(setAdmin(res.data));
         }

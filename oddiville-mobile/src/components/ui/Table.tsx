@@ -134,7 +134,7 @@ const Table = ({ columns, content, mergableRows = [], children, color = "green",
 
                       return (
                         <View key={colIndex}>
-                          <B3 style={{ width: "100%", flexWrap: "wrap" }}>
+                          <B3 style={{ flexWrap: "wrap",  maxWidth: "60%"}}>
                             {row[col.key] === undefined
                               ? "0"
                               : Number(row[col.key]) === 0

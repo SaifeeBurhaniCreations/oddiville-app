@@ -97,9 +97,6 @@ async function dispatchAndSendNotification({
       };
     }
 
-    console.log("getNotificationtype[notificationType]", getNotificationtype[notificationType]);
-    
-
     const notification = await Notifications.create({
       type: getNotificationtype[notificationType],
       title: sanitizedTitle,

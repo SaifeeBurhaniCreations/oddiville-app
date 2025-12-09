@@ -233,35 +233,55 @@ function fillOrderReadySchema(schema, filler) {
     }
 
     // 🟦 PRODUCTS LIST — deeply merge only if field is still empty
-    if (
-      section.type === "product-list" &&
-      section.data &&
-      Array.isArray(section.data.products)
+    // if (
+    //   section.type === "product-list" &&
+    //   section.data &&
+    //   Array.isArray(section.data.products)
+    // ) {
+    //   const fillerProducts = filler["Products"];
+
+    //   if (Array.isArray(fillerProducts)) {
+    //     section.data.products = section.data.products.map((product, i) => {
+    //       const fillerProduct = fillerProducts[i] || {};
+
+    //       return {
+    //         ...product,
+    //         title: product.title || fillerProduct.title || "",
+    //         image: product.image || fillerProduct.image || "",
+    //         description: product.description || fillerProduct.description || "",
+    //         packagesSentence:
+    //           product.packagesSentence || fillerProduct.packagesSentence || "",
+    //         weight: product.weight || fillerProduct.weight || "",
+    //         price: product.price || fillerProduct.price || "",
+    //         packages: fillerProduct.packages || [],
+    //         chambers: fillerProduct.chambers || [],
+    //       };
+    //     });
+    //   }
+    // }
+        if (
+    section.type === "product-list" &&
+    section.data &&
+    Array.isArray(section.data.products)
     ) {
-      const fillerProducts = filler["Products"];
+    const fillerProducts = filler["Products"];
 
-      if (Array.isArray(fillerProducts)) {
-        section.data.products = section.data.products.map((product, i) => {
-          const fillerProduct = fillerProducts[i] || {};
-
-          return {
-            ...product,
-            title: product.title || fillerProduct.title || "",
-            image: product.image || fillerProduct.image || "",
-            description: product.description || fillerProduct.description || "",
-            packagesSentence:
-              product.packagesSentence || fillerProduct.packagesSentence || "",
-            weight: product.weight || fillerProduct.weight || "",
-            price: product.price || fillerProduct.price || "",
-            packages: fillerProduct.packages || [],
-            chambers: fillerProduct.chambers || [],
-          };
-        });
-      }
+    if (Array.isArray(fillerProducts)) {
+        section.data.products = fillerProducts.map((fillerProduct) => ({
+        title: fillerProduct.title || "",
+        image: fillerProduct.image || "box",
+        description: fillerProduct.description || "",
+        packagesSentence: fillerProduct.packagesSentence || "",
+        weight: fillerProduct.weight || "",
+        price: fillerProduct.price || "",
+        packages: fillerProduct.packages || [],
+        chambers: fillerProduct.chambers || [],
+        }));
+    }
     }
   }
 
-  // 🟦 BUTTONS — deeply merge only if field is still empty
+  // 🟦 BUTTONS
   if (buttons && Array.isArray(buttons)) {
     const fillerButtons = filler["buttons"];
     if (Array.isArray(fillerButtons)) {

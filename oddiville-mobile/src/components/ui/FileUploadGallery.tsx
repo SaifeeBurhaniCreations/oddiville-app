@@ -10,11 +10,16 @@ const { width: screenWidth } = Dimensions.get("screen");
 const FileUploadGallery = ({ children, fileStates, existingStates, maxImage = 10 }: FileUploadGalleryProps) => {
   const [capturePhotos, setCapturePhotos] = fileStates;
   const [existingPhotos, setExistingPhotos] = existingStates;
+
   const safeCapturePhotos = Array.isArray(capturePhotos) ? capturePhotos : [];
   const safeExistingPhotos = Array.isArray(existingPhotos) ? existingPhotos : [];
+
   const [isPicking, setIsPicking] = useState(false);
 
-  const totalPhotos = useMemo(() => safeCapturePhotos.length + safeExistingPhotos.length, [safeCapturePhotos.length, safeExistingPhotos.length]);
+  const totalPhotos = useMemo(
+    () => safeCapturePhotos.length + safeExistingPhotos.length,
+    [safeCapturePhotos.length, safeExistingPhotos.length]
+  );
 
   const remainingSlots = Math.max(0, maxImage - totalPhotos);
 
@@ -28,10 +33,10 @@ const FileUploadGallery = ({ children, fileStates, existingStates, maxImage = 10
       setIsPicking(true);
 
       const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
+      if (status !== "granted") {
         const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (newStatus !== 'granted') {
-          Alert.alert('Permission required', 'Permission is required to upload a photo.');
+        if (newStatus !== "granted") {
+          Alert.alert("Permission required", "Permission is required to upload a photo.");
           return;
         }
       }
@@ -43,22 +48,68 @@ const FileUploadGallery = ({ children, fileStates, existingStates, maxImage = 10
         allowsMultipleSelection: true,
       });
 
-      if (!result.canceled && Array.isArray(result.assets) && result.assets.length > 0) {
-        const assets = result.assets.slice(0, remainingSlots);
-        const newUris = assets.map(asset => asset.uri);
+ if (!result.canceled && Array.isArray(result.assets) && result.assets.length > 0) {
+  const assets = result.assets.slice(0, remainingSlots);
+  const newUris = assets.map((asset) => asset.uri);
 
-        setCapturePhotos([...(Array.isArray(capturePhotos) ? capturePhotos : []), ...newUris]);
+  const current = Array.isArray(capturePhotos) ? capturePhotos : [];
+  const updated = [...current, ...newUris];
 
-        if (result.assets.length > remainingSlots) {
-          Alert.alert(
-            "Limit reached",
-            `Only ${remainingSlots} image(s) were added to respect the maximum of ${maxImage} images.`
-          );
-        }
-      }
+  setCapturePhotos(updated);
+
+  if (result.assets.length > remainingSlots) {
+    Alert.alert(
+      "Limit reached",
+      `Only ${remainingSlots} image(s) were added to respect the maximum of ${maxImage} images.`
+    );
+  }
+}
     } catch (error) {
-      console.error('Error picking image:', error);
+      console.error("Error picking image:", error);
       Alert.alert("Error", "Failed to pick image. Try again.");
+    } finally {
+      setIsPicking(false);
+    }
+  };
+
+  const handleCaptureImage = async () => {
+    if (remainingSlots <= 0) {
+      Alert.alert("Limit reached", `You can only upload up to ${maxImage} images.`);
+      return;
+    }
+
+    try {
+      setIsPicking(true);
+
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission required", "Camera permission is required to take a photo.");
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+
+if (!result.canceled && result.assets && result.assets[0]?.uri) {
+  const uri = result.assets[0].uri;
+
+  const current = Array.isArray(capturePhotos) ? capturePhotos : [];
+  const totalNow = current.length + safeExistingPhotos.length;
+
+  if (totalNow >= maxImage) {
+    Alert.alert("Limit reached", `You can only upload up to ${maxImage} images.`);
+  } else {
+    const updated = [...current, uri];
+    setCapturePhotos(updated);
+  }
+}
+    } catch (error) {
+      console.error("Error capturing image:", error);
+      Alert.alert("Error", "Failed to capture image. Try again.");
     } finally {
       setIsPicking(false);
     }
@@ -76,7 +127,16 @@ const FileUploadGallery = ({ children, fileStates, existingStates, maxImage = 10
           disabled={disablePicker}
         >
           <PlusIcon color={getColor("green", 700)} size={32} />
-          <B6>{ disablePicker ? `Max ${maxImage}` : "Take a photo" }</B6>
+          <B6>{disablePicker ? `Max ${maxImage}` : "browse a photo"}</B6>
+        </Pressable>
+
+        <Pressable
+          style={[styles.fileUpload, disablePicker ? styles.fileUploadDisabled : null]}
+          onPress={handleCaptureImage}
+          disabled={disablePicker}
+        >
+          <PlusIcon color={getColor("green", 700)} size={32} />
+          <B6>{disablePicker ? `Max ${maxImage}` : "Take a photo"}</B6>
         </Pressable>
 
         {safeCapturePhotos.map((uri, index) => (

@@ -6,7 +6,8 @@ export type packageSize = {
     icon: DataAccordianEnum;
     isChecked: boolean;
     size: number;
-    unit: "gm" | "kg";
+    rawSize: string;
+    unit: "gm" | "kg" | string;
 };
 
 
@@ -20,18 +21,21 @@ const packageSizeSlice = createSlice({
     name: 'packageSize',
     initialState,
     reducers: {
-        togglePackageSize(state, action: PayloadAction<packageSize>) {
-            const index = state.selectedSizes.findIndex(
-                (s) => s.size === action.payload.size && s.unit === action.payload.unit
-            );
-            if (index >= 0) {
-                state.selectedSizes = state.selectedSizes.filter(
-                    (s) => !(s.size === action.payload.size && s.unit === action.payload.unit)
-                );
-            } else {
-                state.selectedSizes = [...state.selectedSizes, action.payload];
-            }
-        },
+   togglePackageSize(state, action: PayloadAction<packageSize>) {
+  const index = state.selectedSizes.findIndex(
+    (s) => s.rawSize === action.payload.rawSize
+  );
+
+  if (index >= 0) {
+    // remove it
+    state.selectedSizes = state.selectedSizes.filter(
+      (s) => s.rawSize !== action.payload.rawSize
+    );
+  } else {
+    // add it
+    state.selectedSizes = [...state.selectedSizes, action.payload];
+  }
+},
         setPackageSizes(state, action: PayloadAction<packageSize[]>) {
             state.selectedSizes = action.payload;
         },

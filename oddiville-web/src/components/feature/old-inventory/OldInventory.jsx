@@ -10,7 +10,8 @@ import { bulkIngest } from "../../../services/oldInventory.service";
 
 const STEPS_CONFIG = [
   { key: 1, title: "Raw Material entry", acceptsImage: true, buttonLabel: "Add Raw Material" },
-  { key: 2, title: "Production entry", acceptsImage: false, buttonLabel: "Add Production" },
+  { key: 2, title: "Vendor entry", acceptsImage: false, buttonLabel: "Add Vendor" },
+  // { key: 2, title: "Production entry", acceptsImage: false, buttonLabel: "Add Production" },
   { key: 3, title: "Chamber Stock entry", acceptsImage: false, buttonLabel: "Add ChamberStock" },
   { key: 4, title: "Dispatch Order entry", acceptsImage: true, buttonLabel: "Add Dispatch Order" },
 ];
@@ -192,7 +193,8 @@ export default function OldInventory() {
       // stepPayload = { rows: normalizedRows, challan: challan.dispatch };
     }
 
-    const keyMap = { 1: "rawMaterial", 2: "production", 3: "chamberStock", 4: "dispatchOrder" };
+    const keyMap = { 1: "rawMaterial", 2: "vendor", 3: "chamberStock", 4: "dispatchOrder" };
+    // const keyMap = { 1: "rawMaterial", 2: "production", 3: "chamberStock", 4: "dispatchOrder" };
     const currentKey = keyMap[step];
 
     const finalMerged = { ...fullData, [currentKey]: stepPayload };
@@ -212,7 +214,6 @@ export default function OldInventory() {
       }
 
       console.log("defensivelyNormalized", JSON.stringify(defensivelyNormalized, null, 2));
-      
 
       try {
         const response = await bulkIngest(defensivelyNormalized);

@@ -120,24 +120,61 @@ export type RootStackParamList = {
   "home": undefined;
   "purchase": undefined;
   "production": undefined;
-  "packaging": undefined;
+  "package": undefined;
   "sales": undefined;
 
-  "raw-material-receive": { id: string };
+  "chambers": undefined;
+
+  "raw-material-receive": { rmId: string };
   "raw-material-overview": { rmId: string };
   "raw-material-order": undefined;
   
   "production-start": { id: string };
+  "production-complete": { id: string };
   "lane": undefined;
 
   login: undefined;
+
+  packaging: undefined;
+  "packaging-details": { id: string; name: string };
+
+  "policies/purchase": undefined;
+  "policies/production": undefined;
+  "policies/package": undefined;
+  "policies/sales": undefined;
+
+  "labours": undefined;
+  "labours-details": { wId: string; mode: "single" | "multiple" };
+
+
+   vendors: undefined;
+  "vendor-create": { userId: string };
+  "vendor-orders": { userId: string };
+  "vendor-order-detail": { orderId: string };
+
+  calendar: undefined;
+  "calendar-event-detail": {
+    date: string;
+    scheduledEvents: string;
+    // scheduledEvents: CalendarEventResponse[];
+  };
+
+  user: undefined;
+  "user-form": { username: string };
+
+  trucks: undefined;
+  "truck-create": { id?: string };
+  "truck-detail": { id: string };
+
+  "create-orders": undefined;
+
+  "search-results": { query: string };
 
   "supervisor-raw-material": undefined;
   "supervisor-orders": undefined;
   "supervisor-production": undefined;
   "supervisor-contractor": undefined;
 
-  "search-results": { query: string };
 
   "raw-material-detail": {
     data: {
@@ -153,35 +190,10 @@ export type RootStackParamList = {
     source: "chamber" | "raw_material";
   };
 
-  vendors: undefined;
-  "vendor-create": { userId: string };
-  "vendor-orders": { userId: string };
-  "vendor-order-detail": { orderId: string };
-
-  calendar: undefined;
-  "calendar-event-detail": {
-    date: string;
-    scheduledEvents: string;
-    // scheduledEvents: CalendarEventResponse[];
-  };
-
-  // packaging: undefined;
-  "packaging-details": { id: string; name: string };
-
-  user: undefined;
-  "user-form": { username: string };
-
-  trucks: undefined;
-  "truck-create": { id?: string };
-  "truck-detail": { id: string };
-
-  "create-orders": undefined;
   "completed-order-detail": { orderId: string };
   "dispatch-summary": { orderId: string };
   "shipping-details": { orderId: string };
 
-  "supervisor-rm-details": { rmId: string };
-  "supervisor-contractor-details": { wId: string; mode: "single" | "multiple" };
 
   "other-products-detail": {
     data: string;

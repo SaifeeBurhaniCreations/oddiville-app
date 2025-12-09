@@ -4,23 +4,21 @@ import {
   ImageResizeMode,
   TextInputProps,
   ViewStyle,
-  NativeSyntheticEvent,
-   TextInputFocusEventData
 } from "react-native";
 import {
   ActionButtonConfig,
   ActionButtonConfigSchema,
   ButtonType,
 } from "./cards";
-import { IconProps } from "./icon";
+import { IconProps, IconRatingProps } from "./icon";
 import { RootStackParamList, RootStackParamListSchema } from "./navigation";
 import {
   BottomSheetSchemaKey,
   bottomSheetSchemas,
 } from "../schemas/BottomSheetSchema";
 import { z } from "zod";
-import { PrimitiveType, schemaToTypeMap } from "../utils/schemaUtils";
 import { TextInput } from "react-native";
+
 export interface TagProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   color?: "red" | "green" | "blue" | "yellow";
@@ -413,12 +411,12 @@ export interface RawMaterialDetailByRatingProps {
 export interface RawMaterialProps {
   id: string;
   name: string;
-  image?: string;
+  image?: string | number;
   description?: string;
   detailByRating: RawMaterialDetailByRatingProps[];
   rating: string;
   color?: "red" | "blue" | "green" | "yellow";
-  category: "other" | "material";
+  category: "other" | "material" | "packed";
   quantity?: string;
   href?: keyof RootStackParamList;
   disabled?: boolean;
@@ -454,6 +452,7 @@ export interface ChipGroupProps {
   isActive?: boolean;
   dismisible?: boolean;
   isClickable?: boolean;
+  blockSelection?: boolean;
   style?: any;
   onDismiss?: (index: number) => void;
   onPress?: () => void;
@@ -469,11 +468,14 @@ export interface SelectProps {
   showOptions?: boolean;
   onPress?: () => void;
   style?: any;
+  selectStyle?: any;
   children?: ReactNode;
   isVirtualised?: boolean;
   defaultDropdown?: boolean;
   onSelect?: () => void;
+  preIcon?: ComponentType<IconRatingProps>;
 }
+
 export interface VendorProductProps {
   title: string;
   weight: string;
@@ -625,7 +627,11 @@ export interface Chamber {
 export interface PackageItem {
   quantity?: string;
   size: string | number;
+  rawSize: string;
   unit: "kg" | "gm" | "qn" | null;
+
+  stored_quantity?: number | string | null;
+  rawUnit?: string | null;
 }
 
 export interface ProductDetail {

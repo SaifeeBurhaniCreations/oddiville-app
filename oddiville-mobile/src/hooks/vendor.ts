@@ -15,6 +15,7 @@ import {
   fetchVendorByName,
   fetchAllVendors,
   removeVendor,
+  addVendor,
 } from "@/src/services/vendor.service";
 import { UnparsedVendor, UserProps, VendorOrder } from "../types";
 import { rejectEmptyOrNull } from "../utils/authUtils";
@@ -59,13 +60,23 @@ export function updateAllVendorLists(
     queryClient.setQueryData(key, { ...inf, pages });
   });
 
-  queryClient.setQueryData<Vendor[]>(["vendors"], (old = []) => {
-    const idx = old.findIndex((v) => v.id === updated.id);
-    if (idx === -1) return [updated, ...old];
-    const copy = old.slice();
-    copy[idx] = updated;
-    return copy;
-  });
+  queryClient.setQueryData<Vendor[] | InfiniteData<VendorsPage> | undefined>(
+    ["vendors"],
+    (old) => {
+      if (!old) return old;
+
+      if (!Array.isArray(old)) {
+        return old;
+      }
+
+      const idx = old.findIndex((v) => v.id === updated.id);
+      if (idx === -1) return [updated, ...old];
+
+      const copy = old.slice();
+      copy[idx] = updated;
+      return copy;
+    }
+  );
 }
 
 function getAllCachedVendors(queryClient: QueryClient): Vendor[] {
@@ -429,6 +440,50 @@ export function useVendors(searchText: string) {
   };
 }
 
+type AddVendorVariables = { data: any }; 
+
+export function useAddVendor() {
+  const queryClient = useQueryClient();
+
+  return useMutation<Vendor, Error, AddVendorVariables>({
+    mutationFn: async (vars) => {
+      const response = await addVendor(vars.data);
+      return normalizeVendorForCache(response.data);
+    },
+
+    onSuccess: (newVendor) => {
+      queryClient.setQueryData<InfiniteData<VendorsPage> | undefined>(
+        ["vendors"],
+        (old) => {
+          const current: InfiniteData<VendorsPage> =
+            old ?? {
+              pages: [{ data: [], nextOffset: undefined }],
+              pageParams: [0],
+            };
+
+          const exists = current.pages.some((page) =>
+            page.data.some((v) => v.id === newVendor.id)
+          );
+          if (exists) return current;
+
+          const newPages = current.pages.map((p, idx) =>
+            idx === 0
+              ? { ...p, data: [newVendor, ...p.data] } 
+              : p
+          );
+
+          return { ...current, pages: newPages };
+        }
+      );
+    },
+
+    onSettled() {
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+    },
+  });
+}
+
+
 // export function useVendors(searchText: string) {
 //   const queryClient = useQueryClient();
 //   const socket = useSocket();
@@ -578,8 +633,8 @@ export function useVendorByName(name: string | null) {
 
   const cachedVendor = name
     ? getAllCachedVendors(queryClient).find(
-        (vendor) => normalize(vendor.name) === normalize(name)
-      )
+      (vendor) => normalize(vendor.name) === normalize(name)
+    )
     : undefined;
 
   return useQuery({
@@ -607,13 +662,20 @@ export function useUpdateVendor() {
     onSuccess: (updatedVendor, { id }) => {
       queryClient.setQueryData(["vendor-by-id", id], updatedVendor);
       updateAllVendorLists(queryClient, updatedVendor);
-      queryClient.setQueryData<Vendor[]>(["vendors"], (old = []) => {
-        const idx = old.findIndex((v) => v.id === updatedVendor.id);
-        if (idx === -1) return [updatedVendor, ...old];
-        const copy = old.slice();
-        copy[idx] = updatedVendor;
-        return copy;
-      });
+      queryClient.setQueryData<Vendor[] | InfiniteData<VendorsPage> | undefined>(
+        ["vendors"],
+        (old) => {
+          if (!old) return old;
+          if (!Array.isArray(old)) return old;
+
+          const idx = old.findIndex((v) => v.id === updatedVendor.id);
+          if (idx === -1) return [updatedVendor, ...old];
+
+          const copy = old.slice();
+          copy[idx] = updatedVendor;
+          return copy;
+        }
+      );
     },
     onError: (error) => {
       console.error("Error updating vendor:", error);
@@ -666,27 +728,22 @@ export function useDeleteVendor() {
       await qc.cancelQueries({ queryKey: ["vendors"] });
       await qc.cancelQueries({ queryKey: ["vendor-by-id", id] });
 
-      const previousVendors = qc.getQueryData<Vendor[]>(["vendors"]);
+     const previousById = qc.getQueryData<Vendor | null>(["vendor-by-id", id]);
 
-      const previousById = qc.getQueryData<Vendor | null>(["vendor-by-id", id]);
+let maybeName: string | undefined;
+if (previousById && previousById.name) {
+  maybeName = previousById.name;
+} else {
+  // derive from infinite cache instead of assuming Vendor[]
+  const cachedList = getAllCachedVendors(qc as unknown as QueryClient);
+  const hit = cachedList.find((v) => v.id === id);
+  if (hit && hit.name) maybeName = hit.name;
+}
 
-      let maybeName: string | undefined;
-      if (previousById && previousById.name) maybeName = previousById.name;
-      else if (previousVendors) {
-        const hit = previousVendors.find((v) => v.id === id);
-        if (hit && hit.name) maybeName = hit.name;
-      }
-
-      const previousByName =
-        maybeName !== undefined
-          ? qc.getQueryData<Vendor | null>(["vendor-name", maybeName])
-          : undefined;
-
-      if (previousVendors) {
-        qc.setQueryData<Vendor[] | undefined>(["vendors"], (old = []) =>
-          old.filter((v) => v.id !== id)
-        );
-      }
+const previousByName =
+  maybeName !== undefined
+    ? qc.getQueryData<Vendor | null>(["vendor-name", maybeName])
+    : undefined;
 
       try {
         removeVendorFromInfinitePages(qc, id);
@@ -698,7 +755,7 @@ export function useDeleteVendor() {
       if (maybeName)
         qc.removeQueries({ queryKey: ["vendor-name", maybeName], exact: true });
 
-      return { previousVendors, previousById, previousByName, maybeName };
+      return { previousById, previousByName, maybeName };
     },
 
     onError: (err, variables, context) => {
@@ -707,6 +764,7 @@ export function useDeleteVendor() {
           ["vendors"],
           context.previousVendors
         );
+        qc.invalidateQueries({ queryKey: ["vendors"] });
       }
 
       if (context?.previousById) {

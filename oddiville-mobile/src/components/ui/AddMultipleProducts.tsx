@@ -76,7 +76,7 @@ const AddMultipleProducts = ({
                                             <ChamberIcon color={getColor('green')} size={32} />
                                         </View>
                                         <View style={styles.Vstack}>
-                                            <B1>{chamber.name}</B1>
+                                            <B1>{String(chamber.name).slice(0, 12)}...</B1>
                                             <B4>{chamber.stored_quantity}kg</B4>
                                         </View>
                                     </View>

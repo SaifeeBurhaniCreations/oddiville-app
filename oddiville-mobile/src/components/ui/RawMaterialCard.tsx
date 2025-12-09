@@ -37,8 +37,9 @@ const RawMaterialCard = ({ name, image, description, rating, disabled, href, det
     
     color = getRatingColor(ratingClamped as 1 | 2 | 3 | 4 | 5);
 
-    if(!image) return;
-const rmImage = getImageSource(image).image;
+if (!image) return null; 
+
+const rmImage = getImageSource({image}).image;
 
     return (
         <TouchableOpacity

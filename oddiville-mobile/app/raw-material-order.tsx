@@ -17,12 +17,14 @@ import { getLimitedMaterialNames, getLimitedVendorNames } from '@/src/utils/arra
 import DetailsToast from '@/src/components/ui/DetailsToast'
 import { useFormValidator } from '@/src/sbc/form';
 import FormField from '@/src/sbc/form/FormField';
-import { VendorInputState } from '@/src/types';
+import { RootStackParamList, VendorInputState } from '@/src/types';
 import { clearRawMaterials, setSource } from '@/src/redux/slices/bottomsheet/raw-material.slice';
 import { addRawMaterialOrder } from '@/src/services/rawmaterial.service';
 import { clearVendors } from '@/src/redux/slices/bottomsheet/vendor.slice';
 import { useAppNavigation } from '@/src/hooks/useAppNavigation';
 import { Platform } from 'react-native';
+import { useAuth } from '@/src/context/AuthContext';
+import { rawMaterialOrderBackRoute } from '@/src/constants/backRoute';
 
 type RawMaterialOrderForm = {
     quantity: number | null;
@@ -35,6 +37,8 @@ type RawMaterialOrderForm = {
 
 
 const RawMaterialOrderScreen = () => {
+    const { role } = useAuth();
+    
     const dispatch = useDispatch();
     const { validateAndSetData } = useValidateAndOpenBottomSheet();
     const selectedRM = useSelector((state: RootState) => state.rawMaterial.selectedRawMaterials);
@@ -221,7 +225,7 @@ const RawMaterialOrderScreen = () => {
                 >
                     <ScrollView>
                         <View style={styles.headerBodyWrapper}>
-                            <BackButton label='Order raw material'  backRoute="purchase" style={styles.paddingH16} />
+                            <BackButton label='Order raw material'  backRoute={rawMaterialOrderBackRoute[role ?? "supervisor"] as keyof RootStackParamList} style={styles.paddingH16} />
 
                             <View style={styles.body}>
                                 {!isNotChoosed ?
@@ -396,6 +400,9 @@ const styles = StyleSheet.create({
     },
     paddingH16: {
         paddingHorizontal: 16
+    },
+    paddingH12: {
+        paddingHorizontal: 12      
     },
     keyboardAvoidingView: {
         flex: 1,

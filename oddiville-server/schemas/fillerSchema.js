@@ -5,8 +5,6 @@ const { parseISO } = require("date-fns/parseISO");
 const { formatAmount } = require("../utils/common");
 
 const customTimeFormatter = (rawDate) => {
-  console.log(rawDate);
-  
   if (!rawDate) return "N/A"; 
   const parsedDate =
     typeof rawDate === "string" ? parseISO(rawDate) : new Date(rawDate);
@@ -53,34 +51,73 @@ function mapProduct(product, DispatchOrder) {
       (sum, chamber) => sum + Number(chamber.quantity),
       0
     ) || 0;
+
   const product_weight = formatWeight(raw_weight, { unit: "Kg" });
   const packagesSentence = formatPackagesSentence(DispatchOrder.packages || []);
 
+  // normalize units
   product?.chambers?.forEach((c) => {
     c.unit = "kg";
   });
 
+  const productName = product.product_name || product.name || "Unnamed product";
+
   return {
-    title: DispatchOrder.product_name,
+    title: productName,                           
     image: product.image,
     weight: product_weight,
-    price: formatPrice(DispatchOrder.amount),
+    price: formatPrice(DispatchOrder.amount),      
     description: `${product_weight} in ${product.chambers?.length ?? 0} ${
       product.chambers?.length === 1 ? "chamber" : "chambers"
     }`,
-    chambers: product.chambers.map(pc => ({
+    chambers: product.chambers?.map((pc) => ({
       ...pc,
       quantity: String(pc.quantity),
-    })),
-    packages:
-      DispatchOrder.packages?.map((val) => ({
-        size: val.size,
-        unit: val.unit || "kg",
-        quantity: String(val.quantity),
-      })) || [],
-    packagesSentence,
+    })) || [],
+    // packages:
+    //   DispatchOrder.packages?.map((val) => ({
+    //     size: val.size,
+    //     unit: val.unit || "kg",
+    //     quantity: String(val.quantity),
+    //   })) || [],
+    // packagesSentence,
   };
 }
+
+// function mapProduct(product, DispatchOrder) {
+//   const raw_weight =
+//     product?.chambers?.reduce(
+//       (sum, chamber) => sum + Number(chamber.quantity),
+//       0
+//     ) || 0;
+//   const product_weight = formatWeight(raw_weight, { unit: "Kg" });
+//   const packagesSentence = formatPackagesSentence(DispatchOrder.packages || []);
+
+//   product?.chambers?.forEach((c) => {
+//     c.unit = "kg";
+//   });
+
+//   return {
+//     title: DispatchOrder.product_name,
+//     image: product.image,
+//     weight: product_weight,
+//     price: formatPrice(DispatchOrder.amount),
+//     description: `${product_weight} in ${product.chambers?.length ?? 0} ${
+//       product.chambers?.length === 1 ? "chamber" : "chambers"
+//     }`,
+//     chambers: product.chambers.map(pc => ({
+//       ...pc,
+//       quantity: String(pc.quantity),
+//     })),
+//     packages:
+//       DispatchOrder.packages?.map((val) => ({
+//         size: val.size,
+//         unit: val.unit || "kg",
+//         quantity: String(val.quantity),
+//       })) || [],
+//     packagesSentence,
+//   };
+// }
 
 function getProductDetailsSection(
   DispatchOrder,
@@ -558,9 +595,10 @@ const getFillerSchema = ({
       title: "Select Chambers",
       productCard: Chambers.slice()
         .sort((a, b) => a.chamber_name.localeCompare(b.chamber_name))
+        .filter((ch) => ch.tag === "frozen")
         .map((chamber) => ({
           name: chamber.chamber_name ?? "Unnamed",
-          image: "https://oddiapi.sbcws.com/warehouses/warehouse.png",
+          image: "",
         })),
     },
     country: {

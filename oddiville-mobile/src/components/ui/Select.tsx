@@ -13,9 +13,11 @@ const Select = ({
   isVirtualised,
   defaultDropdown = false,
   style,
+  selectStyle,
   error,
   disabled = false,
   onSelect,
+  preIcon: PreIcon,
   ...props
 }: SelectProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -32,7 +34,7 @@ const Select = ({
   const displayValue = value ?? options[0];
 
   const SelectedElement = (
-    <View>
+    <View style={selectStyle}>
       <TouchableOpacity
         activeOpacity={disabled ? 1 : 0.7}
         style={[
@@ -42,7 +44,11 @@ const Select = ({
         ]}
         onPress={() => !disabled && handlePress()}
       >
+        <View style={{flexDirection: "row", alignItems: "center", gap: 8 }}>
+        {PreIcon && <PreIcon />}
+        
         <B4 color={getColor("green", disabled ? 200 : 700)}>{displayValue}</B4>
+        </View>
         {!disabled && <DownChevron size={16} color={getColor("green", 700)} />}
       </TouchableOpacity>
 

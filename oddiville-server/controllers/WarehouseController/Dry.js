@@ -87,9 +87,7 @@ router.get("/", async (req, res) => {
 router.get("/summary", async (req, res) => {
   try {
     const uniqueChambers = await DryWarehousesClient.findAll({
-      attributes: [
-        "chamber_id",
-      ],
+      attributes: ["chamber_id"],
       where: {
         chamber_id: { [Op.ne]: null },
       },
@@ -97,24 +95,45 @@ router.get("/summary", async (req, res) => {
       raw: true,
     });
 
-    const chamberIds = uniqueChambers
+    const rawIds = uniqueChambers
       .map((r) => r.chamber_id)
       .filter(Boolean)
       .map(String);
 
-    if (chamberIds.length === 0) {
+    if (rawIds.length === 0) {
+      return res.status(200).json({ summaries: [], totalChambers: 0 });
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    const uuids = rawIds.filter((s) => uuidRegex.test(s));
+    const names = rawIds.filter((s) => !uuidRegex.test(s));
+
+    const chamberWhere = {};
+    const orClauses = [];
+    if (uuids.length > 0) orClauses.push({ id: uuids });
+    if (names.length > 0) orClauses.push({ chamber_name: names });
+
+    if (orClauses.length === 0) {
       return res.status(200).json({ summaries: [], totalChambers: 0 });
     }
 
     const chambers = await chamberClient.findAll({
-      where: { id: chamberIds },
+      where: { [Op.or]: orClauses },
       attributes: ["id", "chamber_name", "capacity"],
       raw: true,
     });
-    const chamberMap = new Map(chambers.map((c) => [String(c.id), c]));
 
+    // map by both id and chamber_name so lookups work for either kind of chamber_id
+    const chamberMap = new Map();
+    for (const c of chambers) {
+      if (c.id != null) chamberMap.set(String(c.id), c);
+      if (c.chamber_name != null) chamberMap.set(String(c.chamber_name), c);
+    }
+
+    // get dry rows that reference any of the rawIds (these are strings as stored)
     const dryRows = await DryWarehousesClient.findAll({
-      where: { chamber_id: chamberIds },
+      where: { chamber_id: rawIds },
       attributes: ["id", "chamber_id", "quantity_unit", "unit", "item_name"],
       raw: true,
     });
@@ -127,7 +146,7 @@ router.get("/summary", async (req, res) => {
       return Number.isFinite(n) ? n : 0;
     };
 
-    const summariesMap = new Map(); 
+    const summariesMap = new Map();
     for (const row of dryRows) {
       const cid = String(row.chamber_id);
       const q = parseQuantity(row.quantity_unit);
@@ -138,12 +157,13 @@ router.get("/summary", async (req, res) => {
       summariesMap.set(cid, cur);
     }
 
-    const summaries = chamberIds.map((cid) => {
+    const summaries = rawIds.map((cid) => {
       const meta = chamberMap.get(cid);
       const agg = summariesMap.get(cid) ?? { totalQuantity: 0, itemsCount: 0 };
 
       return {
         chamberId: cid,
+        // prefer chamber_name from meta when available, otherwise null
         chamberName: meta ? meta.chamber_name : null,
         capacity: meta ? meta.capacity : null,
         totalQuantity: agg.totalQuantity,
@@ -163,7 +183,6 @@ router.get("/summary", async (req, res) => {
     return res.status(500).json({ error: "Internal server error." });
   }
 });
-
 
 // READ BY ID
 router.get("/:id", async (req, res) => {

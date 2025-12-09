@@ -1,7 +1,7 @@
 import { RawMaterialProps } from "@/src/types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-export type sourceEnum = "add" | "choose" | "vendor" | "chamber"  | "packaging";
+export type sourceEnum = "add" | "choose" | "vendor" | "chamber"  | "packaging" | "product-chamber";
 interface RawMaterialState {
   selectedRawMaterials: RawMaterialProps[];
   source?: sourceEnum;

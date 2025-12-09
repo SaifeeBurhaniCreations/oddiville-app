@@ -102,7 +102,7 @@ export interface ProductionCardProps {
   laneName: string,
   description: string,
   badgeText: string,
-  laneNumber: number,
+  image: string,
 }
 
 export interface ItemCardProps {
@@ -222,4 +222,5 @@ export interface ContractorWorkLocationCardProps {
   femaleCount?: string;
   onMaleChange?: (text: string) => void;
   onFemaleChange?: (text: string) => void;
+  onLabourRemove?: (contractorIndex: number) => void;
 }

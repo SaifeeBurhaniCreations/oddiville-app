@@ -46,7 +46,8 @@ export function useFormValidator<T extends Record<string, any>>(
     const [values, setValues] = useState<T>(initial as T);
     const [errors, setErrors] = useState<ErrorMap<T>>({});
 
-    const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
+const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
     const confirmDependencyMap = useRef<Record<string, (keyof T)[]>>({});
     const matchDependencyMap = useRef<Record<string, (keyof T)[]>>({});
 

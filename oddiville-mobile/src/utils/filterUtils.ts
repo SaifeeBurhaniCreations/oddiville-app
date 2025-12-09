@@ -5,7 +5,6 @@ export function filterItems<T>(
     filters: Record<string, string[]>,
     filterHandlers: Record<string, (item: T, subKey: string, selected: string[]) => boolean>
 ): T[] {
-    console.log("filters", filters);
     
     return items.filter(item =>
         Object.entries(filters).every(([compositeKey, selectedArr]) => {

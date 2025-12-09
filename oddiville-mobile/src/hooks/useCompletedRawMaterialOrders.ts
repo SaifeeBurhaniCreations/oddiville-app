@@ -5,16 +5,14 @@ import { useEffect } from 'react';
 import { rejectEmptyOrNull } from '../utils/authUtils';
 import type { InfiniteData } from "@tanstack/react-query";
 import { RawMaterialOrderProps } from "../types";
+import { RawMaterialOrderCreated, RawMaterialOrderStatusChanged } from './rawMaterialOrders';
 
-// define the page shape your hook returns
 export type CompletedOrdersPage = {
   data: RawMaterialOrderProps[];
   nextOffset: number | null;
 };
 
-
 type CompletedInfinite = InfiniteData<CompletedOrdersPage>;
-
 
 function upsertFirstPage(
   old: CompletedInfinite | undefined,
@@ -29,7 +27,6 @@ function upsertFirstPage(
 
   const first = old.pages[0] ?? { data: [], nextOffset: null };
   if (first.data.some((n) => n.id === item.id)) {
-    // replace in place in first page
     const idx = first.data.findIndex((n) => n.id === item.id);
     const newFirst = {
       ...first,
@@ -38,7 +35,6 @@ function upsertFirstPage(
     return { ...old, pages: [newFirst, ...old.pages.slice(1)] };
   }
 
-  // prepend to first page
   const newFirst = { ...first, data: [item, ...first.data] };
   return { ...old, pages: [newFirst, ...old.pages.slice(1)] };
 }
@@ -66,26 +62,20 @@ export function useCompletedRawMaterialOrders() {
   const limit = 10;
 
   useEffect(() => {
-    const onStatusChanged = (data: any) => {
-      const updated: RawMaterialOrderProps | undefined =
-        data?.materialDetails ?? data;
-      if (!updated?.id) return;
+    const upsertCompletedIfNeeded = (updated: RawMaterialOrderProps) => {
+      const isCompleted =
+        updated.status === "completed" || !!updated.arrival_date;
 
-      queryClient.setQueryData(
-        ["raw-material-order-by-id", updated.id],
-        updated
-      );
-
+      if (isCompleted) {
+        queryClient.invalidateQueries({ queryKey: ["production"] });
+      }
+      
       queryClient.setQueryData<InfiniteData<CompletedOrdersPage>>(
         COMPLETED_KEY,
         (old) => {
-          const isCompleted =
-            updated.status === "completed" || !!updated.arrival_date;
-
           if (isCompleted) {
             return upsertFirstPage(old, updated);
           } else {
-            // moved out of completed -> remove everywhere
             return removeFromAllPages(old, updated.id) as
               | InfiniteData<CompletedOrdersPage>
               | undefined;
@@ -94,11 +84,38 @@ export function useCompletedRawMaterialOrders() {
       );
     };
 
+    const onCreated = (data: RawMaterialOrderCreated) => {
+      const updated = data.materialDetails;
+      if (!updated?.id) return;
+
+      queryClient.setQueryData(
+        ["raw-material-order-by-id", updated.id],
+        updated
+      );
+
+      upsertCompletedIfNeeded(updated);
+    };
+
+    const onStatusChanged = (data: RawMaterialOrderStatusChanged) => {
+      const updated = data.materialDetails;
+      if (!updated?.id) return;
+
+      queryClient.setQueryData(
+        ["raw-material-order-by-id", updated.id],
+        updated
+      );
+
+      upsertCompletedIfNeeded(updated);
+    };
+
+    socket.on("raw-material-order:created", onCreated);
     socket.on("raw-material-order:status-changed", onStatusChanged);
+
     return () => {
+      socket.off("raw-material-order:created", onCreated);
       socket.off("raw-material-order:status-changed", onStatusChanged);
     };
-  }, [queryClient]);
+  }, [queryClient, socket]);
 
   return useInfiniteQuery<CompletedOrdersPage, Error>({
     queryKey: COMPLETED_KEY,
@@ -111,7 +128,6 @@ export function useCompletedRawMaterialOrders() {
         offset,
       });
 
-      // Normalize to notifications’ page shape
       return {
         data: res ?? [],
         nextOffset: (res?.length ?? 0) === limit ? offset + limit : null,
@@ -121,7 +137,6 @@ export function useCompletedRawMaterialOrders() {
     staleTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    // keepPreviousData is implied for infinite queries, but you can add if you like:
     // @ts-ignore
     keepPreviousData: true,
   });

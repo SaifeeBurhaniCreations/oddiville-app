@@ -76,17 +76,16 @@ const ProductListAccordianComponent = ({ data }: ProductListAccordianComponentPr
                                                 </View>
                                             </View>
                                             <C1 color={getColor("green", 400)}>{product?.description}</C1>
-    
                                         </View>
     
-                                        <C1 color={getColor("green", 400)}>{product?.packagesSentence}</C1>
+                                        {product?.packagesSentence && <C1 color={getColor("green", 400)}>{product?.packagesSentence}</C1>}
                                     </View>
                                 </View>
                                 {
                                     isChecked && (
                                         <React.Fragment>
                                             <ChipGroup size={"sm"} isClickable={false} data={chambers}>Chambers</ChipGroup>
-                                            <ChipGroup size={"sm"} isClickable={false} data={packages}>Package</ChipGroup>
+                                            {packages && packages?.length > 0 && <ChipGroup size={"sm"} isClickable={false} data={packages}>Package</ChipGroup>}
                                         </React.Fragment>
                                     )
                                 }

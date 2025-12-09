@@ -22,6 +22,7 @@ routes.use("/api/chamber-stock/", require("../controllers/ChamberStockController
 routes.use("/api/chamber/", require("../controllers/WarehouseController/Chamber"))
 routes.use("/api/chamber/type/frozen", require("../controllers/WarehouseController/Frozen"))
 routes.use("/api/chamber/type/dry", require("../controllers/WarehouseController/Dry"))
+routes.use("/api/packed-item", require("../controllers/PackedItemController"))
 
 routes.use("/api/roles", require("../controllers/Roles/RolesController"))
 routes.use("/api/roles/permissions", require("../controllers/Roles/PermissionController"))

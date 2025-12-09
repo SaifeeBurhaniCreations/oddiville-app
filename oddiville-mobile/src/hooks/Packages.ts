@@ -27,9 +27,10 @@ export type CreatePackageDTO = {
 }
 
 export type UpdatePackageDTO = {
-    unit: string;
+    product_name: string;
     size: string;
     quantity: string;
+    unit: "kg" | "gm" | null;
 };
 
 function useDebounce(value: string, delay: number) {
@@ -93,8 +94,10 @@ export function usePackages(searchText: string) {
 
     return {
         data: filtered,
+        isFetching: query.isFetching,
         isLoading: query.isLoading,
         fromCache,
+        refetch: query.refetch,
     };
 }
 
@@ -223,3 +226,21 @@ export function useUpdatePackage() {
         },
     });
 }
+
+// export function useUpdatePackage() {
+//   return useMutation({
+//     mutationFn: async ({ id, data }: { id: string; data: UpdatePackageDTO }) => {
+//       const response = await updatePackage({ id, data });
+//       return response.data as Package;
+//     },
+//     onSuccess(_updatedPackage) {
+//       // test mode: no cache update, no socket emit
+//     },
+//     onError(_error) {
+//       // optional: console.log(_error);
+//     },
+//     onSettled() {
+//       // nothing
+//     },
+//   });
+// }

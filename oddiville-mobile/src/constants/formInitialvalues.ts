@@ -4,4 +4,5 @@ export const addUserInitialValues = {
   name: "",
   phone: "",
   profilepic: "",
+  policies: [],
 };

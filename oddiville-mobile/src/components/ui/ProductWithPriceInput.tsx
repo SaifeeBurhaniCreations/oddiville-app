@@ -12,7 +12,7 @@ const ProductWithPriceInput = ({ name, weight }: ProductWithPriceInputProps) => 
         <View style={styles.card}>
             <View style={styles.titleWithImageSection}>
                 <View style={styles.productImage}>
-                    <CustomImage src={getImageSource(name).image} width={32} height={32} resizeMode='contain' />
+                    <CustomImage src={getImageSource({image: name}).image} width={32} height={32} resizeMode='contain' />
                 </View>
                 <View>
                     <H4 color={getColor("green", 700)}>{name}</H4>

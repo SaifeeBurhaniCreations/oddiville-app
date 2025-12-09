@@ -1,6 +1,6 @@
 // 1. React and React Native core
 import React, { useEffect, useState, useRef, useMemo } from "react";
-import { StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
 
 // 2. Third-party dependencies
 import { useDispatch, useSelector } from "react-redux";
@@ -9,8 +9,7 @@ import { parse, isValid as isDateValid, startOfDay } from "date-fns";
 // 3. Project components
 import PageHeader from "@/src/components/ui/PageHeader";
 import BackButton from "@/src/components/ui/Buttons/BackButton";
-import Tabs from "@/src/components/ui/Tabs";
-import RadioGroup from "@/src/components/ui/RadioGroup";
+
 import CreateFromStorage from "@/src/components/ui/dispatch-order/CreateFromStorage";
 import Button from "@/src/components/ui/Buttons/Button";
 import DetailsToast from "@/src/components/ui/DetailsToast";
@@ -18,19 +17,20 @@ import DetailsToast from "@/src/components/ui/DetailsToast";
 // 4. Project hooks
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { useMultiStepFormValidator } from "@/src/sbc/form";
-import {
-  useProductItems,
-  useProductPackage,
-  useRawMaterialByProduct,
-} from "@/src/hooks/productItems";
+
 import { useDispatchOrder } from "@/src/hooks/dispatchOrder";
+import { usePackedItems } from "@/src/hooks/packedItem";
+import { useChamber } from "@/src/hooks/useChambers";
 
 // 5. Project constants/utilities
 import { getColor } from "@/src/constants/colors";
 
 // 6. Types
 import { RootState } from "@/src/redux/store";
-import { CountryProps, PackageItem } from "@/src/types";
+import { CountryProps } from "@/src/types";
+import { clearLocations } from "@/src/redux/slices/bottomsheet/location.slice";
+import { clearRawMaterials } from "@/src/redux/slices/bottomsheet/raw-material.slice";
+import { clearProduct } from "@/src/redux/slices/product.slice";
 
 // 7. Schemas
 // No items of this type
@@ -39,18 +39,13 @@ import { CountryProps, PackageItem } from "@/src/types";
 // No items of this type
 
 // Redux slice actions
-import { clearLocations } from "@/src/redux/slices/bottomsheet/location.slice";
-import { clearRawMaterials } from "@/src/redux/slices/bottomsheet/raw-material.slice";
-import {
-  clearProduct,
-  setRawMaterials,
-} from "@/src/redux/slices/product.slice";
+
 
 interface Chamber {
-  id: string | number;
-  name: string | number;
-  stored_quantity: number | string;
-  quantity: number | string;
+  id: string;
+  name: string;
+  stored_quantity: number;
+  quantity: number;
 }
 
 interface Product {
@@ -61,42 +56,12 @@ interface Product {
 export type OrderStorageForm = {
   customer_name: string;
   amount: string;
-  product_name: string;
   est_delivered_date: string;
   address: string;
   country: CountryProps;
   state: string | { name: string; isoCode: string };
   city: string | { name: string; isoCode: string };
-  packages: PackageItem[];
   products: Product[];
-  postal_code: string;
-};
-
-const validatePackageQuantity = (
-  packages: PackageItem[],
-  totalOrderQuantity: number
-): boolean => {
-  if (!Array.isArray(packages) || packages?.length === 0) return false;
-
-  let totalPackageQuantity = 0;
-
-  for (const pkg of packages) {
-    const packageSize = Number(pkg.size);
-    const packageQuantity = Number(pkg.quantity);
-
-    if (
-      isNaN(packageSize) ||
-      isNaN(packageQuantity) ||
-      packageSize <= 0 ||
-      packageQuantity <= 0
-    ) {
-      return false;
-    }
-
-    totalPackageQuantity += packageSize * packageQuantity;
-  }
-
-  return totalPackageQuantity >= totalOrderQuantity;
 };
 
 const validateProductChambers = (products: Product[]): boolean => {
@@ -131,29 +96,14 @@ const validateProductChambers = (products: Product[]): boolean => {
   });
 };
 
-const calculateTotalOrderQuantity = (products: Product[]): number => {
-  if (!Array.isArray(products) || products?.length === 0) return 0;
-
-  return products.reduce((total, product) => {
-    return (
-      total +
-      product.chambers.reduce((productTotal, chamber) => {
-        const quantity = Number(chamber.quantity) || 0;
-        return productTotal + quantity;
-      }, 0)
-    );
-  }, 0);
-};
-
 const CreateOrder = () => {
+  const dispatch = useDispatch();
   const [step, setStep] = useState<number>(1);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastType, setToastType] = useState<"success" | "error" | "info">(
     "info"
   );
   const [toastMessage, setToastMessage] = useState("");
-  const { productItems, isLoading: productLoading } = useProductItems();
-  const { productPackages, isLoading: packageLoading } = useProductPackage();
   const { goTo } = useAppNavigation();
   const {
     countries: selectedCountry,
@@ -163,49 +113,21 @@ const CreateOrder = () => {
   const { product: selectedProduct } = useSelector(
     (state: RootState) => state.product
   );
-  const productsInitialized = useRef(false);
-  const dispatch = useDispatch();
-  const productPackagesInitialized = useRef(false);
   const dispatchOrder = useDispatchOrder();
-  const rawMaterials = useRawMaterialByProduct(selectedProduct);
-  const selectedPackage = useSelector(
-    (state: RootState) => state.packageSize.selectedSizes
-  );
-  const storeRawMaterials = useSelector(
-    (state: RootState) => state.product.rawMaterials
-  );
+  const { data: packedItemsData ,isFetching: packedItemsLoading } = usePackedItems();
 
-  const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setToastVisible(true);
-  };
+  const filteredPackedItemsData = useMemo(() => {
+    return packedItemsData?.map(item => ({
+      ...item,
+      chamber: item.chamber.filter(
+        chamber => !chamber.id.toLowerCase().includes("dry")
+      )
+    }));
+  }, [packedItemsData]);
 
-  useEffect(() => {
-    if (selectedCountry?.label && selectedCountry?.icon) {
-      setField("country", selectedCountry);
-    }
-  }, [selectedCountry]);
+  const { data: chambersData ,isFetching: chambersLoading } = useChamber();
 
-  useEffect(() => {
-    if (selectedState) {
-      setField("state", selectedState);
-    }
-  }, [selectedState]);
-
-  useEffect(() => {
-    if (selectedCity) {
-      setField("city", selectedCity);
-    }
-  }, [selectedCity]);
-
-  useEffect(() => {
-    if (JSON.stringify(storeRawMaterials) !== JSON.stringify(rawMaterials)) {
-      dispatch(setRawMaterials(rawMaterials));
-    }
-  }, [dispatch, rawMaterials, storeRawMaterials]);
-
-  const {
+    const {
     values,
     setField,
     errors,
@@ -217,16 +139,13 @@ const CreateOrder = () => {
   } = useMultiStepFormValidator<OrderStorageForm>(
     {
       customer_name: "",
-      product_name: "",
       amount: "",
       est_delivered_date: "",
       address: "",
       country: selectedCountry ?? { label: "India", icon: "", isoCode: "IN" },
-      packages: [],
       products: [],
       state: "",
       city: "",
-      postal_code: "",
     },
     {
       customer_name: [
@@ -247,48 +166,6 @@ const CreateOrder = () => {
           },
           message: "Amount must be a valid positive number!",
         },
-      ],
-      packages: [
-        {
-          type: "custom" as const,
-          validate: (value: any, allValues: Record<string, any>) => {
-            const packages: PackageItem[] = value;
-            const formValues = allValues as OrderStorageForm;
-
-            if (!Array.isArray(packages) || packages.length === 0) {
-              return false;
-            }
-
-            const hasValidFields = packages.every(
-              (pkg) =>
-                pkg &&
-                pkg.size !== null &&
-                pkg.size !== undefined &&
-                pkg.size !== "" &&
-                pkg.unit !== null &&
-                pkg.unit !== undefined &&
-                ["kg", "gm", "qn"].includes(pkg.unit) &&
-                pkg.quantity !== null &&
-                pkg.quantity !== undefined &&
-                pkg.quantity !== "" &&
-                Number(pkg.size) > 0 &&
-                Number(pkg.quantity) > 0
-            );
-
-            if (!hasValidFields) return false;
-
-            const totalOrderQuantity = formValues?.products
-              ? calculateTotalOrderQuantity(formValues.products)
-              : 0;
-
-            return validatePackageQuantity(packages, totalOrderQuantity);
-          },
-          message:
-            "Package quantities must cover the total order quantity. Each package must have valid size, unit, and quantity greater than 0.",
-        },
-      ],
-      product_name: [
-        { type: "required" as const, message: "Product name is required!" },
       ],
       products: [
         {
@@ -349,18 +226,6 @@ const CreateOrder = () => {
           message: "Please select a city!",
         },
       ],
-      postal_code: [
-        {
-          type: "required" as const,
-          message: "Postal code is required!",
-        },
-        // Optional validation - can be uncommented when needed
-        // {
-        //     type: 'pattern' as const,
-        //     pattern: /^\d{6}$/,
-        //     message: "Postal code must be exactly 6 digits!"
-        // },
-      ],
     },
     {
       1: [
@@ -369,69 +234,85 @@ const CreateOrder = () => {
         "country",
         "state",
         "city",
-        "postal_code",
         "est_delivered_date",
       ],
-      2: ["products", "product_name", "packages", "amount"],
+      2: ["products", "amount"],
     } as Record<number, (keyof OrderStorageForm)[]>,
     {
       validateOnChange: true,
       debounce: 300,
     }
   );
+      
+    useEffect(() => {
+      if (!selectedProduct || !filteredPackedItemsData?.length) return;
 
-  useEffect(() => {
-    if (productLoading) return;
-    if (
-      !productsInitialized.current &&
-      values.products?.length === 0 &&
-      productItems?.length > 0
-    ) {
-      setField("products", productItems);
-      productsInitialized.current = true;
-    }
-  }, [productLoading, productItems]);
-
-  useEffect(() => {
-    if (!productPackages || !selectedPackage) return;
-
-    const updated = selectedPackage
-      .map((sp) => {
-        const match = productPackages.find(
-          (pp) => pp.size === sp.size && pp.unit === sp.unit
-        );
-        if (!match) return null;
-
-        const existing = values.packages?.find(
-          (p) => p.size === sp.size && p.unit === sp.unit
-        );
-        return {
-          ...match,
-          quantity: existing?.quantity ?? "",
-        };
-      })
-      .filter(Boolean);
-
-    const same =
-      updated?.length === values.packages?.length &&
-      updated.every((up) =>
-        values.packages.some(
-          (vp) =>
-            vp.size === up?.size &&
-            vp.unit === up.unit &&
-            vp.quantity === up?.quantity
-        )
+      const packed = filteredPackedItemsData.find(
+        (p) => p.product_name === selectedProduct
       );
+      if (!packed) return;
 
-    if (!same) {
-      setField("packages", updated);
-    }
-  }, [productPackages, selectedPackage, values.packages]);
+      const currentProducts = Array.isArray(values.products)
+        ? values.products
+        : [];
 
-  useEffect(() => {
-    if (!selectedProduct || !selectedProduct?.length) return;
-    setField("product_name", selectedProduct);
-  }, [selectedProduct]);
+      const alreadyExists = currentProducts.some(
+        (p) => p.name === packed.product_name
+      );
+      if (alreadyExists) return;
+
+      const mappedChambers =
+        (packed.chamber || []).map((c) => {
+          const chamberInfo = chambersData?.find(
+            (ch) => String(ch.id) === String(c.id)
+          );
+
+          return {
+            id: c.id,
+            name: chamberInfo?.chamber_name ?? String(c.id),
+            stored_quantity: c.quantity,
+            quantity: "",
+          };
+        }) ?? [];
+
+      const newProduct = {
+        name: packed.product_name,
+        chambers: mappedChambers,
+      };
+
+      setField("products", [...currentProducts, newProduct]);
+
+    }, [selectedProduct, filteredPackedItemsData, values.products, chambersData]);
+
+    const showToast = (type: "success" | "error" | "info", message: string) => {
+      setToastType(type);
+      setToastMessage(message);
+      setToastVisible(true);
+    };
+
+    useEffect(() => {
+      if (selectedCountry?.label && selectedCountry?.icon) {
+        setField("country", selectedCountry);
+      }
+    }, [selectedCountry]);
+
+    useEffect(() => {
+      if (selectedState) {
+        setField("state", selectedState);
+      }
+    }, [selectedState]);
+
+    useEffect(() => {
+      if (selectedCity) {
+        setField("city", selectedCity);
+      }
+    }, [selectedCity]);
+
+
+  // useEffect(() => {
+  //   if (!selectedProduct || !selectedProduct?.length) return;
+  //   setField("product_name", selectedProduct);
+  // }, [selectedProduct]);
 
   const onSubmit = () => {
     const updatedValues = {
@@ -449,22 +330,11 @@ const CreateOrder = () => {
   };
 
   const onFinalSubmit = async () => {
-    const amount = values?.amount;
-    const quantity = values?.products[0].chambers.reduce(
-      (sum, chamber) => sum + Number(chamber.quantity),
-      0
-    );
-
-    const calculated_amount = Number(amount);
-    const newValue = { ...values, amount: String(calculated_amount) };
-    const result = validateForm(newValue);
-    // console.log('final Data befor validate', newValue);
-    // console.log('success', result);
-    // console.log('success', result.success);
-    // console.log('final Data', result.data);
-    // return;
+    const result = validateForm();
 
     if (result.success) {
+      console.log("✅ Final form data:", JSON.stringify(result.data));
+
       try {
         dispatchOrder.mutate(result.data, {
           onSuccess: (result) => {
@@ -472,7 +342,7 @@ const CreateOrder = () => {
             dispatch(clearLocations());
             dispatch(clearRawMaterials());
             dispatch(clearProduct());
-            goTo("admin-orders");
+            goTo("sales");
           },
           onError: (error) => {
             showToast("error", "Failed to dispatch order");
@@ -490,16 +360,21 @@ const CreateOrder = () => {
   };
 
   return (
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+        >
     <View style={styles.pageContainer}>
-      <PageHeader page={"Create Dispatch"} />
+      <PageHeader page={"Sales"} />
       <View style={styles.wrapper}>
         <View style={[styles.HStack, { paddingHorizontal: 16 }]}>
           <View style={{ paddingBottom: 8 }}>
             <BackButton
-              label="Create product"
+              label="Create Dispatch Order"
               backRoute=""
               onPress={() => {
-                step === 2 ? setStep(1) : goTo("admin-orders");
+                step === 2 ? setStep(1) : goTo("sales");
               }}
             />
           </View>
@@ -551,6 +426,7 @@ const CreateOrder = () => {
         onHide={() => setToastVisible(false)}
       />
     </View>
+    </KeyboardAvoidingView>
   );
 };
 

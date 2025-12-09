@@ -17,7 +17,7 @@ const SupervisorRawMaterialScreen = () => {
             <PageHeader page={'Raw Material'} />
             <View style={styles.wrapper}>
                 <View style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}>
-                    <BackButton label='Raw Material' backRoute="admin-home" />
+                    <BackButton label='Raw Material' backRoute="home" />
                     <Button onPress={() => goTo('raw-material-order')} variant='outline' size='md'>Add Material</Button>
                 </View>
 

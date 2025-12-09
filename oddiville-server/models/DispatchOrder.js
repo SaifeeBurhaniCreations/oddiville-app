@@ -15,10 +15,10 @@ module.exports = (sequelize, Sequelize) => {
         type: Sequelize.STRING,
         allowNull: true,
       },
-      postal_code: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-      },
+      // postal_code: {
+      //   type: Sequelize.INTEGER,
+      //   allowNull: true,
+      // },
       state: {
         type: Sequelize.STRING,
         allowNull: true,
@@ -51,17 +51,17 @@ module.exports = (sequelize, Sequelize) => {
         type: Sequelize.JSON,
         allowNull: false,
       },
-      packages: {
-        type: Sequelize.JSON,
-        allowNull: false,
-      },
+      // packages: {
+      //   type: Sequelize.JSON,
+      //   allowNull: false,
+      // },
       sample_images: {
         type: Sequelize.ARRAY(Sequelize.STRING),
         allowNull: true,
       },
-      product_name: { type: Sequelize.STRING,
-        allowNull: false,
-      },
+      // product_name: { type: Sequelize.STRING,
+      //   allowNull: false,
+      // },
       amount: {
         type: Sequelize.FLOAT,
         allowNull: false,

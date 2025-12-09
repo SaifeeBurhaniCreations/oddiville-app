@@ -122,7 +122,7 @@ const CalendarScreen = () => {
                         <RefreshControl refreshing={false} onRefresh={refetch} colors={[getColor("green")]} />
                     }>
                         <View style={[styles.VStack, styles.gap12]}>
-                            <BackButton label='Calendar' backRoute="admin-home" />
+                            <BackButton label='Calendar' backRoute="home" />
                             <Calendar setSelectedDate={setSelectedDate} selectedDate={selectedDate} scheduledEvents={scheduledEvents} />
 
                             <FormField name="product_name" form={{ values, setField, errors }}>
@@ -134,7 +134,7 @@ const CalendarScreen = () => {
                                         error={error}
                                         style={styles.flexGrow}
                                     >
-                                        Product Name
+                                        Title
                                     </Input>
                                 )}
                             </FormField>
@@ -148,7 +148,7 @@ const CalendarScreen = () => {
                                         error={error}
                                         style={styles.flexGrow}
                                     >
-                                        Work area
+                                        Description
                                     </Input>
                                 )}
                             </FormField>

@@ -36,7 +36,7 @@ const DispatchProductList = ({ products, isChecked }: { products: productDetails
 
                                 </View>
 
-                                <C1 color={getColor("green", 400)}>{product?.packagesSentence}</C1>
+                                {product?.packagesSentence && <C1 color={getColor("green", 400)}>{product?.packagesSentence}</C1>}
                             </View>
                         </View>
                         {
@@ -47,15 +47,17 @@ const DispatchProductList = ({ products, isChecked }: { products: productDetails
                                             title: `${String(value.name)} (${String(value.quantity)})`
                                         }))
                                     }>Chambers</ChipGroup>
-                                    <ChipGroup size={"sm"} isClickable={false} data={
-                                        product.packages?.map(value => {
-                                            const IconComp = mapPackageIcon(value)
-                                            return {
-                                                title: `${value.size} ${value.unit}: ${value.quantity}`,
+                                    {product.packages && product.packages?.length > 0 ? (
+                                        <ChipGroup size={"sm"} isClickable={false} data={
+                                            product.packages?.map(value => {
+                                                const IconComp = mapPackageIcon(value)
+                                                return {
+                                                    title: `${value.size} ${value.unit}: ${value.quantity}`,
                                                 icon: IconComp && <IconComp color={getColor("green", 700)} size={16} />,
                                             }
                                         })
                                     }>Package</ChipGroup>
+                                    ) : null}
                                 </React.Fragment>
                             )
                         }

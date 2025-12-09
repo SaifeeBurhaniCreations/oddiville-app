@@ -1,7 +1,7 @@
 // 1. React and React Native core
 import { useState, useMemo, useCallback } from "react";
 
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 
 // 2. Third-party dependencies
 import { formatDate } from "date-fns";
@@ -38,21 +38,23 @@ import { InfiniteData } from "@tanstack/query-core";
 import Button from "@/src/components/ui/Buttons/Button";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { H3 } from "@/src/components/typography/Typography";
+import { RefreshControl } from "react-native-gesture-handler";
 
 // 8. Assets
 // No items of this type
 
 const PurchaseScreen = () => {
   const { goTo } = useAppNavigation();
+const { height: screenHeight } = useWindowDimensions()
 
   const [pendingSearch, setPendingSearch] = useState("");
   const [completedSearch, setCompletedSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   useAdmin();
 
-  const { data: pendingData = [], isFetching: pendingLoading } =
+  const { data: pendingData = [], isFetching: pendingLoading, refetch: refetchRM } =
     useRawMaterialOrders();
-  const { data: vendorData = [], isFetching: vendorLoading } = useAllVendors();
+  const { data: vendorData = [], isFetching: vendorLoading, refetch: refetchVendor } = useAllVendors();
 
   const formatOrder = useCallback(
     (order: RawMaterialOrderProps): OrderProps => {
@@ -102,7 +104,7 @@ const PurchaseScreen = () => {
             icon: <DatabaseIcon size={16} color={getColor("green", 700)} />,
           },
         ],
-        href: "supervisor-rm-details",
+        href: "raw-material-receive",
         identifier: "order-ready",
       };
     },
@@ -116,6 +118,7 @@ const PurchaseScreen = () => {
     isFetchingNextPage,
     isFetching: completedFetching,
     isLoading: completedInitialLoading,
+    refetch: refetchCompleted,
   } = useCompletedRawMaterialOrders();
 
   const completedItems: RawMaterialOrderProps[] =
@@ -151,7 +154,12 @@ const PurchaseScreen = () => {
         >
           <View style={styles.flexGrow}>
             <View
-              style={[styles.HStack, styles.justifyBetween, styles.alignCenter, {paddingTop: 16}]}
+              style={[
+                styles.HStack,
+                styles.justifyBetween,
+                styles.alignCenter,
+                { paddingTop: 16 },
+              ]}
             >
               <H3>Order raw material</H3>
               <Button
@@ -173,12 +181,34 @@ const PurchaseScreen = () => {
             </View>
             {pendingOrders?.length === 0 && (
               <View style={{ alignItems: "center" }}>
-                <EmptyState stateData={emptyStateData} />
+                <ScrollView contentContainerStyle={{ alignItems: "center", flex: 1 }} refreshControl={<RefreshControl refreshing={pendingLoading} onRefresh={() => {
+                  refetchRM()
+                  refetchVendor()
+                }} />}>
+                <EmptyState stateData={emptyStateData} style={{marginTop: -(screenHeight/ 7)}} />
+                </ScrollView>
               </View>
             )}
-            <SupervisorFlatlist data={pendingOrders} />
+            <SupervisorFlatlist data={pendingOrders} reFetchers={[refetchRM, refetchVendor]} />
           </View>
           <View style={styles.flexGrow}>
+                 <View
+              style={[
+                styles.HStack,
+                styles.justifyBetween,
+                styles.alignCenter,
+                { paddingTop: 16 },
+              ]}
+            >
+              <H3>Order raw material</H3>
+              <Button
+                variant="outline"
+                size="md"
+                onPress={() => goTo("raw-material-order")}
+              >
+                Add material
+              </Button>
+            </View>
             <View style={styles.searchinputWrapper}>
               <SearchInput
                 style={{ borderWidth: 1 }}
@@ -190,7 +220,12 @@ const PurchaseScreen = () => {
             </View>
             {completedOrders?.length === 0 && (
               <View style={{ alignItems: "center" }}>
-                <EmptyState stateData={emptyStateData} />
+                <ScrollView contentContainerStyle={{ alignItems: "center", flex: 1 }} refreshControl={<RefreshControl refreshing={completedFetching} onRefresh={() => {
+                  refetchCompleted()
+                  refetchRM()
+                }} />}>
+                <EmptyState stateData={emptyStateData} style={{marginTop: -(screenHeight/ 7)}} />
+                                </ScrollView>
               </View>
             )}
             <SupervisorFlatlist
@@ -199,6 +234,7 @@ const PurchaseScreen = () => {
               fetchNext={fetchNextPage}
               hasNext={hasNextPage}
               isFetchingNext={isFetchingNextPage}
+              reFetchers={[refetchCompleted, refetchRM]}
             />
           </View>
         </Tabs>

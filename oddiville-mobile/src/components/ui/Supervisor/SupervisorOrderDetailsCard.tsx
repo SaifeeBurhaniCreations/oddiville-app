@@ -28,7 +28,7 @@ const SupervisorOrderDetailsCard = ({ order, style, ...props }: SupervisorOrderC
                     <View style={styles.titleRow}>
                         {order.isImage && (
                             <View style={styles.imageWrapper}>
-                                <CustomImage src={getImageSource(order.title).image} width={32} height={32} resizeMode='contain' />
+                                <CustomImage src={getImageSource({image: order.title}).image} width={32} height={32} resizeMode='contain' />
                             </View>
                         )}
                         <View style={styles.titleColumn}>

@@ -110,7 +110,7 @@ const VendorOrdersScreen = () => {
             <PageHeader page="Vendors" />
             <View style={styles.wrapper}>
                 <View style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}>
-                    <BackButton label={`${!userId ? "Vendors" : filteredVendors[0]?.alias ? filteredVendors[0]?.alias : truncatedName} orders (${orders?.length})`} backRoute={!userId ? "admin-home" : "vendors"} />
+                    <BackButton label={`${!userId ? "Vendors" : filteredVendors[0]?.alias ? filteredVendors[0]?.alias : truncatedName} orders (${orders?.length})`} backRoute={!userId ? "home" : "vendors"} />
                     <Button onPress={() => goTo('vendors')} variant="outline" size="md">
                         View Vendors
                     </Button>

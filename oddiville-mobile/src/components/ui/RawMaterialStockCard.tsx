@@ -17,7 +17,7 @@ const RawMaterialStockCard = ({ id, name, image, weightSentence, status, totalIt
         <Pressable onPress={onPress} style={[styles.cardWrapper, { borderRightWidth: (id % 2 === 1 ) ? 1 : 0, borderRightColor: getColor("green", 100),  borderBottomWidth: isLastRow ? 0 : 1,
             borderBottomColor: getColor("green", 100), }]}>
             <View style={styles.productImage}>
-                <CustomImage src={getImageSource(image).image} width={40} height={40} style={{ borderRadius: 8, opacity: disabled ? 0.5 : 1 }} resizeMode='contain' />
+                <CustomImage src={getImageSource({image}).image} width={40} height={40} style={{ borderRadius: 8, opacity: disabled ? 0.5 : 1 }} resizeMode='contain' />
             </View>
             <View style={styles.cardText}>
                 <View style={styles.titleWithIcon}>

@@ -89,7 +89,7 @@ router.get("/:id", async (req, res) => {
 
 router.post("/create", async (req, res) => {
   const io = req.app.get("io");
-  const { name, phone, zipcode } = req.body;
+const { name, zipcode, phone } = req.body;
   if (!name || typeof name !== "string" || name.trim().length === 0) {
     return res
       .status(400)
@@ -110,12 +110,16 @@ router.post("/create", async (req, res) => {
       .json({ error: "Vendor with this name already exists." });
   }
 
-  const vendor = await Vendors.create({
-    ...req.body,
-    name: name.trim(),
-    zipcode: zipcode === "" ? 0 : zipcode,
-    phone,
-  });
+const vendor = await Vendors.create({
+  ...req.body,
+  name: name.trim(),
+  phone,
+  zipcode: zipcode === "" ? 0 : zipcode,
+  state:
+    typeof req.body.state === "object" && req.body.state?.name
+      ? req.body.state.name.trim()
+      : String(req.body.state ?? "").trim(),
+});
 
   const payload = vendor.get({ plain: true });
   console.log("Emitting vendor created:", JSON.stringify(payload, null , 2));

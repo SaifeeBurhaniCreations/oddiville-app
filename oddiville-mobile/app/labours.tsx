@@ -1,5 +1,5 @@
 // 1. React and React Native core
-import { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -46,6 +46,7 @@ import EmptyState from "@/src/components/ui/EmptyState";
 
 // 8. Assets
 import NoContractorBatchImg from "@/src/assets/images/illustrations/no-contractor-batch.png"
+import BackButton from "@/src/components/ui/Buttons/BackButton";
 
 const options = [{ text: "Add multiple" }, { text: "Add single" }];
 
@@ -185,7 +186,7 @@ const SupervisorContractorScreen = () => {
     id: string
   ) => {
     if (id) {
-      goTo("supervisor-contractor-details", {
+      goTo("labours-details", {
         wId: id,
         mode: "single",
       });
@@ -201,6 +202,9 @@ const SupervisorContractorScreen = () => {
       <View style={styles.pageContainer}>
         <PageHeader page={"Labour"} />
         <View style={styles.wrapper}>
+          <View style={[styles.paddingTLR16]}>
+            <BackButton label="Labours" backRoute="home" />
+          </View>
           <View style={styles.errorContainer}>
             <TouchableOpacity onPress={onRefresh} style={styles.retryButton}>
               <B2 color={getColor("light")}>Retry</B2>
@@ -222,6 +226,9 @@ const SupervisorContractorScreen = () => {
     <View style={styles.pageContainer}>
       <PageHeader page={"Labour"} />
       <View style={styles.wrapper}>
+        <View style={[styles.paddingTLR16]}>
+          <BackButton label="Labours" backRoute="home" /> 
+          </View>
         <Tabs
           tabTitles={["Today's worker", "History"]}
           headerStyle={{ padding: 16 }}
@@ -284,7 +291,7 @@ const SupervisorContractorScreen = () => {
               </View>
             ) : activities?.length > 0 ? (
               <ActivitesFlatList
-                style={{paddingHorizontal: 16,}}
+                style={{paddingHorizontal: 16}}
                 onPress={handleContractorPress}
                 isVirtualised={false}
                 activities={activities}
@@ -380,4 +387,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minHeight: 200,
   },
+    paddingTLR16: {
+        paddingTop: 16,
+        paddingLeft: 16,
+        paddingRight: 16,
+    },
 });

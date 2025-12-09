@@ -219,7 +219,7 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
             <View style={styles.inputSelectWrapper}>
                 <View style={{ flex: alignment === 'half' ? 1 : 5, flexDirection: 'column', gap: 8 }}>
                     <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between" }}>
-                        <H4>{label}</H4>
+                        <H4>{label.slice(0, 13)}...</H4>
                         <B4 color={getColor('green', 700)}>
                             {remainingKg} Kg
                         </B4>

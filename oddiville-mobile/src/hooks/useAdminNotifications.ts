@@ -363,30 +363,95 @@ export function useMarkNotificationRead(
 ) {
   const queryClient = useQueryClient();
 
+  const getNotificationFromCache = (id: string): Notification | undefined => {
+    const cache = queryClient.getQueryData<any>([key, username]);
+    if (!cache?.pages) return undefined;
+
+    for (const page of cache.pages as NotificationsPage[]) {
+      const found = page.data.find((n) => n.id === id);
+      if (found) return found;
+    }
+    return undefined;
+  };
+
   return useMutation({
     mutationFn: async ({ id, update }: { id: string; update: { read: boolean } }) => {
+      const current = getNotificationFromCache(id);
+
+      if (!current) {
+        return updateNotificationService(id, update);
+      }
+
+      if (current.read === update.read) {
+        return { skipped: true };
+      }
       return updateNotificationService(id, update);
     },
-    onMutate: async ({ id }) => {
+
+    onMutate: async ({ id, update }) => {
       await queryClient.cancelQueries({ queryKey: [key, username] });
       const prevData = queryClient.getQueryData([key, username]);
+
       queryClient.setQueryData([key, username], (old: any) => {
         if (!old) return old;
+
         return {
           ...old,
           pages: old.pages.map((page: NotificationsPage) => ({
             ...page,
-            data: page.data.map((n: Notification) => (n.id === id ? { ...n, read: true } : n)),
+            data: page.data.map((n: Notification) =>
+              n.id === id && n.read !== update.read
+                ? { ...n, read: update.read }
+                : n
+            ),
           })),
         };
       });
+
       return { prevData };
     },
+
     onError: (err, variables, context) => {
-      queryClient.setQueryData([key, username], context?.prevData);
+      // rollback on error
+      if (context?.prevData) {
+        queryClient.setQueryData([key, username], context.prevData);
+      }
     },
+
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: [key, username] });
     },
   });
+}
+
+export function countUnreadFromPages(
+  data: InfiniteData<NotificationsPage> | undefined
+): number {
+  if (!data) return 0;
+  return data.pages.reduce((sum, page) => {
+    return (
+      sum +
+      page.data.filter((n: Notification) => !n.read).length
+    );
+  }, 0);
+}
+
+
+export function useUnreadNotificationCount(username: string) {
+  const { data: informativeData } = useNotificationsInformative(username);
+  const { data: actionableData } = useNotificationsActionable(username);
+  const { data: todaysData } = useNotificationsTodays(username);
+
+  const informativeUnread = countUnreadFromPages(informativeData as any);
+  const actionableUnread = countUnreadFromPages(actionableData as any);
+  const todaysUnread = countUnreadFromPages(todaysData as any);
+
+  const total = informativeUnread + actionableUnread + todaysUnread;
+
+  return {
+    total,
+    informativeUnread,
+    actionableUnread,
+    todaysUnread,
+  };
 }

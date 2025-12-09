@@ -4,7 +4,6 @@ module.exports = (sequelize, Sequelize) => {
         name: { type: Sequelize.STRING, allowNull: false, unique: true },
         alias: { type: Sequelize.STRING, allowNull: true },
         phone: { type: Sequelize.STRING, allowNull: false },
-        zipcode: { type: Sequelize.INTEGER, allowNull: false },
         state: { type: Sequelize.STRING, allowNull: false },
         city: { type: Sequelize.STRING, allowNull: false },
         address: { type: Sequelize.STRING, allowNull: true },

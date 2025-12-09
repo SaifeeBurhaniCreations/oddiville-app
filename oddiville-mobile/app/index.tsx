@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import LoaderScreen from "@/src/components/ui/LoaderScreen";
 
 export default function IndexGate() {
-  const { role, isAuthenticated, loading } = useAuth();
+  const { role, policies, isAuthenticated, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -13,10 +13,21 @@ export default function IndexGate() {
       router.replace("/login");
     } else if (
       role === "admin" ||
-      role === "superadmin" ||
-      role === "supervisor" 
+      role === "superadmin" 
     ) {
       router.replace("/(tabs)/home");
+    } else if (
+      role === "supervisor"  && policies && policies.length > 0
+    ) {
+       if(policies[0] === "purchase") {
+         router.replace("/policies/purchase");
+       } else if(policies[0] === "production") {
+         router.replace("/policies/production");
+       } else if(policies[0] === "package") {
+         router.replace("/policies/package");
+       } else if(policies[0] === "sales") {
+         router.replace("/policies/sales");
+       }
     } else {
       router.replace("/");
     }

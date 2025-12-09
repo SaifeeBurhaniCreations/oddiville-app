@@ -1,70 +1,98 @@
-import React, { useState } from 'react';
-import { Image, View, StyleSheet, ImageSourcePropType } from 'react-native';
-import { CustomImageProps } from "@/src/types";
-import { useMemoizedStyle } from '@/src/hooks/useMemoizedStyle';
-import Loader from './Loader';
+import React, { useState } from "react";
+import {
+  Image,
+  View,
+  StyleSheet,
+  ImageSourcePropType,
+  ImageResizeMode,
+  StyleProp,
+  ImageStyle,
+} from "react-native";
+import { useMemoizedStyle } from "@/src/hooks/useMemoizedStyle";
+import Loader from "./Loader";
 
+export type CustomImageProps = {
+  src?: string | ImageSourcePropType | null;
+  width?: number | string; 
+  height?: number | string;
+  style?: StyleProp<ImageStyle>;
+  borderRadius?: number;
+  resizeMode?: ImageResizeMode;
+  fallback?: ImageSourcePropType;
+  loadingIndicator?: boolean;
+};
 
 const CustomImage: React.FC<CustomImageProps> = ({
-    src,
-    width = "100%",
-    height = "100%",
-    style = {},
-    borderRadius,
-    resizeMode = 'cover',
-    fallback = { uri: "https://via.placeholder.com/150" },
-    //   fallback = require('../assets/fallback.png'), 
-    loadingIndicator = true,
+  src,
+  width = "100%",
+  height = "100%",
+  style = {},
+  borderRadius,
+  resizeMode = "cover",
+  fallback = { uri: "https://via.placeholder.com/150" },
+  loadingIndicator = true,
 }) => {
-    const [imageError, setImageError] = useState(false);
-    const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-    // Determine the image source
-    const source: ImageSourcePropType =
-        imageError ? fallback : typeof src === 'string' ? { uri: src } : src;
+  const source: ImageSourcePropType = (() => {
+    if (imageError || !src) return fallback;
 
-    const imageStyle = useMemoizedStyle(
-        [
-            { width, height, borderRadius: borderRadius ?? 16 },
-            style,
-        ],
-        [width, height, borderRadius, style]
-    );
+    if (typeof src === "string") {
+      return { uri: src };
+    }
 
-    return (
-        <View style={[styles.container, { width, height }]}>
-            {/* Loading Indicator */}
-            {loading && loadingIndicator && (
-               <Loader />
-            )}
+    return src;
+  })();
 
-            {/* Image */}
-            <Image
-                source={source}
-                style={imageStyle}
-                resizeMode={resizeMode}
-                onLoad={() => setLoading(false)}
-                onError={() => {
-                    setLoading(false);
-                    setImageError(true);
-                }}
-            />
+  const baseImageStyle: ImageStyle = {
+    borderRadius: borderRadius ?? 16,
+  };
+
+  if (width !== undefined) {
+    baseImageStyle.width = width as any;
+  }
+  if (height !== undefined) {
+    baseImageStyle.height = height as any;
+  }
+
+  const imageStyle = useMemoizedStyle(
+    [baseImageStyle, style],
+    [width, height, borderRadius, style]
+  );
+
+  return (
+    <View style={[styles.container, { width: width as any, height: height as any }]}>
+      {loading && loadingIndicator && (
+        <View style={styles.loader}>
+          <Loader />
         </View>
-    );
+      )}
+
+      <Image
+        source={source}
+        style={imageStyle}
+        resizeMode={resizeMode}
+        onLoad={() => setLoading(false)}
+        onError={() => {
+          setLoading(false);
+          setImageError(true);
+        }}
+      />
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden',
-    },
-    image: {
-        borderRadius: 16,
-    },
-    loader: {
-        position: 'absolute',
-    },
+  container: {
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  loader: {
+    position: "absolute",
+    zIndex: 1,
+  },
 });
 
 export default CustomImage;

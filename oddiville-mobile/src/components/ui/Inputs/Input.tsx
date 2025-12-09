@@ -9,14 +9,14 @@ import {
   View,
   TouchableOpacity,
 } from "react-native";
-import { B2, B4, H4 } from "../../typography/Typography";
-import CalandarPlainIcon from "../../icons/page/CalandarPlainIcon";
+import { B2, B4, H4 } from "@/src/components/typography/Typography";
+import CalandarPlainIcon from "@/src/components/icons/page/CalandarPlainIcon";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { format } from "date-fns";
-import EyeOffIcon from "../../icons/page/EyeOffIcon";
-import EyeIcon from "../../icons/page/EyeIcon";
+import EyeOffIcon from "@/src/components/icons/page/EyeOffIcon";
+import EyeIcon from "@/src/components/icons/page/EyeIcon";
 import Tooltip from "../Tooltip";
-import ClockIcon from "../../icons/common/ClockIcon";
+import ClockIcon from "@/src/components/icons/common/ClockIcon";
 
 const Input = forwardRef<TextInput, InputProps>(
   (
@@ -62,9 +62,19 @@ const Input = forwardRef<TextInput, InputProps>(
     const digitsOnly = (s: string) => s.replace(/[^0-9]/g, "");
 
     const handleChangeText = (text: string) => {
-      const next = keyboardType === "phone-pad" ? digitsOnly(text) : text;
-      onChangeText?.(next);
+      let transformed = text;
+
+      if (keyboardType === "phone-pad") {
+        transformed = digitsOnly(text);
+      }
+
+      if (keyboardType === "email-address") {
+        transformed = text.toLowerCase();
+      }
+
+      onChangeText?.(transformed);
     };
+
 
     useEffect(() => {
       if (error || status === "error") {
@@ -164,6 +174,7 @@ const Input = forwardRef<TextInput, InputProps>(
           inputStyle,
           disabled && { backgroundColor, color: getColor("green", 400) },
         ]}
+        autoCapitalize={keyboardType === "email-address" ? "none" : undefined}
         placeholder={placeholder}
         onChangeText={handleChangeText}
         onFocus={() => !disabled && setIsFocused(true)}

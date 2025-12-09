@@ -110,9 +110,10 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
   const { name, company, address, phone } = req.body;
 
   let sampleImageId = null;
-  let products = [];
+  let clientPlainResult = null;
   const stored_date = new Date();
 
+  let products = [];
   try {
     const rawProducts = req.body.products ?? "[]";
     products = JSON.parse(rawProducts);
@@ -122,21 +123,15 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
     return res.status(400).json({ error: "Invalid products payload" });
   }
 
-  if (!products.length) {
-    return res.status(400).json({ error: "No products provided" });
-  }
-console.log("products", products);
-
-  return res.status(200).json({ message: "Products created successfully" });
-  let clientPlainResult = null;
+  if (!products.length) return res.status(400).json({ error: "No products provided" });
 
   try {
-    await sequelize.transaction(async (t) => {
-      if (req.file) {
-        const uploaded = await uploadToS3(req.file);
-        sampleImageId = uploaded.url;
-      }
+    if (req.file) {
+      const uploaded = await uploadToS3(req.file);
+      sampleImageId = uploaded.url;
+    }
 
+    await sequelize.transaction(async (t) => {
       const client = await thirdPartyClient.create(
         {
           name,
@@ -152,38 +147,70 @@ console.log("products", products);
 
       for (const prod of products) {
         const product_name = (prod.product_name ?? "").trim();
-        const selectedChambers = Array.isArray(prod.selectedChambers)
-          ? prod.selectedChambers
-          : [];
-
+        const selectedChambers = Array.isArray(prod.selectedChambers) ? prod.selectedChambers : [];
         const rent = prod.rent ?? null;
         const est_dispatch_date = prod.est_dispatch_date ?? null;
 
-        if (!product_name) {
-          throw new Error("product_name missing for a product");
-        }
+        if (!product_name) throw new Error("product_name missing for a product");
 
         const normalizedIncoming = selectedChambers.map((c) => ({
           id: String(c.id),
           add: Number(c.add_quantity ?? c.quantity ?? 0),
           sub: Number(c.sub_quantity ?? 0),
-          rating: company,
+          rating: c.rating ?? company,
         }));
 
         const chamberIds = normalizedIncoming.map((c) => c.id);
 
         const chamberInstances = chamberIds.length
-          ? await chamberClient.findAll({ where: { id: chamberIds }, transaction: t })
+          ? await chamberClient.findAll({
+              where: { id: chamberIds },
+              transaction: t,
+              lock: t.LOCK.UPDATE,
+            })
           : [];
+
         const chamberMap = new Map(chamberInstances.map((c) => [String(c.id), c]));
 
-        const normalizeItems = (items) =>
-          Array.isArray(items) ? items.map((it) => String(it)) : [];
+        const normalizeItems = (items) => (Array.isArray(items) ? items.map((it) => String(it)) : []);
+
+        const insufficient = [];
+        for (const incoming of normalizedIncoming) {
+          const inst = chamberMap.get(incoming.id);
+          if (!inst) {
+            insufficient.push({
+              id: incoming.id,
+              reason: "chamber_not_found",
+            });
+            continue;
+          }
+
+          const capacity = Number(inst.capacity ?? 0);
+          const currentStock = Number(inst.current_stock ?? inst.stored_quantity ?? 0);
+          const netToAdd = Math.max(0, Number(incoming.add) - Number(incoming.sub)); 
+          const available = Math.max(0, capacity - currentStock);
+          if (netToAdd > available) {
+            insufficient.push({
+              id: inst.id,
+              name: inst.name,
+              requested: netToAdd,
+              available,
+              capacity,
+              currentStock,
+            });
+          }
+        }
+
+        if (insufficient.length > 0) {
+          const err = new Error("Insufficient chamber capacity for one or more chambers");
+          err.details = insufficient;
+          throw err;
+        }
 
         let stock = await stockClient.findOne({
           where: { product_name, category: "other" },
           transaction: t,
-          lock: t.LOCK.UPDATE, 
+          lock: t.LOCK.UPDATE,
         });
 
         if (!stock) {
@@ -216,7 +243,6 @@ console.log("products", products);
           }
         } else {
           let chambersList = Array.isArray(stock.chamber) ? stock.chamber : [];
-
           chambersList = chambersList.map((ch) => ({
             id: String(ch.id),
             quantity: String(ch.quantity ?? "0"),
@@ -224,7 +250,7 @@ console.log("products", products);
           }));
 
           for (const incoming of normalizedIncoming) {
-            const net = Number(incoming.add) - Number(incoming.sub); 
+            const net = Number(incoming.add) - Number(incoming.sub);
             const idx = chambersList.findIndex(
               (item) => String(item.id) === incoming.id && item.rating === incoming.rating
             );
@@ -254,22 +280,11 @@ console.log("products", products);
           }
 
           const safeChambersList = Array.isArray(chambersList) ? chambersList : [];
-          await stockClient.update(
-            { chamber: safeChambersList },
-            { where: { id: stock.id }, transaction: t }
-          );
+          await stockClient.update({ chamber: safeChambersList }, { where: { id: stock.id }, transaction: t });
         }
 
-        const freshStock = await stockClient.findByPk(stock.id, {
-          transaction: t,
-          raw: true,
-        });
-        freshStock.chamber = Array.isArray(freshStock.chamber) ? freshStock.chamber : [];
-
-        const stored_quantity = normalizedIncoming.reduce(
-          (s, c) => s + Math.max(0, c.add - c.sub),
-          0
-        );
+        const freshStock = await stockClient.findByPk(stock.id, { transaction: t, raw: true });
+        const stored_quantity = normalizedIncoming.reduce((s, c) => s + Math.max(0, c.add - c.sub), 0);
 
         await otherItemClient.create(
           {
@@ -300,74 +315,118 @@ console.log("products", products);
     return res.status(201).json(clientPlainResult);
   } catch (err) {
     console.error("Server error creating third-party product:", err);
+    if (err && err.details) {
+      return res.status(400).json({ error: err.message, details: err.details });
+    }
     const message = err && err.message ? err.message : "Internal server error";
     return res.status(500).json({ error: message });
   }
 });
 
 router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
+  const { id: stockIdParam, othersItemId } = req.params;
+  let { chambers = [], add_quantity = 0, sub_quantity = 0 } = req.body;
+
   try {
-    const { id, othersItemId } = req.params;
-    let { chambers, add_quantity, sub_quantity } = req.body;
+    add_quantity = Number(add_quantity || 0);
+    sub_quantity = Number(sub_quantity || 0);
+    chambers = Array.isArray(chambers) ? chambers : [];
 
-    const chamberStock = await stockClient.findByPk(id, { raw: true });
+    await sequelize.transaction(async (t) => {
+      const stockRow = await stockClient.findByPk(stockIdParam, { transaction: t, lock: t.LOCK.UPDATE });
+      if (!stockRow) throw Object.assign(new Error("Chamber stock not found"), { status: 404 });
 
-    if (!chamberStock) {
-      return res.status(404).json({ error: "Chamber stock not found" });
-    }
+      const item = await otherItemClient.findByPk(othersItemId, { transaction: t, lock: t.LOCK.UPDATE });
+      if (!item) throw Object.assign(new Error("OthersItem not found"), { status: 404 });
 
-    const item = await otherItemClient.findByPk(othersItemId);
-    if (!item) return res.status(404).json({ error: "OthersItem not found" });
+      const currentChambers = Array.isArray(stockRow.chamber) ? stockRow.chamber : [];
 
-    add_quantity = Number(add_quantity);
-    sub_quantity = Number(sub_quantity);
+      const chamberIdsToLock = currentChambers
+        .filter((sc) => chambers.includes(sc.id))
+        .map((sc) => sc.id);
 
-    const updatedChambers = chamberStock.chamber.map((stockChamber) => {
-      if (chambers.includes(stockChamber.id)) {
-        let quantity = Number(stockChamber.quantity);
-        if (add_quantity !== 0) quantity += add_quantity;
-        if (sub_quantity !== 0) quantity -= sub_quantity;
-        return { ...stockChamber, quantity: quantity.toString() };
+      const lockedChamberInstances = chamberIdsToLock.length
+        ? await chamberClient.findAll({ where: { id: chamberIdsToLock }, transaction: t, lock: t.LOCK.UPDATE })
+        : [];
+
+      const chamberMap = new Map(lockedChamberInstances.map((c) => [String(c.id), c]));
+
+      if (add_quantity > 0) {
+        const insufficient = [];
+        for (const stockChamber of currentChambers) {
+          if (!chambers.includes(stockChamber.id)) continue;
+          const inst = chamberMap.get(String(stockChamber.id));
+          if (!inst) {
+            insufficient.push({ id: stockChamber.id, reason: "chamber_not_found" });
+            continue;
+          }
+          const capacity = Number(inst.capacity ?? 0);
+          const currentStock = Number(inst.current_stock ?? inst.stored_quantity ?? 0);
+          const netAdd = add_quantity;
+          const available = Math.max(0, capacity - currentStock);
+          if (netAdd > available) {
+            insufficient.push({
+              id: inst.id,
+              name: inst.name,
+              requested: netAdd,
+              available,
+              capacity,
+              currentStock,
+            });
+          }
+        }
+        if (insufficient.length > 0) {
+          const err = new Error("Insufficient chamber capacity for requested add_quantity");
+          err.details = insufficient;
+          throw err;
+        }
       }
-      return stockChamber;
+
+      const updatedChambers = currentChambers.map((stockChamber) => {
+        if (!chambers.includes(stockChamber.id)) return stockChamber;
+        let quantity = Number(stockChamber.quantity ?? 0);
+        if (add_quantity) quantity += add_quantity;
+        if (sub_quantity) quantity -= sub_quantity;
+        if (quantity < 0) quantity = 0;
+        return { ...stockChamber, quantity: quantity.toString() };
+      });
+
+      await stockClient.update({ chamber: updatedChambers }, { where: { id: stockRow.id }, transaction: t });
+
+      let stored_quantity = Number(item.stored_quantity ?? 0);
+      if (add_quantity) stored_quantity += add_quantity;
+      if (sub_quantity) stored_quantity -= sub_quantity;
+      if (stored_quantity < 0) stored_quantity = 0;
+
+      await otherItemClient.update({ stored_quantity }, { where: { id: othersItemId }, transaction: t });
+
+      const chamberMatch = updatedChambers.find((sc) => chambers.includes(sc.id));
+      const chamberIdForHistory = chamberMatch ? chamberMatch.id : null;
+
+      await historyClient.create(
+        {
+          product_id: item.id,
+          deduct_quantity: sub_quantity,
+          remaining_quantity: stored_quantity,
+          chamber_id: chamberIdForHistory,
+        },
+        { transaction: t }
+      );
+
     });
 
-    const updatedStock = await stockClient.update(
-      { chamber: updatedChambers },
-      { where: { id }, returning: true }
-    );
-
-    let stored_quantity = Number(item.stored_quantity);
-    if (add_quantity !== 0) stored_quantity += add_quantity;
-    if (sub_quantity !== 0) stored_quantity -= sub_quantity;
-
-    await otherItemClient.update(
-      { stored_quantity },
-      { where: { id: othersItemId } }
-    );
-
-    const chamberId = chamberStock.chamber.filter((stockChamber) =>
-      chambers.includes(stockChamber.id)
-    )[0].id;
-
-    await historyClient.create({
-      product_id: item.id,
-      deduct_quantity: sub_quantity,
-      remaining_quantity: stored_quantity,
-      chamber_id: chamberId,
-    });
-
-    res.status(200).json(updatedStock);
+    const updatedStock = await stockClient.findByPk(stockIdParam, { raw: true });
+    return res.status(200).json(updatedStock);
   } catch (error) {
-    console.error(
-      "Error during update chamberStock by id:",
-      error?.message || error
-    );
-    return res
-      .status(500)
-      .json({ error: "Internal server error, please try again later." });
+    console.error("Error during update chamberStock by id:", error?.message || error);
+    if (error && error.details) {
+      return res.status(400).json({ error: error.message, details: error.details });
+    }
+    const status = error && error.status ? error.status : 500;
+    return res.status(status).json({ error: error.message || "Internal server error, please try again later." });
   }
 });
+
 
 // router.patch("/deduct-quantity/:othersItemId", async (req, res) => {
 //   const { sub_quantity } = req.body;

@@ -26,6 +26,7 @@ const SearchWithFilter = ({
   icon?: ComponentType<IconProps>;
   style?: any;
 }) => {
+  
   return (
     <View style={[styles.searchFilter, style]}>
       <SearchInput

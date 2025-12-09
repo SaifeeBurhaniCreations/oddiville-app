@@ -843,7 +843,6 @@ router.post("/bulk-ingest", async (req, res) => {
     const productionBlock = body.production || {};
     const chamberStockBlock = body.chamberStock || {};
     const dispatchBlock = body.dispatchOrder || {};
-    console.log("rawMaterialBlock", JSON.stringify(rawMaterialBlock, null, 2));
     if (dispatchBlock) {
       dispatchBlock.rows = dispatchBlock.rows.map((row) => {
         const chooseDelimiter = (s) => {
@@ -1478,7 +1477,6 @@ router.post("/bulk-ingest", async (req, res) => {
           mergedChambers.push(obj);
         }
       }
-      console.log("mergedChambers", JSON.stringify(mergedChambers, null, 2));
       const updatedPayload = {
         ...existingJson,
         chamber: mergedChambers,

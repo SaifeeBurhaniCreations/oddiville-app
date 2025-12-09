@@ -1,7 +1,7 @@
 import { FilterEnum, BottomSheetSchemaKey } from "../schemas/BottomSheetSchema";
 import { ButtonConfig } from "../types";
 
-type SectionType = "titleWithCheckbox" | "optionList";
+type SectionType = "title-with-checkbox" | "optionList";
 interface CheckboxData { text: string; isChecked: boolean; }
 interface SectionData { key: FilterEnum; options: CheckboxData[]; }
 interface OptionListData { isCheckEnable: boolean; options: string[]; }
@@ -10,10 +10,9 @@ interface Filter { sections: Section[]; buttons?: ButtonConfig[] }
 
 const filterDataMap: Record<FilterEnum, CheckboxData[]> = {
     "chamber:detailed": [
-        { text: "Name", isChecked: false },
-        { text: "Total quantity", isChecked: false },
-        { text: "Remaining quantity", isChecked: false },
-        { text: "Category", isChecked: false },
+        { text: "Material", isChecked: false },
+        { text: "Others", isChecked: false },
+        { text: "Packed", isChecked: false },
     ],
     "order:upcoming": [
         { text: "Est order date", isChecked: false },
@@ -59,7 +58,6 @@ const filterDataMap: Record<FilterEnum, CheckboxData[]> = {
 };
 
 const filterDataDetailMap: Record<FilterEnum, string[]> = {
-    "chamber:detailed": ["Name", "quantity"],
     "order:upcoming": ["Name", "quantity"],
     "order:inprogress": ["Name", "quantity"],
     "order:completed": ["Name", "quantity"],
@@ -68,20 +66,48 @@ const filterDataDetailMap: Record<FilterEnum, string[]> = {
     "vendor:order": ["Name", "quantity"],
     "vendor:overview": ["Name", "quantity"],
     "user:overview": ["Name", "quantity"],
+    "chamber:detailed": ["Name", "quantity"],
 };
 
 function buildSection(
-    key: FilterEnum,
-    options: CheckboxData[] | string[],
-    mode: "select-main" | "select-detail"
+  key: FilterEnum,
+  options: CheckboxData[] | string[],
+  mode: "select-main" | "select-detail"
 ): Section {
-    if (mode === "select-main") {
-        return { type: "titleWithCheckbox", data: { key, options: options as CheckboxData[] } };
-    } else if (mode === "select-detail") {
-        return { type: "optionList", data: { isCheckEnable: false, options: options as string[] } };
-    }
-    throw new Error(`Unhandled mode: ${mode}`);
+  if (mode === "select-main") {
+    const checkboxOptions = options as CheckboxData[];
+
+    return {
+      type: "optionList",
+      data: {
+        isCheckEnable: false,
+        options: checkboxOptions.map(o => o.text),
+      },
+    };
+  } else if (mode === "select-detail") {
+    return {
+      type: "optionList",
+      data: {
+        isCheckEnable: false,
+        options: options as string[],
+      },
+    };
+  }
+  throw new Error(`Unhandled mode: ${mode}`);
 }
+
+// function buildSection(
+//     key: FilterEnum,
+//     options: CheckboxData[] | string[],
+//     mode: "select-main" | "select-detail"
+// ): Section {
+//     if (mode === "select-main") {
+//         return { type: "title-with-checkbox", data: { key, options: options as CheckboxData[] } };
+//     } else if (mode === "select-detail") {
+//         return { type: "optionList", data: { isCheckEnable: false, options: options as string[] } };
+//     }
+//     throw new Error(`Unhandled mode: ${mode}`);
+// }
 
 export const runFilter = ({
     key,
@@ -105,6 +131,6 @@ export const runFilter = ({
             { text: 'Clear', variant: 'fill', color: 'green', alignment: "half", disabled: false },
         ],
     } : { sections: [buildSection(key, options, mode)] };
-
+    
     validateAndSetData(key, "filter", { ...currentFilter, mode, ...extraMeta });
 }

@@ -33,11 +33,16 @@ import { ItemCardProps } from '@/src/types';
 // 8. Assets 
 import noBatchImage from "@/src/assets/images/illustrations/no-batch.png";
 import noBatchImageProduction from "@/src/assets/images/illustrations/no-production-batch.png";
+import ProductionLane from '@/src/components/icons/common/ProductionLane';
+import { useAppNavigation } from '@/src/hooks/useAppNavigation';
 
-const SupervisorProductionScreen = () => {
+const ProductionScreen = () => {
+    const { goTo } = useAppNavigation();
+  
   const [isLoading, setIsLoading] = useState(false);
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const { data: productionData, isFetching: productionLoading } = useProduction();
+  
   const { data: lanes, isFetching: laneLoading } = useLanes();
   function getLaneNameById (id: string) {
     if(!laneLoading) {
@@ -77,12 +82,8 @@ const SupervisorProductionScreen = () => {
     return { inQueue, inPending, inProgress };
   }, [productionData]);
 
-  
-
-  const handleSearchFilter = () => {
-    setIsLoading(true);
-    // validateAndSetData("temp123", "filter");
-    setIsLoading(false);
+  const handleLanePress = () => {
+    goTo("lane")
   }
   const emptyStateData = getEmptyStateData("production");
 
@@ -99,11 +100,12 @@ const SupervisorProductionScreen = () => {
           ) : (
             <View style={styles.flexGrow}>
               <View style={styles.searchinputWrapper}>
-                <SearchInput
-                  border
-                  value={""}
-                  returnKeyType="search"
+                 <SearchWithFilter
+                  value=''
+                  onChangeText={() => { }}
                   placeholder={"Search by material name"}
+                  onFilterPress={handleLanePress}
+                  icon={ProductionLane}
                 />
               </View>
               <ItemsFlatList items={inPending?.concat(inQueue)} />
@@ -121,7 +123,8 @@ const SupervisorProductionScreen = () => {
                   value=''
                   onChangeText={() => { }}
                   placeholder={"Search by material name"}
-                  onFilterPress={handleSearchFilter}
+                  onFilterPress={handleLanePress}
+                  icon={ProductionLane}
                 />
               </View>
               <ItemsFlatList isProduction={true} items={inProgress} />
@@ -175,4 +178,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SupervisorProductionScreen;
+export default ProductionScreen;

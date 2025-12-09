@@ -224,7 +224,7 @@ const CompletedOrderDetailScreen = () => {
     <View style={styles.pageContainer}>
       <PageHeader page={"Order"} />
       <View style={styles.wrapper}>
-        <BackButton label="Order details" backRoute="admin-orders" />
+        <BackButton label="Order details" backRoute="sales" />
 
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={{ gap: 24 }}>

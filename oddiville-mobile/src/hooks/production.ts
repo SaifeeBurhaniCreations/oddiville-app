@@ -39,7 +39,6 @@ const toProduction = (payload: any): Production | null => {
 
 export function useProduction() {
   const queryClient = useQueryClient();
-
   useEffect(() => {
     const listener = (payload: any) => {
       const updated = toProduction(payload);

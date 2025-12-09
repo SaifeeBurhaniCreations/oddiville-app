@@ -1,0 +1,1 @@
+export const allowedPolicies = ["purchase", "production", "package", "sales"];

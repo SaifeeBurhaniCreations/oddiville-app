@@ -1,6 +1,5 @@
+import ContractorIcon from "../components/icons/bottom-bar/ContractorIcon";
 import WarehouseIcon from "../components/icons/bottom-bar/WarehouseIcon";
-import CarrotIcon from "../components/icons/menu/CarrotIcon";
-import HeadphoneIcon from "../components/icons/menu/HeadphoneIcon";
 import PackagingIcon from "../components/icons/menu/PackagingIcon";
 import ShopIcon from "../components/icons/menu/ShopIcon";
 import UserIcon from "../components/icons/menu/UserIcon";
@@ -9,38 +8,72 @@ import { menuItemsProps } from "../types";
 
 export const MENU_ITEMS: menuItemsProps[] = [
     {
-        name: "Raw Material",
-        icon: CarrotIcon,
-        href: "raw-material-overview"
-        // href: "rawMaterial"
+        name: "Chambers",
+        icon: WarehouseIcon,
+        href: "chambers"
     },
     {
         name: "Vendors",
         icon: ShopIcon,
         href: "vendor-orders"
     },
-    {
-        name: "Packaging Material",
-        icon: PackagingIcon,
-        href: "packaging"
-    },
-    {
+     {
         name: "Users",
         icon: UserIcon,
         href: "user"
     },
     {
-        name: "Supervisor View",
-        icon: WarehouseIcon,
-        href: "supervisor-raw-material"
+        name: "Trucks",
+        icon: TruckIcon,
+        href: "trucks"
+    },
+    {
+        name: "Labours",
+        icon: ContractorIcon,
+        href: "labours"
     },
 ]
+
+export const PRODUCTION_MENU_ITEMS: menuItemsProps[] = [
+    {
+        name: "Chambers",
+        icon: WarehouseIcon,
+        href: "chambers"
+    },
+]
+export const PACKAGE_MENU_ITEMS: menuItemsProps[] = [
+    {
+        name: "Chambers",
+        icon: WarehouseIcon,
+        href: "chambers"
+    },
+]
+
+export const DISPATCH_MENU_ITEMS: menuItemsProps[] = [
+    {
+        name: "Manage Trucks",
+        icon: TruckIcon,
+        href: "trucks"
+    },
+]
+
+// {
+//     name: "Packaging Material",
+//     icon: PackagingIcon,
+//     href: "packaging"
+// },
+
+// {
+//     name: "Supervisor View",
+//     icon: WarehouseIcon,
+//     href: "purchase"
+// },
 
 export const SUPERVISOR_VIEW_MENU_ITEMS: menuItemsProps[] = [
     {
         name: "Chamber",
         icon: WarehouseIcon,
-        href: "packaging"
+        href: "chambers"
     },
     {
         name: "Packaging",
@@ -55,7 +88,7 @@ export const SUPERVISOR_VIEW_MENU_ITEMS: menuItemsProps[] = [
     {
         name: "Admin View",
         icon: UserIcon,
-        href: "admin-home"
+        href: "home"
     },
 ]
 export const SUPERVISOR_MENU_ITEMS: menuItemsProps[] = [

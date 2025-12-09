@@ -60,16 +60,20 @@ interface ProductItem {
 
 // --- Hook ---
 export function useProductItems() {
-    const selectedRm = useSelector((state: RootState) => state.rawMaterial.selectedRawMaterials as SelectedRawMaterial[]);
+    const selectedRm = useSelector((state: RootState) => state.product.rawMaterials);
 
-    const { data: chamberData = [], isLoading: chamberLoading } = useChamber() as {
+    const { data: chamberData = [], isLoading: chamberLoading, refetch: chamberRefetch, isFetching: chamberFetching } = useChamber() as {
         data: Chamber[];
         isLoading: boolean;
+        refetch: () => void;
+        isFetching: boolean;
     };
 
-    const { data: stockData = [], isLoading: stockLoading } = useChamberStock() as {
+    const { data: stockData = [], isLoading: stockLoading, refetch: stockRefetch, isFetching: stockFetching } = useChamberStock() as {
         data: StockDataEntry[];
         isLoading: boolean;
+        refetch: () => void;
+        isFetching: boolean;
     };
 
     const productItems: ProductItem[] = useMemo(() => {
@@ -79,7 +83,7 @@ export function useProductItems() {
 
         return selectedRm
             .map((rm): ProductItem | null => {
-                const stock = stockData.find((s) => s.product_name === rm.name);
+                const stock = stockData.find((s) => s.product_name === rm);
 
                 if (!stock || !Array.isArray(stock.chamber)) return null;
 
@@ -104,7 +108,7 @@ export function useProductItems() {
                 });
 
                 return {
-                    name: rm.name,
+                    name: rm,
                     price: '',
                     chambers: Object.values(mergedChambers),
                     image: Carrot ?? null,
@@ -116,36 +120,106 @@ export function useProductItems() {
     return {
         productItems,
         isLoading: chamberLoading || stockLoading,
+        isFetching: chamberFetching || stockFetching,
+        refetch: () => {
+            chamberRefetch();
+            stockRefetch();
+        },
     };
 }
+type Unit = "gm" | "kg";
+
+function normalizeUnit(raw: string | null | undefined): Unit | null {
+  if (!raw) return null;
+  const u = String(raw).toLowerCase().replace(/\.$/, "");
+  if (["g", "gm", "gram", "grams", "gms"].includes(u)) return "gm";
+  if (["kg", "kgs", "kilogram", "kilograms"].includes(u)) return "kg";
+  return null;
+}
+
+function extractFirstNumber(s: string | number | null | undefined): number | null {
+  if (s === null || s === undefined) return null;
+  const str = String(s).trim();
+  if (!str) return null;
+
+  if (/\bNaN\b/i.test(str)) return null;
+
+  const m = str.match(/-?\d+(\.\d+)?/);
+  if (!m) return null;
+  const n = parseFloat(m[0]);
+  return Number.isFinite(n) ? n : null;
+}
+
+function extractUnitFromString(s: string | null | undefined): Unit | null {
+  if (!s) return null;
+  const m = String(s).match(/\b(kgs?|kilograms?|gms?|grams?|gm|g)\b/i);
+  return normalizeUnit(m?.[0] ?? null);
+}
+
+type ProductPackageItem = {
+  size: number | null;
+  unit: Unit | null;
+  stored_quantity: number | null;
+  quantity: string;     
+  rawSize?: string;     
+  rawUnit?: string | null;
+};
 
 export function useProductPackage() {
-    const { product: selectedProduct } = useSelector((state: RootState) => state.product);
-    // console.log("selectedProduct", selectedProduct);
-    
-    const { data: packageData = { types: [] }, isLoading } = usePackageByName(selectedProduct) as {
-        data: PackageData;
-        isLoading: boolean;
-    };
+  const { product: selectedProduct } = useSelector((state: RootState) => state.product);
 
-    const productPackages = useMemo(() => {
+  const { data: packageData = { types: [] }, isLoading, refetch, isFetching } = usePackageByName(selectedProduct) as {
+    data: PackageData;
+    isLoading: boolean;
+    isFetching: boolean;
+    refetch: () => void;
+  };
 
-        return packageData?.types.map((pkg) => ({
-            size: Number(pkg.size),
-            stored_quantity: Number(pkg.quantity),
-            unit: pkg.unit,
-            quantity: '',
-        }));
-    }, [packageData, selectedProduct]);
+  const productPackages: ProductPackageItem[] = useMemo(() => {
+    return (packageData?.types || []).map((pkg) => {
+      const rawSizeStr = pkg.size === undefined || pkg.size === null ? "" : String(pkg.size);
 
-    return {
-        productPackages,
-        isLoading,
-    };
+      let size = typeof pkg.size === "number" ? pkg.size : extractFirstNumber(pkg.size);
+
+      const unitFromPkgField = normalizeUnit(pkg.unit);
+const unitFromSizeString = extractUnitFromString(
+  pkg.size != null ? String(pkg.size) : undefined
+);
+
+      const unit = unitFromPkgField ?? unitFromSizeString ?? null;
+
+      const stored_quantity = (() => {
+        const q = Number(pkg.quantity);
+        return Number.isFinite(q) ? q : null;
+      })();
+
+      return {
+        size: size === null ? null : size,
+        unit,
+        stored_quantity,
+        quantity: "",
+        rawSize: rawSizeStr,
+        rawUnit: pkg.unit ?? null,
+      };
+    });
+  }, [packageData, selectedProduct]);
+
+  return { productPackages, isLoading, isFetching, refetch };
 }
 
-export function useRawMaterialByProduct(name: string) {
-    const packageQuery = usePackageByName(name);
-    const data = packageQuery.data as Package | null;
-    return data?.raw_materials ?? [];
+
+export function useRawMaterialByProduct(name: string | null) {
+  const {
+    data,
+    refetch,
+    isFetching,
+    isLoading,
+  } = usePackageByName(name);
+
+  return {
+    rawMaterials: data?.raw_materials ?? [],
+    refetch,
+    isFetching,
+    isLoading,
+  };
 }

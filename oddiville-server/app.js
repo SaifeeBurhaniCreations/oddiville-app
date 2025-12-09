@@ -86,12 +86,26 @@ const PORT = process.env.PORT || 8022;
 
 (async function start() {
   try {
-    // await sequelize.authenticate();
-    await TruckDetails.sync({ force: true });
     console.log("✅ Connected to Aiven PostgreSQL");
 
     if (process.env.SHOULD_SYNC === "true") {
+      // await Admin.sync({ force: true });
+      // await sequelize.authenticate();
       await Lanes.sync({ force: true });
+      await ChamberStock.sync({ force: true });
+      await TruckDetails.sync({ force: true });
+      await Notifications.sync({ force: true });
+      await Production.sync({ force: true });
+      await RawMaterialOrder.sync({ force: true });
+      // await History.sync({ force: true });
+      // await OthersItem.sync({ force: true });
+      // await ThirdPartyClient.sync({ force: true });
+      await Vendors.sync({ force: true });
+      await Packages.sync({ force: true });
+      await DryWarehouse.sync({ force: true });
+      await DispatchOrder.sync({ force: true });
+      await Calendar.sync({ force: true });
+      await Contractor.sync({ force: true });
       console.log("✅ Synced DB with models");
     }
 

@@ -50,7 +50,7 @@ const getOrderDetails = (
                 icon: null,
             },
         ],
-        href: 'supervisor-rm-details',
+        href: 'raw-material-receive',
         identifier: 'order-ready',
     };
 

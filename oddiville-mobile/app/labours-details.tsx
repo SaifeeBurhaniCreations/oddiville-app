@@ -47,7 +47,7 @@ const columns = [
 ] as { label: string, key: string }[];
 
 const SupervisorWorkerDetailsScreen = () => {
-    const { wId, mode = "multiple" } = useParams("supervisor-contractor-details", "wId", "mode");
+    const { wId, mode = "multiple" } = useParams("labours-details", "wId", "mode");
     const [isLoading, setIsLoading] = useState(false);
     const [toastVisible, setToastVisible] = useState(false);
     const [toastType, setToastType] = useState<"success" | "error" | "info">("info");
@@ -237,7 +237,7 @@ const SupervisorWorkerDetailsScreen = () => {
                 <View style={styles.wrapper}>
                     <ScrollView showsVerticalScrollIndicator={false}>
                         <View style={[styles.VStack, styles.gap16]}>
-                            <BackButton label='Detail' backRoute="supervisor-contractor" />
+                            <BackButton label='Detail' backRoute="labours" />
 
                             {workerDetail && (
                                 <SupervisorOrderDetailsCard

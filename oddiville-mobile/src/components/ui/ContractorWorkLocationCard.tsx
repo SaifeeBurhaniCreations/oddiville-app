@@ -7,8 +7,9 @@ import DownChevron from '../icons/navigation/DownChevron'
 import Input from './Inputs/Input'
 import Table from './Table'
 import { useEffect } from 'react'
+import TrashIcon from '../icons/common/TrashIcon'
 
-const ContractorWorkLocationCard = ({ workAssigned, isFirst, contractorIndex, isOpen, columns, setIsAddDisabled, onPress, handleRadioChange, handleInputChange, setWorkAssigned, setworkerCount, ...props }: ContractorWorkLocationCardProps) => {
+const ContractorWorkLocationCard = ({ workAssigned, isFirst, contractorIndex, isOpen, columns, setIsAddDisabled, onPress, handleRadioChange, handleInputChange, setWorkAssigned, setworkerCount, onLabourRemove, ...props }: ContractorWorkLocationCardProps) => {
   const isValidRadioKey = (key: string): key is "enterCount" | "notNeeded" =>
     key === "enterCount" || key === "notNeeded";
 
@@ -30,9 +31,20 @@ const ContractorWorkLocationCard = ({ workAssigned, isFirst, contractorIndex, is
     <View style={[styles.card, isFirst && styles.firstCard]} {...props}>
         <Pressable style={styles.cardHeader} onPress={onPress}>
         <H5 color={getColor("light")}>{workAssigned.contractorName}</H5>
+            <View style={styles.Hstack}>
+            <Pressable
+              style={styles.dropdownIcon}
+              onPress={(e) => {
+                e.stopPropagation?.();
+            onLabourRemove?.(contractorIndex)
+              }}
+            >
+              <TrashIcon color={getColor("green")} />
+            </Pressable>
         {
             isOpen ? <View style={styles.dropdownIcon}><UpChevron color={getColor("green")} /></View> : <View style={styles.dropdownIcon}><DownChevron color={getColor("green")} /></View>
         }
+          </View>
       </Pressable>
       {isOpen && <View style={styles.cardBody}>
         <Input
@@ -148,4 +160,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
         gap: 16,
       },
+    Hstack: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
 })

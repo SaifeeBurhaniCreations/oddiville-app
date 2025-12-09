@@ -391,7 +391,17 @@ const ProductCardSection = z.object({
   data: z.array(
     z.object({
       name: z.string(),
-      image: z.string(),
+      image: z.string().optional(),
+      description: z.string().optional(),
+    })
+  )
+});
+
+const PoliciesSection = z.object({
+  type: z.literal('policies-card'),
+  data: z.array(
+    z.object({
+      name: z.string(),
       description: z.string().optional(),
     })
   )
@@ -461,6 +471,14 @@ const ButtonSchema = z.object({
   disabled: z.boolean().optional(),
   color: z.enum(['red', 'green', 'blue', 'yellow']),
   alignment: z.enum(['full', 'half', 'left', 'right']),
+});
+
+const StorageRMRatingSection = z.object({
+  type: z.literal('storage-rm-rating'),
+  data: z.array(z.object({
+    rating: z.string(),
+    message: z.string(),
+  })),
 });
 
 // ------------------- Bottom Sheet Configs ------------------- //
@@ -630,8 +648,18 @@ export const CalendarEventBottomSheetConfigSchema = z.object({
 export const ScheduledCalendarEventBottomSheetConfigSchema = z.object({
   sections: z.array(z.discriminatedUnion('type', [HeaderSection, DataGroupSection])),
 });
+
 export const UserActionBottomSheetConfigSchema = z.object({
   sections: z.array(z.discriminatedUnion('type', [TitleWithDetailsCrossSection, OptionListSection])),
+});
+
+export const StorageRMRatingConfigSchema = z.object({
+  sections: z.array(z.discriminatedUnion('type', [TitleWithDetailsCrossSection, StorageRMRatingSection])),
+});
+
+export const PoliciesBottomSheetConfigSchema = z.object({
+  sections: z.array(z.discriminatedUnion('type', [TitleWithDetailsCrossSection, PoliciesSection])),
+  buttons: z.array(ButtonSchema).optional()
 });
 
 // ------------------- Type Inference ------------------- //
@@ -673,7 +701,8 @@ export type ImagePreviewBottomSheetConfig = z.infer<typeof ImagePreviewBottomShe
 export type CalendarEventBottomSheetConfig = z.infer<typeof CalendarEventBottomSheetConfigSchema>;
 export type ScheduledCalendarEventBottomSheetConfig = z.infer<typeof ScheduledCalendarEventBottomSheetConfigSchema>;
 export type UserActionBottomSheetConfig = z.infer<typeof UserActionBottomSheetConfigSchema>;
-
+export type StorageRMRatingConfig = z.infer<typeof StorageRMRatingConfigSchema>;
+export type PoliciesBottomSheetConfig = z.infer<typeof PoliciesBottomSheetConfigSchema>;
 // ------------------- Central Schema Registry ------------------- //
 
 export const bottomSheetSchemas = {
@@ -716,6 +745,8 @@ export const bottomSheetSchemas = {
   "calendar-event-scheduled": CalendarEventBottomSheetConfigSchema,
   "scheduled-date-event": ScheduledCalendarEventBottomSheetConfigSchema,
   "user-action": UserActionBottomSheetConfigSchema,
+  "storage-rm-rating": StorageRMRatingConfigSchema,
+  "select-policies": PoliciesBottomSheetConfigSchema,
 } as const;
 
 export type BottomSheetSchemaKey = keyof typeof bottomSheetSchemas;

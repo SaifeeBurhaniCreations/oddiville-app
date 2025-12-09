@@ -3,6 +3,7 @@ import { fetchOrders, fetchOrderById, dispatchOrder, updateOrder, updateOrderSta
 import { useEffect } from "react";
 import { socket } from "../lib/notificationSocket";
 import { rejectEmptyOrNull } from "../utils/authUtils";
+import { OrderStorageForm } from "@/app/create-orders";
 
 export interface DispatchOrderPackage {
     quantity: string;        
@@ -16,56 +17,48 @@ export interface DispatchOrderPackage {
     chambers: {
         id: string;
         name: string;
-        quantity: string;
+        stored_quantity: number | string;
+        quantity: number | string;
     }[];        
   }
   
   export interface DispatchTruckDetails {
-    agency_name: string;     // "Hans Travels"
-    driver_name: string;     // "Rajesh Choudhary"
-    number: string;          // "MP0913GH62"
-    phone: string;           // "6415151648"
-    type: string;            // "Eicher"
+    agency_name: string;   
+    driver_name: string;    
+    number: string;      
+    phone: string;       
+    type: string;            
   }
   
   export interface DispatchOrderData {
     id: string;                       
     status: "pending" | "dispatched" | "completed" | "in-progress" | string;
-    
     customer_name: string;           
-    product_name: string;              
     address: string;                  
     city: string;                   
     state: string;                  
     country: string;                  
-    postal_code: number;             
-    
     amount: number;                    
-  
-    createdAt: string | Date;           
+    createdAt: string | Date;  
+    updatedAt: string | Date;
     dispatch_date: string | Date;      
     est_delivered_date: string | Date;  
     delivered_date: string | Date | null;
-  
-    packages: DispatchOrderPackage[];
     products: DispatchOrderProduct[];
-  
     sample_images: string[];          
-  
     truck_details: DispatchTruckDetails | null;
-  
-    updatedAt: string | Date;
   }
+
+const CHAMBER_STOCK_KEY = ["chamber-stock"];
   
 export function useOrders() {
     const queryClient = useQueryClient();
 
-    const query = useQuery({
+    const query = useQuery<DispatchOrderData[]>({
         queryKey: ['dispatchOrders'],
         queryFn: rejectEmptyOrNull(async () => {
             try {
                 const response = await fetchOrders();
-                // Ensure we always return an array
                 const data = response?.data;
                 return Array.isArray(data) ? data : [];
             } catch (error) {
@@ -81,13 +74,13 @@ export function useOrders() {
     });
 
     useEffect(() => {
-        const handleOrderUpdate = (updatedOrder: any) => {
+        const handleOrderUpdate = (updatedOrder: DispatchOrderData) => {
             if (!updatedOrder?.id) {
                 console.warn('Received order update without valid ID:', updatedOrder);
                 return;
             }
 
-            queryClient.setQueryData(['dispatchOrders'], (oldData: any[] | undefined) => {
+            queryClient.setQueryData(['dispatchOrders'], (oldData: DispatchOrderData[] | undefined) => {
                 if (!oldData || !Array.isArray(oldData)) {
                     return [updatedOrder];
                 }
@@ -106,13 +99,13 @@ export function useOrders() {
             queryClient.setQueryData(['dispatchOrder', updatedOrder.id], updatedOrder);
         };
 
-        const handleOrderReceive = (newOrder: any) => {
+        const handleOrderReceive = (newOrder: DispatchOrderData) => {
             if (!newOrder?.id) {
                 console.warn('Received new order without valid ID:', newOrder);
                 return;
             }
 
-            queryClient.setQueryData(['dispatchOrders'], (oldData: any[] | undefined) => {
+            queryClient.setQueryData(['dispatchOrders'], (oldData: DispatchOrderData[] | undefined) => {
                 if (!oldData || !Array.isArray(oldData)) {
                     return [newOrder];
                 }
@@ -153,7 +146,7 @@ export function useUpdateOrderStatus() {
         onSuccess: (updatedOrder) => {
             if (!updatedOrder?.id) return;
 
-            queryClient.setQueryData(['dispatchOrders'], (oldData: any[] | undefined) => {
+            queryClient.setQueryData(['dispatchOrders'], (oldData: DispatchOrderData[] | undefined) => {
                 if (!oldData || !Array.isArray(oldData)) return oldData;
 
                 return oldData.map(order => 
@@ -176,7 +169,7 @@ export function useOrderById(id: string | null) {
         queryFn: rejectEmptyOrNull(async () => {
             if (!id) return null;
 
-            const cachedOrders = queryClient.getQueryData<any[]>(['dispatchOrders']);
+            const cachedOrders = queryClient.getQueryData<DispatchOrderData[]>(['dispatchOrders']);
             if (cachedOrders) {
                 const orderFromCache = cachedOrders.find(o => o.id === id);
                 if (orderFromCache) {
@@ -196,9 +189,9 @@ export function useOrderById(id: string | null) {
     useEffect(() => {
         if (!id) return;
 
-        const listener = (data: any) => {
-            if (data?.orderDetails?.id === id) {
-                queryClient.setQueryData(['dispatchOrder', id], data.orderDetails);
+        const listener = (data: DispatchOrderData) => {
+            if (data?.id === id) {
+                queryClient.setQueryData(['dispatchOrder', id], data);
             }
         };
 
@@ -212,18 +205,35 @@ export function useOrderById(id: string | null) {
     return query;
 }
 
+// export function useDispatchOrder() {
+//   return useMutation({
+//     mutationFn: async (data: OrderStorageForm) => {
+//       const response = await dispatchOrder(data);
+//       console.log("response.data", response.data);
+      
+//       return response.data;
+//     },
+//     onSuccess: () => {
+//       console.log("Dispatch order request success — no cache updated");
+//     },
+//     onError: (error) => {
+//       console.error("Error creating dispatch order:", error);
+//     },
+//   });
+// }
+
 export function useDispatchOrder() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (data: any) => {
+        mutationFn: async (data: OrderStorageForm) => {
             const response = await dispatchOrder(data);
             return response.data;
         },
         onSuccess: (newOrder) => {
             if (!newOrder?.id) return;
 
-            queryClient.setQueryData(['dispatchOrders'], (oldData: any[] | undefined) => {
+            queryClient.setQueryData(['dispatchOrders'], (oldData: DispatchOrderData[] | undefined) => {
                 if (!oldData || !Array.isArray(oldData)) {
                     return [newOrder];
                 }
@@ -248,7 +258,10 @@ export function useDispatchOrder() {
         onError: (error) => {
             console.error('Error creating dispatch order:', error);
             queryClient.invalidateQueries({ queryKey: ['dispatchOrders'] });
-        }
+        },
+        onSettled() {
+          queryClient.invalidateQueries({ queryKey: ['dispatchOrders'] });
+        },
     });
 }
 

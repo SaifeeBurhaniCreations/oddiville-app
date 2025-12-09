@@ -1,6 +1,6 @@
 // 1. React and React Native core
 import { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 // 2. Third-party dependencies
 // No items of this type
@@ -28,7 +28,6 @@ import { RootState } from "@/src/redux/store";
 import { sortBy } from "@/src/utils/numberUtils";
 import { FlatList } from "react-native";
 import { useAuth } from "@/src/context/AuthContext";
-import { isAdminRole } from "@/src/utils/authUtils";
 import { Chamber, useDryChambers } from "@/src/hooks/useChambers";
 import { useGlobalFormValidator } from "@/src/sbc/form/globalFormInstance";
 import { AddProductPackageForm } from "@/src/components/ui/bottom-sheet/InputWithSelectComponent";
@@ -157,7 +156,7 @@ const PackagingScreen = () => {
         >
           <BackButton
             label="Package"
-            backRoute={isAdminRole(role ?? "supervisor")}
+            backRoute={"package"}
           />
 
           <Button variant="outline" size="md" onPress={handleOpenAddNewPackage}>

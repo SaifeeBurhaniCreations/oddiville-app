@@ -1,590 +1,847 @@
 // 1. React and React Native core
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { ScrollView, StyleSheet, View, Alert } from 'react-native';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  View,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from "react-native";
 
 // 2. Third-party dependencies
-import { formatDate, isValid as isValidDate } from 'date-fns';
+import { isValid as isDateValid, parse } from "date-fns";
+import * as ImagePicker from 'expo-image-picker';
 
 // 3. Project components
-import PageHeader from '@/src/components/ui/PageHeader';
-import BackButton from '@/src/components/ui/Buttons/BackButton';
-import SupervisorOrderDetailsCard from '@/src/components/ui/Supervisor/SupervisorOrderDetailsCard';
-import TruckWeightCard from '@/src/components/ui/TruckWeightCard';
-import PriceInput from '@/src/components/ui/Inputs/PriceInput';
-import RatingCard from '@/src/components/ui/RatingCard/RatingCard';
-import FileUpload from '@/src/components/ui/FileUpload';
-import Button from '@/src/components/ui/Buttons/Button';
-import LinkButton from '@/src/components/ui/Buttons/LinkButton';
-import DatabaseIcon from '@/src/components/icons/page/DatabaseIcon';
-import Loader from '@/src/components/ui/Loader';
+import PageHeader from "@/src/components/ui/PageHeader";
+import DatabaseIcon from "@/src/components/icons/page/DatabaseIcon";
+import TruckWeightCard from "@/src/components/ui/TruckWeightCard";
+import { B5 } from "@/src/components/typography/Typography";
+import Input from "@/src/components/ui/Inputs/Input";
+import SimpleFileUpload from "@/src/components/ui/SimpleFileUpload";
+import SupervisorOrderDetailsCard from "@/src/components/ui/Supervisor/SupervisorOrderDetailsCard";
+import Button from "@/src/components/ui/Buttons/Button";
+import BackButton from "@/src/components/ui/Buttons/BackButton";
+import Modal from "@/src/components/ui/modals/Modal";
+import Loader from "@/src/components/ui/Loader";
 
 // 4. Project hooks
-import { useParams } from '@/src/hooks/useParams';
-import { useProductionById, useStartProduction } from '@/src/hooks/production';
-import { useRawMaterialOrderById } from '@/src/hooks/rawMaterialOrders';
-import { useAppNavigation } from '@/src/hooks/useAppNavigation';
-import { useAdmin } from '@/src/hooks/useAdmin';
+import { useAppNavigation } from "@/src/hooks/useAppNavigation";
+import { useParams } from "@/src/hooks/useParams";
+import {
+  ALL_KEY,
+  PENDING_KEY,
+  useRawMaterialOrderById,
+} from "@/src/hooks/rawMaterialOrders";
+import { useUpdateRawMaterialOrder } from "@/src/hooks/useUpdateRawMaterialOrder";
 
 // 5. Project constants/utilities
-import { getColor } from '@/src/constants/colors';
-import FormField from '@/src/sbc/form/FormField';
-import { useFormValidator } from '@/src/sbc/form';
+import { getColor } from "@/src/constants/colors";
+import { useFormValidator } from "@/src/sbc/form";
+import FormField from "@/src/sbc/form/FormField";
 
 // 6. Types
-import { OrderProps } from '@/src/types';
-import DetailsToast from '@/src/components/ui/DetailsToast';
+import { OrderProps, RawMaterialOrderProps, RootStackParamList } from "@/src/types";
+import { formatDateForDisplay } from "@/src/utils/dateUtils";
+import DetailsToast from "@/src/components/ui/DetailsToast";
+import { hasUrlField, isChallanObject } from "@/src/utils/urlUtils";
+import { queryClient } from "@/src/lib/react-query";
+import { rawMaterialReceiveBackRoute } from "@/src/constants/backRoute";
+import { useAuth } from "@/src/context/AuthContext";
 
-type RNImageFile = {
-    uri: string;
-    type?: string;
-    fileName?: string;
-    name?: string;
+type RawMaterialReceived = {
+  arrival_date: string;
+  truck_weight: string;
+  tare_weight: string;
+  quantity_received: string;
+  challan: null | string | { key: string; url: string };
+  truck_number: string;
+  driver_name: string;
 };
 
-type ProductionStart = {
-    sample_quantity: string;
-    rating: string;
-    sample_image: string | RNImageFile | null;
-    supervisor: string;
+const parseWeight = (weight: string): number => {
+  const parsed = parseFloat(weight?.replace(/[^\d.-]/g, "") || "0");
+  return isNaN(parsed) ? 0 : Math.max(0, parsed);
 };
 
-// Constants
-const DEFAULT_VALUE = "--";
-const KG_TO_TONS = 1000;
-const DATE_FORMAT = "MMM d, yyyy";
+const formatOrder = (order: any): OrderProps => ({
+  id: order?.id,
+  title: order?.raw_material_name ?? "N/A",
+  name: order?.vendor ?? "N/A",
+  description: [
+    {
+      name: "Order quantity",
+      value: `${order?.quantity_ordered ?? "--"} ${order?.unit ?? ""}`,
+      icon: <DatabaseIcon size={16} color={getColor("green", 700)} />,
+    },
+  ],
+  // address: order?.address ?? "N/A",
+  helperDetails: [
+    {
+      name: "Order",
+      value: formatDateForDisplay(order?.order_date),
+      icon: null,
+    },
+    {
+      name: "Arrival",
+      value: formatDateForDisplay(order?.arrival_date),
+      icon: null,
+    },
+  ],
+  href: "raw-material-receive",
+  identifier: order?.status ?? "order-ready",
+});
 
-const RawMaterialReceiveScreen = () => {
-    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [toastVisible, setToastVisible] = useState(false);
-    const [toastType, setToastType] = useState<"success" | "error" | "info">("info");
-    const [toastMessage, setToastMessage] = useState("");
+const SupervisorRawMaterialDetailsScreen = () => {
+  const [loading, setLoading] = useState(false);
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastType, setToastType] = useState<"success" | "error" | "info">(
+    "info"
+  );
+  const [toastMessage, setToastMessage] = useState("");
 
-    // Hooks
-    const { id } = useParams('raw-material-receive', 'id');
-    const { goTo } = useAppNavigation();
-    const adminData = useAdmin();
+  const isInitialized = useRef(false);
+    const { role } = useAuth();
 
-    const {
-        data: productionData,
-        isFetching: productFetching,
-        error: productionError,
-        isError: isProductionError
-    } = useProductionById(id!);
+  const { goTo } = useAppNavigation();
+  const { rmId } = useParams("raw-material-receive", "rmId");
 
-    const rawOrderId = productionData?.raw_material_order_id;
-    const {
-        data: rawMaterialOrderData,
-        isFetching: dataFetching,
-        error: rawMaterialError,
-        isError: isRawMaterialError
-    } = useRawMaterialOrderById(rawOrderId);
+  // Validate rmId
+  const safeRmId = useMemo(() => {
+    return rmId && rmId !== "undefined" && rmId !== "null" ? rmId : null;
+  }, [rmId]);
 
-    const startProduction = useStartProduction();
+  const {
+    data: orderData,
+    isFetching,
+    error,
+  } = useRawMaterialOrderById(safeRmId);
 
-    const showToast = (type: "success" | "error" | "info", message: string) => {
-        setToastType(type);
-        setToastMessage(message);
-        setToastVisible(true);
-    };
+  const formattedOrder = useMemo(() => {
+    return orderData ? formatOrder(orderData) : null;
+  }, [orderData]);
 
-    useEffect(() => {
-        if (isProductionError && productionError) {
-            showToast("error", "Failed to load production data. Please try again!");
+  const showToast = (type: "success" | "error" | "info", message: string) => {
+    setToastType(type);
+    setToastMessage(message);
+    setToastVisible(true);
+  };
 
-            goTo('production')
-        }
-        if (isRawMaterialError && rawMaterialError) {
-            showToast("error", "Failed to load raw material order data!");
-        }
-    }, [isProductionError, productionError, isRawMaterialError, rawMaterialError, goTo]);
+  const updateRawMaterialOrder = useUpdateRawMaterialOrder();
 
-    const {
-        values,
-        setField,
-        errors,
-        validateForm,
-        resetForm,
-        isValid,
-    } = useFormValidator<ProductionStart>(
-        {
-            sample_quantity: '0',
-            rating: '',
-            sample_image: null,
-            supervisor: adminData?.name || '',
-        },
-        {
-            sample_quantity: [],
-            rating: [
-                {
-                    type: 'custom',
-                    validate: (value: number) => {
-                        if (!value || value === 0) return false;
-                        const ratings = [1, 2, 3, 4, 5];
-                        console.log(value);
+  const { values, setField, errors, validateForm, resetForm, isValid } =
+    useFormValidator<RawMaterialReceived>(
+      {
+        arrival_date: "",
+        truck_weight: "",
+        tare_weight: "",
+        quantity_received: "",
+        challan: null,
+        truck_number: "",
+        driver_name: "",
+      },
+      {
+        arrival_date: [
+          { type: "required", message: "Arrival date is required!" },
+        ],
+        truck_weight: [
+          { type: "required", message: "Truck weight is required!" },
+          {
+            type: "custom",
+            validate: (value) => parseWeight(value) > 0,
+            message: "Truck weight must be greater than 0 kg!",
+          },
+        ],
+        tare_weight: [
+          { type: "required", message: "Tare weight is required!" },
+          {
+            type: "custom",
+            validate: (value) => parseWeight(value) >= 0,
+            message: "Tare weight must be 0 or greater!",
+          },
+        ],
+        quantity_received: [
+          { type: "required", message: "Quantity received is required!" },
+          {
+            type: "custom",
+            validate: (value) =>
+              parseWeight(value) > 0 &&
+              parseWeight(value) <= Number(orderData?.quantity_ordered),
+            message:
+              "Quantity must be greater than 0 or smaller then ordered quantity",
+          },
+        ],
+        challan: [{ type: "required", message: "Challan is required!" }],
 
-                        if (!ratings.includes(value)) return false;
-                        return true;
-                    },
-                    message: "Rating is required and must be one of 1, 2, 3, 4, 5."
-                }
-            ],
-            sample_image: [
-                {
-                    type: 'custom',
-                    validate: (value: any) => {
-                        if (!value) return false;
-                        if (typeof value === 'string' && !value.trim()) return false;
-                        if (typeof value === 'object' && (!value.uri || !value.uri.trim())) return false;
-                        return true;
-                    },
-                    message: "Sample image is required and must be a valid image file."
-                }
-            ],
-        },
-        {
-            validateOnChange: true,
-            debounce: 300,
-        }
+        truck_number: [
+          { type: "required", message: "Truck Number is required!" },
+          {
+            type: "length",
+            length: 8,
+            message: "Truck Number must be 8 digit!",
+          },
+        ],
+        driver_name: [
+          { type: "required", message: "Driver name is required!" },
+        ],
+      },
+      {
+        validateOnChange: true,
+        debounce: 300,
+      }
     );
-    // const orderDetail: OrderProps = useMemo(() => {
-    //     const safeProductName = productionData?.product_name || DEFAULT_VALUE;
-    //     const safeVendor = rawMaterialOrderData?.vendor || DEFAULT_VALUE;
 
-    //     const quantityReceived = rawMaterialOrderData?.quantity_received;
-    //     const unit = rawMaterialOrderData?.unit;
-    //     const quantityText = quantityReceived && unit
-    //         ? `${quantityReceived} ${unit}`
-    //         : DEFAULT_VALUE;
+  const netWeightKg = useMemo(() => {
+    const truckWeight = parseWeight(values.truck_weight);
+    const tareWeight = parseWeight(values.tare_weight);
+    const net = truckWeight - tareWeight;
+    return net > 0 ? net : 0;
+  }, [values.truck_weight, values.tare_weight]);
 
-    //     const orderDate = rawMaterialOrderData?.order_date;
-    //     const arrivalDate = rawMaterialOrderData?.arrival_date;
+  const isWeightLogicValid = useMemo(() => {
+    const truckWeight = parseWeight(values.truck_weight);
+    const tareWeight = parseWeight(values.tare_weight);
+    return truckWeight >= tareWeight;
+  }, [values.truck_weight, values.tare_weight]);
 
-    //     const formatDateSafely = (dateString: any) => {
-    //         if (!dateString) return DEFAULT_VALUE;
-    //         try {
-    //             const date = new Date(dateString);
-    //             return isValidDate(date) ? formatDate(date, DATE_FORMAT) : DEFAULT_VALUE;
-    //         } catch {
-    //             return DEFAULT_VALUE;
-    //         }
-    //     };
+  useEffect(() => {
+    if (!orderData || isInitialized.current) return;
 
-    //     return {
-    //         title: safeProductName,
-    //         name: safeVendor,
-    //         description: [
-    //             {
-    //                 name: "Quantity",
-    //                 value: quantityText,
-    //                 icon: <DatabaseIcon color={getColor("green", 700)} size={16} />,
-    //             },
-    //         ],
-    //         helperDetails: [
-    //             {
-    //                 name: "Order",
-    //                 value: formatDateSafely(orderDate),
-    //                 icon: null,
-    //             },
-    //             {
-    //                 name: "Arrival",
-    //                 value: formatDateSafely(arrivalDate),
-    //                 icon: null,
-    //             },
-    //         ],
-    //     };
-    // }, [productionData, rawMaterialOrderData]);
+    const truckDetails = orderData?.truck_details;
+    const arrivalDate = formatDateForDisplay(orderData.arrival_date);
+    const quantityReceived = orderData.quantity_received?.toString() || "";
 
-    const orderDetail = useMemo<OrderProps>(() => {
-        const safeProductName = productionData?.product_name || DEFAULT_VALUE;
-        const safeVendor = rawMaterialOrderData?.vendor || DEFAULT_VALUE;
+    const truckWeightKg = truckDetails?.truck_weight
+      ? truckDetails.truck_weight.toString()
+      : "";
+    const tareWeightKg = truckDetails?.tare_weight
+      ? truckDetails.tare_weight.toString()
+      : "";
 
-        const quantityReceived = rawMaterialOrderData?.quantity_received;
-        const unit = rawMaterialOrderData?.unit;
-        const quantityText = quantityReceived && unit
-            ? `${quantityReceived} ${unit}`
-            : DEFAULT_VALUE;
-
-        const orderDate = rawMaterialOrderData?.order_date;
-        const arrivalDate = rawMaterialOrderData?.arrival_date;
-
-        const formatDateSafely = (dateInput: any) => {
-            if (!dateInput) return DEFAULT_VALUE;
-            try {
-                const date = new Date(dateInput);
-                return isValidDate(date) ? formatDate(date, DATE_FORMAT) : DEFAULT_VALUE;
-            } catch {
-                return DEFAULT_VALUE;
-            }
-        };
-
-        return {
-            title: safeProductName,
-            name: safeVendor,
-            description: [
-                {
-                    name: "Quantity",
-                    value: quantityText,
-                    icon: <DatabaseIcon color={getColor("green", 700)} size={16} />,
-                },
-            ],
-            helperDetails: [
-                {
-                    name: "Order",
-                    value: formatDateSafely(orderDate),
-                    icon: null,
-                },
-                {
-                    name: "Arrival",
-                    value: formatDateSafely(arrivalDate),
-                    icon: null,
-                },
-            ],
-        };
-    }, [productionData, rawMaterialOrderData]);
-    const truckDetails = useMemo(() => {
-        const truckDetailsData = rawMaterialOrderData?.truck_details;
-
-        if (!truckDetailsData) {
-            return {
-                title: DEFAULT_VALUE,
-                description: "Product weight",
-                truckWeight: DEFAULT_VALUE,
-                otherDescription: "Truck weight",
-            };
-        }
-
-        const parseTruckWeight = (weight: any): number => {
-            if (typeof weight === 'number') return weight;
-            if (typeof weight === 'string') {
-                const parsed = parseFloat(weight);
-                return isNaN(parsed) ? 0 : parsed;
-            }
-            return 0;
-        };
-
-        const truckWeight = parseTruckWeight(truckDetailsData.truck_weight);
-        const tareWeight = parseTruckWeight(truckDetailsData.tare_weight);
-
-        const netWeight = truckWeight > 0 && tareWeight > 0
-            ? truckWeight - tareWeight
-            : 0;
-
-        return {
-            title: netWeight > 0 ? `${(netWeight)} Kg` : DEFAULT_VALUE,
-            description: "Product weight",
-            truckWeight: truckWeight > 0 ? `${(truckWeight / KG_TO_TONS).toFixed(2)} Tons` : DEFAULT_VALUE,
-            otherDescription: "Truck weight",
-        };
-    }, [rawMaterialOrderData]);
-
-    const buildFormData = useCallback((form: ProductionStart, status: string): FormData => {
-        const formData = new FormData();
-
-        formData.append("sample_quantity", form.sample_quantity.trim());
-        formData.append("rating", form.rating);
-        formData.append("status", status);
-        formData.append("start_time", new Date().toISOString());
-
-        if (status === 'in-progress' && adminData?.name) {
-            formData.append("supervisor", adminData.name.trim());
-        }
-
-        if (form.sample_image) {
-            try {
-                let fileData: any = null;
-
-                if (typeof form.sample_image === 'string') {
-                    const uri = form.sample_image.trim();
-                    if (uri) {
-                        const fileName = uri.split('/').pop() || 'sample_image.jpg';
-                        const fileExtension = fileName.split('.').pop()?.toLowerCase();
-
-                        let mimeType = 'application/octet-stream';
-                        if (fileExtension === 'jpg' || fileExtension === 'jpeg') {
-                            mimeType = 'image/jpeg';
-                        } else if (fileExtension === 'png') {
-                            mimeType = 'image/png';
-                        } else if (fileExtension === 'pdf') {
-                            mimeType = 'application/pdf';
-                        }
-
-                        fileData = {
-                            uri,
-                            name: fileName,
-                            type: mimeType,
-                        };
-                    }
-                } else if (form.sample_image && typeof form.sample_image === 'object' && 'uri' in form.sample_image) {
-                    const { uri, name, fileName, type } = form.sample_image;
-                    if (uri?.trim()) {
-                        fileData = {
-                            uri: uri.trim(),
-                            name: (fileName || name || 'sample_image.jpg').trim(),
-                            type: type || 'application/octet-stream',
-                        };
-                    }
-                }
-
-                if (fileData && fileData.uri) {
-                    formData.append("sample_image", fileData);
-                }
-            } catch (error) {
-                console.error("Error processing sample image:", error);
-                showToast("error", "Failed to process the selected image file!");
-            }
-        }
-
-        return formData;
-    }, [adminData]);
-
-    const onSubmit = useCallback(async (status: 'in-progress' | 'in-queue') => {
-        if (isSubmitting || startProduction.isPending) {
-            return;
-        }
-
-        if (!id) {
-            showToast("error", "Production ID is missing!");
-            return;
-        }
-
-        if (!adminData?.name && status === 'in-progress') {
-            showToast("error", "Supervisor information is missing!");
-            return;
-        }
-
-        const result = validateForm();
-        if (!result.success) {
-            const firstError = Object.values(result.errors)[0];
-            if (firstError) {
-                showToast("error", firstError);
-            }
-            return;
-        }
-
-        try {
-            setIsSubmitting(true);
-            const formData = buildFormData(result.data, status);
-
-            await new Promise((resolve, reject) => {
-                startProduction.mutate(
-                    { id: id, data: formData },
-                    {
-                        onSuccess: (response) => {
-                            console.log("Production started successfully:", response);
-
-                            if (status === 'in-progress') {
-                                goTo("production-start", { id: id });
-                            } else {
-                                goTo('production');
-                            }
-
-                            setTimeout(() => {
-                                resetForm();
-                            }, 100);
-
-                            resolve(response);
-                        },
-                        onError: (error) => {
-                            console.error("Production start failed:", error);
-
-                            let errorMessage = "Failed to start production. Please try again.";
-
-                            if (error instanceof Error) {
-                                if (error.message.includes('network')) {
-                                    errorMessage = "Network error. Please check your connection and try again.";
-                                } else if (error.message.includes('validation')) {
-                                    errorMessage = "Invalid data provided. Please check your inputs.";
-                                }
-                            }
-                            showToast("error", errorMessage);
-                            reject(error);
-                        }
-                    }
-                );
-            });
-
-        } catch (error) {
-            console.error("Production submission failed:", error);
-
-            if (error instanceof Error && error.message === "File processing failed") {
-                return;
-            }
-            showToast("error", "An unexpected error occurred. Please try again!");
-        } finally {
-            setIsSubmitting(false);
-        }
-    }, [id, adminData, isSubmitting, startProduction, validateForm, buildFormData, goTo, resetForm]);
-
-    const isLoading = productFetching || dataFetching;
-    const isFormDisabled = isLoading || isSubmitting || startProduction.isPending || !productionData;
-
-    if (isProductionError && !productionData) {
-        return (
-            <View style={styles.pageContainer}>
-                <PageHeader page="Production" />
-                <View style={styles.errorContainer}>
-                    <Loader />
-                </View>
-            </View>
-        );
+    let challanUrl: string | null = null;
+    if (truckDetails?.challan) {
+      if (typeof truckDetails.challan === "string") {
+        challanUrl = truckDetails.challan;
+      } else if (hasUrlField(truckDetails.challan)) {
+        challanUrl = (truckDetails.challan as { url: string }).url;
+      }
     }
 
+    const fieldsToUpdate = [
+      ["arrival_date", arrivalDate],
+      ["quantity_received", quantityReceived],
+      ["truck_weight", truckWeightKg],
+      ["tare_weight", tareWeightKg],
+      ["challan", challanUrl],
+    ] as const;
+
+    fieldsToUpdate.forEach(([field, value]) => {
+      setField(field, value);
+    });
+
+    isInitialized.current = true;
+  }, [orderData?.id]);
+
+  useEffect(() => {
+    isInitialized.current = false;
+  }, [safeRmId]);
+
+  const hasChanges = useMemo(() => {
+    if (!isInitialized.current) return false;
+
     return (
-        <View style={styles.pageContainer}>
-            <PageHeader page="Production" />
-            <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={styles.wrapper}>
-                    <View style={[styles.VStack, styles.gap16]}>
-                        <BackButton
-                            label="Detail"
-                            backRoute='supervisor-production'
-                        />
-
-                        <SupervisorOrderDetailsCard
-                            order={orderDetail}
-                            color="green"
-                            bgSvg={DatabaseIcon}
-                        />
-
-                        <TruckWeightCard {...truckDetails} />
-
-                        <FormField name="sample_quantity" form={{ values, setField, errors }}>
-                            {({ value, onChange, error }) => (
-                                <PriceInput
-                                    value={value}
-                                    onChangeText={onChange}
-                                    placeholder="Enter quantity"
-                                    addonText="Kg"
-                                    error={error}
-                                    editable={!isFormDisabled}
-                                >
-                                    Sample quantity
-                                </PriceInput>
-                            )}
-                        </FormField>
-
-                        <FormField name="rating" form={{ values, setField, errors }}>
-                            {({ value, onChange, error }) => (
-                                <RatingCard
-                                    active={value}
-                                    onChange={onChange}
-                                // disabled={isFormDisabled}
-                                // error={error}
-                                >
-                                    Select rating
-                                </RatingCard>
-                            )}
-                        </FormField>
-
-                        <FormField name="sample_image" form={{ values, setField, errors }}>
-                            {({ value, onChange, error }) => (
-                                <FileUpload
-                                    fileState={[value, onChange]}
-                                    error={error}
-                                // disabled={isFormDisabled}
-                                />
-                            )}
-                        </FormField>
-                    </View>
-
-                    <View style={styles.gap16}>
-                        <Button
-                            variant="fill"
-                            disabled={isFormDisabled}
-                            onPress={() => onSubmit('in-progress')}
-                        // loading={isSubmitting && startProduction.isPending}
-                        >
-                            {isSubmitting || startProduction.isPending
-                                ? "Starting production..."
-                                : "Start production"
-                            }
-                        </Button>
-
-                        <LinkButton
-                            disabled={isFormDisabled}
-                            onPress={() => onSubmit('in-queue')}
-                        >
-                            {isSubmitting || startProduction.isPending
-                                ? "Adding to queue..."
-                                : "Add to production queue"
-                            }
-                        </LinkButton>
-                    </View>
-                </View>
-            </ScrollView>
-            <DetailsToast
-                type={toastType}
-                message={toastMessage}
-                visible={toastVisible}
-                onHide={() => setToastVisible(false)}
-            />
-
-            {/* Loading overlay */}
-            {isLoading && (
-                <View style={styles.overlay}>
-                    <View style={styles.loaderContainer}>
-                        <Loader />
-                    </View>
-                </View>
-            )}
-        </View>
+      values.arrival_date !== "" ||
+      values.truck_weight !== "" ||
+      values.tare_weight !== "" ||
+      values.quantity_received !== "" ||
+      values.truck_number !== "" ||
+      values.driver_name !== "" ||
+      values.challan !== null
     );
+  }, [
+    values.arrival_date,
+    values.truck_weight,
+    values.tare_weight,
+    values.quantity_received,
+    values.truck_number,
+    values.driver_name,
+    values.challan,
+  ]);
+
+  useEffect(() => {
+    setHasUnsavedChanges(hasChanges);
+  }, [hasChanges]);
+
+  const handleBackPress = () => {
+    if (hasUnsavedChanges && !orderData?.arrival_date) {
+      setShowDiscardModal(true);
+    } else {
+      goTo("purchase");
+    }
+  };
+
+  const validateWeights = (): boolean => {
+    const truckWeight = parseWeight(values.truck_weight);
+    const tareWeight = parseWeight(values.tare_weight);
+    const quantityReceived = parseWeight(values.quantity_received);
+
+    if (truckWeight <= tareWeight) {
+      showToast(
+        "error",
+        "Truck gross weight must be greater than tare weight!"
+      );
+      return false;
+    }
+
+    const netWeight = truckWeight - tareWeight;
+    if (Math.abs(netWeight - quantityReceived) > quantityReceived * 0.1) {
+      showToast(
+        "error",
+        `Net weight (${netWeight.toFixed(
+          2
+        )} kg) differs significantly from quantity received (${quantityReceived} kg). Please verify the weights.`
+      );
+
+      onSubmit(true);
+      // [
+      //   { text: "Review", style: "cancel" },
+      //   { text: "Continue Anyway", onPress: () => onSubmit(true) }
+      // ]
+      return false;
+    }
+
+    return true;
+  };
+
+  const onSubmit = async (skipValidation = false) => {
+    if (loading || updateRawMaterialOrder.isPending) return;
+
+    const result = validateForm();
+    if (!result.success) {
+      showToast("error", "Please fill in all required fields correctly!");
+      return;
+    }
+
+    if (!skipValidation && !validateWeights()) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const formData = new FormData();
+
+      // Parsing date safely
+      const arrivalDateStr = result.data.arrival_date;
+      const arrivalDate = parse(arrivalDateStr, "MMM dd, yyyy", new Date());
+      if (isDateValid(arrivalDate)) {
+        formData.append("arrival_date", arrivalDate.toISOString());
+      } else {
+        console.error("Invalid date:", arrivalDateStr);
+      }
+
+      const truckWeightTons = parseWeight(result.data.truck_weight).toString();
+      const tareWeightTons = parseWeight(result.data.tare_weight).toString();
+
+      formData.append("truck_weight", truckWeightTons);
+      formData.append("tare_weight", tareWeightTons);
+      formData.append("truck_number", result.data.truck_number);
+      formData.append("driver_name", result.data.driver_name);
+      formData.append(
+        "quantity_received",
+        parseWeight(result.data.quantity_received).toString()
+      );
+
+      const challan = orderData?.truck_details?.challan;
+      if (isChallanObject(challan)) {
+        formData.append("challan", JSON.stringify(challan));
+      } else if (result.data.challan) {
+        let fileData: any = result.data.challan;
+        if (typeof result.data.challan === "string") {
+          const filename =
+            result.data.challan.split("/").pop() || "challan.jpg";
+          const fileType = filename.toLowerCase().endsWith(".pdf")
+            ? "application/pdf"
+            : "image/jpeg";
+          fileData = {
+            uri: result.data.challan,
+            name: filename,
+            type: fileType,
+          };
+        } else if (result.data.challan instanceof File) {
+          const filename = result.data.challan.name;
+          const fileType =
+            result.data.challan.type ||
+            (filename.toLowerCase().endsWith(".pdf")
+              ? "application/pdf"
+              : "image/jpeg");
+          fileData = {
+            ...result.data.challan,
+            type: fileType,
+          };
+        }
+        formData.append("challan", fileData);
+      }
+
+      if (!safeRmId) {
+        throw new Error("Invalid order ID");
+      }
+
+      updateRawMaterialOrder.mutate(
+        { id: safeRmId, data: formData },
+        {
+          onSuccess: (updated) => {
+            showToast("success", "Raw material order updated successfully!");
+
+            queryClient.setQueryData<RawMaterialOrderProps[]>(
+              PENDING_KEY,
+              (old = []) => old.filter((o) => o.id !== safeRmId)
+            );
+            queryClient.setQueryData<RawMaterialOrderProps[]>(
+              ALL_KEY,
+              (old = []) => {
+                if (!updated?.id) return old;
+                const idx = old.findIndex((o) => o.id === updated.id);
+                if (idx === -1) return [updated, ...old];
+                const copy = old.slice();
+                copy[idx] = updated;
+                return copy;
+              }
+            );
+            queryClient.setQueryData(
+              ["raw-material-order-by-id", safeRmId],
+              updated
+            );
+
+            queryClient.invalidateQueries({ queryKey: PENDING_KEY });
+            queryClient.invalidateQueries({ queryKey: ALL_KEY });
+            queryClient.invalidateQueries({ queryKey: ["raw-material-orders", "completed"] });
+            goTo("purchase");
+            resetForm();
+            setHasUnsavedChanges(false);
+          },
+          onError: (error: any) => {
+            console.error("Update error:", error);
+            showToast(
+              "error",
+              error?.message ||
+                "Failed to update raw material order. Please try again!"
+            );
+          },
+        }
+      );
+    } catch (err) {
+      console.error("Submit error:", err);
+      showToast("error", "An unexpected error occurred. Please try again!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const shouldShowTruckDetails = useMemo(() => {
+    return (
+      values.truck_weight !== "" &&
+      values.tare_weight !== "" &&
+      parseWeight(values.truck_weight) > 0 &&
+      parseWeight(values.tare_weight) >= 0 &&
+      isWeightLogicValid &&
+      netWeightKg > 0
+    );
+  }, [
+    values.truck_weight,
+    values.tare_weight,
+    isWeightLogicValid,
+    netWeightKg,
+  ]);
+
+  const isEditable = useMemo(() => {
+    return !!orderData?.arrival_date;
+  }, [orderData?.arrival_date]);
+
+  if (isFetching) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Loader />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.pageContainer}>
+        <PageHeader page={"Raw Material"} />
+        <View style={styles.wrapper}>
+          <BackButton label="Raw material receive" backRoute="purchase" />
+          <View style={styles.errorContainer}>
+            <B5 color={getColor("red", 600)}>
+              Failed to load order details. Please try again.
+            </B5>
+            <Button variant="outline" onPress={() => goTo("purchase")}>
+              Go Back
+            </Button>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (!orderData) {
+    return (
+      <View style={styles.pageContainer}>
+        <PageHeader page={"Raw Material"} />
+        <View style={styles.wrapper}>
+          <BackButton label="Raw material receive" backRoute="purchase" />
+          <View style={styles.errorContainer}>
+            <B5 color={getColor("dark", 600)}>Order not found.</B5>
+            <Button variant="outline" onPress={() => goTo("purchase")}>
+              Go Back
+            </Button>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.pageContainer}>
+      <PageHeader page={"Raw Material"} />
+      <View style={styles.wrapper}>
+        <BackButton label="Raw material receive" backRoute={rawMaterialReceiveBackRoute[role ?? "supervisor"] as keyof RootStackParamList} />
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardAvoidingView}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.innerWrapper}>
+              {formattedOrder && (
+                <SupervisorOrderDetailsCard order={formattedOrder} />
+              )}
+
+              {shouldShowTruckDetails && (
+                <TruckWeightCard
+                  title={`${netWeightKg.toFixed(2)}`}
+                  description="Net weight (Kg)"
+                />
+              )}
+
+              {!isWeightLogicValid &&
+                values.truck_weight &&
+                values.tare_weight && (
+                  <View style={styles.warningContainer}>
+                    <B5 color={getColor("light", 400)}>
+                      ⚠️ Truck weight cannot be less than tare weight
+                    </B5>
+                  </View>
+                )}
+
+              <View style={styles.titleWithDataInputs}>
+                <FormField
+                  name="quantity_received"
+                  form={{ values, setField, errors }}
+                >
+                  {({ value, onChange, error }) => (
+                    <Input
+                      value={value}
+                      onChangeText={(text: string) => {
+                        setField("quantity_received", text);
+                        setTouched((t) => ({ ...t, quantity_received: true }));
+                      }}
+                      onBlur={() =>
+                        setTouched((t) => ({ ...t, quantity_received: true }))
+                      }
+                      placeholder="Enter received quantity"
+                      error={touched.quantity_received ? error : undefined}
+                      keyboardType="numeric"
+                      disabled={!!isEditable}
+                      addonText="kg"
+                      mask="addon"
+                      post
+                    >
+                      Quantity received
+                    </Input>
+                  )}
+                </FormField>
+
+                <FormField
+                  name="arrival_date"
+                  form={{ values, setField, errors }}
+                >
+                  {({ value, onChange, error }) => (
+                    <Input
+                      value={value}
+                      onChangeText={(text: string) => {
+                        setField("arrival_date", text);
+                        setTouched((t) => ({ ...t, arrival_date: true }));
+                      }}
+                      onBlur={() =>
+                        setTouched((t) => ({ ...t, arrival_date: true }))
+                      }
+                      placeholder="Select arrival date"
+                      error={touched.arrival_date ? error : undefined}
+                      disabled={!!isEditable}
+                      mask="date"
+                      post
+                    >
+                      Arrival date
+                    </Input>
+                  )}
+                </FormField>
+
+                <B5 color={getColor("yellow", 700)} style={styles.sectionTitle}>
+                  TRUCK DETAILS
+                </B5>
+
+                <FormField
+                  name="truck_weight"
+                  form={{ values, setField, errors }}
+                >
+                  {({ value, onChange, error }) => (
+                    <Input
+                      value={value}
+                      onChangeText={(text: string) => {
+                        setField("truck_weight", text);
+                        setTouched((t) => ({ ...t, truck_weight: true }));
+                      }}
+                      onBlur={() =>
+                        setTouched((t) => ({ ...t, truck_weight: true }))
+                      }
+                      placeholder="Enter truck gross weight in kg"
+                      error={touched.truck_weight ? error : undefined}
+                      keyboardType="numeric"
+                      disabled={!!isEditable}
+                      addonText="kg"
+                      mask="addon"
+                      post
+                    >
+                      Gross weight
+                    </Input>
+                  )}
+                </FormField>
+
+                <FormField
+                  name="tare_weight"
+                  form={{ values, setField, errors }}
+                >
+                  {({ value, onChange, error }) => (
+                    <Input
+                      value={value}
+                      onChangeText={(text: string) => {
+                        setField("tare_weight", text);
+                        setTouched((t) => ({ ...t, tare_weight: true }));
+                      }}
+                      onBlur={() =>
+                        setTouched((t) => ({ ...t, tare_weight: true }))
+                      }
+                      error={touched.tare_weight ? error : undefined}
+                      keyboardType="numeric"
+                      disabled={!!isEditable}
+                      addonText="kg"
+                      mask="addon"
+                      post
+                      tooltipText={{
+                        title: "Tare Weight",
+                        description:
+                          "Net Weight(empty truck) = Gross Weight - Tare Weight",
+                      }}
+                      showTooltip
+                      placeholder="Enter empty truck weight in kg"
+                    >
+                      Tare weight
+                    </Input>
+                  )}
+                </FormField>
+
+                <FormField
+                  name="truck_number"
+                  form={{ values, setField, errors }}
+                >
+                  {({ value, onChange, error }) => (
+                    <Input
+                      value={value}
+                      onChangeText={(text: string) => {
+                        setField("truck_number", text);
+                        setTouched((t) => ({ ...t, truck_number: true }));
+                      }}
+                      onBlur={() =>
+                        setTouched((t) => ({ ...t, truck_number: true }))
+                      }
+                      error={touched.truck_number ? error : undefined}
+                      disabled={!!isEditable}
+                      post
+                      placeholder="Enter truck number"
+                    >
+                      Truck number
+                    </Input>
+                  )}
+                </FormField>
+
+                <FormField
+                  name="driver_name"
+                  form={{ values, setField, errors }}
+                >
+                  {({ value, onChange, error }) => (
+                    <Input
+                      value={value}
+                      onChangeText={(text: string) => {
+                        setField("driver_name", text);
+                        setTouched((t) => ({ ...t, driver_name: true }));
+                      }}
+                      onBlur={() =>
+                        setTouched((t) => ({ ...t, driver_name: true }))
+                      }
+                      error={touched.driver_name ? error : undefined}
+                      disabled={!!isEditable}
+                      placeholder="Enter driver name"
+                    >
+                      Driver name
+                    </Input>
+                  )}
+                </FormField>
+
+                <FormField name="challan" form={{ values, setField, errors }}>
+                  {({ value, onChange, error }) => (
+                    <SimpleFileUpload
+                      fileState={[value, onChange]}
+                      error={error}
+                      disabled={!!isEditable}
+                      onlyPhoto
+                      both
+                    />
+                  )}
+                </FormField>
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.buttonContainer}>
+            <Button
+              variant="fill"
+              disabled={
+                !isValid ||
+                loading ||
+                updateRawMaterialOrder.isPending ||
+                isEditable ||
+                !isWeightLogicValid
+              }
+              onPress={() => onSubmit()}
+            >
+              {loading || updateRawMaterialOrder.isPending
+                ? "Processing..."
+                : "Confirm Arrival"}
+            </Button>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+
+      <DetailsToast
+        type={toastType}
+        message={toastMessage}
+        visible={toastVisible}
+        onHide={() => setToastVisible(false)}
+      />
+
+      <Modal
+        showPopup={showDiscardModal}
+        setShowPopup={setShowDiscardModal}
+        modalData={{
+          title: "Discard changes?",
+          description:
+            "Are you sure you want to discard all the changes? This action cannot be undone.",
+          buttons: [
+            {
+              label: "Cancel",
+              variant: "outline",
+              action: () => setShowDiscardModal(false),
+            },
+            {
+              label: "Discard",
+              variant: "fill",
+              action: () => {
+                resetForm();
+                setHasUnsavedChanges(false);
+                goTo("purchase");
+              },
+            },
+          ],
+        }}
+      />
+    </View>
+  );
 };
 
-export default RawMaterialReceiveScreen;
-
 const styles = StyleSheet.create({
-    pageContainer: {
-        flex: 1,
-        backgroundColor: getColor('green', 500),
-    },
-    wrapper: {
-        flex: 1,
-        backgroundColor: getColor('light', 200),
-        borderTopStartRadius: 16,
-        borderTopEndRadius: 16,
-        padding: 16,
-        gap: 12,
-        justifyContent: "space-between",
-        minHeight: '100%',
-    },
-    HStack: {
-        flexDirection: "row"
-    },
-    VStack: {
-        flexDirection: "column"
-    },
-    justifyBetween: {
-        justifyContent: "space-between",
-    },
-    alignCenter: {
-        alignItems: "center"
-    },
-    gap8: {
-        gap: 8,
-    },
-    gap16: {
-        gap: 16,
-    },
-    p16: {
-        padding: 16,
-    },
-    overlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-        zIndex: 999,
-    },
-    loaderContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: getColor('light', 200),
-        borderTopStartRadius: 16,
-        borderTopEndRadius: 16,
-    },
+  pageContainer: {
+    flex: 1,
+    backgroundColor: getColor("green", 500),
+  },
+  wrapper: {
+    flex: 1,
+    backgroundColor: getColor("light", 200),
+    borderTopStartRadius: 16,
+    borderTopEndRadius: 16,
+    padding: 16,
+    gap: 16,
+  },
+  innerWrapper: {
+    flexDirection: "column",
+    gap: 24,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 100,
+  },
+  buttonContainer: {
+    paddingTop: 16,
+    paddingBottom: Platform.OS === "ios" ? 34 : 16,
+    backgroundColor: getColor("light", 200),
+  },
+  titleWithDataInputs: {
+    flexDirection: "column",
+    gap: 16,
+  },
+  sectionTitle: {
+    textTransform: "uppercase",
+    marginTop: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: getColor("light", 200),
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+    paddingHorizontal: 32,
+  },
+  warningContainer: {
+    backgroundColor: getColor("red", 50),
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: getColor("red", 200),
+  },
 });
+
+export default SupervisorRawMaterialDetailsScreen;

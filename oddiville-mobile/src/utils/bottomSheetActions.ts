@@ -28,6 +28,8 @@ export const getBottomSheetActions = (type: BottomSheetSchemaKey): BottomSheetAc
             return ['ship-order'];
         case 'filter':
             return ['clear-filter'];
+        case 'select-policies':
+            return ['cancel-policies', 'select-policies'];
         default:
             return [];
     }

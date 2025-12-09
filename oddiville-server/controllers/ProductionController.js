@@ -3,6 +3,7 @@ const {
   Production: productionClient,
   Lanes: lanesClient,
   RawMaterialOrder: rawMaterialOrderClient,
+  Chambers: chambersClient,
 } = require("../models");
 const multer = require("multer");
 const {
@@ -33,6 +34,7 @@ const {
   createAndSendProductionCompleteNotification,
 } = require("../utils/ProductionUtils");
 require("dotenv").config();
+const sequelize = require("../config/database");
 
 const upload = multer();
 
@@ -204,8 +206,6 @@ router.get("/:id", async (req, res) => {
     }
     const isStarted = redis.get(`production:save:${id}`);
 
-    console.log("{ ...production, isStarted: isStarted ?? false }", { ...production, isStarted: isStarted ?? false });
-    
     return res.status(200).json({ ...production, isStarted: isStarted ?? false });
   } catch (error) {
     console.error("Error during fetching Production:", error?.message || error);
@@ -306,8 +306,8 @@ router.patch("/:id", upload.array("sample_images"), async (req, res) => {
       }
     }
 
-    redis.set(`production:save:${newProduction.id}`, true, "EX", 60);
-    const isStarted = redis.get(`production:save:${newProduction.id}`);
+    redis.set(`production:save:${id}`, true, "EX", 60);
+    const isStarted = redis.get(`production:save:${id}`);
 
     return res.status(200).json({...updatedProduction?.dataValues, isStarted});
   } catch (error) {
@@ -412,94 +412,150 @@ router.patch("/complete/:id", async (req, res) => {
   const redis = req.app.get("redis");
 
   const { end_time, chambers = [], wastage_quantity = 0 } = req.body;
-  // chambers = [
-  //     {
-  //         id: chamber id,
-  //         quantity: ---,
-  //         rating
-  //     }
-  // ]
 
+  let tx;
   try {
-    const production = await validateAndFetchProduction(productionId);
-    const chamberInstances = await validateAndFetchChambers(chambers);
+    tx = await sequelize.transaction();
 
-    const recovery = chambers?.reduce((sum, c) => sum + Number(c.quantity), 0);
+    const production = await validateAndFetchProduction(productionId, { tx });
 
-    await updateProductionCompletion(
+    const chamberInstances = await validateAndFetchChambers(chambers, { tx });
+
+    const chamberIds = chambers.map((c) => c.id);
+    const lockedChambers = chamberIds.length
+      ? await chambersClient.findAll({
+          where: { id: chamberIds },
+          transaction: tx,
+          lock: tx.LOCK.UPDATE,
+        })
+      : [];
+
+    const chamberMap = new Map(lockedChambers.map((c) => [String(c.id), c]));
+
+    const insufficient = [];
+    for (const requested of chambers) {
+      const inst = chamberMap.get(String(requested.id));
+      if (!inst) {
+        insufficient.push({
+          id: requested.id,
+          reason: "chamber_not_found",
+          requested: Number(requested.quantity || 0),
+        });
+        continue;
+      }
+
+      const requestedQty = Number(requested.quantity || 0);
+      const capacity = Number(inst.capacity ?? 0);
+      const currentStock = Number(inst.current_stock ?? inst.stored_quantity ?? 0);
+      const available = Math.max(0, capacity - currentStock);
+
+      if (requestedQty > available) {
+        insufficient.push({
+          id: inst.id,
+          name: inst.name,
+          requested: requestedQty,
+          available,
+          capacity,
+          current_stock: currentStock,
+        });
+      }
+    }
+
+    if (insufficient.length > 0) {
+      await tx.rollback();
+      return res.status(400).json({
+        message: "Insufficient chamber space for requested quantities.",
+        details: insufficient,
+      });
+    }
+
+    const recovery = chambers.reduce((sum, c) => sum + Number(c.quantity || 0), 0);
+
+    const newProduction = await updateProductionCompletion(
       production,
       end_time,
       wastage_quantity,
-      recovery
+      recovery,
+      { tx }
     );
 
     const updatedStock = await updateChamberStocks(
-      production,
+      newProduction,
       chambers,
-      chamberInstances
+      lockedChambers,
+      { tx }
     );
 
-    await updateRawMaterialStoreDate(production);
-    await clearLaneAssignment(production);
+    if (typeof updateRawMaterialStoreDate === "function") {
+      await updateRawMaterialStoreDate(newProduction, { tx });
+    }
 
-    await createAndSendProductionCompleteNotification(
-      production,
-      chamberInstances
-    );
+    if (production.lane) {
+      await clearLaneAssignment(production, { tx });
+    }
 
-    await redis.del(`production:save:${id}`);
-
-    // {
-    //   productionId: production.id,
-    //   productionDetails: {
-    //     id: production.id,
-    //     product_name: production.product_name,
-    //     batch_code: production.batch_code,
-    //     end_time: production.end_time,
-    //     status: "completed",
-    //     chambers: chamberInstances.map((c) => ({
-    //       id: c.id,
-    //       quantity: String(chambers.find((x) => x.id === c.id)?.quantity ?? 0),
-    //       rating: String(chambers.find((x) => x.id === c.id)?.rating ?? ""),
-    //     })),
-    //     wastage_quantity,
-    //     recovery,
-    //   },
-    //   timestamp: new Date().toISOString(),
-    //   type: "PRODUCTION_STATUS_CHANGED",
-    // }
+    await tx.commit();
+    tx = null;
 
     const productionCompleteDetails = {
-      productionId: production.id,
+      productionId: newProduction.id,
       productionDetails: {
-        id: production.id,
-        product_name: production.product_name,
-        batch_code: production.batch_code,
-        end_time: production.end_time,
-        status: "completed",
-        chambers: chamberInstances.map((c) => ({
+        id: newProduction.id,
+        product_name: newProduction.product_name,
+        batch_code: newProduction.batch_code,
+        end_time: newProduction.end_time,
+        status: newProduction.status,
+        chambers: lockedChambers.map((c) => ({
           id: c.id,
-          quantity: String(chambers.find((x) => x.id === c.id)?.quantity ?? 0),
-          rating: String(chambers.find((x) => x.id === c.id)?.rating ?? ""),
+          quantity: String(chambers.find((x) => String(x.id) === String(c.id))?.quantity ?? 0),
+          rating: String(chambers.find((x) => String(x.id) === String(c.id))?.rating ?? ""),
         })),
-        wastage_quantity,
-        recovery,
+        wastage_quantity: newProduction.wastage_quantity,
+        recovery: newProduction.recovery,
       },
     };
 
-    io.emit("production:completed", productionCompleteDetails);
+    try {
+      io.emit("production:completed", productionCompleteDetails);
+    } catch (emitErr) {
+      console.warn("Socket emit failed:", emitErr);
+    }
+
+    try {
+      await redis.del(`production:save:${productionId}`);
+    } catch (rerr) {
+      console.warn("Redis cleanup failed:", rerr);
+    }
+
+    if (typeof createAndSendProductionCompleteNotification === "function") {
+      try {
+        await createAndSendProductionCompleteNotification(newProduction, lockedChambers);
+      } catch (noteErr) {
+        console.warn("create/send notification failed after commit:", noteErr);
+      }
+    }
 
     return res.json({
       message: "Production completed, stock updated, lane cleared.",
-      production,
+      production: newProduction,
       updatedStock,
     });
   } catch (err) {
+    if (tx) {
+      try {
+        await tx.rollback();
+      } catch (rbErr) {
+        console.error("Rollback failed:", rbErr);
+      }
+    }
     console.error("Completion error:", err);
-    return res
-      .status(err.status || 500)
-      .json({ message: err.message || "Server error" });
+    if (err && err.details) {
+      return res.status(400).json({ message: err.message || "Validation error", details: err.details });
+    }
+    return res.status(err.status || 500).json({ message: err.message || "Server error" });
   }
 });
+
+
 
 module.exports = router;

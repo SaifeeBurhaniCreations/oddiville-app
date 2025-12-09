@@ -38,179 +38,211 @@ import BagIcon from '@/src/components/icons/packaging/BagIcon';
 // 8. Assets 
 // No items of this type
 
+const EMPTY_BAG_WEIGHT_G = 1;
+
 const PackagingDetailsScreen = () => {
-    const { id: packageId, name: packageName } = useParams('packaging-details', 'id', "name")
-    const { data: packageData, isFetching: packageLoading } = usePackageById(packageId!)
-    const isLoadingPackage = useSelector((state: RootState) => state.fillPackage.isLoading);
-    const isLoadingPackageSize = useSelector((state: RootState) => state.packageSizePackaging.isLoadingPackageSize);
+  const { id: packageId, name: packageName } = useParams('packaging-details', 'id', "name");
+  const { data: packageData, isFetching: packageLoading } = usePackageById(packageId!);
+  const isLoadingPackage = useSelector((state: RootState) => state.fillPackage.isLoading);
+  const isLoadingPackageSize = useSelector((state: RootState) => state.packageSizePackaging.isLoadingPackageSize);
 
-    const packages = useMemo(() => {
-        return formatPackageParams({ types: packageData?.types });
-    }, [packageData]);
-    const [isLoading, setIsLoading] = useState(false)
-    const dispatch = useDispatch();
-    const { validateAndSetData } = useValidateAndOpenBottomSheet();
+  const packages = useMemo(() => {
+    return formatPackageParams({ types: packageData?.types });
+  }, [packageData]);
 
-    const handleOpen = (id: string) => {
-        const match = packages?.find(pkg => pkg.weight === id);
-        if (!match) return;
+  const uiPackages = useMemo(() => {
+    if (!packages) return [];
 
-        const { icon, ...selectedPackage } = match;
-        dispatch(setPackageSize({ ...selectedPackage, id: packageId }));
+    return packages.map((pkg) => {
+      const qtyKg = Number(pkg.quantity) || 0;
 
-        const fillPackage = {
-            sections: [
-                {
-                    type: 'title-with-details-cross',
-                    data: {
-                        title: 'Add package count',
-                        description: `${selectedPackage.weight} • ${selectedPackage.quantity} count`,
-                        details: { icon: "pencil" }
-                    },
-                },
-                {
-                    type: 'input',
-                    data: {
-                        placeholder: 'Enter counts',
-                        label: 'Add package',
-                        keyboardType: 'number-pad',
-                        formField: "quantity"
-                    },
-                },
-            ],
-            buttons: [
-                { text: 'Add', variant: 'fill', color: 'green', alignment: "full", disabled: false, actionKey: "add-package-quantity" },
-                // { text: "Update", variant: 'fill', color: 'green', alignment: "full", disabled: false, actionKey: "update-package-quantity", isVisible: false },
-            ],
-        };
+      const packetCount = Math.round(qtyKg * (1000 / EMPTY_BAG_WEIGHT_G));
 
-        setIsLoading(true);
-        validateAndSetData(id, "fill-package", fillPackage);
-        setIsLoading(false);
+      return {
+        ...pkg,
+        quantityKg: pkg.quantity,
+        displayQuantity: String(packetCount),
+      };
+    });
+  }, [packages]);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const dispatch = useDispatch();
+  const { validateAndSetData } = useValidateAndOpenBottomSheet();
+
+  const handleOpen = (id: string) => {
+    const match = packages?.find(pkg => pkg.weight === id);
+    if (!match) return;
+
+    const { icon, ...selectedPackage } = match;
+
+    const qtyKg = Number(selectedPackage.quantity) || 0;
+    const packetCount = Math.round(qtyKg * (1000 / EMPTY_BAG_WEIGHT_G));
+
+    dispatch(setPackageSize({ ...selectedPackage, id: packageId }));
+
+    const fillPackage = {
+      sections: [
+        {
+          type: 'title-with-details-cross',
+          data: {
+            title: 'Add package count',
+            // show human-friendly packet count instead of kg
+            description: `${selectedPackage.weight} • ${packetCount} packets`,
+            details: { icon: "pencil" }
+          },
+        },
+        {
+          type: 'input',
+          data: {
+            placeholder: 'Enter counts',
+            label: 'Add package',
+            keyboardType: 'number-pad',
+            formField: "quantity"
+          },
+        },
+      ],
+      buttons: [
+        {
+          text: 'Add',
+          variant: 'fill',
+          color: 'green',
+          alignment: "full",
+          disabled: false,
+          actionKey: "add-package-quantity"
+        },
+      ],
     };
 
-    const handleOpenAddNewSize = () => {
-        dispatch(setCurrentProductId(packageId))
-        setIsLoading(true)
-        validateAndSetData(packageId!, "add-package");
-        setIsLoading(false)
-    }
+    setIsLoading(true);
+    validateAndSetData(id, "fill-package", fillPackage);
+    setIsLoading(false);
+  };
 
-    const emptyStateData = getEmptyStateData("packaging-details");
+  const handleOpenAddNewSize = () => {
+    dispatch(setCurrentProductId(packageId));
+    setIsLoading(true);
+    validateAndSetData(`${packageId}:${packageName}`, "add-package");
+    setIsLoading(false);
+  };
 
-    // console.log(JSON.stringify(formatPackageParams));
+  const emptyStateData = getEmptyStateData("packaging-details");
 
-    return (
-        <View style={styles.pageContainer}>
-            <PageHeader page={'SKU'} />
-            <View style={styles.wrapper}>
-                <View style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}>
+  return (
+    <View style={styles.pageContainer}>
+      <PageHeader page={'SKU'} />
+      <View style={styles.wrapper}>
+        <View style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}>
+          <BackButton
+            label={packageName ? packageName : "UnTitled"}
+            backRoute="package"
+          />
 
-                    <BackButton label={packageName ? packageName : "UnTitled"} backRoute="packaging" />
-
-                    <Button variant='outline' size='md' onPress={handleOpenAddNewSize}>Add new size</Button>
-                </View>
-                <View style={styles.cardList}>
-                    {!packages ? (
-                        <View style={styles.overlay}>
-                            <View style={styles.loaderContainer}>
-                                <Loader />
-                            </View>
-                        </View>
-                    ) : packages?.length > 0 ? (
-                        chunkCards(sortBy([...packages], "weight"), 2).map((pair, index) => (
-                            <View key={index} style={styles.cardRow}>
-                                {pair.map((item, i) => (
-                                    <View key={i} style={styles.cardWrapper}>
-                                        <PackagingSizeCard
-                                            icon={item.icon ? item.icon : BagIcon}
-                                            weight={item.weight || ""}
-                                            quantity={item.quantity || ""}
-                                            disabled={item.disabled || false}
-                                            onPress={() => handleOpen(item?.weight)}
-                                        />
-
-                                    </View>
-                                ))}
-                                {pair?.length === 1 && <View style={styles.cardWrapper} />}
-                            </View>
-                        ))
-                    ) : (
-                        <EmptyState stateData={emptyStateData} />
-                    )}
-                </View>
-                <BottomSheet color='green' />
-                {(isLoadingPackageSize || isLoadingPackage || packageLoading) &&
-                    <View style={styles.overlay}>
-                        <View style={styles.loaderContainer}>
-                            <Loader />
-                        </View>
-                    </View>
-                }
-            </View>
+          <Button variant='outline' size='md' onPress={handleOpenAddNewSize}>
+            Add new size
+          </Button>
         </View>
-    )
-}
 
-export default PackagingDetailsScreen
+        <View style={styles.cardList}>
+          {!uiPackages ? (
+            <View style={styles.overlay}>
+              <View style={styles.loaderContainer}>
+                <Loader />
+              </View>
+            </View>
+          ) : uiPackages?.length > 0 ? (
+            chunkCards(sortBy([...uiPackages], "weight"), 2).map((pair, index) => (
+              <View key={index} style={styles.cardRow}>
+                {pair.map((item, i) => (
+                  <View key={i} style={styles.cardWrapper}>
+                    <PackagingSizeCard
+                      icon={item.icon ? item.icon : BagIcon}
+                      weight={item.weight || ""}
+                      quantity={item.displayQuantity || ""}
+                      disabled={item.disabled || false}
+                      onPress={() => handleOpen(item?.weight)}
+                    />
+                  </View>
+                ))}
+                {pair?.length === 1 && <View style={styles.cardWrapper} />}
+              </View>
+            ))
+          ) : (
+            <EmptyState stateData={emptyStateData} />
+          )}
+        </View>
+
+        <BottomSheet color='green' />
+
+        {(isLoadingPackageSize || isLoadingPackage || packageLoading) && (
+          <View style={styles.overlay}>
+            <View style={styles.loaderContainer}>
+              <Loader />
+            </View>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+};
+
+export default PackagingDetailsScreen;
 
 const styles = StyleSheet.create({
-    pageContainer: {
-        flex: 1,
-        backgroundColor: getColor('green', 500),
-        position: "relative",
-    },
-    wrapper: {
-        flex: 1,
-        flexDirection: "column",
-        gap: 24,
-        backgroundColor: getColor('light', 200),
-        borderTopStartRadius: 16,
-        borderTopEndRadius: 16,
-        padding: 16,
-    },
-    flexGrow: {
-        flex: 1,
-    },
-    overlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: getColor('green', 500, 0.1),
-        zIndex: 2,
-    },
-    content: {
-        flexDirection: "column",
-        gap: 16,
-        height: "100%"
-    },
-
-    HStack: {
-        flexDirection: "row"
-    },
-    justifyBetween: {
-        justifyContent: "space-between",
-    },
-    alignCenter: {
-        alignItems: "center"
-    },
-    gap8: {
-        gap: 8,
-    },
-    cardList: {
-        flexDirection: "column",
-        gap: 16,
-    },
-    cardRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        gap: 16,
-    },
-    loaderContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    cardWrapper: {
-        flex: 1,
-    },
-
-})
+  pageContainer: {
+    flex: 1,
+    backgroundColor: getColor('green', 500),
+    position: "relative",
+  },
+  wrapper: {
+    flex: 1,
+    flexDirection: "column",
+    gap: 24,
+    backgroundColor: getColor('light', 200),
+    borderTopStartRadius: 16,
+    borderTopEndRadius: 16,
+    padding: 16,
+  },
+  flexGrow: {
+    flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: getColor('green', 500, 0.1),
+    zIndex: 2,
+  },
+  content: {
+    flexDirection: "column",
+    gap: 16,
+    height: "100%"
+  },
+  HStack: {
+    flexDirection: "row"
+  },
+  justifyBetween: {
+    justifyContent: "space-between",
+  },
+  alignCenter: {
+    alignItems: "center"
+  },
+  gap8: {
+    gap: 8,
+  },
+  cardList: {
+    flexDirection: "column",
+    gap: 16,
+  },
+  cardRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 16,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardWrapper: {
+    flex: 1,
+  },
+});

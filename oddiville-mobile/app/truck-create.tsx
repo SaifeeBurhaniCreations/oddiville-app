@@ -224,7 +224,7 @@ const TruckCreateScreen = () => {
           <FormField name="phone" form={{ values, setField, errors }}>
             {({ value, onChange, error }) => (
               <Input
-                value={value || ""}
+                value={value.slice(0, 9) || ""}
                 onChangeText={onChange}
                 placeholder="Enter phone number"
                 error={error}
@@ -277,7 +277,7 @@ const TruckCreateScreen = () => {
 
           <FormField name="challan" form={{ values, setField, errors }}>
             {({ value, onChange, error }) => (
-              <SimpleFileUpload fileState={[value, onChange]} error={error} />
+              <SimpleFileUpload fileState={[value, onChange]} error={error} both />
             )}
           </FormField>
 

@@ -208,6 +208,12 @@ const AddMultipleContractor = ({ setToast, onContractorAdded }: { setToast?: (va
         ]);
     };
 
+const handleLabourRemove = (contractorIndex: number) => {
+  setWorkAssignedMultiple(prev =>
+    prev.filter((_, idx) => idx !== contractorIndex)
+  );
+};
+
     return (
         <View style={[styles.flexGrow, { paddingTop: 16, gap: '24' }]}>
             {
@@ -225,6 +231,7 @@ const AddMultipleContractor = ({ setToast, onContractorAdded }: { setToast?: (va
                         columns={columns}
                         handleRadioChange={handleMultipleContractorRadioChange}
                         handleInputChange={handleMultipleContractorInputChange}
+                        onLabourRemove={handleLabourRemove}
                     />
                 ))
                     :

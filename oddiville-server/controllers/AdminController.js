@@ -12,73 +12,83 @@ router.get("/users", async (req, res) => {
   return res.status(200).json(response_signup_find);
 });
 
-router.post("/authentication/signup", async (req, res) => {
-  console.log("req.body", req.body);
+// router.post("/authentication/signup", async (req, res) => {
+//   console.log("req.body", req.body);
 
-  if (!req.body.username) {
-    return res.status(400).json({ error: "Username is required." });
-  }
+//   if (!req.body.username) {
+//     return res.status(400).json({ error: "Username is required." });
+//   }
 
-  req.body.userpass = req.body.username;
-  const signupUser = req.body;
+//   req.body.userpass = req.body.username;
+//   const signupUser = req.body;
 
-  try {
-    const response_signup_create = await adminClient.create(signupUser);
-    const user = response_signup_create.dataValues;
+//   try {
+//     const response_signup_create = await adminClient.create(signupUser);
+//     const user = response_signup_create.dataValues;
 
-    if (!process.env.JWT_SECRET) {
-      console.error("JWT_SECRET is not defined in environment variables.");
-      return res.status(500).json({ error: "Server configuration error." });
-    }
+//     if (!process.env.JWT_SECRET) {
+//       console.error("JWT_SECRET is not defined in environment variables.");
+//       return res.status(500).json({ error: "Server configuration error." });
+//     }
 
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET);
-    return res.status(200).json({ token });
-  } catch (error) {
-    console.error("Error during authentication:", error);
-    return res.status(500).json({ error: "Internal server error." });
-  }
-});
+//     const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET);
+//     return res.status(200).json({ token });
+//   } catch (error) {
+//     console.error("Error during authentication:", error);
+//     return res.status(500).json({ error: "Internal server error." });
+//   }
+// });
 
 router.post("/authentication/login", async (req, res) => {
   let { email, userpass } = req.body;
+
   if (!email || !userpass) {
     return res.status(400).json({ error: "Email and password are required." });
   }
 
   try {
     const response_login_find = await adminClient.findOne({ where: { email } });
-    if (!response_login_find || response_login_find.length === 0) {
+console.log("response_login_find", response_login_find);
+
+    if (!response_login_find) {
       return res.status(401).json({ error: "Email or password is not valid." });
     }
 
     const admin = response_login_find.dataValues;
-    if (typeof userpass !== "string" || typeof admin.userpass !== "string") {
-      return res.status(400).json({ error: "Invalid password format" });
-    }
 
     const passwordMatch = await validatePassword(userpass, admin.userpass);
     if (!passwordMatch) {
-      return res
-        .status(401)
-        .json({ error: "Username or password is not valid." });
+      return res.status(401).json({ error: "Username or password is not valid." });
     }
 
     if (!process.env.JWT_SECRET) {
-      console.error("JWT_SECRET is not defined in environment variables.");
-      return res.status(500).json({ error: "Server configuration error." });
+      return res.status(500).json({ error: "JWT_SECRET not configured." });
     }
+
     const token = jwt.sign({ email: admin.email }, process.env.JWT_SECRET);
-    return res.status(200).json({ token, authData: response_login_find });
+
+    const authData = {
+      username: admin.username,
+      name: admin.name,
+      email: admin.email,
+      phone: admin.phone,
+      profilepic: admin.profilepic,
+      role: admin.role,
+      policies: admin.policies || [], 
+    };
+
+    return res.status(200).json({ token, authData });
+
   } catch (error) {
     console.error("Error during authentication:", error);
-    return res
-      .status(500)
-      .json({ error: "Internal server error, please try again later." });
+    return res.status(500).json({ error: "Internal server error." });
   }
 });
 
 router.get("/me", async (req, res) => {
   const authHeader = req.headers.authorization;
+  console.log("authHeader", authHeader);
+  
   if (!authHeader) {
     return res.status(401).json({ error: "Authorization token is missing." });
   }
@@ -98,43 +108,44 @@ router.get("/me", async (req, res) => {
   }
 });
 
-// router.post("/authentication/signup", async (req, res) => {
-//     const signupUser = {
-//         username: "admin",
-//         userpass: await hashPassword("1"),
-//         name: "Root Admin",
-//         role: "superadmin",
-//         email: "admin@oddiville.com",
-//         phone: "1234567890",
-//         profilepic: "https://5ce38766bf86.ngrok-free.app/profilepic/K7b1A9xGmEwZ3uYJqPTFhV20cdNsXoQnMBiRKe5L8tzrCJHgWvUpafSODl9y6Bk4EN.png",
-//         createdAt: Date.now(),
-//         updatedAt: Date.now(),
-//     }
-//     // const signupUser = {
-//     //     username: "supervisor.oddiville",
-//     //     userpass: await hashPassword("1"),
-//     //     name: "Anand Mehta",
-//     //     role: "supervisor",
-//     //     email: "manager@oddiville.com",
-//     //     phone: "+919876543210",
-//     //     profilepic: "https://9714-2402-8100-2731-9da3-b876-7c59-bc39-c713.ngrok-free.app/profilepic/lokqkDWgwjg$oQFFOgrigeoho5h95hoofa0fa303kfskkKFJjOJOJSFJAEFJ.png",
-//     //     createdAt: Date.now(),
-//     //     updatedAt: Date.now(),
-//     // }
-//     try {
-//         const response_signup_create = await adminClient.create(signupUser);
-//         const admin = response_signup_create.dataValues;
-//         if (!process.env.JWT_SECRET) {
-//             console.error("JWT_SECRET is not defined in environment variables.");
-//             return res.status(500).json({ error: "Server configuration error." });
-//         }
-//         const token = jwt.sign({ _id: admin._id }, process.env.JWT_SECRET)
-//         return res.status(200).json({ token });
-//     } catch (error) {
-//         console.error("Error during authentication:", error);
-//         return res.status(500).json({ error: "Internal server error." });
-//     }
-// });
+router.post("/authentication/signup", async (req, res) => {
+    const signupUser = {
+        username: "admin",
+        userpass: await hashPassword("1"),
+        name: "Root Admin",
+        role: "superadmin",
+        email: "admin@oddiville.com",
+        phone: "1234567890",
+        policies: null,
+        profilepic: "https://5ce38766bf86.ngrok-free.app/profilepic/K7b1A9xGmEwZ3uYJqPTFhV20cdNsXoQnMBiRKe5L8tzrCJHgWvUpafSODl9y6Bk4EN.png",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+    }
+    // const signupUser = {
+    //     username: "supervisor.oddiville",
+    //     userpass: await hashPassword("1"),
+    //     name: "Anand Mehta",
+    //     role: "supervisor",
+    //     email: "manager@oddiville.com",
+    //     phone: "+919876543210",
+    //     profilepic: "https://9714-2402-8100-2731-9da3-b876-7c59-bc39-c713.ngrok-free.app/profilepic/lokqkDWgwjg$oQFFOgrigeoho5h95hoofa0fa303kfskkKFJjOJOJSFJAEFJ.png",
+    //     createdAt: Date.now(),
+    //     updatedAt: Date.now(),
+    // }
+    try {
+        const response_signup_create = await adminClient.create(signupUser);
+        const admin = response_signup_create.dataValues;
+        if (!process.env.JWT_SECRET) {
+            console.error("JWT_SECRET is not defined in environment variables.");
+            return res.status(500).json({ error: "Server configuration error." });
+        }
+        const token = jwt.sign({ _id: admin._id }, process.env.JWT_SECRET)
+        return res.status(200).json({ token });
+    } catch (error) {
+        console.error("Error during authentication:", error);
+        return res.status(500).json({ error: "Internal server error." });
+    }
+});
 
 router.post("/users", async (req, res) => {
   const io = req.app.get("io");
