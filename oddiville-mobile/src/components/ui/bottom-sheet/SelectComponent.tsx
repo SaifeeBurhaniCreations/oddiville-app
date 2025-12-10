@@ -20,7 +20,7 @@ const SelectComponent = ({ data }: SelectComponentProps) => {
     const { validateAndSetData } = useValidateAndOpenBottomSheet();
     const { data: DryChambersRaw } = useDryChambers();
     const DryChambers = DryChambersRaw || [];
-    const { placeholder, label } = data;
+    const { placeholder, label, key } = data;
 
     const joined = selectedChambers.join(", ");
     const truncated = joined?.length > 60 ? joined.slice(0, 60) + "..." : joined;
@@ -28,7 +28,7 @@ const SelectComponent = ({ data }: SelectComponentProps) => {
     const placeholderOption = getPlaceholder(placeholder, truncated);
 
     const handlePress = () => {
-        if(data.key === "product-package") {
+        if(key === "product-package") {
             const CHAMBER_LIST = {
                 sections: [
                     {

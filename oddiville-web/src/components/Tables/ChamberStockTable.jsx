@@ -3,7 +3,7 @@ import Spinner from "@/components/Spinner/Spinner";
 import { omitArray } from "../../sbc/utils/arrayTransformer/arrayTransformer";
 import { updateChamberStock } from "../../services/chamberstock.service";
 import { useUpdateChamberstock } from "../../hooks/chamberStock";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 
 const ChamberStockTableWrapper = ({ children }) => (
   <table className="table align-items-center mb-0">
@@ -340,12 +340,11 @@ const EditForm = ({ service, onCancel, onSave, saving }) => {
   );
 };
 
-
 const ChamberStockTable = ({ chamberStock = [], isLoading = false }) => {
   const [openRowId, setOpenRowId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const containerRef = useRef(null);
-  const updateChamberstock = useUpdateChamberstock()
+  const updateChamberstock = useUpdateChamberstock();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -384,29 +383,32 @@ const ChamberStockTable = ({ chamberStock = [], isLoading = false }) => {
   const handleCancelEdit = () => {
     setEditingId(null);
   };
-  
-const handleSave = (serviceId, payload) => {
-  const updatePayload = omitArray(payload.chamber, "chamber_name")
 
+  const handleSave = (serviceId, payload) => {
+    const updatePayload = omitArray(payload.chamber, "chamber_name");
 
-  const normalizedPayload = updatePayload.map((c) => ({
-    id: c.id,
-    quantity: String(c.quantity ?? "0"),
-    rating: c.rating ? String(c.rating) : "",
-  }));
-  
-  updateChamberstock.mutate({ id: serviceId, data: normalizedPayload }, {
-    onSuccess: (result) => {
-      navigate('/chamberstock/edit')
-    },
-    onError: (error) => { showToast('error', 'Failed to update chamberstock'); }
-});
-  // updateChamberStock({id: serviceId, data: normalizedPayload});
+    const normalizedPayload = updatePayload.map((c) => ({
+      id: c.id,
+      quantity: String(c.quantity ?? "0"),
+      rating: c.rating ? String(c.rating) : "",
+    }));
 
-  setEditingId(null);
-  setOpenRowId(null);
-};
+    updateChamberstock.mutate(
+      { id: serviceId, data: normalizedPayload },
+      {
+        onSuccess: (result) => {
+          navigate("/chamberstock/edit");
+        },
+        onError: (error) => {
+          showToast("error", "Failed to update chamberstock");
+        },
+      }
+    );
+    // updateChamberStock({id: serviceId, data: normalizedPayload});
 
+    setEditingId(null);
+    setOpenRowId(null);
+  };
 
   if (isLoading) {
     return (
@@ -453,8 +455,9 @@ const handleSave = (serviceId, payload) => {
                 <td>
                   <img
                     src={
-                      service?.sample_image?.url ||
-                      "/assets/img/png/fallback_img.png"
+                      service?.image?.trim()
+                        ? service.image
+                        : "/assets/img/png/fallback_img.png"
                     }
                     className="avatar avatar-lg"
                     alt={service.product_name || "banner"}

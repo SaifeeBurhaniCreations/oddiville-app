@@ -697,7 +697,7 @@ useEffect(() => {
           products: productsWithRating,
           packedChambers: packedChambersWithId,
         };
-        console.log("finalPayload", JSON.stringify(finalPayload, null, 2));
+        // console.log("finalPayload", JSON.stringify(finalPayload, null, 2));
 
         setIsLoading(true);
         createPacked(finalPayload);

@@ -27,7 +27,8 @@ const getUnitFromPackages = (packages: PackageItem[]): string => {
   if (!packages || packages.length === 0) {
     return "kg";
   }
-  return packages[0].unit || "kg";
+  return "kg";
+  // return packages[0].unit || "kg";
 };
 
 export const mapStorageFormToPackedDTO = (

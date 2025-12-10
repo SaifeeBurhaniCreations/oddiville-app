@@ -47,6 +47,10 @@ export interface DispatchOrderPackage {
     products: DispatchOrderProduct[];
     sample_images: string[];          
     truck_details: DispatchTruckDetails | null;
+
+    total_quantity: number;
+    unit: string;
+    package: any; 
   }
 
 const CHAMBER_STOCK_KEY = ["chamber-stock"];

@@ -111,10 +111,9 @@ const filteredPackedItemsData = useMemo(() => {
       "Entered quantity exceeds available quantity in chamber!"
     );
   };
+    // console.log("filteredPackedItemsData", JSON.stringify(filteredPackedItemsData));
 
   async function handleToggleProductBottomSheet() {
-    console.log("filteredPackedItemsData", JSON.stringify(filteredPackedItemsData));
-    
     const ADD_PRODUCT = {
         sections: [
             {

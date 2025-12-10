@@ -113,7 +113,7 @@ const SimpleFileUpload = ({
                 error && touched ? getColor("red") : getColor("green"),
             },
           ]}
-          onPress={handleTakePhoto}
+          // onPress={handleTakePhoto}
           // onPress={handlePickFile}
           disabled={isPicking || disabled}
         >

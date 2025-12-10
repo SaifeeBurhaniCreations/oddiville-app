@@ -28,7 +28,8 @@ const RawMaterial = () => {
       setIsLoading(true);
       try {
         const response = await fetchRawMaterial();
-        dispatch(handleFetchData(response.data));
+        
+        dispatch(handleFetchData(response));
       } catch (error) {
         toast.error("Failed to fetch data");
         console.error(error);
@@ -84,8 +85,8 @@ const RawMaterial = () => {
   );
 
   const renderRows = () =>
-    filteredData.map((item) => (
-      <tr key={item._id}>
+    filteredData.map((item, index) => (
+      <tr key={index}>
         <td>
           <div className="d-flex px-2 py-1">
             <div

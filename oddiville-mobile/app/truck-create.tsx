@@ -1,6 +1,6 @@
 // 1. React and React Native core
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
 
 // 2. Third-party dependencies
 import { ScrollView } from "react-native-gesture-handler";
@@ -185,9 +185,17 @@ const TruckCreateScreen = () => {
   };
 
   return (
-    <View style={styles.pageContainer}>
-      <PageHeader page="Trucks" />
-      <ScrollView>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    >
+      <View style={styles.pageContainer}>
+        <PageHeader page="Trucks" />
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
         <View style={styles.wrapper}>
           <View
             style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}
@@ -313,6 +321,7 @@ const TruckCreateScreen = () => {
         onHide={() => setToastVisible(false)}
       />
     </View>
+    </KeyboardAvoidingView>
   );
 };
 

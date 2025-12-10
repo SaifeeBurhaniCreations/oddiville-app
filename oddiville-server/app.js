@@ -4,7 +4,7 @@ const path = require("path");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const { Server } = require("socket.io");
-const redisModule = await import("./devops/redis.js");
+const redis = require('./devops/redis');
 const routes = require("./config/routes");
 const sequelize = require("./config/database");
 
@@ -109,14 +109,20 @@ const PORT = process.env.PORT || 8022;
       console.log("✅ Synced DB with models");
     }
 
-    try {
-      const client = redisModule.default ?? redisModule.client ?? redisModule;
-      
-      app.set("redis", client);
-      console.log("✅ Connected to Redis");
-    } catch (redisErr) {
-      console.error("⚠️ Redis connection failed:", redisErr);
-    }
+   try {
+  const redisClient = redis;
+
+ if(process.env.ENVIRONMENT === "development") {
+  await redisClient.set('health-check', 'ok'); 
+  const value = await redisClient.get('health-check');
+  console.log("Redis health-check value:", value);
+ }
+
+  app.set("redis", redisClient);
+  console.log("✅ Connected to Redis");
+} catch (redisErr) {
+  console.error("⚠️ Redis connection failed:", redisErr);
+}
 
     server.listen(PORT, () => {
       console.log(`🚀 Server running at http://localhost:${PORT}`);

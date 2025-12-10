@@ -31,10 +31,11 @@ export interface Production {
   batch_code?: string | null;
   notes?: string | null;
   sample_images?: { url: string; key: string }[] | null;
+  isStarted?: boolean;
 }
 const toProduction = (payload: any): Production | null => {
   if (!payload) return null;
-  return payload.productionDetails ?? payload; 
+  return payload.productionDetails ?? payload;
 };
 
 export function useProduction() {
@@ -96,10 +97,6 @@ export function useProductionById(id: string | null) {
     queryFn: rejectEmptyOrNull(async () => {
       if (!id) return null;
 
-      if (initialData) {
-        dispatch(setCurrentProduct(initialData));
-        return initialData;
-      }
       const response = await fetchProductionById(id);
       dispatch(setCurrentProduct(response?.data));
       return response?.data;

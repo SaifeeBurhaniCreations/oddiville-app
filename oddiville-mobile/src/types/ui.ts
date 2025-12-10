@@ -18,6 +18,7 @@ import {
 } from "../schemas/BottomSheetSchema";
 import { z } from "zod";
 import { TextInput } from "react-native";
+import { DispatchOrderData } from "../hooks/dispatchOrder";
 
 export interface TagProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
@@ -678,24 +679,25 @@ export interface SummaryItem {
 }
 
 // 📦 Full Dispatch Order
-export interface DispatchOrder {
-  id: string;
-  status: "pending" | "dispatched" | "completed" | "in-progress";
-  customer_name: string;
-  address: string;
-  total_quantity: string; // e.g., "4"
-  unit: "Ton" | "ton";
-  amount: string;
-  createdAt?: Date;
-  dispatch_date: Date;
-  est_delivered_date: Date;
-  delivered_date: Date | null;
-  packages: PackageItem[];
-  products: ProductDetail[];
-  truck_details: TruckDetails | null;
-}
+// export interface DispatchOrder {
+//   id: string;
+//   status: "pending" | "dispatched" | "completed" | "in-progress";
+//   customer_name: string;
+//   address: string;
+//   total_quantity: string; // e.g., "4"
+//   unit: "Ton" | "ton";
+//   amount: string;
+//   createdAt?: Date;
+//   dispatch_date: Date;
+//   est_delivered_date: Date;
+//   delivered_date: Date | null;
+//   packages: PackageItem[];
+//   products: ProductDetail[];
+//   truck_details: TruckDetails | null;
+// }
 
 // 📦 Array of Orders
+export type DispatchOrder = DispatchOrderData;
 export type DispatchOrderList = DispatchOrder[];
 
 // 🧾 Unparsed Orders (e.g., from JSON with date strings)

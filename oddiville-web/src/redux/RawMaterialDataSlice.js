@@ -22,9 +22,10 @@ const RawMaterialDataSlice = createSlice({
             state.data = state.data.filter(project => project?.id !== action.payload);
         },
         handleModifyData: (state, action) => {
-            const updatedProject = action.payload;
+            const updatedProject = action.payload.data;
+
             state.data = state.data.map(project => 
-                project._id === updatedProject._id ? updatedProject : project
+                project.id === updatedProject.id ? updatedProject : project
             );
         }
     }

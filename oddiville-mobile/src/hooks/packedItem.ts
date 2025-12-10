@@ -19,37 +19,6 @@ export type PackedItem = {
   __optimistic?: boolean;
 };
 
-// export const useCreatePackedItem = () => {
-//   const queryClient = useQueryClient();
-
-//   return useMutation({
-//     mutationFn: (form: StorageForm) => {
-//       const dto: CreatePackedItemDTO = mapStorageFormToPackedDTO(form, null);
-//       // console.log("dto", dto);
-      
-//       return createPackedItem(dto); 
-//     },
-
-//     // TEMP: during backend testing, do nothing else
-//     onMutate() {
-//       // no optimistic cache update
-//     },
-
-//     onError(_error, _variables, _context) {
-//       // maybe console.log for debugging
-//       console.log("createPackedItem error", _error);
-//     },
-
-//     onSuccess(_response) {
-//       // don't read response.data, don't touch cache
-//     },
-
-//     onSettled() {
-//       // don't invalidate queries
-//     },
-//   });
-// };
-
 export const useCreatePackedItem = () => {
   const queryClient = useQueryClient();
 
@@ -112,6 +81,15 @@ export const useCreatePackedItem = () => {
     },
   });
 };
+
+// export const useCreatePackedItem = () => {
+//   return useMutation({
+//     mutationFn: (form: StorageForm) => {
+//       const dto: CreatePackedItemDTO = mapStorageFormToPackedDTO(form, null);
+//       return createPackedItem(dto); 
+//     },
+//   });
+// };
 
 export const usePackedItems = () => {
   const queryClient = useQueryClient();

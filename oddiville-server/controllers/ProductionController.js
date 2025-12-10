@@ -146,8 +146,8 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
       supervisor,
     });
 
-    redis.set(`production:save:${newProduction.id}`, true, "EX", 60);
-    const isStarted = redis.get(`production:save:${newProduction.id}`);
+    await redis.set(`production:save:${newProduction.id}`, true);
+    const isStarted = true;
 
     const productionDetails = {
       title: "START PRODUCTION",
@@ -204,7 +204,9 @@ router.get("/:id", async (req, res) => {
     if (!production) {
       return res.status(404).json({ error: "Production not found" });
     }
-    const isStarted = redis.get(`production:save:${id}`);
+const raw = await redis.get(`production:save:${id}`);
+const isStarted = raw === "true"; 
+
 
     return res.status(200).json({ ...production, isStarted: isStarted ?? false });
   } catch (error) {
@@ -306,10 +308,12 @@ router.patch("/:id", upload.array("sample_images"), async (req, res) => {
       }
     }
 
-    redis.set(`production:save:${id}`, true, "EX", 60);
-    const isStarted = redis.get(`production:save:${id}`);
+    await redis.set(`production:save:${id}`, true);
+const raw = await redis.get(`production:save:${id}`);
+const isStarted = raw === "true"; 
 
-    return res.status(200).json({...updatedProduction?.dataValues, isStarted});
+
+    return res.status(200).json({...updatedProduction?.dataValues, isStarted: isStarted ?? false});
   } catch (error) {
     console.error("Error during updating Production:", error?.message || error);
     return res

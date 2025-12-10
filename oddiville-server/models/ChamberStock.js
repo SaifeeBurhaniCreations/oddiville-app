@@ -71,9 +71,45 @@ module.exports = (sequelize, Sequelize) => {
           },
         },
       },
+      packages: {
+        type: Sequelize.JSON,
+        allowNull: true,
+        validate: {
+          isValidPackages(value) {
+            if (value == null) return;
+
+            if (!Array.isArray(value)) {
+              throw new Error("Packages must be an array if provided.");
+            }
+
+            value.forEach((pkg, index) => {
+              const allowedKeys = ["size", "unit", "rawSize", "dry_item_id", "quantity"];
+              const keys = Object.keys(pkg);
+
+              const extra = keys.filter((k) => !allowedKeys.includes(k));
+              if (extra.length > 0) {
+                throw new Error(
+                  `Packages[${index}] has invalid fields: ${extra.join(", ")}`
+                );
+              }
+
+              if (pkg.size != null && isNaN(Number(pkg.size))) {
+                throw new Error(`Packages[${index}].size must be numeric.`);
+              }
+            });
+          },
+        },
+      },
     },
     {
       timestamps: true,
+      validate: {
+        packagesOnlyForPacked() {
+          if (this.category !== "packed" && this.packages != null) {
+            throw new Error("Packages are only allowed for category 'packed'.");
+          }
+        },
+      },
     }
   );
 

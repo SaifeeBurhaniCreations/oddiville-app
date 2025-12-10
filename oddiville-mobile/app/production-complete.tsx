@@ -341,6 +341,7 @@ const ProductionStartScreen = () => {
     }
   };
 
+const isStarted = !!productionData?.isStarted;
 
   return (
     <View style={styles.pageContainer}>
@@ -392,7 +393,7 @@ const ProductionStartScreen = () => {
             disabled={updateProduction.isPending || productionLoading}
             variant="outline"
           >
-            {updateProduction.isPending ? "Saving..." : updateProduction.data?.isStarted ? "Update" : "Save"}
+            {updateProduction.isPending ? isStarted ? "Saving..." : "Starting..." : isStarted ? "Save" : "Start"}
           </Button>
           <Button
             onPress={openBottomSheet}

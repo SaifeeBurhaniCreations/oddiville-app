@@ -17,7 +17,7 @@ import type {
 } from "@/src/types";
 import { AddProductPackageForm } from "./InputWithSelectComponent";
 import { useGlobalFormValidator } from "@/src/sbc/form/globalFormInstance";
-import { useDryChambers } from "@/src/hooks/useChambers";
+import { Chamber, useDryChambers } from "@/src/hooks/useChambers";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { setDeleteUserPopup, setVendorDeletePopup } from "@/src/redux/slices/delete-popup-slice";
 import Modal from "../modals/Modal";
@@ -56,7 +56,6 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
       key?: "user-action" | "vendor-action" | "supervisor-production" | "product-package" | string
     ) => {
       const value = typeof item === "object" ? item.name : item;
-      console.log("meta?.type", meta?.type, "meta?.mode", meta?.mode);
 
       if (meta?.type === "filter") {
         const filterKey = meta.id as FilterEnum; 
@@ -115,81 +114,81 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
         }
       }
 
-      // if (isChoosingChambers) {
-      //   setField("chamber_name", value);
-      //   const addProductPackage = {
-      //     sections: [
-      //       {
-      //         type: "title-with-details-cross",
-      //         data: {
-      //           title: "Add new Package",
-      //         },
-      //       },
-      //       {
-      //         type: "input-with-select",
-      //         data: {
-      //           placeholder: "Enter Product",
-      //           label: "Product name",
-      //           placeholder_second: "Enter RM",
-      //           label_second: "Raw Material",
-      //           alignment: "half",
-      //           key: "add-raw-material",
-      //           formField_1: "product_name",
-      //           source: "add-product-package",
-      //           source2: "product-package",
-      //         },
-      //       },
-      //       {
-      //         type: "input-with-select",
-      //         data: {
-      //           placeholder: "Enter title",
-      //           label: "Package title",
-      //           key: "package-weight",
-      //           formField_1: "size",
-      //           label_second: "Unit",
-      //           source: "add-product-package",
-      //         },
-      //       },
-      //       {
-      //         type: "input",
-      //         data: {
-      //           placeholder: "Enter counts",
-      //           label: "Add package",
-      //           keyboardType: "number-pad",
-      //           formField: "quantity",
-      //         },
-      //       },
-      //       {
-      //         type: "select",
-      //         data: {
-      //           placeholder: typeof item === "string" ? item : "Select Chamber",
-      //           label: "Select Chamber",
-      //           options:
-      //             DryChambers && DryChambers.length === 0
-      //               ? []
-      //               : DryChambers.map((dch: Chamber) => dch.chamber_name),
-      //           key: "product-package",
-      //         },
-      //       },
-      //     ],
-      //     buttons: [
-      //       {
-      //         text: "Add package",
-      //         variant: "fill",
-      //         color: "green",
-      //         alignment: "full",
-      //         disabled: false,
-      //         actionKey: "add-product-package",
-      //       },
-      //     ],
-      //   };
-      //   await validateAndSetData(
-      //     "temp123",
-      //     "add-product-package",
-      //     addProductPackage
-      //   );
-      //   return;
-      // }
+      if (isChoosingChambers) {
+        setField("chamber_name", value);
+        const addProductPackage = {
+          sections: [
+            {
+              type: "title-with-details-cross",
+              data: {
+                title: "Add new Package",
+              },
+            },
+            {
+              type: "input-with-select",
+              data: {
+                placeholder: "Enter Product",
+                label: "Product name",
+                placeholder_second: "Enter RM",
+                label_second: "Raw Material",
+                alignment: "half",
+                key: "add-raw-material",
+                formField_1: "product_name",
+                source: "add-product-package",
+                source2: "product-package",
+              },
+            },
+            {
+              type: "input-with-select",
+              data: {
+                placeholder: "Enter title",
+                label: "Package title",
+                key: "package-weight",
+                formField_1: "size",
+                label_second: "Unit",
+                source: "add-product-package",
+              },
+            },
+            {
+              type: "input",
+              data: {
+                placeholder: "Enter counts",
+                label: "Add package",
+                keyboardType: "number-pad",
+                formField: "quantity",
+              },
+            },
+            {
+              type: "select",
+              data: {
+                placeholder: typeof item === "string" ? item : "Select Chamber",
+                label: "Select Chamber",
+                options:
+                  DryChambers && DryChambers.length === 0
+                    ? []
+                    : DryChambers.map((dch: Chamber) => dch.chamber_name),
+                key: "product-package",
+              },
+            },
+          ],
+          buttons: [
+            {
+              text: "Add package",
+              variant: "fill",
+              color: "green",
+              alignment: "full",
+              disabled: false,
+              actionKey: "add-product-package",
+            },
+          ],
+        };
+        await validateAndSetData(
+          "temp123",
+          "add-product-package",
+          addProductPackage
+        );
+        return;
+      }
 
       dispatch(closeBottomSheet());
     },

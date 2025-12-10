@@ -11,7 +11,7 @@ const ChamberStockForm = ({ id, form, isLoading, handleSubmit, handleExit }) => 
   const { data: chambers, isLoading: isChamberLoading, error } = useChambers();
 
 const chamberStockSafe = Array.isArray(chamberStock) ? chamberStock : [];
-  
+
   const chamberLookup = useMemo(() => {
     const m = new Map();
     (Array.isArray(chambers) ? chambers : []).forEach((c) => {

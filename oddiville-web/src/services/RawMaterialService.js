@@ -7,7 +7,7 @@ const createRawMaterial = async (formData) => {
 
 const fetchRawMaterial = async () => {
   const response = await api.get(`/raw-material/all`);
-  return response;
+  return response.data;
 };
 
 const modifyRawMaterial = async (dataModel) => {
