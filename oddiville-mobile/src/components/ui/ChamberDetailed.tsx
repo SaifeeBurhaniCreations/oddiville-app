@@ -156,7 +156,7 @@ const ChamberDetailed = ({
 
         return {
           name: item.product_name,
-          description: `${totalQuantity}${item.unit}`,
+          description: `${totalQuantity} ${item.unit}`,
           rating: ratingDisplay,
           disabled,
           href: item.category === "other" ? "other-products-detail" : "",

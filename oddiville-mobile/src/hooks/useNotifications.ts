@@ -9,6 +9,35 @@ import type { AdminNotification } from "@/src/types/notification";
 import useSocket from "@/src/hooks/useSocketFromContext";
 import { fetchNotificationsInformative, fetchNotificationsActionable, fetchNotificationsTodays, updateNotificationService } from "@/src/services/notification.service";
 
+export type NotificationDetails = {
+  id: string;
+  identifier: string;
+  type: string;
+  title: string;
+  badgeText: string;
+  createdAt: string | Date;
+  description: string | string[];
+  category: string;
+  read: boolean;
+  extraData: any;
+};
+
+export type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
+  read: boolean;
+  type: string;
+  details: NotificationDetails;
+  description?: string[];
+};
+
+export type NotificationsPage = {
+  data: Notification[];
+  nextOffset: number | null;
+};
+
 export type FetchNotificationParams = {
   search?: string;
   limit?: number;
@@ -350,4 +379,36 @@ export function useMarkNotificationRead() {
       });
     },
   });
+}
+
+
+export function countUnreadFromPages(
+  data: InfiniteData<NotificationsPage> | undefined
+): number {
+  if (!data) return 0;
+  return data.pages.reduce((sum, page) => {
+    return (
+      sum +
+      page.data.filter((n: Notification) => !n.read).length
+    );
+  }, 0);
+}
+
+export function useUnreadNotificationCount(params: FetchNotificationParams = DEFAULT_PARAMS) {
+  const { data: informativeData } = useInformativeNotifications(params);
+  const { data: actionableData } = useActionableNotifications(params);
+  const { data: todaysData } = useTodaysNotifications(params);
+
+  const informativeUnread = informativeData.filter((n) => !n.read).length;
+  const actionableUnread = actionableData.filter((n) => !n.read).length;
+  const todaysUnread = todaysData.filter((n) => !n.read).length;
+
+  const total = informativeUnread + actionableUnread + todaysUnread;
+
+  return {
+    total,
+    informativeUnread,
+    actionableUnread,
+    todaysUnread,
+  };
 }

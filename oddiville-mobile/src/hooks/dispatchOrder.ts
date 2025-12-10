@@ -38,6 +38,7 @@ export interface DispatchOrderPackage {
     city: string;                   
     state: string;                  
     country: string;                  
+    phone: string;                  
     amount: number;                    
     createdAt: string | Date;  
     updatedAt: string | Date;

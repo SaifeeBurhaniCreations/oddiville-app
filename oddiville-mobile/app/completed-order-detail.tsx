@@ -27,6 +27,7 @@ import TruckIcon from "@/src/components/icons/page/TruckIcon";
 // 4. Project hooks
 import { useParams } from "@/src/hooks/useParams";
 import { useOrderById } from "@/src/hooks/dispatchOrder";
+import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
 
 // 5. Project constants/utilities
 import { getColor } from "@/src/constants/colors";
@@ -37,24 +38,42 @@ import {
   DispatchOrder,
   OrderProps,
   PackageItem,
-  ProductDetail,
   productDetails,
   SummaryItem,
 } from "@/src/types";
-import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
 
-// 7. Schemas
-// No items of this type
+// ---- Helper: safely convert string | Date | null to Date ----
+const toDate = (value: string | Date | null | undefined): Date | undefined => {
+  if (!value) return undefined;
+  return typeof value === "string" ? new Date(value) : value;
+};
 
-// 8. Assets
-// No items of this type
-
+// ---- Formatter object ----
 const formatOrder = {
   orderDetails: (order: DispatchOrder): OrderProps => {
-    const timeTaken = formatTimeDifference(
-      order.dispatch_date,
-      order.delivered_date!
-    );
+    const dispatchDate = toDate(order.dispatch_date as any);
+    const deliveredDate = toDate(order.delivered_date as any);
+
+    let timeTaken = "N/A";
+    if (dispatchDate && deliveredDate) {
+      timeTaken = formatTimeDifference(dispatchDate, deliveredDate);
+    }
+
+    const totalQuantityKg =
+      order.products?.reduce((total: number, product: any) => {
+        const chamberTotal =
+          product.chambers?.reduce(
+            (sum: number, chamber: any) =>
+              sum + (Number(chamber.quantity) || 0),
+            0
+          ) ?? 0;
+        return total + chamberTotal;
+      }, 0) ?? 0;
+
+    const uniqueProductCount = order.products
+      ? new Set(order.products.map((p: any) => p.name)).size
+      : 0;
+
     return {
       title: order.customer_name,
       address: order.address,
@@ -68,49 +87,40 @@ const formatOrder = {
         },
         {
           name: "Quantity",
-          value: `${order.products?.reduce((total, product) => {
-            const chamberTotal = product.chambers?.reduce(
-              (sum, chamber) => sum + (Number(chamber.quantity) || 0),
-              0
-            );
-            return total + (chamberTotal || 0);
-          }, 0)} Kg`,
+          value: `${totalQuantityKg} Kg`,
           icon: <DatabaseIcon />,
         },
         {
           name: "Product",
-          value: order.products
-            ? new Set(order.products.map((p) => p.name)).size
-            : 0,
+          value: uniqueProductCount,
           icon: <BoxIcon />,
         },
       ],
       dispatchDetails: [
         {
-          value: order.dispatch_date
-            ? formatDate(new Date(order.dispatch_date), "dd-MM-yy")
-            : "N/A",
+          value: dispatchDate ? formatDate(dispatchDate, "dd-MM-yy") : "N/A",
           icon: <WarehouseIcon />,
         },
         {
-          value: order.delivered_date
-            ? formatDate(order.delivered_date, "dd-MM-yy")
-            : "",
+          value: deliveredDate ? formatDate(deliveredDate, "dd-MM-yy") : "",
           icon: <StoreIcon />,
         },
       ],
       identifier: undefined,
     };
   },
+
   products: (
-    item: ProductDetail,
+    item: DispatchOrder["products"][number],
     amount: string,
     packages: PackageItem[]
   ): productDetails => {
-    const totalWeight = item.chambers?.reduce(
-      (sum, chamber) => sum + (Number(chamber.quantity) || 0),
-      0
-    );
+    const totalWeight =
+      item.chambers?.reduce(
+        (sum: number, chamber: any) => sum + (Number(chamber.quantity) || 0),
+        0
+      ) ?? 0;
+
     const chamberCount = item.chambers?.length || 0;
 
     const description = `${totalWeight} Kg from ${chamberCount} chamber${
@@ -118,53 +128,53 @@ const formatOrder = {
     }`;
 
     const allPackages = packages || [];
-    const packageStrings = allPackages?.map(
-      (pkg) => `${pkg.quantity} package of ${pkg.size}${pkg.unit}`
+    const packageStrings = allPackages.map(
+      (pkg: PackageItem) =>
+        `${pkg.quantity} package of ${pkg.size}${pkg.unit}`
     );
     const packagesSentence = packageStrings.join(", ");
 
     const price = `${amount} Rs`;
 
     return {
-      title: item.name,
-      image: item.image ?? "",
+      title: (item as any).name,
+      image: (item as any).image ?? "",
       description,
       packagesSentence,
       weight: `${totalWeight} Kg`,
       price,
-      packages: packages,
-      chambers: item.chambers,
+      packages: allPackages,
+      chambers: (item as any).chambers,
     };
   },
+
   summaryData: (order: DispatchOrder): SummaryItem[] => {
-    const data = [
+    const createdAt = toDate(order.createdAt as any);
+    const dispatchDate = toDate(order.dispatch_date as any);
+    const deliveredDate = toDate(order.delivered_date as any);
+
+    const data: SummaryItem[] = [
       {
         message: "Request for the order has been received",
-        date: order.createdAt
-          ? formatDate(new Date(order.dispatch_date), "MMM dd, yyyy")
-          : "N/A",
+        date: createdAt ? formatDate(createdAt, "MMM dd, yyyy") : "N/A",
         icon: <UserIcon size={24} color={getColor("light")} />,
       },
       {
         message: "Order has been created",
-        date: order.createdAt
-          ? formatDate(new Date(order.dispatch_date), "MMM dd, yyyy")
-          : "N/A",
+        date: createdAt ? formatDate(createdAt, "MMM dd, yyyy") : "N/A",
         icon: <BoxIcon size={24} color={getColor("light")} />,
       },
       {
         message: "Order has been shipped",
         reason: "",
-        date: order.dispatch_date
-          ? formatDate(new Date(order.dispatch_date), "MMM dd, yyyy")
-          : "N/A",
+        date: dispatchDate ? formatDate(dispatchDate, "MMM dd, yyyy") : "N/A",
         icon: <TruckIcon size={24} color={getColor("light")} />,
       },
       {
         message: "Order has arrived at the destination",
         reason: "",
-        date: order.delivered_date
-          ? formatDate(new Date(order.dispatch_date), "MMM dd, yyyy")
+        date: deliveredDate
+          ? formatDate(deliveredDate, "MMM dd, yyyy")
           : "N/A",
         icon: <StoreIcon size={36} color={getColor("light")} />,
       },
@@ -173,12 +183,23 @@ const formatOrder = {
   },
 };
 
+// ---- Categorize + map into UI-friendly structures ----
 const categorizeOrders = (order: DispatchOrder) => {
   const orderDetails: OrderProps = formatOrder.orderDetails(order);
   const summaryData: SummaryItem[] = formatOrder.summaryData(order);
   const products: productDetails[] = [];
-  order.products?.forEach((element) => {
-    products.push(formatOrder.products(element, order.amount, order.packages));
+
+  // Based on your TS error, DispatchOrder has "package", not "packages"
+  const orderPackages: PackageItem[] = (order as any).package ?? [];
+
+  order.products?.forEach((element: DispatchOrder["products"][number]) => {
+    products.push(
+      formatOrder.products(
+        element,
+        String(order.amount ?? ""),
+        orderPackages
+      )
+    );
   });
 
   return { orderDetails, products, summaryData };
@@ -188,14 +209,27 @@ const CompletedOrderDetailScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { orderId } = useParams("dispatch-summary", "orderId");
   const { data: orderData, isLoading: ordersLoading } = useOrderById(orderId!);
-
-  const { orderDetails, products, summaryData } = categorizeOrders(
-    !ordersLoading ? orderData : []
-  );
-
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
 
+  // While order is loading or missing, show loader
+  if (ordersLoading || !orderData) {
+    return (
+      <View style={styles.pageContainer}>
+        <PageHeader page={"Order"} />
+        <View style={styles.wrapper}>
+          <Loader />
+        </View>
+      </View>
+    );
+  }
+
+  const { orderDetails, products, summaryData } = categorizeOrders(
+    orderData as DispatchOrder
+  );
+
   const handleOpenChallanViewer = (urls: string[]) => {
+    if (!urls || urls.length === 0) return;
+
     const ImagePreview = {
       sections: [
         {
@@ -204,7 +238,7 @@ const CompletedOrderDetailScreen = () => {
             title: "Example_challan",
           },
         },
-        urls?.length === 1
+        urls.length === 1
           ? {
               type: "image-preview",
               data: {
@@ -220,6 +254,16 @@ const CompletedOrderDetailScreen = () => {
     validateAndSetData("Abcd1", "image-preview", ImagePreview);
   };
 
+  const hasImages =
+    Array.isArray((orderData as any).sample_images) &&
+    (orderData as any).sample_images.length > 0;
+
+  const firstImage = hasImages ? (orderData as any).sample_images[0] : "";
+  const firstExt = firstImage ? firstImage.split(".").pop() : "jpg";
+  const remainingCount = hasImages
+    ? Math.max(0, (orderData as any).sample_images.length - 1)
+    : 0;
+
   return (
     <View style={styles.pageContainer}>
       <PageHeader page={"Order"} />
@@ -230,16 +274,28 @@ const CompletedOrderDetailScreen = () => {
           <View style={{ gap: 24 }}>
             <SupervisorOrderDetailsCard order={orderDetails} />
 
-            <View style={styles.receipt}>
-              <View style={[styles.row, styles.gap12]}>
-                <FileIcon />
-                <B2>Challan_1.{orderData?.sample_images[0].split(".")[1]} + {orderData?.sample_images.length - 1} more</B2>
-                {/* <B2>{ (testUrls?.[0]?.split("/").pop() ?? "").slice(-16) } + {testUrls.length - 1} more</B2> */}
+            {hasImages && (
+              <View style={styles.receipt}>
+                <View style={[styles.row, styles.gap12]}>
+                  <FileIcon />
+                  <B2>
+                    {`Challan_1.${firstExt}` +
+                      (remainingCount > 0
+                        ? ` + ${remainingCount} more`
+                        : "")}
+                  </B2>
+                </View>
+                <Pressable
+                  onPress={() =>
+                    handleOpenChallanViewer(
+                      (orderData as any).sample_images as string[]
+                    )
+                  }
+                >
+                  <B5 color={getColor("green")}>View receipt</B5>
+                </Pressable>
               </View>
-              <Pressable onPress={() => handleOpenChallanViewer(orderData.sample_images)}>
-                <B5 color={getColor("green")}>View receipt</B5>
-              </Pressable>
-            </View>
+            )}
 
             <Tabs
               tabTitles={["Products", "Product journey"]}
@@ -283,10 +339,6 @@ const styles = StyleSheet.create({
   },
   flexGrow: {
     flex: 1,
-  },
-  searchinputWrapper: {
-    height: 44,
-    marginTop: 24,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

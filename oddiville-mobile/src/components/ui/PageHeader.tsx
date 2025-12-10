@@ -33,8 +33,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { toggleMenu } from "@/src/utils/bottomBarUtils";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { useAuth } from "@/src/context/AuthContext";
-import { useUnreadNotificationCount } from "@/src/hooks/useAdminNotifications";
 import { useAdmin } from "@/src/hooks/useAdmin";
+import { useUnreadNotificationCount } from "@/src/hooks/useNotifications";
 
 type PageVariant =
   | "welcome"

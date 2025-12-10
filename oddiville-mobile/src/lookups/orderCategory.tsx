@@ -118,10 +118,19 @@ export const formatOrder = {
     let timeTaken = "N/A";
     try {
       if (order.dispatch_date && order.delivered_date) {
-        timeTaken = formatTimeDifference(
-          order.dispatch_date,
-          order.delivered_date
-        );
+        const dispatchDate =
+          typeof order.dispatch_date === "string"
+            ? new Date(order.dispatch_date)
+            : order.dispatch_date;
+
+        const deliveredDate =
+          typeof order.delivered_date === "string"
+            ? new Date(order.delivered_date)
+            : order.delivered_date;
+
+        if (isValidDate(dispatchDate) && isValidDate(deliveredDate)) {
+          timeTaken = formatTimeDifference(dispatchDate, deliveredDate);
+        }
       }
     } catch (error) {
       console.warn(
@@ -145,7 +154,7 @@ export const formatOrder = {
       bottomDetails: [
         {
           name: "Amount",
-          value: `${formatAmount(Number(order.amount), { unit: "rs" } )}`,
+          value: `${formatAmount(Number(order.amount), { unit: "rs" })}`,
           icon: <CashIcon size={16} />,
         },
         {
