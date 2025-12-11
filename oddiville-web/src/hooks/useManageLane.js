@@ -11,6 +11,14 @@ import {
 } from "@/redux/LaneDataSlice";
 import { initialLaneState } from "@/schemas/LaneSchema";
 
+const normalizeImage = (img) => {
+  if (!img) return null;
+  if (typeof img === "string") return { url: img };
+  if (typeof img === "object" && img.url) return { url: img.url };
+  return null;
+};
+
+
 const useManageLane = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -101,23 +109,35 @@ const useManageLane = () => {
 
   // Prefill form when editing
   
-  useEffect(() => {
-    if (id && lanes?.length > 0) {
-      const data = lanes.find((lane) => lane.id === id || lane._id === id);
-      if (data) {
-        form.setFields({
-          name: data.name || "",
-          description: data.description || "",
-        });
+useEffect(() => {
+  if (id && lanes?.length > 0) {
+    const data = lanes.find((lane) => lane.id === id || lane._id === id);
+
+    if (data) {
+      form.setFields({
+        name: data.name,
+        description: data.description,
+      });
+      
+      const existing = data.sample_image;
+      if (existing && typeof existing === "object") {
+        setFetchedBanners(existing);
+      } else if (existing && typeof existing === "string") {
+        setFetchedBanners({ url: existing });
+      } else if (data.sample_image?.url) {
+        setFetchedBanners({ url: data.sample_image.url });
+      } else {
+        setFetchedBanners(null);
       }
-    } else if (!id) {
-      form.resetForm();
     }
-  }, [id, lanes]);
+  } else {
+    form.resetForm();
+    setFetchedBanners(null);
+  }
+}, [id, lanes]);
 
   const fetchBanners = (file) => {
     setBanners(file);
-
     form.setField("sample_image", file);
   };
 
@@ -170,21 +190,44 @@ const useManageLane = () => {
           toast.error(response.data.error || "Failed to add lane.");
         }
       } else {
-        // Update
-        const updatedLane = { ...result.data, id };
-        dispatch(handleModifyData(updatedLane));
-        const response = await modify({ formData: result.data, id });
+         response = await modify({ formData: formPayload, id });
+
         if (response.status === 200) {
-          //  const all = await fetchLocations();
-          //           // normalize as needed...
-          //           dispatch(handleFetchData(all.data));
-          if (response.data && response.data.id) {
-            dispatch(handleModifyData(response.data));
-          }
+          const returned = response.data;
+
+          const normalizedImage = normalizeImage(returned.sample_image);
+
+          const laneForStore = {
+            ...returned,
+            sample_image: normalizedImage,
+          };
+
+          const stripNonSerializable = (obj) => {
+            const out = {};
+            for (const key in obj) {
+              const v = obj[key];
+              if (
+                v instanceof File ||
+                v instanceof FileList ||
+                typeof v === "function" ||
+                typeof v === "symbol" ||
+                typeof v === "undefined"
+              ) {
+                continue;
+              }
+              out[key] = v;
+            }
+            return out;
+          };
+
+          const serializableLane = stripNonSerializable(laneForStore);
+
+          setFetchedBanners(normalizedImage);
+          dispatch(handleModifyData(serializableLane));
+
           toast.success("Lane Updated");
         } else {
-          toast.error(response.data.error || "Failed to update lane.");
-          dispatch(handleFetchData(lanes));
+          toast.error(response.data?.error || "Failed to update lane.");
         }
       }
     } catch (error) {
