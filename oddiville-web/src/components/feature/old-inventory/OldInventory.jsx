@@ -17,7 +17,7 @@ const STEPS_CONFIG = [
 ];
 
 export default function OldInventory() {
-  const { step, next, prev } = useStep(1, STEPS_CONFIG.length);
+  const { step, next, prev } = useStep(2, STEPS_CONFIG.length);
   const { validateExcel } = useInventoryValidator();
 
   const [excelRows, setExcelRows] = useState([]);
@@ -37,6 +37,7 @@ export default function OldInventory() {
   const [nextStepTitle, setNextStepTitle] = useState("");
 
   const [skipStep2, setSkipStep2] = useState(true);
+  const [skipStep1, setSkipStep1] = useState(true);
 
   const handleExcelChange = (event) => {
     const excelFile = event.target.files && event.target.files[0];
@@ -108,10 +109,28 @@ export default function OldInventory() {
     return out;
   }
 
+  function normalizeVendorMaterialsFields(row = {}) {
+    const out = { ...row };
+    console.log("out", out);
+    
+    // const td = out.materials.split(",");
+
+    // out.materials = td;
+
+    // const removeKeys = [
+    //   "materials",
+    // ];
+    // for (const k of removeKeys) delete out[k];
+
+    return out;
+  }
+
   function normalizeRowsForStep(mappedRows = [], stepKey = 1) {
     if (!Array.isArray(mappedRows)) return mappedRows;
     if (stepKey === 1) {
       return mappedRows.map((r) => normalizeTruckFields(r, "raw"));
+    }else if (stepKey === 2) {
+      return mappedRows.map((r) => normalizeVendorMaterialsFields(r));
     } else if (stepKey === 4) {
       return mappedRows.map((r) => normalizeTruckFields(r, "dispatch"));
     }
@@ -223,19 +242,30 @@ export default function OldInventory() {
       }
       return;
     }
+    
+if (step === 1) {
+  const nextCfg = STEPS_CONFIG.find((s) => s.key === 2);
+  toast.success(`Skipping Step 1. Proceeding to ${nextCfg?.title}.`);
 
-    if (step === 1 && skipStep2) {
-      const nextCfg = STEPS_CONFIG.find((s) => s.key === 3);
-      setNextStepTitle(nextCfg ? nextCfg.title : "");
-      toast.success(`${currentCfg.title} completed! Skipping ${STEPS_CONFIG.find(s => s.key === 2).title} and proceeding to ${nextCfg.title}.`);
-      next();
-      setTimeout(() => {
-        next();
-      }, 0);
+  next(); 
 
-      setExcelRows([]);
-      return;
-    }
+  setExcelRows([]);
+  return;
+}
+
+    // if (step === 1 && skipStep2) {
+    //   const nextCfg = STEPS_CONFIG.find((s) => s.key === 3);
+    //   setNextStepTitle(nextCfg ? nextCfg.title : "");
+    //   toast.success(`${currentCfg.title} completed! Skipping ${STEPS_CONFIG.find(s => s.key === 2).title} and proceeding to ${nextCfg.title}.`);
+    //   next();
+    //   setTimeout(() => {
+    //     next();
+    //   }, 0);
+
+    //   setExcelRows([]);
+    //   return;
+    // }
+
     const nextCfg = STEPS_CONFIG.find((s) => s.key === step + 1);
     setNextStepTitle(nextCfg ? nextCfg.title : "");
     toast.success(`${currentCfg.title} completed! Proceed to ${nextCfg.title}.`);

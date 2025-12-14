@@ -14,8 +14,8 @@ export const getBottomSheetActions = (type: BottomSheetSchemaKey): BottomSheetAc
             return ['add-package-quantity'];
         case 'upcoming-order':
             return ['ship-order', 'edit-order', 'cancel-order'];
-        case 'filter':
-            return ['apply-filter'];
+        // case 'filter':
+        //     return ['apply-filter'];
         case 'verify-material':
             return ['verify-material'];
         case 'supervisor-production':
@@ -27,7 +27,7 @@ export const getBottomSheetActions = (type: BottomSheetSchemaKey): BottomSheetAc
         case 'order-ready':
             return ['ship-order'];
         case 'filter':
-            return ['clear-filter'];
+            return ['cancel', 'clear-filter'];
         case 'select-policies':
             return ['cancel-policies', 'select-policies'];
         default:
