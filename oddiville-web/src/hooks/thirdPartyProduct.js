@@ -81,7 +81,6 @@ export function useOtherProductById(id = null) {
     }
     return list;
   }, [id, otherProductResult, enrichedOtherProducts]);
-console.log("otherProductResult", otherProductResult);
 
   return { stockData, otherProduct: otherProductResult };
 }

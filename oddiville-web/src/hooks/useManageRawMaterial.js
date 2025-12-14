@@ -273,7 +273,6 @@ useEffect(() => {
       sample_image: stockObj.sample_image || null,
     };
   });
-console.log("productsFromBackend", productsFromBackend);
 
   setProductList(productsFromBackend);
   setClientField("products", productsFromBackend);
