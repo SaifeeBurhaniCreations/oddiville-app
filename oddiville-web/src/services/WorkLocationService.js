@@ -23,7 +23,9 @@ const remove = async(id) => {
 
 const modify = async(dataModel) => {
     const { id, formData } = dataModel
-    const response = await api.put(`/location/${id}`, formData)
+    const response = await api.put(`/location/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    })
     return response;
 }
 

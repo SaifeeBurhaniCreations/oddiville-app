@@ -5,12 +5,37 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { handleModifyData, handlePostData } from "@/redux/WorkLocationSlice";
 import { useFormValidator } from "@/lib/custom_library/formValidator/useFormValidator";
-import {
-  initialLocationState,
-  // locationValidationSchema,
-} from "@/schemas/WorkLocationSchema";
+import { initialLocationState } from "@/schemas/WorkLocationSchema";
 import { handleFetchData } from "../redux/WorkLocationSlice";
 import { fetchLocations } from "@/services/WorkLocationService";
+
+const normalizeImage = (img) => {
+  if (!img) return null;
+  if (typeof img === "string") return { url: img };
+  if (typeof img === "object" && (img.url || img.imageUrl)) {
+    return { url: img.url || img.imageUrl };
+  }
+  return null;
+};
+
+const stripNonSerializable = (obj) => {
+  const out = {};
+  for (const key in obj) {
+    const v = obj[key];
+    if (
+      v instanceof File ||
+      v instanceof FileList ||
+      typeof v === "function" ||
+      typeof v === "symbol" ||
+      typeof v === "undefined"
+    ) {
+      continue;
+    }
+    out[key] = v;
+  }
+  return out;
+};
+
 const useManageWorkLocation = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -20,8 +45,8 @@ const useManageWorkLocation = () => {
   const workLocationData = useSelector((state) => state.location.data);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [banners, setBanners] = useState(null);
-  const [fetchedBanners, setFetchedBanners] = useState(null);
+  const [banners, setBanners] = useState(null); 
+  const [fetchedBanners, setFetchedBanners] = useState(null); 
   const [deleteBanners, setDeleteBanners] = useState(false);
 
   const locationValidationSchema = useMemo(() => {
@@ -51,9 +76,7 @@ const useManageWorkLocation = () => {
             if (deleteBanners) return !!hasUpload;
 
             const existingImage =
-              fetchedBanners?.sample_image ||
-              fetchedBanners?.imageUrl ||
-              workLocationData?.sample_image;
+              fetchedBanners?.url || fetchedBanners?.sample_image || workLocationData?.sample_image;
 
             if (existingImage) {
               if (hasUpload) return true;
@@ -73,9 +96,8 @@ const useManageWorkLocation = () => {
   );
 
   const fetchBanners = (file) => {
-    setBanners(file);
-
-    form.setField("sample_image", file);
+    setBanners(file); 
+    form.setField("sample_image", file); 
   };
 
   const handleExit = () => {
@@ -101,21 +123,13 @@ const useManageWorkLocation = () => {
 
     if (!result.success) return;
 
-    // const formPayload = new FormData();
-    // formPayload.append("location_name", result.data.location_name);
-    // formPayload.append("description", result.data.description);
-
-    // if (banners) {
-    //     formPayload.append("sample_image", banners);
-    // }
     const formPayload = new FormData();
     formPayload.append("location_name", result.data.location_name);
     formPayload.append("description", result.data.description);
 
-    if (result.data.sample_image) {
-      formPayload.append("sample_image", result.data.sample_image);
-    }
-    if (id && deleteBanners && !banners) {
+    if (banners) {
+      formPayload.append("sample_image", banners);
+    } else if (id && deleteBanners && !banners) {
       formPayload.append("deleteBanner", "true");
     }
 
@@ -125,12 +139,17 @@ const useManageWorkLocation = () => {
       if (isCreating) {
         response = await create(formPayload);
 
-        // if server returns error info in 4xx but still resolved, handle that too
         if (response.status === 201) {
-          dispatch(handlePostData(response.data));
+          const created = response.data;
+          const normalized = {
+            ...created,
+            sample_image: normalizeImage(created.sample_image),
+          };
+          dispatch(handlePostData(stripNonSerializable(normalized)));
           toast.success("Location is Added!");
+          form.resetForm();
+          navigate("/work-location");
         } else {
-          // prefer server message if present
           const serverMsg = response?.data?.message ?? response?.data?.error;
           throw new Error(
             serverMsg || `Failed to create location. Status ${response.status}`
@@ -138,20 +157,38 @@ const useManageWorkLocation = () => {
         }
       } else {
         response = await modify({ formData: formPayload, id });
+
         if (response.status === 200) {
-          const all = await fetchLocations();
-          // normalize as needed...
-          dispatch(handleFetchData(all.data));
-          toast.success("Location is Updated!");
-        } else {
+            const updated = response.data;
+            const normalizedImage = normalizeImage(updated.sample_image);
+            setFetchedBanners(normalizedImage);
+
+            const serializable = stripNonSerializable({
+              ...updated,
+              sample_image: normalizedImage,
+            });
+
+            const idKey = updated._id ? "_id" : "id";
+            const idValue = updated[idKey];
+
+            const allRes = await fetchLocations(); 
+            const allItems = allRes.data || [];
+
+            const newList = allItems.map((item) =>
+              item[idKey] === idValue ? serializable : item
+            );
+              
+            dispatch(handleFetchData(newList));
+
+            toast.success("Location is Updated!");
+            navigate("/work-location");
+          } else {
           const serverMsg = response?.data?.message ?? response?.data?.error;
           throw new Error(
             serverMsg || `Failed to update location. Status ${response.status}`
           );
         }
       }
-
-      navigate("/work-location");
     } catch (error) {
       if (error?.response) {
         const status = error.response.status;
@@ -162,13 +199,11 @@ const useManageWorkLocation = () => {
           null;
 
         if (status === 409) {
-          // show a friendly message for duplicate
           toast.error(serverMsg || "Work location already exists");
         } else {
           toast.error(serverMsg || `Server failed with status ${status}`);
         }
       } else {
-        // fallback — network or thrown Error
         toast.error(
           error?.message || "An error occurred while processing the location."
         );
@@ -187,7 +222,8 @@ const useManageWorkLocation = () => {
           description: data.description,
         });
 
-        setFetchedBanners(data.sample_image);
+        const normalized = normalizeImage(data.sample_image);
+        setFetchedBanners(normalized);
       }
     } else {
       setFetchedBanners(null);
@@ -195,6 +231,7 @@ const useManageWorkLocation = () => {
       setDeleteBanners(false);
       form.setFields(initialLocationState);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, workLocationData]);
 
   return {

@@ -10,7 +10,7 @@ const Lane = () => {
     showModal,
     selectedLane,
     handleDeleteClick,
-    handleDelete,
+    handleDelete, 
     setShowModal,
   } = useManageLanes();
 

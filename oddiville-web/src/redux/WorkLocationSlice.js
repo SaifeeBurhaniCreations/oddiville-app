@@ -23,19 +23,7 @@ const WorkLocationSlice = createSlice({
     },
     handleModifyData: (state, action) => {
       const updated = action.payload;
-
-      const key = updated._id ?? updated.id;
-      if (!key) {
-        console.warn(
-          "handleModifyData: updated object missing id/_id",
-          updated
-        );
-        return;
-      }
-
-      state.data = state.data.map((item) =>
-        item[key] === updated[key] ? updated : item
-      );
+      state.data = updated
     },
   },
 });
