@@ -19,60 +19,51 @@ import {
 import { useChamberstock } from "../../../../hooks/chamberStock";
 
 const getAverageRating = (chambers = []) => {
-  const validRatings = chambers
-    .map((c) => Number(c.rating))
-    .filter((r) => Number.isInteger(r) && r >= 1 && r <= 5);
+  const ratings = chambers.map(ch => ch.rating);
+
+  const hasTextRating = ratings.some(r => isNaN(Number(r)));
+
+  if (hasTextRating) {
+    return ratings.join(", ");
+  }
+
+  const validRatings = ratings
+    .map(r => Number(r))
+    .filter(r => Number.isInteger(r) && r >= 1 && r <= 5);
 
   if (validRatings.length === 0) return null;
 
-  const avg =
-    validRatings.reduce((sum, r) => sum + r, 0) / validRatings.length;
-
-  return Math.round(avg * 10) / 10; // 1 decimal (e.g. 4.5)
+  const avg = validRatings.reduce((sum, r) => sum + r, 0) / validRatings.length;
+  return Math.round(avg * 10) / 10;
 };
 
 const StarRating = ({ value }) => {
-  const rating = Number(value);
-
-  if (!rating || rating < 1 || rating > 5) {
-    return <span className="text-secondary">N/A</span>;
+  if (typeof value === "string" && isNaN(Number(value))) {
+    return <span className="text-secondary">{value}</span>;
   }
 
-  const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 >= 0.5;
+  const num = Number(value);
 
-  return (
-    <span style={{ whiteSpace: "nowrap" }}>
-      {[1, 2, 3, 4, 5].map((star) => {
-        if (star <= fullStars) {
-          return (
-            <span key={star} style={{ color: "#f4c150" }}>
-              ★
-            </span>
-          );
-        }
+  if (!isNaN(num) && num >= 1 && num <= 5) {
+    const fullStars = Math.floor(num);
+    const hasHalfStar = num % 1 >= 0.5;
 
-        if (star === fullStars + 1 && hasHalfStar) {
-          return (
-            <span key={star} style={{ color: "#f4c150" }}>
-              ☆
-            </span>
-          );
-        }
+    return (
+      <span style={{ whiteSpace: "nowrap" }}>
+        {[1, 2, 3, 4, 5].map((star) => {
+          if (star <= fullStars) return <span key={star} style={{ color: "#f4c150" }}>★</span>;
+          if (star === fullStars + 1 && hasHalfStar) return <span key={star} style={{ color: "#f4c150" }}>☆</span>;
+          return <span key={star} style={{ color: "#e0e0e0" }}>★</span>;
+        })}
+      </span>
+    );
+  }
 
-        return (
-          <span key={star} style={{ color: "#e0e0e0" }}>
-            ★
-          </span>
-        );
-      })}
-    </span>
-  );
+  return <span className="text-secondary">No rating</span>;
 };
 
 
 const ExpandedChambersRow = ({ chambers }) => {
-  console.log("chambers", chambers);
 
   if (!chambers || chambers.length === 0) {
     return (
@@ -91,31 +82,7 @@ const ExpandedChambersRow = ({ chambers }) => {
           </tr>
         </thead>
         <tbody>
-          {[
-    {
-        "id": "3f38277d-9987-47ee-94ea-efdc52ae3ec2",
-        "product_name": "Peas",
-        "image": null,
-        "category": "other",
-        "unit": "kg",
-        "chamber": [
-            {
-                "id": "9317e7a9-381e-485b-923f-9b79a018e519",
-                "quantity": "500",
-                "rating": "4"
-            },
-            {
-                "id": "8cd93b32-b694-4c5d-b541-0034152010bc",
-                "quantity": "250",
-                "rating": "5"
-            }
-        ],
-        "packages": null,
-        "createdAt": "2025-12-13T06:27:43.697Z",
-        "updatedAt": "2025-12-13T06:27:43.697Z"
-    }
-].map((ch) => (
-          // {chambers.map((ch) => (
+          {chambers.map((ch) => (
             <tr key={ch.id}>
               <td className="text-center">{ch.product_name || ch.id.slice(0, 10)}</td>
               <td className="text-center">{ch?.chamber?.length > 0 && ch?.chamber?.reduce((acc, cur) => acc + Number(cur.quantity), 0)}</td>
@@ -246,7 +213,6 @@ const ThirdPartyProduct = () => {
       const isSingle = chambers.length === 1;
       const isMultiple = chambers.length > 1;
       const isOpen = openRowId === item.id;
-      // console.log("chambers", chambers);
 
       return (
         <React.Fragment key={item.id}>

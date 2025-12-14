@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchThirdPartyProducts,
-  fetchThirdPartyProductsById,
+  fetchThirdPartyProductsById, fetchOtherItems
 } from "@/services/ThirdPartyProductService";
 import { useChamberstock } from "./chamberStock";
+import { useMemo } from "react";
+
 export function useThirdPartyProducts(options = {}) {
   const defaults = {
     enabled: true,
@@ -30,7 +32,31 @@ export function useThirdPartyProducts(options = {}) {
   });
 }
 
-import { useMemo } from "react";
+export function useOtherItems(options = {}) {
+  const defaults = {
+    enabled: true,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    cacheTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
+  };
+  const merged = { ...defaults, ...options };
+
+  return useQuery({
+    queryKey: ["other-items"],
+    queryFn: async () => {
+      const res = await fetchOtherItems();
+      return res?.data ?? res;
+    },
+    enabled: merged.enabled,
+    staleTime: merged.staleTime,
+    cacheTime: merged.cacheTime,
+    refetchOnWindowFocus: merged.refetchOnWindowFocus,
+    refetchOnMount: merged.refetchOnMount,
+    retry: merged.retry,
+  });
+}
 
 export function useOtherProductById(id = null) {
   const { data: stock } = useChamberstock(); 
@@ -84,3 +110,5 @@ export function useOtherProductById(id = null) {
 
   return { stockData, otherProduct: otherProductResult };
 }
+
+

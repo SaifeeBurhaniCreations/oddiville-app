@@ -21,8 +21,7 @@ const AddRawMaterial = () => {
     id,
   } = useManageRawMaterial();
 
-  console.log("productList", productList);
-
+  // console.log("filteredChambers", filteredChambers);
   return (
     <div className="container py-4 ">
       <div className="row justify-content-center">

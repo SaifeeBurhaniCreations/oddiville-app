@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { useOtherProductById } from "@/hooks/thirdPartyProduct";
+import { useOtherProductById, useOtherItems } from "@/hooks/thirdPartyProduct";
 
 import { useFormValidator } from "@/lib/custom_library/formValidator/useFormValidator";
 import { create, modify } from "@/services/ThirdPartyProductService";
@@ -22,6 +22,7 @@ const useManageRawMaterial = () => {
   const chambers = useSelector((state) => state.ServiceDataSlice.chamber);
   const workLocation = useSelector((state) => state.location.data);
 const { otherProduct: ThirdPartyProduct } = useOtherProductById(id);
+const { otherItems } = useOtherItems();
   const [isLoading, setIsLoading] = useState(false);
   const [banners, setBanners] = useState(null);
   const [productList, setProductList] = useState([]);
@@ -243,6 +244,7 @@ const { otherProduct: ThirdPartyProduct } = useOtherProductById(id);
       fetchAll();
     }
   }, [dispatch, chambers?.length]);
+
 useEffect(() => {
   if (!id || !ThirdPartyProduct || !Array.isArray(chambers)) return;
 
@@ -255,6 +257,8 @@ useEffect(() => {
 
   const productsFromBackend = (ThirdPartyProduct.products || []).map((stockObj) => {
     const product_name = stockObj.product_name || "";
+    console.log("ThirdPartyProduct.products", ThirdPartyProduct.products);
+    
     const rent = stockObj.rent || "";
     const est_dispatch_date = stockObj.est_dispatch_date || "";
     const selectedChambers = (stockObj.chamber || []).map((ch) => {
@@ -284,6 +288,7 @@ useEffect(() => {
 }, [id, ThirdPartyProduct, chambers]);
 
   const filteredChambers = chambers?.filter((c) => c.tag === "frozen");
+console.log("otherItems", otherItems);
 
   return {
     id,
