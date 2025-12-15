@@ -2,14 +2,14 @@ import useManageRawMaterial from "@/hooks/useManageRawMaterial";
 import ClientDetailsForm from "@/components/forms/ClientDetailsForm";
 import AddProductForm from "@/components/forms/AddProductForm";
 import ProductListTable from "@/components/tables/ProductListTable";
+import { useEffect } from "react";
 
 const AddRawMaterial = () => {
   const {
     isLoading,
     clientForm,
     productForm,
-    productList,
-    filteredChambers,
+    productdata,
     handleProductInputChange,
     toggleChamber,
     updateQuantity,
@@ -21,9 +21,29 @@ const AddRawMaterial = () => {
     id,
   } = useManageRawMaterial();
 
-  // console.log("filteredChambers", filteredChambers);
-  return (
-    <div className="container py-4 ">
+ const { productList, chambers: filteredChambers } = productdata;
+  const productIndex = Number(new URLSearchParams(location.search).get("product"));
+
+useEffect(() => {
+  if (!isNaN(productIndex)) {
+    handleEditProduct(productIndex);
+  }
+}, [productIndex, productList]);
+
+const chamberMap = new Map(
+  (filteredChambers || []).map(ch => [ch.id, ch.chamber_name])
+);
+
+const productListWithChamberNames = productList.map(product => ({
+  ...product,
+  selectedChambers: (product.selectedChambers || []).map(ch => ({
+    ...ch,
+    name: chamberMap.get(ch.id) || ch.name || "",
+  })),
+}));
+
+return (
+    <div className="container py-4 overflow-y-auto" style={{ maxHeight: "93vh" }}>
       <div className="row justify-content-center">
         <div className="col-12 col-md-11 col-lg-10">
           <div className="row">
@@ -39,7 +59,7 @@ const AddRawMaterial = () => {
             <div className=" col-12 mb-4 col-lg-8">
               <AddProductForm
                 productForm={productForm}
-                filteredChambers={filteredChambers}
+                selectedChambers={filteredChambers}
                 toggleChamber={toggleChamber}
                 updateQuantity={updateQuantity}
                 addProductToList={addProductToList}
@@ -51,11 +71,11 @@ const AddRawMaterial = () => {
 
           <div className="row ">
             <div className="col-12 ">
-              {/* <ProductListTable
-                productList={productList}
-                handleEditProduct={handleEditProduct}
-                handleDeleteProduct={handleDeleteProduct}
-              /> */}
+            <ProductListTable
+              productList={productListWithChamberNames}
+              handleEditProduct={handleEditProduct}
+              handleDeleteProduct={handleDeleteProduct}
+            />
             </div>
           </div>
         </div>

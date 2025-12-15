@@ -24,7 +24,8 @@ const getAverageRating = (chambers = []) => {
   const hasTextRating = ratings.some(r => isNaN(Number(r)));
 
   if (hasTextRating) {
-    return ratings.join(", ");
+    return ratings[0];
+    // return ratings.join(", ");
   }
 
   const validRatings = ratings
@@ -61,7 +62,6 @@ const StarRating = ({ value }) => {
 
   return <span className="text-secondary">No rating</span>;
 };
-
 
 const ExpandedChambersRow = ({ chambers }) => {
 
@@ -108,7 +108,6 @@ const ThirdPartyProduct = () => {
   const [selectedItem, setSelectedItem] = useState(null);
 
   const [openRowId, setOpenRowId] = useState(null);
-
   /* =======================
      Fetch chamber stock ONCE
      ======================= */
@@ -241,7 +240,7 @@ const ThirdPartyProduct = () => {
                   className="text-primary text-xs cursor-pointer"
                   onClick={() => toggleRow(item.id)}
                 >
-                  {chambers[0].product_name}
+                  {chambers[0].product_name} ▾
                 </span>
               )}
 
@@ -259,7 +258,7 @@ const ThirdPartyProduct = () => {
 
             <td>
               <NavLink
-                to={`/raw-material-other/update/${item.id}`}
+                to={`/raw-material-other/update/${item.id}?product=0`}
                 className="btn btn-link text-secondary text-xs"
               >
                 Edit

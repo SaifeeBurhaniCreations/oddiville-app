@@ -117,7 +117,6 @@ const ProductionStartScreen = () => {
     .filter((lane: any) => !!lane.production_id && lane.production_id !== id)
     .map((lane: any) => lane.value);
 
-  // console.log("productionLoading", productionLoading);
 
   const orderDetail: OrderProps = useMemo(() => {
     return {
@@ -201,7 +200,6 @@ const ProductionStartScreen = () => {
   }, [productionData]);
 
   const openBottomSheet = () => {
-    console.log();
     
     const supervisorProduction = {
       sections: [

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
 import useStep from "@/hooks/useStep";
@@ -10,34 +10,37 @@ import { bulkIngest } from "../../../services/oldInventory.service";
 
 const STEPS_CONFIG = [
   { key: 1, title: "Raw Material entry", acceptsImage: true, buttonLabel: "Add Raw Material" },
-  { key: 2, title: "Vendor entry", acceptsImage: false, buttonLabel: "Add Vendor" },
-  // { key: 2, title: "Production entry", acceptsImage: false, buttonLabel: "Add Production" },
+  { key: 2, title: "Vendor entry", acceptsImage: false, buttonLabel: "Add Vendor", optional: true },
   { key: 3, title: "Chamber Stock entry", acceptsImage: false, buttonLabel: "Add ChamberStock" },
   { key: 4, title: "Dispatch Order entry", acceptsImage: true, buttonLabel: "Add Dispatch Order" },
 ];
 
 export default function OldInventory() {
-  const { step, next, prev } = useStep(2, STEPS_CONFIG.length);
+  const { step, next, prev } = useStep(1, STEPS_CONFIG.length);
   const { validateExcel } = useInventoryValidator();
 
   const [excelRows, setExcelRows] = useState([]);
   const [parsedPreview, setParsedPreview] = useState([]);
   const [challan, setChallan] = useState({
     rawMaterial: { in: [], out: [] },
-    dispatch: [],
+    dispatch: { in: [], out: [] },
   });
   const [fullData, setFullData] = useState({
     rawMaterial: null,
-    production: null,
+    vendor: null,
     chamberStock: null,
     dispatchOrder: null,
   });
   const [showModal, setShowModal] = useState(false);
   const [modalErrors, setModalErrors] = useState([]);
   const [nextStepTitle, setNextStepTitle] = useState("");
+  const [currentStepData, setCurrentStepData] = useState({
+    step: null,
+    rows: [],
+  });
 
-  const [skipStep2, setSkipStep2] = useState(true);
-  const [skipStep1, setSkipStep1] = useState(true);
+  // const [skipStep2, setSkipStep2] = useState(true);
+  // const [skipStep1, setSkipStep1] = useState(true);
 
   const handleExcelChange = (event) => {
     const excelFile = event.target.files && event.target.files[0];
@@ -51,6 +54,17 @@ export default function OldInventory() {
 
       setExcelRows(rows || []);
       setParsedPreview((rows || []).slice(0, 21));
+
+    const { errors, mappedRows } = validateExcel(rows, step);
+    if (errors && errors.length) return;
+
+    const normalizedRows = normalizeRowsForStep(mappedRows, step);
+
+    setCurrentStepData({
+      step,
+      rows: normalizedRows,
+    });
+
     };
     reader.readAsArrayBuffer(excelFile);
   };
@@ -221,7 +235,7 @@ export default function OldInventory() {
     setFullData(finalMerged);
 
     if (step === STEPS_CONFIG.length) {
-      // console.log("FINAL MERGED INVENTORY JSON:", JSON.stringify(finalMerged, null, 2));
+      console.log("FINAL MERGED INVENTORY JSON:", JSON.stringify(finalMerged, null, 2));
       toast.success("All steps completed!");
 
       const defensivelyNormalized = { ...finalMerged };
@@ -243,15 +257,15 @@ export default function OldInventory() {
       return;
     }
     
-if (step === 1) {
-  const nextCfg = STEPS_CONFIG.find((s) => s.key === 2);
-  toast.success(`Skipping Step 1. Proceeding to ${nextCfg?.title}.`);
+// if (step === 1) {
+//   const nextCfg = STEPS_CONFIG.find((s) => s.key === 2);
+//   toast.success(`Skipping Step 1. Proceeding to ${nextCfg?.title}.`);
 
-  next(); 
+//   next(); 
 
-  setExcelRows([]);
-  return;
-}
+//   setExcelRows([]);
+//   return;
+// }
 
     // if (step === 1 && skipStep2) {
     //   const nextCfg = STEPS_CONFIG.find((s) => s.key === 3);
@@ -273,6 +287,19 @@ if (step === 1) {
     setExcelRows([]);
   };
 
+  const handleSkipVendor = () => {
+  toast.info("Vendor entry skipped");
+  
+  setFullData(prev => ({
+    ...prev,
+    vendor: { rows: [] },
+  }));
+
+  next();   
+  setExcelRows([]);
+  setParsedPreview([]);
+};
+
   return (
     <div className="container d-flex flex-column gap-3" style={{ height: "89vh" }}>
       <div className="flex-grow-1" style={{ minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
@@ -289,7 +316,9 @@ if (step === 1) {
                     <ExcelUploader disabled={cfg.key !== step} onFileChange={handleExcelChange} />
 
                     {/* Raw Material: two challans side-by-side */}
-                    {cfg.acceptsImage && cfg.key === 1 && (
+                    {cfg.acceptsImage && cfg.key === 1 && currentStepData.step === 1 && (
+                      <div>
+                        {currentStepData.rows.map((row, index) => (
                       <div className="d-flex gap-3 mt-3">
                         <div className="flex-fill">
                           <ImageUploader
@@ -299,8 +328,9 @@ if (step === 1) {
                             onChange={(arr) =>
                               setChallan((prev) => ({ ...prev, rawMaterial: { ...prev.rawMaterial, in: arr } }))
                             }
-                            disabled={cfg.key !== step}
-                          />
+                            disabled={cfg.key !== step}>
+                              Challan In {index + 1}
+                            </ImageUploader>
                         </div>
 
                         <div className="flex-fill">
@@ -311,9 +341,12 @@ if (step === 1) {
                             onChange={(arr) =>
                               setChallan((prev) => ({ ...prev, rawMaterial: { ...prev.rawMaterial, out: arr } }))
                             }
-                            disabled={cfg.key !== step}
-                          />
+                            disabled={cfg.key !== step}>
+                              Challan Out {index + 1}
+                            </ImageUploader>
                         </div>
+                      </div>
+                        ))}
                       </div>
                     )}
 
@@ -340,14 +373,51 @@ if (step === 1) {
               {STEPS_CONFIG.slice(2).map((cfg) => (
                 <div key={cfg.key} className="card">
                   <div className="d-flex justify-content-between align-items-center card-header">
-                    <h6>{cfg.title}</h6>
+                   <h6>
+                    {cfg.title}
+                    {cfg.optional && <span className="text-muted ms-2">(Optional)</span>}
+                  </h6>
                   </div>
 
                   <div className="card-body">
                     <ExcelUploader disabled={cfg.key !== step} onFileChange={handleExcelChange} />
 
                     {/* Dispatch: upload dispatch challan here */}
-                    {cfg.acceptsImage && cfg.key === 4 && (
+                    {cfg.acceptsImage && cfg.key === 4 && currentStepData.step === 4 && (
+                      <div>
+                        {currentStepData.rows.map((row, index) => (
+                      <div className="d-flex gap-3 mt-3">
+                        <div className="flex-fill">
+                          <ImageUploader
+                            name="Challan In"
+                            multiple={false}
+                            value={challan.dispatch.in}
+                            onChange={(arr) =>
+                              setChallan((prev) => ({ ...prev, dispatch: { ...prev.dispatch, in: arr } }))
+                            }
+                            disabled={cfg.key !== step}>
+                              Challan In {index + 1}
+                            </ImageUploader>
+                        </div>
+
+                        <div className="flex-fill">
+                          <ImageUploader
+                            name="Challan Out"
+                            multiple={false}
+                            value={challan.dispatch.out}
+                            onChange={(arr) =>
+                              setChallan((prev) => ({ ...prev, dispatch: { ...prev.dispatch, out: arr } }))
+                            }
+                            disabled={cfg.key !== step}>
+                              Challan Out {index + 1}
+                            </ImageUploader>
+                        </div>
+                      </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* {cfg.acceptsImage && cfg.key === 4 && (
                       <div className="mt-3">
                         <ImageUploader
                           name="Dispatch Challan"
@@ -357,19 +427,38 @@ if (step === 1) {
                           disabled={cfg.key !== step}
                         />
                       </div>
-                    )}
+                    )} */}
 
-                    <div className="d-flex gap-2 mt-3">
-                      <button type="button" className="btn btn-success" onClick={onClickNext} disabled={cfg.key !== step}>
-                        {cfg.buttonLabel}
-                      </button>
+                <div className="d-flex gap-2 mt-3">
+                  <button
+                    type="button"
+                    className="btn btn-success"
+                    onClick={onClickNext}
+                    disabled={cfg.key !== step}
+                  >
+                    {cfg.buttonLabel}
+                  </button>
 
-                      {step > 1 && cfg.key === step && (
-                        <button type="button" className="btn btn-secondary" onClick={() => prev()}>
-                          Back
-                        </button>
-                      )}
-                    </div>
+                  {cfg.optional && cfg.key === step && (
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={handleSkipVendor}
+                    >
+                      Skip
+                    </button>
+                  )}
+
+                  {step > 1 && cfg.key === step && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={prev}
+                    >
+                      Back
+                    </button>
+                  )}
+                </div>
                   </div>
                 </div>
               ))}
