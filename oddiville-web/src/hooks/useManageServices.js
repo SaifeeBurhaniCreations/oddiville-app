@@ -25,6 +25,7 @@ const useManageServices = () => {
         const fetchAll = async () => {
             try {
                 const warehouseRes = await fetchDryWarehouse();
+                
                 dispatch(handleFetchData(warehouseRes.data));
 
                 const chamberRes = await fetchChamber();
@@ -49,7 +50,6 @@ const useManageServices = () => {
 
    
     useEffect(() => {
-       
         setFilteredData(serviceData);
         if (serviceData) {
             setIsLoading(false);
@@ -61,7 +61,7 @@ const useManageServices = () => {
         setFilteredData(
             chamberName === "All"
                 ? serviceData
-                : serviceData.filter((item) => item?.chamber_id === chamberName)
+                : serviceData.filter((item) => item?.chamber_name === chamberName)
         );
     };
 

@@ -9,10 +9,31 @@ import ExcelUploader from "../../Shared/oldInventory/ExcelUploader";
 import { bulkIngest } from "../../../services/oldInventory.service";
 
 const STEPS_CONFIG = [
-  { key: 1, title: "Raw Material entry", acceptsImage: true, buttonLabel: "Add Raw Material" },
-  { key: 2, title: "Vendor entry", acceptsImage: false, buttonLabel: "Add Vendor", optional: true },
-  { key: 3, title: "Chamber Stock entry", acceptsImage: false, buttonLabel: "Add ChamberStock" },
-  { key: 4, title: "Dispatch Order entry", acceptsImage: true, buttonLabel: "Add Dispatch Order" },
+  {
+    key: 1,
+    title: "Raw Material entry",
+    acceptsImage: true,
+    buttonLabel: "Add Raw Material",
+  },
+  {
+    key: 2,
+    title: "Vendor entry",
+    acceptsImage: false,
+    buttonLabel: "Add Vendor",
+    optional: true,
+  },
+  {
+    key: 3,
+    title: "Chamber Stock entry",
+    acceptsImage: false,
+    buttonLabel: "Add ChamberStock",
+  },
+  {
+    key: 4,
+    title: "Dispatch Order entry",
+    acceptsImage: true,
+    buttonLabel: "Add Dispatch Order",
+  },
 ];
 
 export default function OldInventory() {
@@ -50,21 +71,23 @@ export default function OldInventory() {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: "array" });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+      const rows = XLSX.utils.sheet_to_json(worksheet, {
+        header: 1,
+        raw: false,
+      });
 
       setExcelRows(rows || []);
       setParsedPreview((rows || []).slice(0, 21));
 
-    const { errors, mappedRows } = validateExcel(rows, step);
-    if (errors && errors.length) return;
+      const { errors, mappedRows } = validateExcel(rows, step);
+      if (errors && errors.length) return;
 
-    const normalizedRows = normalizeRowsForStep(mappedRows, step);
+      const normalizedRows = normalizeRowsForStep(mappedRows, step);
 
-    setCurrentStepData({
-      step,
-      rows: normalizedRows,
-    });
-
+      setCurrentStepData({
+        step,
+        rows: normalizedRows,
+      });
     };
     reader.readAsArrayBuffer(excelFile);
   };
@@ -78,14 +101,20 @@ export default function OldInventory() {
     if (out.truck_loaded_weight != null)
       td.truck_loaded_weight = String(out.truck_loaded_weight);
 
-    if (out.truck_number != null && !td.truck_number) td.truck_number = String(out.truck_number);
-    if (out.driver_name != null && !td.driver_name) td.driver_name = String(out.driver_name);
+    if (out.truck_number != null && !td.truck_number)
+      td.truck_number = String(out.truck_number);
+    if (out.driver_name != null && !td.driver_name)
+      td.driver_name = String(out.driver_name);
 
-    if (out.truck_driver != null && !td.driver_name) td.driver_name = String(out.truck_driver);
-    if (out.truck_agency != null && !td.agency_name) td.agency_name = String(out.truck_agency);
-    if (out.truck_phone != null && !td.phone) td.phone = String(out.truck_phone);
+    if (out.truck_driver != null && !td.driver_name)
+      td.driver_name = String(out.truck_driver);
+    if (out.truck_agency != null && !td.agency_name)
+      td.agency_name = String(out.truck_agency);
+    if (out.truck_phone != null && !td.phone)
+      td.phone = String(out.truck_phone);
 
-    if (out.truck_number != null && !td.number) td.number = String(out.truck_number);
+    if (out.truck_number != null && !td.number)
+      td.number = String(out.truck_number);
     if (out.number != null && !td.number) td.number = String(out.number);
 
     if (out.type != null && !td.type) td.type = String(out.type);
@@ -95,10 +124,24 @@ export default function OldInventory() {
     if (!td.challan) {
       if (out.challan && typeof out.challan === "string") {
         td.challan = { url: out.challan, key: null };
-      } else if (out.challan && typeof out.challan === "object" && (out.challan.url || out.challan.preview || out.challan.key)) {
-        td.challan = { url: out.challan.url || out.challan.preview || null, key: out.challan.key || null };
-      } else if (out.challan_in && Array.isArray(out.challan_in) && out.challan_in[0]) {
-        td.challan = { url: out.challan_in[0].preview || out.challan_in[0].url || null, key: out.challan_in[0].key || null };
+      } else if (
+        out.challan &&
+        typeof out.challan === "object" &&
+        (out.challan.url || out.challan.preview || out.challan.key)
+      ) {
+        td.challan = {
+          url: out.challan.url || out.challan.preview || null,
+          key: out.challan.key || null,
+        };
+      } else if (
+        out.challan_in &&
+        Array.isArray(out.challan_in) &&
+        out.challan_in[0]
+      ) {
+        td.challan = {
+          url: out.challan_in[0].preview || out.challan_in[0].url || null,
+          key: out.challan_in[0].key || null,
+        };
       } else if (out.truck_details && out.truck_details.challan) {
         td.challan = out.truck_details.challan;
       }
@@ -125,29 +168,64 @@ export default function OldInventory() {
 
   function normalizeVendorMaterialsFields(row = {}) {
     const out = { ...row };
-    console.log("out", out);
-    
-    // const td = out.materials.split(",");
 
-    // out.materials = td;
+    if (typeof out.materials === "string") {
+      out.materials = out.materials
+        .split(",")
+        .map((m) => m.trim())
+        .filter(Boolean);
+    }
 
-    // const removeKeys = [
-    //   "materials",
-    // ];
-    // for (const k of removeKeys) delete out[k];
+    if (!Array.isArray(out.materials)) {
+      out.materials = [];
+    }
+
+    return out;
+  }
+
+  function normalizeChamberStockFields(row = {}) {
+    const out = { ...row };
+
+    const chamberName = out.chamber_name;
+    const quantity = out.quantity;
+    const rating = out.rating;
+
+    out.chamber = [];
+
+    if (chamberName) {
+      out.chamber.push({
+        id: String(chamberName).trim(),
+        quantity: quantity != null ? String(quantity) : "",
+        rating: rating != null ? String(rating) : "",
+      });
+    }
+
+    delete out.chamber_name;
+    delete out.quantity;
+    delete out.rating;
 
     return out;
   }
 
   function normalizeRowsForStep(mappedRows = [], stepKey = 1) {
     if (!Array.isArray(mappedRows)) return mappedRows;
+
     if (stepKey === 1) {
       return mappedRows.map((r) => normalizeTruckFields(r, "raw"));
-    }else if (stepKey === 2) {
+    }
+
+    if (stepKey === 2) {
       return mappedRows.map((r) => normalizeVendorMaterialsFields(r));
-    } else if (stepKey === 4) {
+    }
+
+    if (stepKey === 3) {
+      return mappedRows.map((r) => normalizeChamberStockFields(r));
+    }
+
+    if (stepKey === 4) {
       return mappedRows.map((r) => normalizeTruckFields(r, "dispatch"));
     }
+
     return mappedRows;
   }
 
@@ -177,11 +255,16 @@ export default function OldInventory() {
 
     function cellToString(val) {
       if (val == null) return "";
-      if (typeof val === "string" || typeof val === "number" || typeof val === "boolean")
+      if (
+        typeof val === "string" ||
+        typeof val === "number" ||
+        typeof val === "boolean"
+      )
         return String(val);
       if (Array.isArray(val)) {
         try {
-          if (val.length && val.every((i) => typeof i !== "object")) return val.join(", ");
+          if (val.length && val.every((i) => typeof i !== "object"))
+            return val.join(", ");
           return JSON.stringify(val);
         } catch {
           return String(val);
@@ -197,20 +280,27 @@ export default function OldInventory() {
           if (td.driver_name) parts.push(td.driver_name);
           if (parts.length) return parts.join(" | ");
         }
-        if (val.name && (val.quantity != null)) return `${val.name} (${val.quantity})`;
+        if (val.name && val.quantity != null)
+          return `${val.name} (${val.quantity})`;
         if (Array.isArray(val.products) || Array.isArray(val.packages)) {
-          try { return JSON.stringify(val); } catch {}
+          try {
+            return JSON.stringify(val);
+          } catch {}
         }
-        try { return JSON.stringify(val); } catch { return String(val); }
+        try {
+          return JSON.stringify(val);
+        } catch {
+          return String(val);
+        }
       }
       return String(val);
     }
-    
+
     const headers = Object.keys(normalizedRows[0] || {});
-    const previewRows = normalizedRows.slice(0, 20).map((r) =>
-      Object.values(r).map((v) => cellToString(v))
-    );
-    
+    const previewRows = normalizedRows
+      .slice(0, 20)
+      .map((r) => Object.values(r).map((v) => cellToString(v)));
+
     setParsedPreview([headers, ...previewRows]);
 
     let stepPayload = null;
@@ -226,7 +316,12 @@ export default function OldInventory() {
       // stepPayload = { rows: normalizedRows, challan: challan.dispatch };
     }
 
-    const keyMap = { 1: "rawMaterial", 2: "vendor", 3: "chamberStock", 4: "dispatchOrder" };
+    const keyMap = {
+      1: "rawMaterial",
+      2: "vendor",
+      3: "chamberStock",
+      4: "dispatchOrder",
+    };
     // const keyMap = { 1: "rawMaterial", 2: "production", 3: "chamberStock", 4: "dispatchOrder" };
     const currentKey = keyMap[step];
 
@@ -235,18 +330,24 @@ export default function OldInventory() {
     setFullData(finalMerged);
 
     if (step === STEPS_CONFIG.length) {
-      console.log("FINAL MERGED INVENTORY JSON:", JSON.stringify(finalMerged, null, 2));
+      // console.log("FINAL MERGED INVENTORY JSON:", JSON.stringify(finalMerged, null, 2));
       toast.success("All steps completed!");
 
       const defensivelyNormalized = { ...finalMerged };
       if (defensivelyNormalized.rawMaterial?.rows) {
-        defensivelyNormalized.rawMaterial.rows = defensivelyNormalized.rawMaterial.rows.map((r) => normalizeTruckFields(r, "raw"));
+        defensivelyNormalized.rawMaterial.rows =
+          defensivelyNormalized.rawMaterial.rows.map((r) =>
+            normalizeTruckFields(r, "raw")
+          );
       }
       if (defensivelyNormalized.dispatchOrder?.rows) {
-        defensivelyNormalized.dispatchOrder.rows = defensivelyNormalized.dispatchOrder.rows.map((r) => normalizeTruckFields(r, "dispatch"));
+        defensivelyNormalized.dispatchOrder.rows =
+          defensivelyNormalized.dispatchOrder.rows.map((r) =>
+            normalizeTruckFields(r, "dispatch")
+          );
       }
 
-      console.log("defensivelyNormalized", JSON.stringify(defensivelyNormalized, null, 2));
+      // console.log("defensivelyNormalized", JSON.stringify(defensivelyNormalized, null, 2));
 
       try {
         const response = await bulkIngest(defensivelyNormalized);
@@ -256,16 +357,16 @@ export default function OldInventory() {
       }
       return;
     }
-    
-// if (step === 1) {
-//   const nextCfg = STEPS_CONFIG.find((s) => s.key === 2);
-//   toast.success(`Skipping Step 1. Proceeding to ${nextCfg?.title}.`);
 
-//   next(); 
+    // if (step === 1) {
+    //   const nextCfg = STEPS_CONFIG.find((s) => s.key === 2);
+    //   toast.success(`Skipping Step 1. Proceeding to ${nextCfg?.title}.`);
 
-//   setExcelRows([]);
-//   return;
-// }
+    //   next();
+
+    //   setExcelRows([]);
+    //   return;
+    // }
 
     // if (step === 1 && skipStep2) {
     //   const nextCfg = STEPS_CONFIG.find((s) => s.key === 3);
@@ -282,27 +383,35 @@ export default function OldInventory() {
 
     const nextCfg = STEPS_CONFIG.find((s) => s.key === step + 1);
     setNextStepTitle(nextCfg ? nextCfg.title : "");
-    toast.success(`${currentCfg.title} completed! Proceed to ${nextCfg.title}.`);
+    toast.success(
+      `${currentCfg.title} completed! Proceed to ${nextCfg.title}.`
+    );
     next();
     setExcelRows([]);
   };
 
   const handleSkipVendor = () => {
-  toast.info("Vendor entry skipped");
-  
-  setFullData(prev => ({
-    ...prev,
-    vendor: { rows: [] },
-  }));
+    toast.info("Vendor entry skipped");
 
-  next();   
-  setExcelRows([]);
-  setParsedPreview([]);
-};
+    setFullData((prev) => ({
+      ...prev,
+      vendor: { rows: [] },
+    }));
+
+    next();
+    setExcelRows([]);
+    setParsedPreview([]);
+  };
 
   return (
-    <div className="container d-flex flex-column gap-3" style={{ height: "89vh" }}>
-      <div className="flex-grow-1" style={{ minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
+    <div
+      className="container d-flex flex-column gap-3"
+      style={{ height: "89vh" }}
+    >
+      <div
+        className="flex-grow-1"
+        style={{ minHeight: 0, overflowY: "auto", overflowX: "hidden" }}
+      >
         <div className="row">
           {/* Left column: steps 1 & 2 */}
           <div className="col-md-6">
@@ -313,50 +422,88 @@ export default function OldInventory() {
                     <h6>{cfg.title}</h6>
                   </div>
                   <div className="card-body">
-                    <ExcelUploader disabled={cfg.key !== step} onFileChange={handleExcelChange} />
+                    <ExcelUploader
+                      disabled={cfg.key !== step}
+                      onFileChange={handleExcelChange}
+                    />
 
                     {/* Raw Material: two challans side-by-side */}
-                    {cfg.acceptsImage && cfg.key === 1 && currentStepData.step === 1 && (
-                      <div>
-                        {currentStepData.rows.map((row, index) => (
-                      <div className="d-flex gap-3 mt-3">
-                        <div className="flex-fill">
-                          <ImageUploader
-                            name="Challan In"
-                            multiple={false}
-                            value={challan.rawMaterial.in}
-                            onChange={(arr) =>
-                              setChallan((prev) => ({ ...prev, rawMaterial: { ...prev.rawMaterial, in: arr } }))
-                            }
-                            disabled={cfg.key !== step}>
-                              Challan In {index + 1}
-                            </ImageUploader>
-                        </div>
+                    {cfg.acceptsImage &&
+                      cfg.key === 1 &&
+                      currentStepData.step === 1 && (
+                        <div>
+                          {currentStepData.rows.map((row, index) => (
+                            <div className="d-flex gap-3 mt-3" key={index}>
+                              <div className="flex-fill">
+                                <ImageUploader
+                                  name="Challan In"
+                                  multiple={false}
+                                  value={challan.rawMaterial.in}
+                                  onChange={(arr) =>
+                                    setChallan((prev) => ({
+                                      ...prev,
+                                      rawMaterial: {
+                                        ...prev.rawMaterial,
+                                        in: arr,
+                                      },
+                                    }))
+                                  }
+                                  disabled={cfg.key !== step}
+                                >
+                                  Challan In {index + 1}
+                                </ImageUploader>
+                              </div>
 
-                        <div className="flex-fill">
-                          <ImageUploader
-                            name="Challan Out"
-                            multiple={false}
-                            value={challan.rawMaterial.out}
-                            onChange={(arr) =>
-                              setChallan((prev) => ({ ...prev, rawMaterial: { ...prev.rawMaterial, out: arr } }))
-                            }
-                            disabled={cfg.key !== step}>
-                              Challan Out {index + 1}
-                            </ImageUploader>
+                              <div className="flex-fill">
+                                <ImageUploader
+                                  name="Challan Out"
+                                  multiple={false}
+                                  value={challan.rawMaterial.out}
+                                  onChange={(arr) =>
+                                    setChallan((prev) => ({
+                                      ...prev,
+                                      rawMaterial: {
+                                        ...prev.rawMaterial,
+                                        out: arr,
+                                      },
+                                    }))
+                                  }
+                                  disabled={cfg.key !== step}
+                                >
+                                  Challan Out {index + 1}
+                                </ImageUploader>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                        ))}
-                      </div>
-                    )}
+                      )}
 
                     <div className="d-flex gap-2 mt-3">
-                      <button type="button" className="btn btn-success" onClick={onClickNext} disabled={cfg.key !== step}>
+                      <button
+                        type="button"
+                        className="btn btn-success"
+                        onClick={onClickNext}
+                        disabled={cfg.key !== step}
+                      >
                         {cfg.buttonLabel}
                       </button>
 
+                      {cfg.key === 2 && step === 2 && (
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary"
+                          onClick={handleSkipVendor}
+                        >
+                          Skip
+                        </button>
+                      )}
+
                       {step > 1 && cfg.key === step && (
-                        <button type="button" className="btn btn-secondary" onClick={() => prev()}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => prev()}
+                        >
                           Back
                         </button>
                       )}
@@ -373,49 +520,64 @@ export default function OldInventory() {
               {STEPS_CONFIG.slice(2).map((cfg) => (
                 <div key={cfg.key} className="card">
                   <div className="d-flex justify-content-between align-items-center card-header">
-                   <h6>
-                    {cfg.title}
-                    {cfg.optional && <span className="text-muted ms-2">(Optional)</span>}
-                  </h6>
+                    <h6>
+                      {cfg.title}
+                      {cfg.optional && (
+                        <span className="text-muted ms-2">(Optional)</span>
+                      )}
+                    </h6>
                   </div>
 
                   <div className="card-body">
-                    <ExcelUploader disabled={cfg.key !== step} onFileChange={handleExcelChange} />
+                    <ExcelUploader
+                      disabled={cfg.key !== step}
+                      onFileChange={handleExcelChange}
+                    />
 
                     {/* Dispatch: upload dispatch challan here */}
-                    {cfg.acceptsImage && cfg.key === 4 && currentStepData.step === 4 && (
-                      <div>
-                        {currentStepData.rows.map((row, index) => (
-                      <div className="d-flex gap-3 mt-3">
-                        <div className="flex-fill">
-                          <ImageUploader
-                            name="Challan In"
-                            multiple={false}
-                            value={challan.dispatch.in}
-                            onChange={(arr) =>
-                              setChallan((prev) => ({ ...prev, dispatch: { ...prev.dispatch, in: arr } }))
-                            }
-                            disabled={cfg.key !== step}>
-                              Challan In {index + 1}
-                            </ImageUploader>
-                        </div>
+                    {cfg.acceptsImage &&
+                      cfg.key === 4 &&
+                      currentStepData.step === 4 && (
+                        <div>
+                          {currentStepData.rows.map((row, index) => (
+                            <div className="d-flex gap-3 mt-3" key={index}>
+                              <div className="flex-fill">
+                                <ImageUploader
+                                  name="Challan In"
+                                  multiple={false}
+                                  value={challan.dispatch.in}
+                                  onChange={(arr) =>
+                                    setChallan((prev) => ({
+                                      ...prev,
+                                      dispatch: { ...prev.dispatch, in: arr },
+                                    }))
+                                  }
+                                  disabled={cfg.key !== step}
+                                >
+                                  Challan In {index + 1}
+                                </ImageUploader>
+                              </div>
 
-                        <div className="flex-fill">
-                          <ImageUploader
-                            name="Challan Out"
-                            multiple={false}
-                            value={challan.dispatch.out}
-                            onChange={(arr) =>
-                              setChallan((prev) => ({ ...prev, dispatch: { ...prev.dispatch, out: arr } }))
-                            }
-                            disabled={cfg.key !== step}>
-                              Challan Out {index + 1}
-                            </ImageUploader>
+                              <div className="flex-fill">
+                                <ImageUploader
+                                  name="Challan Out"
+                                  multiple={false}
+                                  value={challan.dispatch.out}
+                                  onChange={(arr) =>
+                                    setChallan((prev) => ({
+                                      ...prev,
+                                      dispatch: { ...prev.dispatch, out: arr },
+                                    }))
+                                  }
+                                  disabled={cfg.key !== step}
+                                >
+                                  Challan Out {index + 1}
+                                </ImageUploader>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                        ))}
-                      </div>
-                    )}
+                      )}
 
                     {/* {cfg.acceptsImage && cfg.key === 4 && (
                       <div className="mt-3">
@@ -429,36 +591,36 @@ export default function OldInventory() {
                       </div>
                     )} */}
 
-                <div className="d-flex gap-2 mt-3">
-                  <button
-                    type="button"
-                    className="btn btn-success"
-                    onClick={onClickNext}
-                    disabled={cfg.key !== step}
-                  >
-                    {cfg.buttonLabel}
-                  </button>
+                    <div className="d-flex gap-2 mt-3">
+                      <button
+                        type="button"
+                        className="btn btn-success"
+                        onClick={onClickNext}
+                        disabled={cfg.key !== step}
+                      >
+                        {cfg.buttonLabel}
+                      </button>
 
-                  {cfg.optional && cfg.key === step && (
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={handleSkipVendor}
-                    >
-                      Skip
-                    </button>
-                  )}
+                      {cfg.optional && cfg.key === step && (
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary"
+                          onClick={handleSkipVendor}
+                        >
+                          Skip
+                        </button>
+                      )}
 
-                  {step > 1 && cfg.key === step && (
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={prev}
-                    >
-                      Back
-                    </button>
-                  )}
-                </div>
+                      {step > 1 && cfg.key === step && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={prev}
+                        >
+                          Back
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -467,22 +629,33 @@ export default function OldInventory() {
         </div>
 
         {/* Preview */}
-        <div className="row">
+        <div className="row mt-3">
           <div className="col-md-12">
             {parsedPreview && parsedPreview.length > 0 && (
               <div className="card">
                 <div className="card-header">
                   <h6>List New Added Inventory (Preview)</h6>
                 </div>
-                <div className="card-body" style={{ maxHeight: "50vh", overflowY: "auto" }}>
+                <div
+                  className="card-body"
+                  style={{ maxHeight: "50vh", overflowY: "auto" }}
+                >
                   <div className="table-responsive">
                     <table className="table align-items-center mb-0">
                       <thead>
-                        <tr>{parsedPreview[0].map((headerCell, idx) => <th key={idx}>{headerCell}</th>)}</tr>
+                        <tr>
+                          {parsedPreview[0].map((headerCell, idx) => (
+                            <th key={idx}>{headerCell}</th>
+                          ))}
+                        </tr>
                       </thead>
                       <tbody>
                         {parsedPreview.slice(1).map((row, ridx) => (
-                          <tr key={ridx}>{row.map((cell, cidx) => <td key={cidx}>{cell}</td>)}</tr>
+                          <tr key={ridx}>
+                            {row.map((cell, cidx) => (
+                              <td key={cidx}>{cell}</td>
+                            ))}
+                          </tr>
                         ))}
                       </tbody>
                     </table>
@@ -496,7 +669,9 @@ export default function OldInventory() {
 
       <ModalAccordion
         isOpen={showModal}
-        title={`Validation errors - ${STEPS_CONFIG.find((s) => s.key === step)?.title || ""}`}
+        title={`Validation errors - ${
+          STEPS_CONFIG.find((s) => s.key === step)?.title || ""
+        }`}
         errors={modalErrors}
         onClose={() => {
           setShowModal(false);

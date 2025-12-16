@@ -17,6 +17,7 @@ import {
 } from "@/services/ThirdPartyProductService";
 
 import { useChamberstock } from "../../../../hooks/chamberStock";
+import { useOtherItems } from "../../../../hooks/thirdPartyProduct";
 
 const getAverageRating = (chambers = []) => {
   const ratings = chambers.map(ch => ch.rating);
@@ -100,6 +101,7 @@ const ExpandedChambersRow = ({ chambers }) => {
 const ThirdPartyProduct = () => {
   const dispatch = useDispatch();
   const otherProduct = useSelector((state) => state.otherProduct.data);
+const { data: otherItems = [] } = useOtherItems();
 
   const [filteredData, setFilteredData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -120,6 +122,32 @@ const ThirdPartyProduct = () => {
     });
     return map;
   }, [chamberStockList]);
+
+
+const otherItemMap = useMemo(() => {
+  const map = {};
+  otherItems.forEach((o) => {
+    map[`${o.client_id}_${o.product_id}`] = o;
+  });
+  return map;
+}, [otherItems]);
+
+const resolveImage = (clientId, productIds) => {
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    return "/assets/img/png/fallback_img.png";
+  }
+
+  for (const pid of productIds) {
+    const key = `${clientId}_${pid}`;
+    const item = otherItemMap[key];
+
+    if (item?.sample_image) {
+      return item.sample_image;
+    }
+  }
+
+  return "/assets/img/png/fallback_img.png";
+};
 
   /* =======================
      Fetch orders
@@ -200,6 +228,10 @@ const ThirdPartyProduct = () => {
     </table>
   );
 
+console.log("otherItems", otherItems);
+console.log("otherItemMap", otherItemMap);
+
+
   /* =======================
      Render rows
      ======================= */
@@ -213,12 +245,14 @@ const ThirdPartyProduct = () => {
       const isMultiple = chambers.length > 1;
       const isOpen = openRowId === item.id;
 
+const imageUrl = resolveImage(item.id, item.products);
+
       return (
         <React.Fragment key={item.id}>
           <tr className="text-center">
             <td>
               <img
-                src={item?.banner?.s3Url || "/assets/img/png/fallback_img.png"}
+                src={imageUrl}
                 className="avatar avatar-lg"
                 alt="banner"
               />

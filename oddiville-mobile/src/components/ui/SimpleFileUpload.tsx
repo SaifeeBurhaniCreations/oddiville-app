@@ -19,6 +19,7 @@ const SimpleFileUpload = ({
   disabled,
   onlyPhoto,
   both,
+  children = "Upload receipt",
 }: {
   fileState: [
     string | null,
@@ -28,6 +29,7 @@ const SimpleFileUpload = ({
   disabled?: boolean;
   onlyPhoto?: boolean;
   both?: boolean;
+  children?: string | React.ReactNode;
 }) => {
   const [isPicking, setIsPicking] = useState(false);
   const [touched, setTouched] = useState(false);
@@ -104,7 +106,7 @@ const SimpleFileUpload = ({
     // if (!selectedFile) {
     return (
       <View style={styles.cardWithLabel}>
-        <H4>Upload receipt</H4>
+        <H4>{children}</H4>
         <Pressable
           style={[
             styles.card,

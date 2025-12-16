@@ -1,6 +1,28 @@
 const router = require("express").Router();
 const { Op } = require("sequelize");
 const { Packages, DryWarehouse: DryWarehouseClient, Chambers: ChambersClient, ChamberStock: ChamberStockClient, sequelize } = require("../models");
+const multer = require("multer");
+const { v4: uuidv4 } = require("uuid");
+const { PutObjectCommand } = require("@aws-sdk/client-s3");
+const s3 = require("../utils/s3Client");
+const upload = multer();
+
+const uploadToS3 = async (file) => {
+  const id = uuidv4();
+  const fileKey = `packages/${id}-${file.originalname}`;
+  const bucketName = process.env.AWS_BUCKET_NAME;
+
+  await s3.send(new PutObjectCommand({
+    Bucket: bucketName,
+    Key: fileKey,
+    Body: file.buffer,
+    ContentType: file.mimetype,
+  }));
+
+  const url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
+
+  return { url, key: fileKey };
+};
 
 // GET all packages
 router.get('/', async (req, res) => {
@@ -57,7 +79,12 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-router.post('/create', async (req, res) => {
+router.post('/create', 
+  upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "package_image", maxCount: 1 }
+  ]),
+  async (req, res) => {
     try {
       let { product_name, raw_materials, types, chamber_name } = req.body;
   
@@ -106,8 +133,26 @@ router.post('/create', async (req, res) => {
       }
   
       const result = await sequelize.transaction(async (t) => {
+            let image = null;
+          let product_image = null;
+
+          if (req.files?.image?.[0]) {
+            const uploaded = await uploadToS3(req.files.image[0]);
+            image = {
+              url: uploaded.url,
+              key: uploaded.key
+            };
+          }
+
+          if (req.files?.package_image?.[0]) {
+            const uploadedProduct = await uploadToS3(req.files.package_image[0]);
+            product_image = {
+              url: uploadedProduct.url,
+              key: uploadedProduct.key
+            };
+          }
         const pkg = await Packages.create(
-          { product_name, raw_materials, types, chamber_name },
+          { product_name, raw_materials, types, chamber_name, image, product_image },
           { transaction: t }
         );
   
@@ -142,6 +187,7 @@ router.post('/create', async (req, res) => {
             chamber_id: chamber.id,
             quantity_unit: quantityNum, 
             unit, 
+            sample_image: image,
           };
   
           await DryWarehouseClient.create(DryWarehouseCreatePayload, { transaction: t });

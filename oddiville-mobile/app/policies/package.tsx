@@ -242,7 +242,7 @@ const PackageScreen = () => {
     "add-product-package"
   );
 
-  const choosedChamberSummary = useChambersSummary(choosedChambers);
+  const {summaries: choosedChamberSummary} = useChambersSummary(choosedChambers);
 
   const [isLoading, setIsLoading] = useState(false);
   const [openTab, setOpenTab] = useState<number>(0);
@@ -483,6 +483,12 @@ const PackageScreen = () => {
                 ? []
                 : DryChambers.map((dch: DryChambersTypes) => dch.chamber_name),
             key: "product-package",
+          },
+        },
+         {
+          type: "file-upload",
+          data: {
+            label: "Upload product image",
           },
         },
       ],

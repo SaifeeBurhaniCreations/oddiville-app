@@ -45,7 +45,7 @@ const productListWithChamberNames = productList.map(product => ({
 return (
     <div className="container py-4 overflow-y-auto" style={{ maxHeight: "93vh" }}>
       <div className="row justify-content-center">
-        <div className="col-12 col-md-11 col-lg-10">
+        <div className="col-12 col-md-12 col-lg-12">
           <div className="row">
             <div className="col-12 col-lg-4 mb-4">
               <ClientDetailsForm
@@ -69,8 +69,8 @@ return (
             </div>
           </div>
 
-          <div className="row ">
-            <div className="col-12 ">
+          <div className="row">
+            <div className="col-12">
             <ProductListTable
               productList={productListWithChamberNames}
               handleEditProduct={handleEditProduct}

@@ -27,10 +27,26 @@ const uploadToS3 = async (file) => {
 // CREATE
 router.post("/", upload.single("sample_image"), async (req, res) => {
   try {
-    const { item_name, warehoused_date, description, quantity_unit, chamber_id } = req.body;
+    const {
+      item_name,
+      warehoused_date,
+      description,
+      quantity_unit,
+      chamber_id
+    } = req.body;
 
     if (!item_name || !warehoused_date || !chamber_id) {
       return res.status(400).json({ error: "Missing required fields." });
+    }
+
+    const chamber = await chamberClient.findOne({
+      where: { chamber_name: chamber_id }
+    });
+
+    if (!chamber) {
+      return res.status(404).json({
+        error: `Chamber '${chamber_id}' not found`
+      });
     }
 
     let sample_image = null;
@@ -38,7 +54,7 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
       const uploaded = await uploadToS3(req.file);
       sample_image = {
         url: uploaded.url,
-        key: uploaded.key,
+        key: uploaded.key
       };
     }
 
@@ -47,24 +63,16 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
       warehoused_date: new Date(warehoused_date),
       description,
       quantity_unit,
-      sample_image, 
-      chamber_id,
+      sample_image,
+      chamber_id: chamber.id 
     });
 
-    if (chamber_id) {
-      const chamber = await chamberClient.findOne({ where: { chamber_name: chamber_id } });
+    const currentItems = chamber.items || [];
+    currentItems.push(newItem.id);
+    chamber.items = currentItems;
+    await chamber.save();
 
-      if (chamber) {
-        const currentItems = chamber.items || [];
-        currentItems.push(newItem.id);
-        chamber.items = currentItems;
-        await chamber.save();
-      } else {
-        console.warn(`Chamber with ID ${chamber_id} not found.`);
-      }
-    }
-
-    res.status(201).json(newItem);
+    res.status(201).json({...newItem, chamber_name: chamber.chamber_name});
   } catch (error) {
     console.error("Create Dry Error:", error.message);
     res.status(500).json({ error: "Internal server error." });
@@ -74,9 +82,22 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
 // READ ALL
 router.get("/", async (req, res) => {
   try {
-    const items = await DryWarehousesClient.findAll();
-    
-    res.status(200).json(items);
+    const items = await DryWarehousesClient.findAll({
+      include: [
+        { model: chamberClient,
+          as: "chamber",
+          attributes: ["chamber_name"]
+        }
+      ]
+    });
+
+    const result = items.map(item => ({
+      ...item.toJSON(),
+      chamber_name: item.chamber?.chamber_name,
+      chamber_id: undefined
+    }));
+
+    res.status(200).json(result);
   } catch (error) {
     console.error("Get All Dry Error:", error.message);
     res.status(500).json({ error: "Internal server error." });
