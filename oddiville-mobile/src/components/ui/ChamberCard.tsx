@@ -71,7 +71,7 @@ const ChamberCard = ({
     color = "blue";
     Icon = ShopIcon;
   } else if (category === "packed") {
-    color = "blue";
+    color = "yellow";
     Icon = ShopIcon;
   } else {
     const ratingNumber = Math.round(Number(resultRating));

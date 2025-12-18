@@ -10,7 +10,6 @@ import useValidateAndOpenBottomSheet from '@/src/hooks/useValidateAndOpenBottomS
 import { getLimitedMaterialNames } from '@/src/utils/arrayUtils';
 import { useGlobalFormValidator } from '@/src/sbc/form/globalFormInstance';
 import { setSource } from '@/src/redux/slices/unit-select.slice';
-import { setSource as setRmSource } from '@/src/redux/slices/bottomsheet/raw-material.slice';
 import { StoreMaterialForm } from './AddonInputComponent';
 import { selectChamber } from '@/src/redux/slices/chamber.slice';
 import { setChamberQty } from '@/src/redux/slices/bottomsheet/chamber-ratings.slice';
@@ -18,7 +17,6 @@ import { computeCurrentValue } from '@/src/utils/common';
 import { useChamber } from '@/src/hooks/useChambers';
 import { useChamberStock } from '@/src/hooks/useChamberStock';
 import DetailsToast from '../DetailsToast';
-import { RMSoruceMap } from '@/src/lookups/getRMBackSource';
 
 export type AddProductPackageForm = {
     raw_materials: string[];
@@ -92,7 +90,7 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
     const packageSizeValidator = useGlobalFormValidator<AddPackageSizeForm>('add-package-size');
     const { values: storeValues, errors: storeErrors, setField: storeSetField } = useGlobalFormValidator<StoreMaterialForm>('store-product');
 
-    const { placeholder, label, value, placeholder_second, label_second, key, alignment, formField_1, source, source2 } = data;
+    const { placeholder, label, value, placeholder_second, label_second, key, alignment, formField_1, source } = data;
     const [qty, setQty] = useState(value);
 
     const showToast = (type: "success" | "error" | "info", message: string) => {
@@ -102,18 +100,7 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
     };
 
     const handlePress = () => {
-        console.log("source2", source2);
-        
         dispatch(setSource(source));
-        const mapKey = `${key}:${source}`;
-        const mapped = RMSoruceMap[mapKey];
-        if(source2) {
-            dispatch(setRmSource(source2));
-        } else if (mapped) {
-            dispatch(setRmSource(mapped));
-          }
-
-
         if (['package-weight', 'add-raw-material'].includes(key)) {
             validateAndSetData('Abc123', key);
         } else if (source === 'supervisor-production') {
@@ -213,13 +200,16 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
         )
     );
 
+    // console.log("chamberCapacity", chamberCapacity);
+    // console.log("chamberQuantity", chamberQuantity);
+
     return (
         <>
         <View style={styles.inputContainer}>
             <View style={styles.inputSelectWrapper}>
                 <View style={{ flex: alignment === 'half' ? 1 : 5, flexDirection: 'column', gap: 8 }}>
                     <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between" }}>
-                        <H4>{label.slice(0, 13)}...</H4>
+                        <H4>{label}</H4>
                         <B4 color={getColor('green', 700)}>
                             {remainingKg} Kg
                         </B4>

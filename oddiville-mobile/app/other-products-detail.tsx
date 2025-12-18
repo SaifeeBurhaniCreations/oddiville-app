@@ -232,7 +232,7 @@ const OthersProductScreen = () => {
           <View style={[styles.VStack, styles.gap16]}>
             <BackButton
               label="Detail"
-              backRoute="admin-chambers"
+              backRoute="chambers"
               style={styles.pX16}
             />
             <View style={styles.supervisroCard}>

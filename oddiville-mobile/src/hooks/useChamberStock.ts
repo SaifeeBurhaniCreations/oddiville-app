@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import {
   fetchChamberStock,
   fetchChamberStockById,
+  fetchChamberStockRawMaterials,
   getChamberStockProduction,
 } from "../services/chamberStock.service";
 import { sumBy } from "@/src/sbc/utils/sumBy/sumBy";
@@ -129,7 +130,7 @@ export function useChamberStock() {
   return useQuery<ChamberStock[]>({
     queryKey: ["chamber-stock"],
     queryFn: rejectEmptyOrNull(async () => {
-      const response = await fetchChamberStock();
+      const response = await fetchChamberStockRawMaterials();
       return response?.data || [];
     }),
     staleTime: 1000 * 60 * 5,

@@ -2,10 +2,11 @@ import { useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../redux/store';
 import { useChamber } from './useChambers';
-import { useChamberStock } from './useChamberStock';
+import { ChamberStock, ChamberStockPage, useChamberStock } from './useChamberStock';
 import { Package, usePackageByName } from './Packages';
 import Carrot from '../assets/images/item-icons/Carrot.png';
 import { SelectedRawMaterial } from '../components/ui/dispatch-order/CreateFromStorage';
+import { InfiniteData } from '@tanstack/query-core';
 
 // --- Interfaces ---
 
@@ -57,76 +58,107 @@ interface ProductItem {
     image: any;
 }
 
+export function useFlattenedChamberStock(
+  data?: InfiniteData<ChamberStockPage>
+): ChamberStock[] {
+  return useMemo(() => {
+    if (!data?.pages) return [];
+    return data.pages.flatMap((page) => page.data);
+  }, [data]);
+}
+
 
 // --- Hook ---
+
 export function useProductItems() {
-    const selectedRm = useSelector((state: RootState) => state.product.rawMaterials);
+  const selectedRm = useSelector(
+    (state: RootState) => state.product.rawMaterials
+  );
 
-    const { data: chamberData = [], isLoading: chamberLoading, refetch: chamberRefetch, isFetching: chamberFetching } = useChamber() as {
-        data: Chamber[];
-        isLoading: boolean;
-        refetch: () => void;
-        isFetching: boolean;
-    };
+  const {
+    data: chamberData = [],
+    isLoading: chamberLoading,
+    isFetching: chamberFetching,
+    refetch: chamberRefetch,
+  } = useChamber();
 
-    const { data: stockData = [], isLoading: stockLoading, refetch: stockRefetch, isFetching: stockFetching } = useChamberStock() as {
-        data: StockDataEntry[];
-        isLoading: boolean;
-        refetch: () => void;
-        isFetching: boolean;
-    };
+  const {
+    data: stockQueryData,
+    isLoading: stockLoading,
+    isFetching: stockFetching,
+    refetch: stockRefetch,
+  } = useChamberStock();
 
-    const productItems: ProductItem[] = useMemo(() => {
-        if (chamberLoading || stockLoading || !selectedRm?.length) return [];
+const stockData = stockQueryData ?? [];
 
-        const chamberMap = new Map(chamberData.map((c) => [c.id, c]));
+  const productItems = useMemo(() => {
+    if (chamberLoading || stockLoading || !selectedRm?.length) return [];
 
-        return selectedRm
-            .map((rm): ProductItem | null => {
-                const stock = stockData.find((s) => s.product_name === rm);
+    const chamberMap = new Map(chamberData.map((c) => [c.id, c]));
 
-                if (!stock || !Array.isArray(stock.chamber)) return null;
+    return selectedRm
+      .map((rm) => {
+        const stock = stockData.find(
+          (s) => s.product_name === rm
+        );
 
-                const mergedChambers: Record<string, FormattedChamber> = {};
+        if (!stock) {
+          console.warn("⚠️ Missing stock for raw material:", rm);
+          return null;
+        }
 
-                stock.chamber.forEach((entry) => {
-                    const chamberDetails = chamberMap.get(entry.id);
-                    if (!chamberDetails) return;
+        if (!Array.isArray(stock.chamber)) return null;
 
-                    const qty = Number(entry.quantity) || 0;
+        const mergedChambers: Record<string, any> = {};
 
-                    if (mergedChambers[entry.id]) {
-                        mergedChambers[entry.id].stored_quantity = `${Number(mergedChambers[entry.id].stored_quantity) + qty}`;
-                    } else {
-                        mergedChambers[entry.id] = {
-                            id: entry.id,
-                            name: chamberDetails.chamber_name,
-                            stored_quantity: `${qty}`,
-                            quantity: '',
-                        };
-                    }
-                });
+        stock.chamber.forEach((entry) => {
+          const chamberDetails = chamberMap.get(entry.id);
+          if (!chamberDetails) return;
 
-                return {
-                    name: rm,
-                    price: '',
-                    chambers: Object.values(mergedChambers),
-                    image: Carrot ?? null,
-                };
-            })
-            .filter((item): item is ProductItem => item !== null);
-    }, [selectedRm, stockData, chamberData, chamberLoading, stockLoading]);
+          const qty = Number(entry.quantity) || 0;
 
-    return {
-        productItems,
-        isLoading: chamberLoading || stockLoading,
-        isFetching: chamberFetching || stockFetching,
-        refetch: () => {
-            chamberRefetch();
-            stockRefetch();
-        },
-    };
+          if (mergedChambers[entry.id]) {
+            mergedChambers[entry.id].stored_quantity =
+              String(
+                Number(mergedChambers[entry.id].stored_quantity) + qty
+              );
+          } else {
+            mergedChambers[entry.id] = {
+              id: entry.id,
+              name: chamberDetails.chamber_name,
+              stored_quantity: String(qty),
+              quantity: "",
+            };
+          }
+        });
+
+        return {
+          name: rm,
+          price: "",
+          chambers: Object.values(mergedChambers),
+          image: Carrot,
+        };
+      })
+      .filter(Boolean);
+  }, [
+    selectedRm,
+    stockData,
+    chamberData,
+    chamberLoading,
+    stockLoading,
+  ]);
+
+  return {
+    productItems,
+    isLoading: chamberLoading || stockLoading,
+    isFetching: chamberFetching || stockFetching,
+    refetch: () => {
+      chamberRefetch();
+      stockRefetch();
+    },
+  };
 }
+
 type Unit = "gm" | "kg";
 
 function normalizeUnit(raw: string | null | undefined): Unit | null {
