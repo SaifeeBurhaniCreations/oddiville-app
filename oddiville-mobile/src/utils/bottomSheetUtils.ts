@@ -128,7 +128,7 @@ export const runFilter = ({
     const currentFilter: Filter = mode === "select-main" ? {
         sections: [buildSection(key, options, mode)], buttons: [
             { text: 'Cancel', variant: 'outline', color: 'green', alignment: "half", disabled: false },
-            { text: 'Clear', variant: 'fill', color: 'green', alignment: "half", disabled: false },
+            { text: 'Clear', variant: 'fill', color: 'green', alignment: "half", disabled: false, actionKey: 'clear-filter' },
         ],
     } : { sections: [buildSection(key, options, mode)] };
     

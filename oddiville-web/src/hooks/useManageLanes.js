@@ -20,6 +20,7 @@ const useManageLanes = () => {
             setIsInitialLoading(true);
             try {
                 const getLane = await fetchLanes();
+                
                 dispatch(handleFetchData(getLane.data));
             } catch (error) {
                 toast.error("Failed to fetch data");

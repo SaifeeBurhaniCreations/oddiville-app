@@ -30,7 +30,7 @@ import { setIsProductLoading } from "../redux/slices/product.slice";
 import { setProductionLoading } from "../redux/slices/production.slice";
 import { useChamberStock } from "./useChamberStock";
 import { setChambersAndTotal } from "../redux/slices/production-begin.slice";
-import { clearFilter } from "../redux/slices/bottomsheet/filters.slice";
+import { clearAllFilters } from "../redux/slices/bottomsheet/filters.slice";
 import { clearPolicies, setSelectionDone } from "../redux/slices/bottomsheet/policies.slice";
 
 export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
@@ -498,7 +498,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
 
     "clear-filter": () => {
       const { mainSelection, subSelection } = metaBottomSheet || {};
-      // dispatch(clearFilter())
+      dispatch(clearAllFilters())
       console.log("mainSelection, subSelection", mainSelection, subSelection);
     },
 
