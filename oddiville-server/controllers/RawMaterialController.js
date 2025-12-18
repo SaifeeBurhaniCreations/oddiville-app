@@ -10,7 +10,7 @@ const {
 } = require("../models");
 
 const multer = require("multer");
-const { PutObjectCommand } = require("@aws-sdk/client-s3");
+const { PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const s3 = require("../utils/s3Client");
 const {dispatchAndSendNotification} = require("../utils/dispatchAndSendNotification");
 const notificationTypes = require("../types/notification-types");
@@ -36,6 +36,21 @@ const uploadToS3 = async (file) => {
   const url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
 
   return { url, key: fileKey };
+};
+
+const deleteFromS3 = async (key) => {
+  if (!key) return;
+
+  try {
+    await s3.send(
+      new DeleteObjectCommand({
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Key: key,
+      })
+    );
+  } catch (error) {
+    console.error("Failed to delete file from S3:", error.message || error);
+  }
 };
 
 router.get("/all", async (req, res) => {

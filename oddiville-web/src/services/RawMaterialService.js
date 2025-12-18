@@ -12,7 +12,7 @@ const fetchRawMaterial = async () => {
 
 const modifyRawMaterial = async (dataModel) => {
   const { id, formData } = dataModel;
-  const response = await api.put(`/raw-material/${id}`, formData);
+  const response = await api.patch(`/raw-material/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
   return response;
 };
 

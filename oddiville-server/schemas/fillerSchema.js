@@ -193,6 +193,7 @@ const getFillerSchema = ({
     : urlValue
     ? [urlValue]
     : ["challan.png"];
+const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
 
   return {
     "order-ready": {
@@ -479,14 +480,18 @@ const getFillerSchema = ({
         RawMaterialOrderById?.truck_details?.challan?.url ||
         "https://oddiville-bucket.s3.us-west-2.amazonaws.com/raw-materials/08392beb-8040-4cc2-9bce-d87ace1011a6-5362bd4e-9bc4-4630-9ec7-5763753707cd.jpeg",
     },
-    "add-raw-material": {
-      title: "Add raw materials",
-      productCard: RawMaterials.map((rawMaterial) => ({
-        name: rawMaterial.name ?? "Unnamed",
-        image: rawMaterial?.sample_image?.url ?? rawMaterial?.sample_image,
-        description: "",
-      })),
-    },
+ 
+"add-raw-material": {
+  title: "Add raw materials",
+  productCard: safeRawMaterials.map((rawMaterial) => ({
+    name: rawMaterial?.name || "Unnamed",
+    image:
+      rawMaterial?.sample_image?.url ||
+      rawMaterial?.sample_image ||
+      "/images/fallback.png",
+    description: rawMaterial?.description || "No description available",
+  })),
+},
     "add-product": {
       title: "Add Products",
       optionList: Products,
