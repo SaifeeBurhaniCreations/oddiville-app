@@ -207,6 +207,8 @@ const PageHeader = ({ page }: { page: string }) => {
   const badgeLabel =
     parseInt(notificationCount) > 99 ? "99+" : notificationCount.toString().padStart(2, "0");
 
+    const isWelcome = page === "Welcome";
+
   return (
     <View style={[styles.columnGap12, styles.pageHeader]}>
       {variant === "default" ? (
@@ -237,12 +239,14 @@ const PageHeader = ({ page }: { page: string }) => {
           {page}
         </H1>
 
+      {!isWelcome && (
         <Pressable
           onPress={() => toggleMenu({ isOpen, dispatch })}
           style={styles.userIconContainer}
         >
           <UserCircleIcon />
         </Pressable>
+      )}
       </View>
     </View>
   );

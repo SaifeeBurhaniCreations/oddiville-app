@@ -1,15 +1,16 @@
 import React, { createContext, useEffect, useState, useContext } from "react";
 import * as SecureStore from "expo-secure-store";
 import api from "@/src/lib/axios";
+import { Policy } from "../utils/policiesUtils";
 
 type UserRole = "admin" | "superadmin" | "supervisor" | null;
 
 interface AuthContextType {
   role: UserRole;
-  policies: string[];
+  policies: Policy[];
   isAuthenticated: boolean;
   loading: boolean;
-  login: (role: UserRole, policies: string[]) => Promise<void>;
+  login: (role: UserRole, policies: Policy[]) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -20,7 +21,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [role, setRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
-  const [policies, setPolicies] = useState<string[]>([]);
+  const [policies, setPolicies] = useState<Policy[]>([]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -48,7 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     loadUser();
   }, []);
 
-  const login = async (userRole: UserRole, userPolicies: string[]) => {
+  const login = async (userRole: UserRole, userPolicies: Policy[]) => {
     await SecureStore.setItemAsync(
       "newsync",
       JSON.stringify({ role: userRole, policies: userPolicies })

@@ -20,6 +20,7 @@ export interface UserResponse {
   role: "admin" | "supervisor";
   profilepic?: string;
   createdAt?: string | Date;
+  policies?: ("production" | "packaging" | "purchase" | "sales")[];
 }
 
 export type UpdatePayload = Partial<

@@ -302,8 +302,6 @@ export function useMarkNotificationRead() {
 
   return useMutation<any, Error, MarkReadVars, Context>({
     mutationFn: async ({ id, read }: MarkReadVars) => {
-      console.log("id, read", id, read);
-      
       return await updateNotificationService(id, { read });
     },
 

@@ -224,7 +224,7 @@ const SupervisorWorkerDetailsScreen = () => {
                     <PageHeader page={'Contractor'} />
                     <View style={styles.wrapper}>
                         <View style={styles.errorContainer}>
-                            <BackButton label='Detail' backRoute="supervisor-contractor" />
+                            <BackButton label='Detail' backRoute="labours" />
                         </View>
                     </View>
                 </View>
@@ -281,7 +281,7 @@ const SupervisorWorkerDetailsScreen = () => {
                     <View style={[styles.VStack, styles.gap16]}>
                         <BackButton
                             label='Detail'
-                            backRoute="supervisor-contractor"
+                            backRoute="labours"
                         />
 
                         {workerDetailMultiple && (

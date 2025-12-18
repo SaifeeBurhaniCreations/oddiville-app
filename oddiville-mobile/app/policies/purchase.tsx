@@ -162,13 +162,6 @@ const { height: screenHeight } = useWindowDimensions()
               ]}
             >
               <H3>Order raw material</H3>
-              <Button
-                variant="outline"
-                size="md"
-                onPress={() => goTo("raw-material-order")}
-              >
-                Add material
-              </Button>
             </View>
             <View style={styles.searchinputWrapper}>
               <SearchInput
@@ -201,13 +194,6 @@ const { height: screenHeight } = useWindowDimensions()
               ]}
             >
               <H3>Order raw material</H3>
-              <Button
-                variant="outline"
-                size="md"
-                onPress={() => goTo("raw-material-order")}
-              >
-                Add material
-              </Button>
             </View>
             <View style={styles.searchinputWrapper}>
               <SearchInput
@@ -225,7 +211,7 @@ const { height: screenHeight } = useWindowDimensions()
                   refetchRM()
                 }} />}>
                 <EmptyState stateData={emptyStateData} style={{marginTop: -(screenHeight/ 7)}} />
-                                </ScrollView>
+                 </ScrollView>
               </View>
             )}
             <SupervisorFlatlist

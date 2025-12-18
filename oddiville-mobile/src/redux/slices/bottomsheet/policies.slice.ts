@@ -29,6 +29,11 @@ const PoliciesSlice = createSlice({
     },
     clearPolicies: (state) => {
       state.selectedPolicies = [];
+      state.isSelectionDone = false;
+    },
+    setPolicies: (state, action: PayloadAction<PoliciesProps[]>) => {
+      state.selectedPolicies = action.payload;
+      state.isSelectionDone = true;
     },
     setSelectionDone: (state) => {
       state.isSelectionDone = true;
@@ -42,6 +47,7 @@ const PoliciesSlice = createSlice({
 export const {
   togglePolicy,
   clearPolicies,
+    setPolicies,   
   setSelectionDone,
   resetSelection,
 } = PoliciesSlice.actions;

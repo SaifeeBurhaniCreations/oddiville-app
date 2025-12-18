@@ -48,7 +48,6 @@ router.post("/authentication/login", async (req, res) => {
 
   try {
     const response_login_find = await adminClient.findOne({ where: { email } });
-console.log("response_login_find", response_login_find);
 
     if (!response_login_find) {
       return res.status(401).json({ error: "Email or password is not valid." });
@@ -195,7 +194,7 @@ router.post("/users", async (req, res) => {
     io.emit("user:created", newAdmin.get({ plain: true }));
 
     return res.status(201).json({
-      message: "Admin user created successfully",
+      message: "User created successfully",
       data: newAdmin,
     });
   } catch (error) {

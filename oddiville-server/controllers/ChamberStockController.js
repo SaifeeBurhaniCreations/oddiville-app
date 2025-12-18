@@ -57,6 +57,7 @@ router.get("/all", async (req, res) => {
       .json({ error: "Internal server error, please try again later." });
   }
 });
+
 router.get("/all/materials", async (req, res) => {
   try {
     const chamberStock = await chamberStockClient.findAll({
