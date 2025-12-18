@@ -132,18 +132,7 @@ const ProductionStartScreen = () => {
                     message: "Rating is required and must be one of 1, 2, 3, 4, 5."
                 }
             ],
-            sample_image: [
-                {
-                    type: 'custom',
-                    validate: (value: any) => {
-                        if (!value) return false;
-                        if (typeof value === 'string' && !value.trim()) return false;
-                        if (typeof value === 'object' && (!value.uri || !value.uri.trim())) return false;
-                        return true;
-                    },
-                    message: "Sample image is required and must be a valid image file."
-                }
-            ],
+            sample_image: [],
         },
         {
             validateOnChange: true,
