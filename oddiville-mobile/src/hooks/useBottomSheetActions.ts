@@ -33,6 +33,7 @@ import { setChambersAndTotal } from "../redux/slices/production-begin.slice";
 import { clearAllFilters } from "../redux/slices/bottomsheet/filters.slice";
 import { clearPolicies, setSelectionDone } from "../redux/slices/bottomsheet/policies.slice";
 import { useImageStore } from "../stores/useImageStore";
+import { setIsChoosingChambers } from "../redux/slices/bottomsheet/product-package-chamber.slice";
 
 export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const source = useSelector(
@@ -251,6 +252,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
         dispatch(clearUnit());
         dispatch(clearRawMaterials());
         dispatch(setIsProductLoading(false));
+        dispatch(setIsChoosingChambers(false));
       },
       onError: () => {
         dispatch(setIsProductLoading(false));

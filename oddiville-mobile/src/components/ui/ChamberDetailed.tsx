@@ -271,10 +271,8 @@ const styles = StyleSheet.create({
     height: 44,
   },
   cardContainerV2: {
-    // flexDirection: "column",
     gap: 12,
     paddingBottom: 20,
-    // flex: 1,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
