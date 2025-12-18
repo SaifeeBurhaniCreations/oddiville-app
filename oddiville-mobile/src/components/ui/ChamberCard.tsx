@@ -45,19 +45,20 @@ const ChamberCard = ({
         }),
       });
     } else {
-      goTo(href, {
-        data: {
-          id,
-          description: description ?? "",
-          quantity: quantity ?? "0",
-          name,
-          rating,
-          chambers,
-          image: image ?? "",
-          detailByRating,
-        },
-        source: "chamber",
-      });
+      goTo("raw-material-order")
+      // goTo(href, {
+      //   data: {
+      //     id,
+      //     description: description ?? "",
+      //     quantity: quantity ?? "0",
+      //     name,
+      //     rating,
+      //     chambers,
+      //     image: image ?? "",
+      //     detailByRating,
+      //   },
+      //   source: "chamber",
+      // });
     }
   };
 

@@ -253,8 +253,6 @@ const {
   isFetching: isSummaryFetching
 } = useChambersSummary(choosedChambers);
 
-console.log("product_items", product_items);
-
   const [isLoading, setIsLoading] = useState(false);
   const [openTab, setOpenTab] = useState<number>(0);
   const [toastVisible, setToastVisible] = useState(false);
