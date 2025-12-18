@@ -32,6 +32,7 @@ import { useChamberStock } from "./useChamberStock";
 import { setChambersAndTotal } from "../redux/slices/production-begin.slice";
 import { clearAllFilters } from "../redux/slices/bottomsheet/filters.slice";
 import { clearPolicies, setSelectionDone } from "../redux/slices/bottomsheet/policies.slice";
+import { useImageStore } from "../stores/useImageStore";
 
 export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const source = useSelector(
@@ -175,65 +176,90 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
       }
     },
 
-    "add-product-package": async () => {
-      try { 
-        const quantity = Number(productPackageForm.values.quantity);
+"add-product-package": async () => {
+  try {
+    const quantityNumber = Number(productPackageForm.values.quantity);
+    const emptyBagWeightGram = Number(productPackageForm.values.empty_bag_weight_g || "1");
+    const finalQtyKg = (quantityNumber * emptyBagWeightGram) / 1000;
 
-        const emptyBagWeightGram = Number(productPackageForm.values.empty_bag_weight_g || "1");
+    const productPackagePayload = {
+      ...productPackageForm.values,
+      quantity: String(finalQtyKg),
+    };
 
-        const finalQtyKg = (quantity * emptyBagWeightGram) / 1000;
+    const result = productPackageForm.validateForm(productPackagePayload);
 
-        const productPackagePayload = {
-          ...productPackageForm.values,
-          quantity: String(finalQtyKg),
-        };
+    if (!result.success) {
+      console.log("validation failed");
+      return;
+    }
 
-        const result = productPackageForm?.validateForm(productPackagePayload);
+    const {
+      raw_materials,
+      quantity,
+      size,
+      product_name,
+      unit,
+      chamber_name,
+    } = result.data;
 
-        if (result.success) {
-          const {
-            raw_materials,
-            quantity,
-            size,
-            product_name,
-            unit,
-            chamber_name,
-          } = result.data;
+    const { image, packageImage, clearImages } = useImageStore.getState();
 
-          dispatch(setIsProductLoading(true));
-          createPackage.mutate(
-            {
-              product_name,
-              types: [
-                {
-                  quantity,
-                  size,
-                  unit: (unit === "null" ? null : unit) as "kg" | "gm" | null,
-                },
-              ],
-              raw_materials: raw_materials?.map((val: any) => val.name),
-              chamber_name,
-            },
-            {
-              onSuccess: (result) => {
-                productPackageForm?.resetForm();
-                dispatch(clearUnit());
-                dispatch(clearRawMaterials());
-                dispatch(setIsProductLoading(false));
-              },
-              onError: (error) => {
-                console.log("error in onSuccess create");
-                dispatch(setIsProductLoading(false));
-              },
-            }
-          );
-        } else {
-          console.log("validation failed");
-        }
-      } catch (error: any) {
-        console.log("error in add-product-package", error.message);
-      }
-    },
+    const formData = new FormData();
+
+    // ---- fields ----
+    formData.append("product_name", product_name);
+    formData.append("chamber_name", chamber_name);
+    formData.append(
+      "raw_materials",
+      JSON.stringify(raw_materials.map((v: any) => v.name))
+    );
+    formData.append(
+      "types",
+      JSON.stringify([
+        {
+          quantity,
+          size,
+          unit: unit === "null" ? null : unit,
+        },
+      ])
+    );
+
+    // ---- images ----
+    if (image) {
+      formData.append("image", {
+        uri: image.uri,
+        name: image.name,
+        type: image.type,
+      } as any);
+    }
+
+    if (packageImage) {
+      formData.append("package_image", {
+        uri: packageImage.uri,
+        name: packageImage.name,
+        type: packageImage.type,
+      } as any);
+    }
+
+    dispatch(setIsProductLoading(true));
+
+    createPackage.mutate(formData, {
+      onSuccess: () => {
+        productPackageForm.resetForm();
+        clearImages();
+        dispatch(clearUnit());
+        dispatch(clearRawMaterials());
+        dispatch(setIsProductLoading(false));
+      },
+      onError: () => {
+        dispatch(setIsProductLoading(false));
+      },
+    });
+  } catch (error: any) {
+    console.log("error in add-product-package", error.message);
+  }
+},
 
     "add-package": async () => {
       
@@ -248,7 +274,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
 
           const emptyBagWeightGram = Number(
             packageSizeForm.values.empty_bag_weight_g || "1"
-          );``
+          );
 
           const finalQtyKg = (count * emptyBagWeightGram) / 1000;
 

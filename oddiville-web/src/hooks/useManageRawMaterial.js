@@ -28,12 +28,12 @@ const useManageRawMaterial = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [banners, setBanners] = useState(null);
+  const [bannerFile, setBannerFile] = useState(null);
   const [productList, setProductList] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
   const [fetchedBanners, setFetchedBanners] = useState(null);
   const [deleteBanners, setDeleteBanners] = useState(null);
 
-  /* ================= CLIENT FORM ================= */
   const clientForm = useFormValidator(
     initialClientValues,
     clientValidationRules,
@@ -46,7 +46,6 @@ const useManageRawMaterial = () => {
     validateForm: validateClientForm,
   } = clientForm;
 
-  /* ================= PRODUCT FORM ================= */
   const productForm = useFormValidator(
     initialNewProductState,
     productValidationRules,
@@ -61,13 +60,12 @@ const useManageRawMaterial = () => {
     resetForm: resetProductForm,
   } = productForm;
 
-  useEffect(() => {
-    if (productList.length === 1 && editIndex === null) {
-      handleEditProduct(0);
-    }
-  }, [productList]);
+  // useEffect(() => {
+  //   if (productList.length === 1 && editIndex === null) {
+  //     handleEditProduct(0);
+  //   }
+  // }, [productList]);
 
-  /* ================= CHAMBER LOGIC ================= */
   const toggleChamber = (chamberId) => {
     const prev = Array.isArray(newProduct.selectedChambers)
       ? newProduct.selectedChambers
@@ -111,7 +109,6 @@ const useManageRawMaterial = () => {
     setProductField(name, value);
   };
 
-  /* ================= ADD / EDIT PRODUCT ================= */
   const addProductToList = useCallback(() => {
     const productValidationResult = validateProductForm();
 
@@ -131,14 +128,27 @@ const useManageRawMaterial = () => {
     const updatedList =
       editIndex !== null
         ? productList.map((item, idx) =>
-            idx === editIndex ? { ...newProduct, sample_image: banners } : item
+            idx === editIndex
+              ? {
+                  ...newProduct,
+                  sample_image: banners,
+                  sample_image_file: bannerFile, // ✅ FILE STORED
+                }
+              : item
           )
-        : [...productList, { ...newProduct, sample_image: banners }];
+        : [
+            ...productList,
+            {
+              ...newProduct,
+              sample_image: banners,
+              sample_image_file: bannerFile, // ✅ FILE STORED
+            },
+          ];
 
     setProductList(updatedList);
     setClientField("products", updatedList);
 
-    resetProductForm();
+    setBannerFile(null);
     setBanners(null);
     setEditIndex(null);
     setFetchedBanners(null);
@@ -175,12 +185,13 @@ const useManageRawMaterial = () => {
       });
 
       const imageToUse =
-        item.sample_image && typeof item.sample_image === "string"
+        typeof item.sample_image === "string" && item.sample_image
           ? item.sample_image
           : FALLBACK_IMAGE;
 
       setBanners(imageToUse);
       setFetchedBanners(imageToUse);
+      // setBannerFile(null);
 
       setEditIndex(index);
     },
@@ -200,11 +211,15 @@ const useManageRawMaterial = () => {
   const fetchBanners = (img) => setBanners(img);
 
   const onFileChange = (file) => {
-    setBanners(file);
-    setProductField("sample_image", file);
+    if (!(file instanceof File)) return;
+
+    const previewUrl = URL.createObjectURL(file);
+
+    setBanners(previewUrl);
+    setBannerFile(file);
+    setProductField("sample_image", previewUrl);
   };
 
-  /* ================= SUBMIT ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -226,15 +241,24 @@ const useManageRawMaterial = () => {
     formPayload.append("company", submitValues.company);
     formPayload.append("address", submitValues.address);
     formPayload.append("phone", submitValues.phone);
-    formPayload.append("products", JSON.stringify(productList));
 
-    if (banners) {
-      formPayload.append("sample_image", banners);
-    }
+    const productsWithoutFiles = productList.map(
+      ({ sample_image_file, ...rest }) => rest
+    );
+
+    formPayload.append("products", JSON.stringify(productsWithoutFiles));
+
+    productList.forEach((product, index) => {
+      if (product.sample_image_file) {
+        formPayload.append(
+          `products[${index}][sample_image]`,
+          product.sample_image_file
+        );
+      }
+    });
 
     setIsLoading(true);
-
-    try {
+try {
       const response = id
         ? await modify({ formData: formPayload, id })
         : await create(formPayload);

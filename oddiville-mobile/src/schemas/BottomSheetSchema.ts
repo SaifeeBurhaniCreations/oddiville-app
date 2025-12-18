@@ -464,6 +464,16 @@ const AddonInputSection = z.object({
   }),
 });
 
+const FileUploadSection = z.object({
+  type: z.literal('file-upload'),
+  data: z.object({
+    label: z.string(),
+    title: z.string(),
+    key: z.string(),
+    uploadedTitle: z.string().optional(),
+  }),
+});
+
 // ------------------- Section Union ------------------- //
 const ButtonSchema = z.object({
   text: z.string(),
@@ -580,7 +590,7 @@ export const FillPackageBottomSheetConfigSchema = z.object({
 });
 
 export const AddPorductPackageBottomSheetConfigSchema = z.object({
-  sections: z.array(z.discriminatedUnion('type', [TitleWithDetailsCrossSection, InputSection, InputWithSelectSection,SelectSection])),
+  sections: z.array(z.discriminatedUnion('type', [TitleWithDetailsCrossSection, InputSection, InputWithSelectSection,SelectSection, FileUploadSection])),
   buttons: z.array(ButtonSchema).optional()
 });
 

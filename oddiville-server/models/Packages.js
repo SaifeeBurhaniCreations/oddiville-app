@@ -2,6 +2,14 @@ module.exports = (sequelize, Sequelize) => {
     const Packages = sequelize.define("Packages", {
         id: { type: Sequelize.UUID, defaultValue: Sequelize.UUIDV4, primaryKey: true },
         product_name: { type: Sequelize.STRING, allowNull: false },
+        image: {
+      type: Sequelize.JSON,
+      allowNull: true
+    },
+        package_image: {
+      type: Sequelize.JSON,
+      allowNull: true
+    },
         types: {
             type: Sequelize.JSON,
             allowNull: true,

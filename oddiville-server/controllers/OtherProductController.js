@@ -105,272 +105,188 @@
       res.status(500).json({ error: err.message });
     }
   });
-  router.post("/", upload.single("sample_image"), async (req, res) => {
-    const { name, company, address, phone } = req.body;
 
-    let sampleImageId = null;
-    let clientPlainResult = null;
-    const stored_date = new Date();
+router.post("/", upload.any(), async (req, res) => {
+  const { name, company, address, phone } = req.body;
 
-    let products = [];
-    try {
-      const rawProducts = req.body.products ?? "[]";
-      products = JSON.parse(rawProducts);
-      if (!Array.isArray(products)) products = [];
-    } catch (e) {
-      console.error("Invalid products JSON:", e);
-      return res.status(400).json({ error: "Invalid products payload" });
+  const stored_date = new Date();
+  let clientPlainResult = null;
+
+  /* ------------------ PARSE PRODUCTS ------------------ */
+  let products = [];
+  try {
+    products = JSON.parse(req.body.products ?? "[]");
+    if (!Array.isArray(products)) products = [];
+  } catch (e) {
+    return res.status(400).json({ error: "Invalid products payload" });
+  }
+
+  if (!products.length) {
+    return res.status(400).json({ error: "No products provided" });
+  }
+
+  try {
+    /* ------------------ UPLOAD ALL PRODUCT IMAGES ------------------ */
+    const productImageMap = {};
+
+    for (const file of req.files || []) {
+      const match = file.fieldname.match(
+        /^products\[(\d+)\]\[sample_image\]$/
+      );
+
+      if (!match) continue;
+
+      const index = Number(match[1]);
+
+      const uploaded = await uploadToS3(file);
+
+      productImageMap[index] = uploaded.url;
     }
 
-    if (!products.length) {
-      return res.status(400).json({ error: "No products provided" });
-    }
+    /* ------------------ TRANSACTION ------------------ */
+    await sequelize.transaction(async (t) => {
+      const client = await thirdPartyClient.create(
+        { name, company, address, phone, products: [] },
+        { transaction: t }
+      );
 
-    try {
-      if (req.file) {
-        const uploaded = await uploadToS3(req.file);
-        sampleImageId = uploaded.url;
-      }
+      const clientProductsArray = [];
 
-      await sequelize.transaction(async (t) => {
-        const client = await thirdPartyClient.create(
+      /* ------------------ LOOP PRODUCTS ------------------ */
+      for (let i = 0; i < products.length; i++) {
+        const prod = products[i];
+
+        const product_name = (prod.product_name ?? "").trim();
+        const selectedChambers = Array.isArray(prod.selectedChambers)
+          ? prod.selectedChambers
+          : [];
+
+        const productRent = Number(prod.rent);
+        const est_dispatch_date = prod.est_dispatch_date ?? null;
+        const sampleImage = productImageMap[i] ?? null;
+
+        if (!product_name) throw new Error("product_name missing");
+        if (isNaN(productRent)) throw new Error(`Invalid rent: ${product_name}`);
+        if (!selectedChambers.length)
+          throw new Error(`No chambers for product: ${product_name}`);
+
+        /* ------------------ NORMALIZE CHAMBERS ------------------ */
+        const normalizedIncoming = selectedChambers.map((c) => ({
+          id: String(c.id),
+          add: Number(c.add_quantity ?? c.quantity ?? 0),
+          sub: Number(c.sub_quantity ?? 0),
+          rating: c.rating ?? company,
+        }));
+
+        const chamberIds = normalizedIncoming.map((c) => c.id);
+
+        const chamberInstances = await chamberClient.findAll({
+          where: { id: chamberIds },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+        const chamberMap = new Map(
+          chamberInstances.map((c) => [String(c.id), c])
+        );
+
+        /* ------------------ CAPACITY CHECK ------------------ */
+        const insufficient = [];
+
+        for (const incoming of normalizedIncoming) {
+          const inst = chamberMap.get(incoming.id);
+          if (!inst) continue;
+
+          const capacity = Number(inst.capacity ?? 0);
+          const currentStock = Number(inst.current_stock ?? 0);
+          const netAdd = Math.max(0, incoming.add - incoming.sub);
+
+          if (netAdd > capacity - currentStock) {
+            insufficient.push({ id: inst.id, netAdd });
+          }
+        }
+
+        if (insufficient.length) {
+          const err = new Error("Insufficient chamber capacity");
+          err.details = insufficient;
+          throw err;
+        }
+
+        /* ------------------ STOCK UPSERT ------------------ */
+        let stock = await stockClient.findOne({
+          where: { product_name, category: "other" },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+        if (!stock) {
+          stock = await stockClient.create(
+            {
+              product_name,
+              category: "other",
+              unit: "kg",
+              chamber: normalizedIncoming.map((c) => ({
+                id: c.id,
+                quantity: String(Math.max(0, c.add - c.sub)),
+                rating: c.rating,
+              })),
+            },
+            { transaction: t }
+          );
+        }
+
+        const stored_quantity = normalizedIncoming.reduce(
+          (s, c) => s + Math.max(0, c.add - c.sub),
+          0
+        );
+
+        /* ------------------ SAVE CLIENT PRODUCT ------------------ */
+        await otherItemClient.create(
           {
-            name,
-            address,
-            company,
-            phone,
-            products: [],
+            product_id: stock.id,
+            client_id: client.id,
+            stored_quantity,
+            rent: productRent,
+            stored_date,
+            dispatched_date: null,
+            est_dispatch_date,
+            sample_image: sampleImage,
+            history: [],
           },
           { transaction: t }
         );
 
-        const clientProductsArray = [];
-
-        for (const prod of products) {
-          /* ------------------ PRODUCT LEVEL DATA ------------------ */
-          const product_name = (prod.product_name ?? "").trim();
-          const selectedChambers = Array.isArray(prod.selectedChambers)
-            ? prod.selectedChambers
-            : [];
-
-          const productRent = Number(prod.rent);
-          const est_dispatch_date = prod.est_dispatch_date ?? null;
-
-          if (!product_name) {
-            throw new Error("product_name missing for a product");
-          }
-
-          if (isNaN(productRent)) {
-            throw new Error(`Invalid rent for product: ${product_name}`);
-          }
-
-          if (!selectedChambers.length) {
-            throw new Error(`No chambers selected for product: ${product_name}`);
-          }
-
-          /* ------------------ NORMALIZE CHAMBERS ------------------ */
-          const normalizedIncoming = selectedChambers.map((c) => ({
-            id: String(c.id),
-            add: Number(c.add_quantity ?? c.quantity ?? 0),
-            sub: Number(c.sub_quantity ?? 0),
-            rating: c.rating ?? company,
-          }));
-
-          const chamberIds = normalizedIncoming.map((c) => c.id);
-
-          const chamberInstances = await chamberClient.findAll({
-            where: { id: chamberIds },
-            transaction: t,
-            lock: t.LOCK.UPDATE,
-          });
-
-          const chamberMap = new Map(
-            chamberInstances.map((c) => [String(c.id), c])
-          );
-
-          const normalizeItems = (items) =>
-            Array.isArray(items) ? items.map((it) => String(it)) : [];
-
-          /* ------------------ CAPACITY CHECK ------------------ */
-          const insufficient = [];
-
-          for (const incoming of normalizedIncoming) {
-            const inst = chamberMap.get(incoming.id);
-            if (!inst) {
-              insufficient.push({
-                id: incoming.id,
-                reason: "chamber_not_found",
-              });
-              continue;
-            }
-
-            const capacity = Number(inst.capacity ?? 0);
-            const currentStock = Number(
-              inst.current_stock ?? inst.stored_quantity ?? 0
-            );
-
-            const netToAdd = Math.max(0, incoming.add - incoming.sub);
-            const available = Math.max(0, capacity - currentStock);
-
-            if (netToAdd > available) {
-              insufficient.push({
-                id: inst.id,
-                name: inst.name,
-                requested: netToAdd,
-                available,
-                capacity,
-                currentStock,
-              });
-            }
-          }
-
-          if (insufficient.length) {
-            const err = new Error("Insufficient chamber capacity");
-            err.details = insufficient;
-            throw err;
-          }
-
-          /* ------------------ STOCK UPSERT ------------------ */
-          let stock = await stockClient.findOne({
-            where: { product_name, category: "other" },
-            transaction: t,
-            lock: t.LOCK.UPDATE,
-          });
-
-          if (!stock) {
-            const chamberDataForStock = normalizedIncoming.map((c) => ({
-              id: c.id,
-              quantity: String(Math.max(0, c.add - c.sub)),
-              rating: c.rating,
-            }));
-
-            stock = await stockClient.create(
-              {
-                product_name,
-                category: "other",
-                unit: "kg",
-                chamber: chamberDataForStock,
-              },
-              { transaction: t }
-            );
-
-            for (const { id } of chamberDataForStock) {
-              const chamber = chamberMap.get(id);
-              if (chamber) {
-                chamber.items = normalizeItems(chamber.items);
-                if (!chamber.items.includes(String(stock.id))) {
-                  chamber.items.push(String(stock.id));
-                  await chamber.save({ transaction: t });
-                }
-              }
-            }
-          } else {
-            let chambersList = Array.isArray(stock.chamber) ? stock.chamber : [];
-
-            chambersList = chambersList.map((ch) => ({
-              id: String(ch.id),
-              quantity: String(ch.quantity ?? "0"),
-              rating: ch.rating,
-            }));
-
-            for (const incoming of normalizedIncoming) {
-              const net = incoming.add - incoming.sub;
-
-              const idx = chambersList.findIndex(
-                (i) =>
-                  String(i.id) === incoming.id &&
-                  i.rating === incoming.rating
-              );
-
-              if (idx >= 0) {
-                chambersList[idx].quantity = String(
-                  Math.max(
-                    0,
-                    Number(chambersList[idx].quantity) + net
-                  )
-                );
-              } else {
-                chambersList.push({
-                  id: incoming.id,
-                  quantity: String(Math.max(0, net)),
-                  rating: incoming.rating,
-                });
-              }
-
-              const chamber = chamberMap.get(incoming.id);
-              if (chamber) {
-                chamber.items = normalizeItems(chamber.items);
-                if (!chamber.items.includes(String(stock.id))) {
-                  chamber.items.push(String(stock.id));
-                  await chamber.save({ transaction: t });
-                }
-              }
-            }
-
-            await stockClient.update(
-              { chamber: chambersList },
-              { where: { id: stock.id }, transaction: t }
-            );
-          }
-
-          /* ------------------ OTHERS ITEM (PER PRODUCT RENT) ------------------ */
-          const stored_quantity = normalizedIncoming.reduce(
-            (s, c) => s + Math.max(0, c.add - c.sub),
-            0
-          );
-
-          await otherItemClient.create(
-            {
-              product_id: stock.id,
-              client_id: client.id,
-              stored_quantity,
-              rent: productRent,
-              stored_date,
-              dispatched_date: null,
-              est_dispatch_date,
-              sample_image: sampleImageId,
-              history: [],
-            },
-            { transaction: t }
-          );
-
-          const freshStock = await stockClient.findByPk(stock.id, {
-            transaction: t,
-            raw: true,
-          });
-
-          clientProductsArray.push(freshStock);
-        }
-
-        await client.update(
-          { products: clientProductsArray.map((p) => p.id) },
-          { transaction: t }
-        );
-
-        const clientPlain = client.get({ plain: true });
-        clientPlain.products = clientProductsArray;
-        clientPlainResult = clientPlain;
-      });
-
-      return res.status(201).json(clientPlainResult);
-    } catch (err) {
-      console.error("Server error:", err);
-
-      if (err.details) {
-        return res.status(400).json({
-          error: err.message,
-          details: err.details,
+        const freshStock = await stockClient.findByPk(stock.id, {
+          transaction: t,
+          raw: true,
         });
+
+        clientProductsArray.push(freshStock);
       }
 
-      return res.status(500).json({
-        error: err.message || "Internal server error",
-      });
-    }
-  });
+      await client.update(
+        { products: clientProductsArray.map((p) => p.id) },
+        { transaction: t }
+      );
 
+      clientPlainResult = {
+        ...client.get({ plain: true }),
+        products: clientProductsArray,
+      };
+    });
 
-  router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
+    return res.status(201).json(clientPlainResult);
+  } catch (err) {
+    console.error(err);
+
+    return res.status(err.details ? 400 : 500).json({
+      error: err.message || "Internal server error",
+      details: err.details,
+    });
+  }
+});
+
+router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
     const { id: stockIdParam, othersItemId } = req.params;
     let { chambers = [], add_quantity = 0, sub_quantity = 0 } = req.body;
 
@@ -566,16 +482,266 @@
   //   }
   // });
 
-  router.patch("/:id", async (req, res) => {
+router.patch(
+  "/:id",
+  upload.single("sample_image"),
+  async (req, res) => {
+    const t = await sequelize.transaction();
+
     try {
-      const client = await thirdPartyClient.findByPk(req.params.id);
-      if (!client) return res.status(404).json({ error: "Not found" });
-      await client.update(req.body);
-      res.json(client);
+      const client = await thirdPartyClient.findByPk(req.params.id, {
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (!client) {
+        await t.rollback();
+        return res.status(404).json({ error: "Client not found" });
+      }
+
+      /* BASIC CLIENT UPDATE */
+      const { name, company, address, phone } = req.body;
+
+      await client.update(
+        { name, company, address, phone },
+        { transaction: t }
+      );
+
+      /* PARSE PRODUCTS */
+      let products = [];
+      try {
+        products = JSON.parse(req.body.products || "[]");
+        if (!Array.isArray(products)) products = [];
+      } catch (e) {
+        await t.rollback();
+        return res.status(400).json({ error: "Invalid products payload" });
+      }
+
+      if (!products.length) {
+        await t.rollback();
+        return res.status(400).json({ error: "No products provided" });
+      }
+
+      /* IMAGE HANDLING */
+      let uploadedImageUrl = null;
+      if (req.file) {
+        const uploaded = await uploadToS3(req.file);
+        uploadedImageUrl = uploaded.url;
+      }
+
+      const normalizeItems = (items) =>
+        Array.isArray(items) ? items.map((i) => String(i)) : [];
+
+      const clientProductIds = [];
+
+      for (const prod of products) {
+        const product_name = String(prod.product_name || "").trim();
+        if (!product_name) {
+          throw new Error("product_name missing");
+        }
+
+        const rent = Number(prod.rent);
+        if (isNaN(rent)) {
+          throw new Error(`Invalid rent for ${product_name}`);
+        }
+
+        const est_dispatch_date = prod.est_dispatch_date || null;
+
+        const selectedChambers = Array.isArray(prod.selectedChambers)
+          ? prod.selectedChambers
+          : [];
+
+        if (!selectedChambers.length) {
+          throw new Error(`No chambers selected for ${product_name}`);
+        }
+
+        /* NORMALIZE CHAMBERS */
+        const normalizedIncoming = selectedChambers.map((c) => ({
+          id: String(c.id),
+          add: Number(c.quantity ?? 0),
+          rating: c.rating ?? client.company ?? "other",
+        }));
+
+        const chamberIds = normalizedIncoming.map((c) => c.id);
+
+        const chamberInstances = await chamberClient.findAll({
+          where: { id: chamberIds },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+        const chamberMap = new Map(
+          chamberInstances.map((c) => [String(c.id), c])
+        );
+
+        /* CAPACITY CHECK */
+        const insufficient = [];
+
+        for (const inc of normalizedIncoming) {
+          const chamber = chamberMap.get(inc.id);
+          if (!chamber) {
+            insufficient.push({ id: inc.id, reason: "chamber_not_found" });
+            continue;
+          }
+
+          const capacity = Number(chamber.capacity ?? 0);
+          const current = Number(chamber.current_stock ?? 0);
+          const available = Math.max(0, capacity - current);
+
+          if (inc.add > available) {
+            insufficient.push({
+              id: chamber.id,
+              requested: inc.add,
+              available,
+              capacity,
+            });
+          }
+        }
+
+        if (insufficient.length) {
+          const err = new Error("Insufficient chamber capacity");
+          err.details = insufficient;
+          throw err;
+        }
+
+        /* CHAMBER STOCK UPSERT */
+        let stock = await stockClient.findOne({
+          where: { product_name, category: "other" },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+        if (!stock) {
+          stock = await stockClient.create(
+            {
+              product_name,
+              category: "other",
+              unit: "kg",
+              chamber: normalizedIncoming.map((c) => ({
+                id: c.id,
+                quantity: String(c.add),
+                rating: c.rating,
+              })),
+            },
+            { transaction: t }
+          );
+        } else {
+          let chamberList = Array.isArray(stock.chamber)
+            ? stock.chamber.map((c) => ({
+                id: String(c.id),
+                quantity: String(c.quantity ?? "0"),
+                rating: c.rating,
+              }))
+            : [];
+
+          for (const inc of normalizedIncoming) {
+            const idx = chamberList.findIndex((c) => c.id === inc.id);
+            if (idx >= 0) {
+              chamberList[idx].quantity = String(
+                Number(chamberList[idx].quantity) + inc.add
+              );
+            } else {
+              chamberList.push({
+                id: inc.id,
+                quantity: String(inc.add),
+                rating: inc.rating,
+              });
+            }
+          }
+
+          await stock.update({ chamber: chamberList }, { transaction: t });
+        }
+
+        /* LINK STOCK TO CHAMBERS */
+        for (const ch of normalizedIncoming) {
+          const chamber = chamberMap.get(ch.id);
+          if (chamber) {
+            chamber.items = normalizeItems(chamber.items);
+            if (!chamber.items.includes(String(stock.id))) {
+              chamber.items.push(String(stock.id));
+              await chamber.save({ transaction: t });
+            }
+          }
+        }
+
+        /* OTHERS ITEM UPSERT */
+        const stored_quantity = normalizedIncoming.reduce(
+          (s, c) => s + Math.max(0, c.add),
+          0
+        );
+
+        const existingItem = await otherItemClient.findOne({
+          where: {
+            client_id: client.id,
+            product_id: stock.id,
+          },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+        const finalImage =
+          uploadedImageUrl ||
+          (typeof prod.sample_image === "string"
+            ? prod.sample_image
+            : null);
+
+        if (existingItem) {
+          await existingItem.update(
+            {
+              stored_quantity,
+              rent,
+              est_dispatch_date,
+              sample_image: finalImage ?? existingItem.sample_image,
+            },
+            { transaction: t }
+          );
+        } else {
+          await otherItemClient.create(
+            {
+              client_id: client.id,
+              product_id: stock.id,
+              stored_quantity,
+              rent,
+              stored_date: new Date(),
+              est_dispatch_date,
+              sample_image: finalImage,
+              history: [],
+            },
+            { transaction: t }
+          );
+        }
+
+        clientProductIds.push(stock.id);
+      }
+
+      /* UPDATE CLIENT PRODUCTS */
+      await client.update(
+        { products: clientProductIds },
+        { transaction: t }
+      );
+
+      await t.commit();
+
+      const freshClient = await thirdPartyClient.findByPk(client.id);
+
+      return res.status(200).json(freshClient);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      await t.rollback();
+      console.error("PATCH error:", err);
+
+      if (err.details) {
+        return res.status(400).json({
+          error: err.message,
+          details: err.details,
+        });
+      }
+
+      return res.status(500).json({
+        error: err.message || "Internal server error",
+      });
     }
-  });
+  }
+);
 
   router.delete("/:id", async (req, res) => {
     try {

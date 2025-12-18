@@ -40,7 +40,7 @@ function fmt(dateStr) {
  * Keep these in sync with your DB model expectations.
  */
 const REQUIRED = {
-  vendor: ["name", "phone", "zipcode", "state", "city"],
+  vendor: ["name", "phone", "state", "city"],
   rmo: [
     "raw_material_name",
     "vendor",
@@ -828,6 +828,33 @@ function normalizeDispatchRow(row) {
   };
 }
 
+async function attachChamberStockToChambers({
+  chamberStockId,
+  chamberIds,
+  transaction,
+}) {
+  if (!chamberStockId || !Array.isArray(chamberIds)) return;
+
+  for (const chamberId of chamberIds) {
+    await sequelize.query(
+      `
+      UPDATE "Chambers"
+      SET items = COALESCE(items, '{}'::uuid[]) || :csId::uuid
+      WHERE chamber_name = :chamberName
+        AND NOT (items @> ARRAY[:csId]::uuid[])
+      `,
+      {
+        replacements: {
+          csId: chamberStockId,
+          chamberName: chamberId,
+        },
+        transaction,
+      }
+    );
+  }
+}
+
+
 // -------------------------------------
 // Main route: accepts both old & new payload shape and normalizes then runs existing logic
 // -------------------------------------
@@ -1091,7 +1118,6 @@ router.post("/bulk-ingest", async (req, res) => {
           name,
           alias: v?.alias ?? null,
           phone: String(v?.phone ?? "0000000000"),
-          zipcode: Number(v?.zipcode ?? 0),
           state: v?.state ?? "UNKNOWN",
           city: v?.city ?? "UNKNOWN",
           address: v?.address ?? null,
@@ -1143,7 +1169,6 @@ router.post("/bulk-ingest", async (req, res) => {
 
         const phone =
           fallback.phone != null ? String(fallback.phone) : "0000000000";
-        const zipcode = fallback.zipcode != null ? Number(fallback.zipcode) : 0;
         const state = fallback.state ?? "UNKNOWN";
         const city = fallback.city ?? "UNKNOWN";
 
@@ -1152,7 +1177,6 @@ router.post("/bulk-ingest", async (req, res) => {
             name: vendorName,
             alias: fallback.alias ?? null,
             phone,
-            zipcode,
             state,
             city,
             address: fallback.address ?? null,
@@ -1416,6 +1440,13 @@ router.post("/bulk-ingest", async (req, res) => {
         });
         const asJson = row.toJSON();
         createdChamber.push(asJson);
+
+        await attachChamberStockToChambers({
+          chamberStockId: asJson.id,
+          chamberIds: incomingChambers.map((c) => c.id),
+          transaction: t,
+        });
+
         if (c.clientId) mapCs.set(c.clientId, asJson.id);
         continue;
       }
@@ -1488,6 +1519,12 @@ router.post("/bulk-ingest", async (req, res) => {
 
       await ChamberStockClient.update(updatedPayload, {
         where: { id: existingJson.id },
+        transaction: t,
+      });
+
+      await attachChamberStockToChambers({
+        chamberStockId: existingJson.id,
+        chamberIds: incomingChambers.map((c) => c.id),
         transaction: t,
       });
 

@@ -13,26 +13,30 @@ const Banners = ({
   const [banner, setBanner] = useState({ banner: null, preview: "" });
   const [typeCheckError, setTypeCheckError] = useState("");
 
-  const updateBanner = (file) => {
-    if (!file) return;
+ const updateBanner = (file) => {
+  if (!file) return;
 
-    const validTypes = ["image/png", "image/jpeg"];
-    if (!validTypes.includes(file.type)) {
-      setBanner({ banner: null, preview: "" });
-      setTypeCheckError("Only PNG or JPG images are allowed");
-      form?.setField?.("sample_image", null);
-      if (bannerRef.current) bannerRef.current.value = "";
-      return;
-    }
+  const validTypes = ["image/png", "image/jpeg"];
+  if (!validTypes.includes(file.type)) {
+    setBanner({ banner: null, preview: "" });
+    setTypeCheckError("Only PNG or JPG images are allowed");
+    return;
+  }
 
-    setTypeCheckError("");
-    const reader = new FileReader();
-    reader.onload = () => {
-      setBanner({ banner: file, preview: reader.result });
-      form?.setField?.("sample_image", file);
-    };
-    reader.readAsDataURL(file);
+  setTypeCheckError("");
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    setBanner({ banner: file, preview: reader.result });
+
+    // ✅ THIS IS THE FIX
+    onFileChange?.(file);
   };
+  reader.readAsDataURL(file);
+};
+
+
+  
 
   useEffect(() => {
     fetchBanners?.(banner.banner);

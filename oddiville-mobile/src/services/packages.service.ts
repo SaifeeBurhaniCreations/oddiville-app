@@ -15,6 +15,11 @@ export const fetchPackages = async (searchText: string) => {
 }
 export const fetchPackageById = (id: string) => api.get(`/package/${id}`)
 export const fetchPackageByName = (name: string) => api.get(`/package/product/${name}`)
-export const createPackage = (data: any) => api.post(`/package/create`, data)
+export const createPackage = (formData: FormData) =>
+  api.post(`/package/create`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 export const updatePackage = ({ data, id }: { data: any, id: string }) => api.patch(`/package/update/${id}`, data)
 

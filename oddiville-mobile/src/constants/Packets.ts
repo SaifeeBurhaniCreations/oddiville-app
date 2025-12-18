@@ -34,20 +34,12 @@ export const formatPackageParams = ({ types = [] }: FormatParamsOptions) => {
 };
 
 export const PACKET_ITEMS = (data: PackageItemProp[]) => {
+
     return data?.map((val: any) => ({
         name: val?.product_name,
         id: val.id,
-        img: peasPacketImg,
+        img: val?.package_image?.url ? val?.package_image?.url : peasPacketImg,
         bundle: peasPacketBundleImg,
-        // params: val?.types?.map((item: any) => {
-        //     const iconComp = mapPackageIcon(item)
-        //     return {
-        //         weight: `${item.size}${item.unit}`,
-        //         quantity: kConverter(item.quantity),
-        //         icon: iconComp,
-        //         disabled: Number(val.quantity) <= 0 ? true : false
-        //     }
-        // }),
         href: 'packaging-details' as keyof RootStackParamList
     }))
 }

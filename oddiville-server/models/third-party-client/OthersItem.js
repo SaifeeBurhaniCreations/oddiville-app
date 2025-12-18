@@ -15,7 +15,6 @@ module.exports = (sequelize, Sequelize) => {
       dispatched_date: { type: Sequelize.DATE, allowNull: true },
       est_dispatch_date: { type: Sequelize.DATE, allowNull: true },
       sample_image: { type: Sequelize.STRING, allowNull: true },
-      // sample_image: { type: Sequelize.UUID, allowNull: true },
       history: { type: Sequelize.ARRAY(Sequelize.UUID) },
     },
     { timestamps: true }

@@ -541,6 +541,24 @@ const useValidateAndOpenBottomSheet = () => {
           key: "product-package"
         },
       },
+     {
+          type: "file-upload",
+          data: {
+            label: "Upload package image",
+            uploadedTitle: "Uploaded package image",
+            title: "Upload image",
+            key: "package-image",
+          },
+        },
+        {
+          type: "file-upload",
+          data: {
+            label: "Upload image",
+            uploadedTitle: "Uploaded image",
+            title: "Upload image",
+            key: "image",
+          },
+        },
     ],
     buttons: [
       { text: 'Add package', variant: 'fill', color: 'green', alignment: "full", disabled: false, actionKey: "add-product-package" },

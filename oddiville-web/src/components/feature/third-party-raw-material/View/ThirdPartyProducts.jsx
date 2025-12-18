@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { NavLink } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { toast } from "react-toastify";
+import { useLocation } from "react-router-dom";
 
 import Spinner from "@/components/Spinner/Spinner";
 import { formatDate } from "@/util/formatDate";
@@ -17,6 +18,7 @@ import {
 } from "@/services/ThirdPartyProductService";
 
 import { useChamberstock } from "../../../../hooks/chamberStock";
+import { useOtherItems } from "../../../../hooks/thirdPartyProduct";
 
 const getAverageRating = (chambers = []) => {
   const ratings = chambers.map(ch => ch.rating);
@@ -25,7 +27,6 @@ const getAverageRating = (chambers = []) => {
 
   if (hasTextRating) {
     return ratings[0];
-    // return ratings.join(", ");
   }
 
   const validRatings = ratings
@@ -98,8 +99,10 @@ const ExpandedChambersRow = ({ chambers }) => {
 };
 
 const ThirdPartyProduct = () => {
+  const location = useLocation();
   const dispatch = useDispatch();
   const otherProduct = useSelector((state) => state.otherProduct.data);
+const { data: otherItems = [], refetch: refetchOtherItems } = useOtherItems();
 
   const [filteredData, setFilteredData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,10 +111,8 @@ const ThirdPartyProduct = () => {
   const [selectedItem, setSelectedItem] = useState(null);
 
   const [openRowId, setOpenRowId] = useState(null);
-  /* =======================
-     Fetch chamber stock ONCE
-     ======================= */
-  const { data: chamberStockList = [] } = useChamberstock();
+
+  const { data: chamberStockList = [], refetch: refetchChamberStock  } = useChamberstock();
 
   const chamberStockMap = useMemo(() => {
     const map = {};
@@ -121,35 +122,79 @@ const ThirdPartyProduct = () => {
     return map;
   }, [chamberStockList]);
 
-  /* =======================
-     Fetch orders
-     ======================= */
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const res = await fetchAllOrders();
-        dispatch(handleFetchData(res.data));
-      } catch {
-        toast.error("Failed to fetch data");
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    if (!otherProduct || otherProduct.length === 0) {
-      fetchAll();
-    } else {
+const otherItemMap = useMemo(() => {
+  const map = {};
+  otherItems.forEach((o) => {
+    map[`${o.client_id}_${o.product_id}`] = o;
+  });
+  return map;
+}, [otherItems]);
+
+useEffect(() => {
+  refetchOtherItems?.();
+  refetchChamberStock?.();
+}, [location.key]);
+
+
+const resolveImage = (clientId, productIds) => {
+  
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    return "/assets/img/png/fallback_img.png";
+  }
+
+  for (const pid of productIds) {
+    const key = `${clientId}_${pid}`;
+    const item = otherItemMap[key];
+
+    if (item?.sample_image) {
+      return item.sample_image;
+    }
+  }
+
+  return "/assets/img/png/fallback_img.png";
+};
+
+  // useEffect(() => {
+  //   const fetchAll = async () => {
+  //     try {
+  //       const res = await fetchAllOrders();
+  //       dispatch(handleFetchData(res.data));
+  //     } catch {
+  //       toast.error("Failed to fetch data");
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
+
+  //   if (!otherProduct || otherProduct.length === 0) {
+  //     fetchAll();
+  //   } else {
+  //     setIsLoading(false);
+  //   }
+  // }, [dispatch, otherProduct]);
+
+
+useEffect(() => {
+  const fetchAll = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetchAllOrders();
+      dispatch(handleFetchData(res.data));
+    } catch {
+      toast.error("Failed to fetch data");
+    } finally {
       setIsLoading(false);
     }
-  }, [dispatch, otherProduct]);
+  };
+
+  fetchAll();
+}, [dispatch, location.key]);
 
   useEffect(() => {
     setFilteredData(otherProduct || []);
   }, [otherProduct]);
 
-  /* =======================
-     Delete handlers
-     ======================= */
   const handleDeleteClick = (item) => {
     setSelectedItem(item);
     setShowModal(true);
@@ -175,16 +220,10 @@ const ThirdPartyProduct = () => {
     }
   };
 
-  /* =======================
-     Helpers
-     ======================= */
   const toggleRow = (id) => {
     setOpenRowId((prev) => (prev === id ? null : id));
   };
-
-  /* =======================
-     Table wrapper
-     ======================= */
+    
   const TableWrapper = ({ children }) => (
     <table className="table align-items-center mb-0">
       <thead>
@@ -200,9 +239,6 @@ const ThirdPartyProduct = () => {
     </table>
   );
 
-  /* =======================
-     Render rows
-     ======================= */
   const renderRows = () =>
     filteredData.map((item) => {
       const chambers = (item.products || [])
@@ -213,12 +249,14 @@ const ThirdPartyProduct = () => {
       const isMultiple = chambers.length > 1;
       const isOpen = openRowId === item.id;
 
+      const imageUrl = resolveImage(item.id, item.products);
+
       return (
         <React.Fragment key={item.id}>
           <tr className="text-center">
             <td>
               <img
-                src={item?.banner?.s3Url || "/assets/img/png/fallback_img.png"}
+                src={imageUrl}
                 className="avatar avatar-lg"
                 alt="banner"
               />
@@ -229,7 +267,6 @@ const ThirdPartyProduct = () => {
               <p className="text-xs text-secondary mb-0">{item.company}</p>
             </td>
 
-            {/* ===== N/A / Single / Multiple LOGIC ===== */}
             <td>
               {chambers.length === 0 && (
                 <span className="text-secondary text-xs">N/A</span>
@@ -284,7 +321,7 @@ const ThirdPartyProduct = () => {
     });
 
   return (
-    <div className="container-fluid">
+    <div className="container-fluid overflow-y-auto" style={{maxHeight: "92vh"}}>
       <div className="card mb-4">
         <div className="card-header d-flex justify-content-between">
           <h5>Third Party Products</h5>

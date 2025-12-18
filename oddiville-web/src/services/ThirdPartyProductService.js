@@ -8,12 +8,8 @@ const create = async(formData) => {
 
 const modify = async(dataModel) => {
     const { id, formData } = dataModel
-    console.log(`MODIFY - FormData for ID: ${id}`);
-    for (const pair of formData.entries()) {
-        console.log(`${pair[0]}:`, pair[1]);
-    }
-    return
-    const response = await api.put(`/other-product/${id}`, formData)
+
+    const response = await api.patch(`/other-product/${id}`, formData)
     return response;
 }
 

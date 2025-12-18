@@ -483,7 +483,7 @@ const getFillerSchema = ({
       title: "Add raw materials",
       productCard: RawMaterials.map((rawMaterial) => ({
         name: rawMaterial.name ?? "Unnamed",
-        image: rawMaterial?.sample_image.url,
+        image: rawMaterial?.sample_image?.url ?? rawMaterial?.sample_image,
         description: "",
       })),
     },

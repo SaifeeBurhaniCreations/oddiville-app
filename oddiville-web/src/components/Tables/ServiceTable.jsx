@@ -10,6 +10,7 @@ const TableWrapper = ({ children }) => (
                 <th>Image</th>
                 <th>Item Name</th>
                 <th className="text-center">Chamber</th>
+                <th className="text-center">Quantity</th>
                 <th className="text-center">Created Date</th>
                 <th>Actions</th>
             </tr>
@@ -29,12 +30,17 @@ const renderTableRows = (filteredData, handleDeleteClick) => {
                 />
             </td>
             <td>
-                <p className="text-xl font-weight-bold mb-0">{service.item_name}</p>
+                <p className="text-xl font-weight-bold mb-0">{service.item_name.split(":")[0]}</p>
                 <p className="text-xs text-secondary mb-0">{service.description}</p>
             </td>
             <td className="text-center">
                 <span className="text-secondary text-xs font-weight-bold">
-                    {service?.chamber_id || "N/A"}
+                    {service?.chamber_name || "N/A"}
+                </span>
+            </td>
+            <td className="text-center">
+                <span className="text-secondary text-xs font-weight-bold">
+                    {`${service.item_name.split(":")[1] ?? service?.quantity_unit} Kg` || "N/A"}
                 </span>
             </td>
             <td className="text-center">
@@ -91,7 +97,6 @@ const ServiceTable = ({ filteredData, isLoading, handleDeleteClick }) => {
         );
     }
 
-    // Data Available State
     return (
         <TableWrapper>
             {renderTableRows(filteredData, handleDeleteClick)}

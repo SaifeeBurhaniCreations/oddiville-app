@@ -41,14 +41,13 @@ const AddProductForm = ({
       </div>
 
       <div className="card-body">
-        {/* ================= BANNERS ================= */}
         <Banners
           name="Upload Product Image"
           getBanners={getBanners}
           deleteBanners={deleteBanners}
           setDeleteBanners={setDeleteBanners}
           fetchBanners={fetchBanners}
-          onFileChange={(e) => onFileChange(e.target.files[0])}
+          onFileChange={onFileChange}
         />
 
         {productErrors.sample_image && (
@@ -57,7 +56,6 @@ const AddProductForm = ({
           </div>
         )}
 
-        {/* ================= PRODUCT NAME ================= */}
         <div className="form-floating mb-3">
           <input
             className={`form-control ${
@@ -76,7 +74,6 @@ const AddProductForm = ({
           )}
         </div>
 
-        {/* ================= RENT ================= */}
         <div className="form-floating mb-3">
           <input
             className={`form-control ${
@@ -93,7 +90,6 @@ const AddProductForm = ({
           )}
         </div>
 
-        {/* ================= EST DISPATCH DATE ================= */}
         <div className="mb-3">
           <label className="form-label">Estimated Dispatch Date</label>
           <input
@@ -112,7 +108,6 @@ const AddProductForm = ({
           )}
         </div>
 
-        {/* ================= CHAMBERS ================= */}
         <label className="form-label mt-3">
           Select Chambers (Frozen Tag)
         </label>
@@ -171,7 +166,6 @@ const AddProductForm = ({
           })
         )}
 
-        {/* ================= SUBMIT ================= */}
         <button
           type="button"
           className={`btn mt-3 ${editMode ? "btn-warning" : "btn-success"}`}

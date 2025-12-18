@@ -10,7 +10,7 @@ const CHAMBER_STOCK_KEY = ["chamber-stock"];
 const DRY_CHAMBER_QUERY_KEY: QueryKey = ["dry", "chamber", "summary"];
 
 export type PackedItem = {
-  id: string | number;
+  id: string;
   product_name: string;
   unit: string;
   image: string | null;

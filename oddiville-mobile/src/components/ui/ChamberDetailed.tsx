@@ -1,4 +1,4 @@
-import { StyleSheet, View, ScrollView, RefreshControl } from "react-native";
+import { StyleSheet, View, ScrollView, RefreshControl, FlatList } from "react-native";
 import React, { useState, useMemo, useEffect } from "react";
 import SearchWithFilter from "./Inputs/SearchWithFilter";
 import Select from "./Select";
@@ -205,7 +205,7 @@ const ChamberDetailed = ({
           onPress={handleChamberSearch}
         />
 
-        <ScrollView
+        {/* <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.cardContainerV2}
           refreshControl={
@@ -227,7 +227,34 @@ const ChamberDetailed = ({
               </React.Fragment>
             ))
           )}
-        </ScrollView>
+        </ScrollView> */}
+        <FlatList
+          data={filteredItems}
+          keyExtractor={(item, index) =>
+            item?.id ? item.id.toString() : `${item.name}-${index}`
+          }
+          renderItem={({ item }) => <ChamberCard {...item} />}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.cardContainerV2}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[getColor("green")]}
+            />
+          }
+          ListEmptyComponent={
+            <View style={{ alignItems: "center" }}>
+              <EmptyState stateData={emptyStateData} />
+            </View>
+          }
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) {
+              fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.6}
+        />
       </View>
     </>
   );
