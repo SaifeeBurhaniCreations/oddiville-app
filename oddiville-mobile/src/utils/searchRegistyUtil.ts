@@ -144,7 +144,7 @@ export function normalizeDispatchOrderReadyToSearchActivity(disOrder: DispatchOr
     id: `dispatch-order-ready-${disOrder.id}`, // optional use for notification
     itemId: disOrder.id,
     title:
-      disOrder.product_name ?? "Order Ready",
+      "Order Ready",
     read: true,
     extraData: undefined,
     type: "ORDER READY",
@@ -166,7 +166,7 @@ export function normalizeDispatchOrderShippedToSearchActivity(disOrder: Dispatch
     id: `dispatch-order-shipped-${disOrder.id}`, // optional use for notification
     itemId: disOrder.id,
     title:
-      disOrder.product_name ?? "Order Shipped",
+      "Order Shipped",
     read: true,
     extraData: undefined,
     type: "ORDER SHIPPED",
@@ -188,7 +188,7 @@ export function normalizeDispatchOrderReachedToSearchActivity(disOrder: Dispatch
     id: `dispatch-order-reached-${disOrder.id}`, // optional use for notification
     itemId: disOrder.id,
     title:
-      disOrder.product_name ?? "Order Reached",
+      "Order Reached",
     read: true,
     extraData: undefined,
     type: "ORDER REACHED",

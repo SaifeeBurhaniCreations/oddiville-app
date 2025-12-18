@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { useOtherProductById } from "@/hooks/thirdPartyProduct";
+import { useOtherProductById, useOtherItems } from "@/hooks/thirdPartyProduct";
 
 import { useFormValidator } from "@/lib/custom_library/formValidator/useFormValidator";
 import { create, modify } from "@/services/ThirdPartyProductService";
@@ -15,13 +15,17 @@ import {
   productValidationRules,
 } from "@/schemas/RawMaterialSchema";
 
+const FALLBACK_IMAGE = "/assets/img/png/fallback_img.png";
+
 const useManageRawMaterial = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id } = useParams();
+
   const chambers = useSelector((state) => state.ServiceDataSlice.chamber);
-  const workLocation = useSelector((state) => state.location.data);
-const { otherProduct: ThirdPartyProduct } = useOtherProductById(id);
+  const { otherProduct: ThirdPartyProduct } = useOtherProductById(id);
+  const { data: otherItems = [] } = useOtherItems();
+
   const [isLoading, setIsLoading] = useState(false);
   const [banners, setBanners] = useState(null);
   const [productList, setProductList] = useState([]);
@@ -29,6 +33,7 @@ const { otherProduct: ThirdPartyProduct } = useOtherProductById(id);
   const [fetchedBanners, setFetchedBanners] = useState(null);
   const [deleteBanners, setDeleteBanners] = useState(null);
 
+  /* ================= CLIENT FORM ================= */
   const clientForm = useFormValidator(
     initialClientValues,
     clientValidationRules,
@@ -41,6 +46,7 @@ const { otherProduct: ThirdPartyProduct } = useOtherProductById(id);
     validateForm: validateClientForm,
   } = clientForm;
 
+  /* ================= PRODUCT FORM ================= */
   const productForm = useFormValidator(
     initialNewProductState,
     productValidationRules,
@@ -55,38 +61,49 @@ const { otherProduct: ThirdPartyProduct } = useOtherProductById(id);
     resetForm: resetProductForm,
   } = productForm;
 
+  useEffect(() => {
+    if (productList.length === 1 && editIndex === null) {
+      handleEditProduct(0);
+    }
+  }, [productList]);
+
+  /* ================= CHAMBER LOGIC ================= */
   const toggleChamber = (chamberId) => {
-    const prevSelected = Array.isArray(newProduct?.selectedChambers)
+    const prev = Array.isArray(newProduct.selectedChambers)
       ? newProduct.selectedChambers
       : [];
 
-    const exists = prevSelected.some((c) => c.id === chamberId);
+    const exists = prev.some((c) => c.id === chamberId);
     const chamberDetail = chambers.find((c) => c.id === chamberId);
 
     if (exists) {
-      const updated = prevSelected.filter((c) => c.id !== chamberId);
-      setProductFields({ selectedChambers: updated });
+      setProductFields({
+        selectedChambers: prev.filter((c) => c.id !== chamberId),
+      });
     } else {
-      const updated = [
-        ...prevSelected,
-        {
-          id: chamberId,
-          quantity: "",
-          name: chamberDetail?.chamber_name || "",
-        },
-      ];
-      setProductFields({ selectedChambers: updated });
+      setProductFields({
+        selectedChambers: [
+          ...prev,
+          {
+            id: chamberId,
+            quantity: "",
+            name: chamberDetail?.chamber_name || "",
+          },
+        ],
+      });
     }
   };
 
   const updateQuantity = (chamberId, qty) => {
-    const prevSelected = Array.isArray(newProduct?.selectedChambers)
+    const prev = Array.isArray(newProduct.selectedChambers)
       ? newProduct.selectedChambers
       : [];
-    const updated = prevSelected.map((ch) =>
-      ch.id === chamberId ? { ...ch, quantity: qty } : ch
-    );
-    setProductFields({ selectedChambers: updated });
+
+    setProductFields({
+      selectedChambers: prev.map((c) =>
+        c.id === chamberId ? { ...c, quantity: qty } : c
+      ),
+    });
   };
 
   const handleProductInputChange = (e) => {
@@ -94,8 +111,10 @@ const { otherProduct: ThirdPartyProduct } = useOtherProductById(id);
     setProductField(name, value);
   };
 
+  /* ================= ADD / EDIT PRODUCT ================= */
   const addProductToList = useCallback(() => {
     const productValidationResult = validateProductForm();
+
     if (
       !Array.isArray(newProduct.selectedChambers) ||
       newProduct.selectedChambers.length === 0
@@ -134,6 +153,11 @@ const { otherProduct: ThirdPartyProduct } = useOtherProductById(id);
     validateProductForm,
   ]);
 
+  const formatDateForInput = (date) => {
+    if (!date) return "";
+    return new Date(date).toISOString().split("T")[0];
+  };
+
   const handleEditProduct = useCallback(
     (index) => {
       const item = productList[index];
@@ -142,17 +166,25 @@ const { otherProduct: ThirdPartyProduct } = useOtherProductById(id);
       setProductFields({
         product_name: item.product_name || "",
         rent: item.rent || "",
-        est_dispatch_date: item.est_dispatch_date || "",
-        selectedChambers: item.selectedChambers || [],
+        est_dispatch_date: formatDateForInput(item.est_dispatch_date),
+        selectedChambers: (item.selectedChambers || []).map((ch) => ({
+          id: ch.id,
+          quantity: ch.quantity ?? "",
+        })),
         sample_image: item.sample_image || null,
       });
 
-      setBanners(item.sample_image || null);
-      setFetchedBanners(item.sample_image || null);
-      setProductField("sample_image", item.sample_image || null);
+      const imageToUse =
+        item.sample_image && typeof item.sample_image === "string"
+          ? item.sample_image
+          : FALLBACK_IMAGE;
+
+      setBanners(imageToUse);
+      setFetchedBanners(imageToUse);
+
       setEditIndex(index);
     },
-    [productList, setProductFields, setBanners, setFetchedBanners]
+    [productList]
   );
 
   const handleDeleteProduct = useCallback(
@@ -166,16 +198,17 @@ const { otherProduct: ThirdPartyProduct } = useOtherProductById(id);
   );
 
   const fetchBanners = (img) => setBanners(img);
+
   const onFileChange = (file) => {
     setBanners(file);
     setProductField("sample_image", file);
   };
 
+  /* ================= SUBMIT ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const validationResult = validateClientForm();
-
     if (!validationResult.success) {
       toast.error("Please correct the client details errors.");
       return;
@@ -187,8 +220,8 @@ const { otherProduct: ThirdPartyProduct } = useOtherProductById(id);
     }
 
     const submitValues = validationResult.data;
-
     const formPayload = new FormData();
+
     formPayload.append("name", submitValues.name);
     formPayload.append("company", submitValues.company);
     formPayload.append("address", submitValues.address);
@@ -223,76 +256,70 @@ const { otherProduct: ThirdPartyProduct } = useOtherProductById(id);
     }
   };
 
+  /* ================= FETCH CHAMBERS ================= */
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const chamberRes = await fetchChamber();
-        if (chamberRes.status === 200) {
-          dispatch({
-            type: "ServiceDataSlice/handleFetchCategory",
-            payload: chamberRes.data,
-          });
-        }
-      } catch (error) {
-        toast.error("Failed to fetch chamber data");
-        console.error(error);
-      }
-    };
-
-    if (chambers?.length === 0) {
-      fetchAll();
+    if (!chambers?.length) {
+      fetchChamber().then((res) => {
+        dispatch({
+          type: "ServiceDataSlice/handleFetchCategory",
+          payload: res.data,
+        });
+      });
     }
-  }, [dispatch, chambers?.length]);
-useEffect(() => {
-  if (!id || !ThirdPartyProduct || !Array.isArray(chambers)) return;
+  }, [chambers]);
 
-  setClientFields({
-    name: ThirdPartyProduct.name || "",
-    company: ThirdPartyProduct.company || "",
-    address: ThirdPartyProduct.address || "",
-    phone: ThirdPartyProduct.phone || "",
-  });
+  /* ================= ✅ FIXED MERGE LOGIC (IMPORTANT) ================= */
+  useEffect(() => {
+    if (!ThirdPartyProduct || !otherItems.length || !Array.isArray(chambers))
+      return;
 
-  const productsFromBackend = (ThirdPartyProduct.products || []).map((stockObj) => {
-    const product_name = stockObj.product_name || "";
-    const rent = stockObj.rent || "";
-    const est_dispatch_date = stockObj.est_dispatch_date || "";
-    const selectedChambers = (stockObj.chamber || []).map((ch) => {
-      const master = chambers.find((m) => String(m.id) === String(ch.id));
-      return {
-        id: ch.id,
-        quantity: ch.quantity ?? "", 
-      };
+    setClientFields({
+      name: ThirdPartyProduct.name || "",
+      company: ThirdPartyProduct.company || "",
+      address: ThirdPartyProduct.address || "",
+      phone: ThirdPartyProduct.phone || "",
     });
 
-    return {
-      product_name,
-      rent,
-      est_dispatch_date,
-      selectedChambers,
-      sample_image: stockObj.sample_image || null,
-    };
-  });
-console.log("productsFromBackend", productsFromBackend);
+    const mergedProducts = (ThirdPartyProduct.products || []).map(
+      (stockObj) => {
+        const otherItem = otherItems.find(
+          (item) =>
+            String(item.client_id) === String(ThirdPartyProduct.id) &&
+            String(item.product_id) === String(stockObj.id)
+        );
 
-  setProductList(productsFromBackend);
-  setClientField("products", productsFromBackend);
+        return {
+          product_name: stockObj.product_name || "",
+          rent: otherItem?.rent ?? "",
+          est_dispatch_date: otherItem?.est_dispatch_date ?? "",
+          selectedChambers: (stockObj.chamber || []).map((ch) => ({
+            id: ch.id,
+            quantity: ch.quantity ?? "",
+          })),
+          sample_image:
+            otherItem?.sample_image &&
+            typeof otherItem.sample_image === "string"
+              ? otherItem.sample_image
+              : FALLBACK_IMAGE,
+        };
+      }
+    );
 
-  if (ThirdPartyProduct.sample_image) {
-    setBanners(ThirdPartyProduct.sample_image);
-    setProductField("sample_image", ThirdPartyProduct.sample_image);
-  }
-}, [id, ThirdPartyProduct, chambers]);
+    setProductList(mergedProducts);
+    setClientField("products", mergedProducts);
+  }, [ThirdPartyProduct, otherItems, chambers]);
 
-  const filteredChambers = chambers?.filter((c) => c.tag === "frozen");
+  const productdata = {
+    chambers: chambers?.filter((c) => c.tag === "frozen"),
+    productList,
+  };
 
   return {
     id,
     isLoading,
     clientForm,
     productForm,
-    productList,
-    filteredChambers,
+    productdata,
     handleProductInputChange,
     toggleChamber,
     updateQuantity,

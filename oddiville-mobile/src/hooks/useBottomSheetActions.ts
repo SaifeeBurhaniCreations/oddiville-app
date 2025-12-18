@@ -499,7 +499,6 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
     "clear-filter": () => {
       const { mainSelection, subSelection } = metaBottomSheet || {};
       dispatch(clearAllFilters())
-      console.log("mainSelection, subSelection", mainSelection, subSelection);
     },
 
     "edit-order": () => {

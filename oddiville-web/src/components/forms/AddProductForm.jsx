@@ -1,9 +1,9 @@
-
 import Banners from "@/components/Banners/Banners";
+import { useEffect } from "react";
 
 const AddProductForm = ({
   productForm,
-  filteredChambers,
+  selectedChambers,
   toggleChamber,
   updateQuantity,
   addProductToList,
@@ -19,6 +19,7 @@ const AddProductForm = ({
     editMode,
   } = bannersProps;
 
+
   const {
     values: newProduct,
     errors: productErrors,
@@ -31,14 +32,16 @@ const AddProductForm = ({
   };
 
   const svg = `<svg stroke='white' fill='none' stroke-width='3' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M5 13l4 4L19 7'/></svg>`;
-  const encoded = encodeURIComponent(svg); 
+  const encoded = encodeURIComponent(svg);
 
   return (
     <div className="card">
       <div className="card-header">
-        <h6>{(editMode || id) ? "Edit Product" : "Add New Product"}</h6>
+        <h6>{editMode || id ? "Edit Product" : "Add New Product"}</h6>
       </div>
+
       <div className="card-body">
+        {/* ================= BANNERS ================= */}
         <Banners
           name="Upload Product Image"
           getBanners={getBanners}
@@ -49,14 +52,12 @@ const AddProductForm = ({
         />
 
         {productErrors.sample_image && (
-          <div
-            className="text-danger mb-3 mt-1"
-            style={{ fontSize: "0.875em" }}
-          >
+          <div className="text-danger mb-3 mt-1" style={{ fontSize: "0.875em" }}>
             {productErrors.sample_image}
           </div>
         )}
-     
+
+        {/* ================= PRODUCT NAME ================= */}
         <div className="form-floating mb-3">
           <input
             className={`form-control ${
@@ -69,14 +70,18 @@ const AddProductForm = ({
           />
           <label>Product Name</label>
           {productErrors.product_name && (
-            <div className="invalid-feedback">{productErrors.product_name}</div>
+            <div className="invalid-feedback">
+              {productErrors.product_name}
+            </div>
           )}
         </div>
 
- 
+        {/* ================= RENT ================= */}
         <div className="form-floating mb-3">
           <input
-            className={`form-control ${productErrors.rent ? "is-invalid" : ""}`}
+            className={`form-control ${
+              productErrors.rent ? "is-invalid" : ""
+            }`}
             name="rent"
             placeholder="Rent per Kg"
             value={newProduct.rent}
@@ -88,6 +93,7 @@ const AddProductForm = ({
           )}
         </div>
 
+        {/* ================= EST DISPATCH DATE ================= */}
         <div className="mb-3">
           <label className="form-label">Estimated Dispatch Date</label>
           <input
@@ -106,19 +112,22 @@ const AddProductForm = ({
           )}
         </div>
 
-        <label className="form-label mt-3">Select Chambers (Frozen Tag)</label>
-        {!filteredChambers || filteredChambers.length === 0 ? (
+        {/* ================= CHAMBERS ================= */}
+        <label className="form-label mt-3">
+          Select Chambers (Frozen Tag)
+        </label>
+
+        {!selectedChambers || selectedChambers.length === 0 ? (
           <div className="alert alert-warning">
             No Frozen Chambers available.
           </div>
         ) : (
-          filteredChambers.map((chamber) => {
-            const isSelected = newProduct.selectedChambers.some(
-              (c) => c.id === chamber.id
-            );
+          selectedChambers.map((chamber) => {
             const selectedChamber = newProduct.selectedChambers.find(
               (c) => c.id === chamber.id
             );
+
+            const isSelected = Boolean(selectedChamber);
 
             return (
               <div
@@ -129,27 +138,32 @@ const AddProductForm = ({
                   type="checkbox"
                   checked={isSelected}
                   onChange={() => toggleChamber(chamber.id)}
-                  className="form-check-input me-3
-                  "
+                  className="form-check-input me-3"
                   style={{
                     border: "1px solid #a1a1aa",
                     backgroundColor: isSelected && "#3D874C",
-                    backgroundImage: isSelected && `url("data:image/svg+xml;utf8,${encoded}")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'center',
-                    cursor: 'pointer',
+                    backgroundImage:
+                      isSelected &&
+                      `url("data:image/svg+xml;utf8,${encoded}")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "center",
+                    cursor: "pointer",
                   }}
                 />
-                <span className="me-3 font-weight-bold">
+
+                <span className="me-3 fw-bold">
                   {chamber.chamber_name}
                 </span>
+
                 {isSelected && (
                   <input
                     type="number"
                     className="form-control form-control-sm w-50"
                     placeholder="Quantity (Kg)"
-                    value={selectedChamber?.quantity || ""}
-                    onChange={(e) => updateQuantity(chamber.id, e.target.value)}
+                    value={selectedChamber?.quantity ?? ""}
+                    onChange={(e) =>
+                      updateQuantity(chamber.id, e.target.value)
+                    }
                   />
                 )}
               </div>
@@ -157,6 +171,7 @@ const AddProductForm = ({
           })
         )}
 
+        {/* ================= SUBMIT ================= */}
         <button
           type="button"
           className={`btn mt-3 ${editMode ? "btn-warning" : "btn-success"}`}

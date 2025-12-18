@@ -27,7 +27,7 @@ export const getBottomSheetActions = (type: BottomSheetSchemaKey): BottomSheetAc
         case 'order-ready':
             return ['ship-order'];
         case 'filter':
-            return ['cancel','clear-filter'];
+            return ['cancel', 'clear-filter'];
         case 'select-policies':
             return ['cancel-policies', 'select-policies'];
         default:

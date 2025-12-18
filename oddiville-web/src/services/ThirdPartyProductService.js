@@ -47,4 +47,10 @@ const fetchThirdPartyProductsById = async(id) => {
 }
 
 
-export { create, remove, modify, fetchAllOrders, fetchById, fetchThirdPartyProducts, fetchThirdPartyProductsById, removeThirdPartyProduct }
+const fetchOtherItems = async() => {
+    const response = await api.get(`/other-product/products`)
+    return response;
+}
+
+
+export { create, remove, modify, fetchAllOrders, fetchById, fetchThirdPartyProducts, fetchThirdPartyProductsById, removeThirdPartyProduct, fetchOtherItems }

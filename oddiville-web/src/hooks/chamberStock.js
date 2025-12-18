@@ -76,8 +76,6 @@ export function useUpdateChamberstock() {
           (item) => item.id === updatedChamberstock.id
         );
 
-        console.log("index", index);
-        
         if (index !== -1) {
           const newData = [...oldData];
           newData[index] = updatedChamberstock;

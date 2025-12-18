@@ -1,11 +1,9 @@
-// src/components/tables/ProductListTable.jsx
-
-import React from "react";
+import { formatDate } from "date-fns";
 
 const ProductListTable = ({ productList, handleEditProduct, handleDeleteProduct }) => {
     if (productList.length === 0) return null;
 
-    return (
+    return (    
         <div className="card mt-4">
             <div className="card-header"><h6>Products List</h6></div>
             <div className="card-body table-responsive">
@@ -25,7 +23,7 @@ const ProductListTable = ({ productList, handleEditProduct, handleDeleteProduct 
                                 <td>
                                     <span className="font-weight-bold">{prod.product_name}</span>
                                 </td>
-                                <td>{prod.est_dispatch_date}</td>
+                                <td>{formatDate(prod.est_dispatch_date, "dd-MM-yy")}</td>
                                 <td>₹{prod.rent}</td>
                                 <td>
                                     {prod.selectedChambers.map((c, index) => (
