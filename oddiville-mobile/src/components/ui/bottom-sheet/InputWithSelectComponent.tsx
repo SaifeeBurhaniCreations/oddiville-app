@@ -10,6 +10,7 @@ import useValidateAndOpenBottomSheet from '@/src/hooks/useValidateAndOpenBottomS
 import { getLimitedMaterialNames } from '@/src/utils/arrayUtils';
 import { useGlobalFormValidator } from '@/src/sbc/form/globalFormInstance';
 import { setSource } from '@/src/redux/slices/unit-select.slice';
+import { setSource as setRmSource } from '@/src/redux/slices/bottomsheet/raw-material.slice';
 import { StoreMaterialForm } from './AddonInputComponent';
 import { selectChamber } from '@/src/redux/slices/chamber.slice';
 import { setChamberQty } from '@/src/redux/slices/bottomsheet/chamber-ratings.slice';
@@ -17,6 +18,7 @@ import { computeCurrentValue } from '@/src/utils/common';
 import { useChamber } from '@/src/hooks/useChambers';
 import { useChamberStock } from '@/src/hooks/useChamberStock';
 import DetailsToast from '../DetailsToast';
+import { RMSoruceMap } from '@/src/lookups/getRMBackSource';
 
 export type AddProductPackageForm = {
     raw_materials: string[];
@@ -90,7 +92,7 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
     const packageSizeValidator = useGlobalFormValidator<AddPackageSizeForm>('add-package-size');
     const { values: storeValues, errors: storeErrors, setField: storeSetField } = useGlobalFormValidator<StoreMaterialForm>('store-product');
 
-    const { placeholder, label, value, placeholder_second, label_second, key, alignment, formField_1, source } = data;
+    const { placeholder, label, value, placeholder_second, label_second, key, alignment, formField_1, source, source2 } = data;
     const [qty, setQty] = useState(value);
 
     const showToast = (type: "success" | "error" | "info", message: string) => {
@@ -100,7 +102,18 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
     };
 
     const handlePress = () => {
+        console.log("source2", source2);
+        
         dispatch(setSource(source));
+        const mapKey = `${key}:${source}`;
+        const mapped = RMSoruceMap[mapKey];
+        if(source2) {
+            dispatch(setRmSource(source2));
+        } else if (mapped) {
+            dispatch(setRmSource(mapped));
+          }
+
+
         if (['package-weight', 'add-raw-material'].includes(key)) {
             validateAndSetData('Abc123', key);
         } else if (source === 'supervisor-production') {
@@ -145,23 +158,35 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
                     style={styles.textInput}
                     keyboardType={(meta?.type === 'add-product-package' || meta?.type === 'add-package') ? 'default' : 'number-pad'}
                     placeholder={placeholder}
-                    onChangeText={(val) => {
-                        if (meta?.type === 'supervisor-production') {
-                            const inputQty = Number(val) || 0;
+                   onChangeText={(val) => {
+                        if (meta?.type === "supervisor-production") {
                             const name = typeof formField_1 === "string" ? formField_1 : "";
+                            const inputQty = Math.max(0, Number(val) || 0);
+
+                            if (remainingKg === 0) {
+                            storeSetField(name as keyof StoreMaterialForm, "0");
+                            dispatch(setChamberQty({ name, quantity: "0" }));
+                            showToast("error", "This chamber is already full");
+                            return;
+                            }
 
                             if (remainingKg !== undefined && inputQty > remainingKg) {
-                                storeSetField(name as keyof StoreMaterialForm, String(remainingKg));
-                                dispatch(setChamberQty({ name, quantity: String(remainingKg) }));
-                                showToast("error", `Capacity not available! Value adjusted to remaining: ${remainingKg} Kg`);
-                                return;
+                            storeSetField(name as keyof StoreMaterialForm, String(remainingKg));
+                            dispatch(setChamberQty({ name, quantity: String(remainingKg) }));
+                            showToast(
+                                "error",
+                                `Capacity not available! Value adjusted to remaining: ${remainingKg} Kg`
+                            );
+                            return;
                             }
+
                             storeSetField(name as keyof StoreMaterialForm, String(inputQty));
                             dispatch(setChamberQty({ name, quantity: String(inputQty) }));
                         } else {
                             setField(formField_1 as any, val);
                         }
-                    }}
+                        }}
+
                     // onChangeText={(val) => {
                     //     if (meta?.type === 'supervisor-production') {
                     //         const key = formField_1 as keyof StoreMaterialForm;
@@ -200,16 +225,13 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
         )
     );
 
-    // console.log("chamberCapacity", chamberCapacity);
-    // console.log("chamberQuantity", chamberQuantity);
-
     return (
         <>
         <View style={styles.inputContainer}>
             <View style={styles.inputSelectWrapper}>
                 <View style={{ flex: alignment === 'half' ? 1 : 5, flexDirection: 'column', gap: 8 }}>
                     <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between" }}>
-                        <H4>{label}</H4>
+                        <H4>{label.slice(0, 13)}...</H4>
                         <B4 color={getColor('green', 700)}>
                             {remainingKg} Kg
                         </B4>
