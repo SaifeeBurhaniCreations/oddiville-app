@@ -109,56 +109,75 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
+
   try {
     const rawMaterial = await RawMaterialClient.findOne({ where: { id } });
 
     if (!rawMaterial) {
       return res.status(404).json({ error: "Raw Material not found" });
     }
+
+    // Delete image from S3 if exists
+    if (rawMaterial.sample_image?.key) {
+      await deleteFromS3(rawMaterial.sample_image.key);
+    }
+
     await RawMaterialClient.destroy({ where: { id } });
 
-    return res
-      .status(200)
-      .json({ message: "Deleted successfully", data: rawMaterial });
+    return res.status(200).json({
+      message: "Deleted successfully",
+      data: rawMaterial,
+    });
   } catch (error) {
-    console.error(
-      "Error during deleting Raw Material:",
-      error?.message || error
-    );
+    console.error("Error deleting Raw Material:", error.message || error);
     return res
       .status(500)
       .json({ error: "Internal server error, please try again later." });
   }
 });
 
-router.put("/:id", async (req, res) => {
+router.patch("/:id", upload.single("sample_image"), async (req, res) => {
   const { id } = req.params;
-  const updatedFields = {
-    ...req.body,
-    updatedAt: new Date(),
-  };
 
   try {
-    const [updatedCount, updatedRows] = await RawMaterialClient.update(
-      updatedFields,
-      {
-        where: { id },
-        returning: true,
-      }
-    );
+    const rawMaterial = await RawMaterialClient.findOne({ where: { id } });
 
-    if (updatedCount === 0) {
+    if (!rawMaterial) {
       return res.status(404).json({ error: "Raw Material not found" });
     }
 
-    return res
-      .status(200)
-      .json({ message: "Updated successfully", data: updatedRows[0] });
+    const updatedFields = {
+      updatedAt: new Date(),
+    };
+
+    // Allow updating name
+    if (req.body.name) {
+      updatedFields.name = req.body.name.trim();
+    }
+
+    // ✅ Update image ONLY if a new file is uploaded
+    if (req.file) {
+      const uploaded = await uploadToS3(req.file);
+
+      // (Recommended) delete old image from S3
+      if (rawMaterial.sample_image?.key) {
+        await deleteFromS3(rawMaterial.sample_image.key);
+      }
+
+      updatedFields.sample_image = {
+        url: uploaded.url,
+        key: uploaded.key,
+      };
+    }
+
+    const updated = await rawMaterial.update(updatedFields);
+
+    return res.status(200).json({
+      message: "Updated successfully",
+      data: updated,
+    });
   } catch (error) {
-    console.error(
-      "Error during updating Raw Material:",
-      error.message || error
-    );
+    console.error("Error updating Raw Material:", error.message || error);
     return res
       .status(500)
       .json({ error: "Internal server error, please try again later." });
