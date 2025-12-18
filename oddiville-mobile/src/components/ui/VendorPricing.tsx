@@ -147,20 +147,31 @@ const VendorPricing = ({
                         <View style={styles.justifyRow}>
                             <PriceInput
                                 value={data.price === 0 ? '' : String(data.price ?? '')}
-                                onChangeText={(price: string) => {
+                                keyboardType="decimal-pad"
+                                onChangeText={(priceText: string) => {
                                     const updated = [...values];
-                                    const parsed = parseFloat(price);
-                                    if (price === '') {
-                                        updated[index].price = 0;
-                                    } else if (!isNaN(parsed)) {
-                                        updated[index].price = parsed;
-                                    }
+                                    
+                                    // allow empty
+                                    if (priceText === '') {
+                                    updated[index].price = 0; // number
                                     onChangeVendors(updated);
+                                    return;
+                                    }
+
+                                    const cleaned = priceText.replace(/[^0-9.]/g, '');
+
+                                    const parsed = cleaned;
+                                    console.log(!Number.isNaN(cleaned));
+                                    if (!Number.isNaN(parsed)) {
+                                    updated[index].price = parsed;  
+                                    onChangeVendors(updated);
+                                    }
                                 }}
                                 placeholder="Price"
                                 addonText="Rs"
                                 style={styles.flexGrow}
                             />
+
 
                             <PriceInput
                                 value={qtyNum(data.quantity) === 0 ? '' : String(qtyNum(data.quantity))}

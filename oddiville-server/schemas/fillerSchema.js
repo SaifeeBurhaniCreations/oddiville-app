@@ -47,7 +47,7 @@ function formatPackagesSentence(packages = []) {
 
 function mapProduct(product, DispatchOrder) {
   const raw_weight =
-    product?.chambers?.reduce(
+    Array.isArray(product?.chambers) ? product.chambers : []?.reduce(
       (sum, chamber) => sum + Number(chamber.quantity),
       0
     ) || 0;
@@ -55,8 +55,7 @@ function mapProduct(product, DispatchOrder) {
   const product_weight = formatWeight(raw_weight, { unit: "Kg" });
   const packagesSentence = formatPackagesSentence(DispatchOrder.packages || []);
 
-  // normalize units
-  product?.chambers?.forEach((c) => {
+  Array.isArray(product?.chambers) ? product.chambers : []?.forEach((c) => {
     c.unit = "kg";
   });
 
@@ -203,7 +202,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
         DispatchOrder,
         product_details,
         totalQuantity,
-        {key: "created", value: authenticatedUser.name},
+        {key: "created", value: authenticatedUser.name || "N/A"},
       ),
       Products:
         DispatchOrder?.products?.map((product) =>
@@ -228,7 +227,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
         DispatchOrder,
         product_details,
         totalQuantity,
-        {key: "shipped", value: authenticatedUser.name},
+        {key: "shipped", value: authenticatedUser.name || "N/A"},
       ),
 
       fileName: DispatchOrder?.sample_images?.[0] || "no-challan.pdf",
@@ -414,7 +413,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
         },
         {
           label: "Ordered By",
-          value: `${authenticatedUser.name} `,
+          value: `${authenticatedUser.name || "N/A"} `,
         },
       ],
       "Vendor detail": [
@@ -486,9 +485,9 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
   productCard: safeRawMaterials.map((rawMaterial) => ({
     name: rawMaterial?.name || "Unnamed",
     image:
-      rawMaterial?.sample_image?.url ||
-      rawMaterial?.sample_image ||
-      "/images/fallback.png",
+      typeof rawMaterial?.sample_image === "string"
+        ? rawMaterial.sample_image
+        : rawMaterial?.sample_image?.url ?? "/images/fallback.png",
     description: rawMaterial?.description || "No description available",
   })),
 },
@@ -498,7 +497,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
     },
     "choose-product": {
       title: "Select products",
-      productCard: RawMaterials.map((rawMaterial) => ({
+      productCard: (Array.isArray(RawMaterials) ? RawMaterials : []).map((rawMaterial) => ({
         name: rawMaterial.name ?? "Unnamed",
         description: "22 Kg",
       })),

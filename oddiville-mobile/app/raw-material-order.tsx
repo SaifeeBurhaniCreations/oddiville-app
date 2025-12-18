@@ -97,31 +97,7 @@ const RawMaterialOrderScreen = () => {
             est_arrival_date: [],
             order_date: [],
             vendorQuantities: [
-                {
-                    type: 'custom',
-                    validate: (vendors: VendorInputState[], allValues: Record<string, any>) => {
-                        const isEachVendorValid = vendors.every(
-                            (v: VendorInputState) =>
-                                typeof v.quantity === 'number' &&
-                                v.quantity > 0 &&
-                                typeof v.price === 'number' &&
-                                v.price > 0
-                        );
-
-                        const totalAssigned = vendors.reduce(
-                            (sum: number, v: VendorInputState) => sum + (Number(v.quantity) || 0),
-                            0
-                        );
-
-                        const expectedTotal = Number(allValues.quantity);
-
-                        const isTotalAssignedCorrect = totalAssigned === expectedTotal;
-
-                        return isEachVendorValid && isTotalAssignedCorrect;
-                    },
-                    message:
-                        'Each vendor must have valid price & quantity, and total quantity must match order quantity',
-                },
+                
             ],
         },
         {

@@ -87,7 +87,6 @@ const PackagingDetailsScreen = () => {
           type: 'title-with-details-cross',
           data: {
             title: 'Add package count',
-            // show human-friendly packet count instead of kg
             description: `${selectedPackage.weight} • ${packetCount} packets`,
             details: { icon: "pencil" }
           },

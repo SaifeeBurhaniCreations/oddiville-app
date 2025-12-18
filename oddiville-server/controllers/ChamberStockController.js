@@ -43,6 +43,37 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/all", async (req, res) => {
+  try {
+    const chamberStock = await chamberStockClient.findAll();
+    res.status(200).json(chamberStock);
+  } catch (error) {
+    console.error(
+      "Error during fetching chamberStock:",
+      error?.message || error
+    );
+    return res
+      .status(500)
+      .json({ error: "Internal server error, please try again later." });
+  }
+});
+router.get("/all/materials", async (req, res) => {
+  try {
+    const chamberStock = await chamberStockClient.findAll({
+      where: { category: "material" },
+    });
+    res.status(200).json(chamberStock);
+  } catch (error) {
+    console.error(
+      "Error during fetching chamberStock:",
+      error?.message || error
+    );
+    return res
+      .status(500)
+      .json({ error: "Internal server error, please try again later." });
+  }
+});
+
 router.get("/stock/:product_name", async (req, res) => {
   const { product_name } = req.params;
 

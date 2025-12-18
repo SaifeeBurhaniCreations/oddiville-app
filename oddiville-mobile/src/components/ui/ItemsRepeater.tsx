@@ -16,7 +16,7 @@ const ItemsRepeater = ({
 }: {
   description: string;
   title: string;
-  noValue: boolean;
+  noValue?: boolean;
   children?: ReactNode;
   showToast?: (type: "success" | "error" | "info", message: string) => void;
 }) => {

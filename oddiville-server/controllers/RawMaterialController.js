@@ -241,7 +241,7 @@ const io = req.app.get("io");
           .json({ error: "est_arrival_date must be a valid date." });
       }
     }
-
+    
     const newOrders = await Promise.all(
       vendorQuantities?.map(async (vend) => {
         const createdOrder = await RawMaterialOrderClient.create({

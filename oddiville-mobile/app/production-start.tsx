@@ -133,6 +133,18 @@ const ProductionStartScreen = () => {
                 }
             ],
             sample_image: [],
+            // sample_image: [
+            //     {
+            //         type: 'custom',
+            //         validate: (value: any) => {
+            //             if (!value) return false;
+            //             if (typeof value === 'string' && !value.trim()) return false;
+            //             if (typeof value === 'object' && (!value.uri || !value.uri.trim())) return false;
+            //             return true;
+            //         },
+            //         message: "Sample image is required and must be a valid image file."
+            //     }
+            // ],
         },
         {
             validateOnChange: true,

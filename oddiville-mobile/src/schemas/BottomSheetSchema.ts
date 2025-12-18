@@ -470,8 +470,7 @@ const FileUploadSection = z.object({
     label: z.string(),
     title: z.string(),
     key: z.string(),
-    uploadedTitle: z.string().optional(),
-  }),
+    uploadedTitle: z.string().optional(), }),
 });
 
 // ------------------- Section Union ------------------- //

@@ -6,6 +6,12 @@ export type FetchChamberStockParams = {
   limit?: number;
   offset?: number;
 };
+
+export const fetchChamberStockRawMaterials = async () => {
+  return await api.get(`/chamber-stock/all/materials`);
+};
+   
+
 export const fetchChamberStock = async (params: FetchChamberStockParams = {}) => {
   const queryParams = new URLSearchParams();
 

@@ -253,6 +253,7 @@ const {
   isFetching: isSummaryFetching
 } = useChambersSummary(choosedChambers);
 
+console.log("product_items", product_items);
 
   const [isLoading, setIsLoading] = useState(false);
   const [openTab, setOpenTab] = useState<number>(0);
@@ -687,6 +688,7 @@ useEffect(() => {
   const onSubmit = async () => {
     try {
       const result = validateForm();
+console.log("result", result);
 
       if (result.success) {
         const formData = result.data as StorageForm;
@@ -1172,47 +1174,39 @@ const selectedLabel = selectedProduct || "Select products";
                   placeholder={"Search by product name"}
                 />
               </View>
-              <View style={styles.packagesRow}>
-                <FlatList
-                  data={formattedData}
-                  keyExtractor={(item, index) =>
-                    item.id?.toString() ?? index.toString()
-                  }
-                  refreshControl={
-                    <RefreshControl
-                      refreshing={packageFetching}
-                      onRefresh={packageRefetch}
-                    />
-                  }
-                  renderItem={({ item }) => (
-                    <PackageCard
-                      name={item.name}
-                      id={item.id}
-                      href={item.href}
-                      bundle={item.bundle}
-                      img={item.img}
-                    />
-                  )}
-                  numColumns={2}
-                  columnWrapperStyle={{
-                    justifyContent: "space-between",
-                    gap: 8,
-                  }}
-                  contentContainerStyle={{ paddingBottom: 100 }}
-                  ListEmptyComponent={
-                    <View
-                      style={{
-                        alignItems: "center",
-                        flex: 1,
-                        justifyContent: "center",
-                        marginBottom: 148,
-                      }}
-                    >
-                      <EmptyState stateData={emptyStateData} />
-                    </View>
-                  }
-                />
-              </View>
+              <FlatList
+                style={{ flex: 1, paddingHorizontal: 16 }}
+                data={formattedData}
+                keyExtractor={(item, index) =>
+                  item.id?.toString() ?? index.toString()
+                }
+                renderItem={({ item }) => (
+                  <PackageCard
+                    name={item.name}
+                    id={item.id}
+                    href={item.href}
+                    bundle={item.bundle}
+                    img={item.img}
+                  />
+                )}
+                numColumns={2}
+                columnWrapperStyle={{
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+                contentContainerStyle={{ paddingBottom: 120 }}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={packageFetching}
+                    onRefresh={packageRefetch}
+                  />
+                }
+                ListEmptyComponent={
+                  <View style={{ alignItems: "center", marginTop: 80 }}>
+                    <EmptyState stateData={emptyStateData} />
+                  </View>
+                }
+              />
             </View>
           </Tabs>
         </View>
@@ -1262,7 +1256,7 @@ const styles = StyleSheet.create({
   },
   packagesRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    // flexWrap: "wrap",
     justifyContent: "space-between",
     gap: 8,
     paddingHorizontal: 16,
