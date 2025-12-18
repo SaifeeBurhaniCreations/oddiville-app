@@ -8,19 +8,14 @@ import {
 } from "react-native";
 import { B3, B4, C1, H4, H5 } from "../typography/Typography";
 import Button from "./Buttons/Button";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
 import TrashIcon from "../icons/common/TrashIcon";
 import FileIcon from "../icons/common/FileIcon";
 
-const SimpleFileUpload = ({
-  fileState,
-  error,
-  disabled,
-  onlyPhoto,
-  both,
-  children = "Upload receipt",
-}: {
+type UploadStrategy = "upload" | "browse" | "both";
+
+type Props = {
   fileState: [
     string | null,
     React.Dispatch<React.SetStateAction<string | null>>
@@ -30,14 +25,34 @@ const SimpleFileUpload = ({
   onlyPhoto?: boolean;
   both?: boolean;
   children?: string | React.ReactNode;
-}) => {
+  uploadedChildren?: string | React.ReactNode;
+  title?: string;
+  description?: string;
+};
+
+const SimpleFileUpload = ({
+  fileState,
+  error,
+  disabled,
+  onlyPhoto = false,
+  both,
+  children = "Upload receipt",
+  uploadedChildren = "Uploaded receipt",
+  title = "Upload file",
+  description = "Supported: .png & .jpg & .jpeg",
+}: Props) => {
+  const [fileUri, setFileUri] = fileState;
   const [isPicking, setIsPicking] = useState(false);
   const [touched, setTouched] = useState(false);
-  const [imageUri, setImageUri] = fileState;
 
-  const [selectedFile, setSelectedFile] = fileState;
   const errorOpacity = useRef(new Animated.Value(0)).current;
-  const STRATEGY = both ? "both" : "upload";
+
+  const strategy: UploadStrategy = useMemo(() => {
+    if (both) return "both";
+    if (onlyPhoto) return "upload";
+    return "browse";
+  }, [both, onlyPhoto]);
+
   useEffect(() => {
     Animated.timing(errorOpacity, {
       toValue: error && touched ? 1 : 0,
@@ -46,19 +61,30 @@ const SimpleFileUpload = ({
     }).start();
   }, [error, touched]);
 
+  // ---------- Permission helpers ----------
+  const ensureMediaPermission = async () => {
+    const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (status === "granted") return true;
+    const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    return res.status === "granted";
+  };
+
+  const ensureCameraPermission = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    return status === "granted";
+  };
+
+  // ---------- Handlers ----------
   const handlePickFile = async () => {
-    if (disabled) return;
+    if (disabled || isPicking) return;
     setTouched(true);
+
     try {
       setIsPicking(true);
-      const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        const { status: newStatus } =
-          await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (newStatus !== "granted") {
-          alert("Permission is required to upload a file.");
-          return;
-        }
+      const hasPermission = await ensureMediaPermission();
+      if (!hasPermission) {
+        alert("Permission is required to upload a file.");
+        return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -68,24 +94,21 @@ const SimpleFileUpload = ({
       });
 
       if (!result.canceled) {
-        setSelectedFile(result.assets[0].uri);
+        setFileUri(result.assets[0].uri);
       }
-    } catch (error) {
-      console.error("Error picking file:", error);
+    } catch (err) {
+      console.error("Error picking file:", err);
     } finally {
       setIsPicking(false);
     }
   };
 
-  const handleRemove = () => {
-    setTouched(true);
-    setSelectedFile(null);
-    setImageUri(null);
-  };
-
   const handleTakePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
+    if (disabled || isPicking) return;
+    setTouched(true);
+
+    const hasPermission = await ensureCameraPermission();
+    if (!hasPermission) {
       alert("Camera permission is required to take a photo.");
       return;
     }
@@ -98,15 +121,76 @@ const SimpleFileUpload = ({
     });
 
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      setFileUri(result.assets[0].uri);
     }
   };
 
-  if (!imageUri) {
-    // if (!selectedFile) {
+  const handleRemove = () => {
+    if (disabled) return;
+    setTouched(true);
+    setFileUri(null);
+  };
+
+  // ---------- Helpers ----------
+  const getFileName = (uri: string) => {
+    const name = uri.split("/").pop() || "Unnamed file";
+    return name.length > 24 ? `${name.slice(0, 21)}...` : name;
+  };
+
+  const renderActions = () => {
+    switch (strategy) {
+      case "both":
+        return (
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={disabled || isPicking}
+              onPress={handleTakePhoto}
+            >
+              Upload
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={disabled || isPicking}
+              onPress={handlePickFile}
+            >
+              Browse
+            </Button>
+          </View>
+        );
+      case "upload":
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={disabled || isPicking}
+            onPress={handleTakePhoto}
+          >
+            Upload
+          </Button>
+        );
+      case "browse":
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={disabled || isPicking}
+            onPress={handlePickFile}
+          >
+            Browse
+          </Button>
+        );
+    }
+  };
+
+  // ---------- Render ----------
+  if (!fileUri) {
     return (
       <View style={styles.cardWithLabel}>
         <H4>{children}</H4>
+
         <Pressable
           style={[
             styles.card,
@@ -115,36 +199,16 @@ const SimpleFileUpload = ({
                 error && touched ? getColor("red") : getColor("green"),
             },
           ]}
-          // onPress={handleTakePhoto}
-          // onPress={handlePickFile}
-          disabled={isPicking || disabled}
+          disabled={disabled}
         >
-          <View style={styles.cardItemLeft}>
-            <View>
-              <B3>Upload file</B3>
-              <C1 color={getColor("green", 400)}>Supported: .pdf & .jpeg</C1>
-            </View>
+          <View>
+            <B3>{title}</B3>
+            <C1 color={getColor("green", 400)}>{description}</C1>
           </View>
-          {STRATEGY === "both" ? (
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <Button variant="outline" size="sm" onPress={handleTakePhoto}>
-                Upload
-              </Button>
-              <Button variant="outline" size="sm" onPress={handlePickFile}>
-                Browse
-              </Button>
-            </View>
-          ) : (
-            <Button variant="outline" size="sm" onPress={handleTakePhoto}>
-              Upload
-            </Button>
-          )}
-          {STRATEGY === "upload" && onlyPhoto && (
-            <Button variant="outline" size="sm" onPress={handleTakePhoto}>
-              Upload
-            </Button>
-          )}
+
+          {renderActions()}
         </Pressable>
+
         {error && touched && (
           <Animated.View style={{ opacity: errorOpacity }}>
             <B4 color={getColor("red", 700)}>
@@ -156,17 +220,10 @@ const SimpleFileUpload = ({
     );
   }
 
-  const fileName = imageUri.split("/").pop() || "Unnamed file";
-  // const fileName = selectedFile.split('/').pop() || 'Unnamed file';
-  const maxLength = 24;
-  const truncatedName =
-    fileName?.length > maxLength
-      ? `${fileName.slice(0, maxLength - 3)}...`
-      : fileName;
-
   return (
     <View style={styles.cardWithLabel}>
-      <H4>Uploaded receipt</H4>
+      <H4>{uploadedChildren}</H4>
+
       <View
         style={[
           styles.uploadedCard,
@@ -175,12 +232,14 @@ const SimpleFileUpload = ({
       >
         <View style={styles.cardItemLeft}>
           <FileIcon />
-          <H5>{truncatedName}</H5>
+          <H5>{getFileName(fileUri)}</H5>
         </View>
-        <TouchableOpacity onPress={() => !disabled && handleRemove()}>
+
+        <TouchableOpacity disabled={disabled} onPress={handleRemove}>
           <TrashIcon size={24} color={getColor("green")} />
         </TouchableOpacity>
       </View>
+
       {error && touched && (
         <Animated.View style={{ opacity: errorOpacity }}>
           <B4 color={getColor("red", 700)}>
@@ -194,6 +253,7 @@ const SimpleFileUpload = ({
 
 export default SimpleFileUpload;
 
+// ---------- Styles ----------
 const styles = StyleSheet.create({
   card: {
     backgroundColor: getColor("light"),
@@ -202,8 +262,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    alignItems: "center",
     borderStyle: "dashed",
+    alignItems: "center",
   },
   cardItemLeft: {
     flexDirection: "row",

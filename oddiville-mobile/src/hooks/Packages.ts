@@ -4,27 +4,34 @@ import { fetchPackageById, fetchPackageByName, fetchPackages, createPackage, upd
 import { socket } from '../lib/notificationSocket';
 import { rejectEmptyOrNull } from '../utils/authUtils';
 
+export type StoredImage = {
+  url: string;
+  key: string;
+};
+
 export type Package = {
-    id: string;
-    product_name: string;
-    types: Array<{
-        size: string;
-        quantity: string;
-        unit: 'kg' | 'gm' | null;
-    }> | null;
-    raw_materials: string[];
-}
+  id: string;
+  product_name: string;
+  types: Array<{
+    size: string;
+    quantity: string;
+    unit: 'kg' | 'gm' | null;
+  }> | null;
+  raw_materials: string[];
+  image?: StoredImage | null;
+  package_image?: StoredImage | null;
+};
 
 export type CreatePackageDTO = {
-    product_name: string;
-    types: Array<{
-        quantity: string;
-        size: string;
-        unit: "kg" | "gm" | null;
-    }>;
-    raw_materials: string[];
-    chamber_name: string;
-}
+  product_name: string;
+  types: Array<{
+    quantity: string;
+    size: string;
+    unit: "kg" | "gm" | null;
+  }>;
+  raw_materials: string[];
+  chamber_name: string;
+};
 
 export type UpdatePackageDTO = {
     product_name: string;
@@ -181,22 +188,29 @@ export function usePackageByName(name: string | null) {
 }
 
 export function useCreatePackage() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: async (data: CreatePackageDTO) => {
-            const response = await createPackage(data);
-            return response.data as Package;
-        },
-        onSuccess: (newPackage) => {
-            if (!newPackage?.id) return;
+  const queryClient = useQueryClient();
 
-            socket.emit('package-id:send', newPackage);
+  return useMutation({
+    mutationFn: async (formData: FormData) => {
+      const response = await createPackage(formData);
+      return response.data as Package;
+    },
+    onSuccess: (newPackage) => {
+      if (!newPackage?.id) return;
 
-            queryClient.setQueryData(['packages'], (oldPackages: Package[] = []) => [...oldPackages, newPackage]);
+      socket.emit("package-id:send", newPackage);
 
-            queryClient.setQueryData(['package', newPackage.id], newPackage);
-        },
-    });
+      queryClient.setQueryData(
+        ["packages"],
+        (oldPackages: Package[] = []) => [...oldPackages, newPackage]
+      );
+
+      queryClient.setQueryData(
+        ["package", newPackage.id],
+        newPackage
+      );
+    },
+  });
 }
 
 export function useUpdatePackage() {

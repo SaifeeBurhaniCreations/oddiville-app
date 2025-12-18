@@ -170,10 +170,22 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
                 key: "product-package",
               },
             },
-             {
+          {
           type: "file-upload",
           data: {
-            label: "Upload product image",
+            label: "Upload package image",
+            uploadedTitle: "Uploaded package image",
+            title: "Upload image",
+            key: "package-image",
+          },
+        },
+        {
+          type: "file-upload",
+          data: {
+            label: "Upload image",
+            uploadedTitle: "Uploaded package image",
+            title: "Upload image",
+            key: "image",
           },
         },
           ],

@@ -503,6 +503,24 @@ useEffect(() => {
             key: "product-package",
           },
         },
+        {
+          type: "file-upload",
+          data: {
+            label: "Upload package image",
+            uploadedTitle: "Uploaded package image",
+            title: "Upload image",
+            key: "package-image",
+          },
+        },
+        {
+          type: "file-upload",
+          data: {
+            label: "Upload image",
+            uploadedTitle: "Uploaded image",
+            title: "Upload image",
+            key: "image",
+          },
+        },
       ],
       buttons: [
         {
@@ -687,7 +705,7 @@ useEffect(() => {
 
         const packedChambersWithId = (choosedChamberSummary || [])
           .map((ch, idx) => ({
-            id: ch.chamber_id,
+            id: String(ch.chamber_id),
             quantity: Number(formData.packedChambers?.[idx]?.quantity || 0),
           }))
           .filter((item) => item.quantity > 0);

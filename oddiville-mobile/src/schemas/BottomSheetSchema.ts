@@ -468,6 +468,9 @@ const FileUploadSection = z.object({
   type: z.literal('file-upload'),
   data: z.object({
     label: z.string(),
+    title: z.string(),
+    key: z.string(),
+    uploadedTitle: z.string().optional(),
   }),
 });
 

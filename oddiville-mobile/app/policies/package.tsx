@@ -80,6 +80,7 @@ import FormField from "@/src/sbc/form/FormField";
 import ChamberIcon from "@/src/components/icons/common/ChamberIcon";
 import { useCreatePackedItem } from "@/src/hooks/packedItem";
 import { resetPackageSizes } from "@/src/redux/slices/bottomsheet/package-size.slice";
+import { RefreshControl } from "react-native-gesture-handler";
 
 interface Chamber {
   id: string | number;
@@ -95,7 +96,7 @@ interface Product {
 }
 
 interface PackedChamber {
-  id: string | number;
+  id: string;
   quantity: number | string;
 }
 
@@ -173,20 +174,6 @@ const validateProductChambers = (products: Product[]): boolean => {
   });
 };
 
-const calculateTotalOrderQuantity = (products: Product[]): number => {
-  if (!Array.isArray(products) || products?.length === 0) return 0;
-
-  return products.reduce((total, product) => {
-    return (
-      total +
-      product.chambers.reduce((productTotal, chamber) => {
-        const quantity = Number(chamber.quantity) || 0;
-        return productTotal + quantity;
-      }, 0)
-    );
-  }, 0);
-};
-
 const calculateTotalPackedQuantity = (
   packedChambers?: PackedChamber[]
 ): number => {
@@ -204,12 +191,19 @@ const PackageScreen = () => {
     data: packageData,
     isLoading: packageLoading,
     fromCache,
+    refetch: packageRefetch,
+    isFetching: packageFetching,
   } = usePackages(searchText);
+
   const storageRMRating = useSelector(
     (state: RootState) => state.StorageRMRating.storageRmRating
   );
-  const { productPackages, isLoading: productPackagesLoading } =
-    useProductPackage();
+  const {
+    productPackages,
+    isLoading: productPackagesLoading,
+    refetch: productPackageRefetch,
+    isFetching: productPackageFetching,
+  } = useProductPackage();
   const { mutate: createPacked, isPending, error } = useCreatePackedItem();
 
   const { data: DryChambersRaw } = useDryChambers();
@@ -217,9 +211,14 @@ const PackageScreen = () => {
 
   const dispatch = useDispatch();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
-  const { productItems: product_items, isLoading: productsLoading } =
-    useProductItems();
-  const { data: frozenChambers, isLoading: frozenLoading } =
+  const {
+    productItems: product_items,
+    isLoading: productsLoading,
+    isFetching: productsFetching,
+    refetch: productItemsRefetch,
+  } = useProductItems();
+
+  const { data: frozenChambers, isLoading: frozenLoading, refetch: frozenChambersRefetch, isFetching: frozenChambersFetching } =
     useFrozenChambers();
 
   const isProductLoading = useSelector(
@@ -236,13 +235,24 @@ const PackageScreen = () => {
   const choosedChambers = useSelector(
     (state: RootState) => state.rawMaterial.selectedChambers
   );
-  const rawMaterials = useRawMaterialByProduct(selectedProduct);
+
+const {
+  rawMaterials,
+  isLoading: rmInitialLoading,
+  refetch: refetchRM,
+  isFetching: rmLoading
+} = useRawMaterialByProduct(selectedProduct);
 
   const productPackageForm = useGlobalFormValidator<AddProductPackageForm>(
     "add-product-package"
   );
 
-  const {summaries: choosedChamberSummary} = useChambersSummary(choosedChambers);
+ const {
+  summaries: choosedChamberSummary,
+  refetch: refetchSummary,
+  isFetching: isSummaryFetching
+} = useChambersSummary(choosedChambers);
+
 
   const [isLoading, setIsLoading] = useState(false);
   const [openTab, setOpenTab] = useState<number>(0);
@@ -353,22 +363,30 @@ const PackageScreen = () => {
     );
   };
 
-  useEffect(() => {
-    if (
-      (!product_items ||
-        !Array.isArray(product_items) ||
-        product_items.length === 0) &&
-      selectedProduct
-    ) {
-      showToast("error", `${selectedProduct} is not in your chambers!`);
-    }
+ useEffect(() => {
+  // nothing seleced -> do nothing
+  if (!selectedProduct) return;
 
-    setField("products", product_items);
-  }, [product_items]);
+  if (rmLoading || rmInitialLoading) return;
+
+  const noRM = !Array.isArray(rawMaterials) || rawMaterials.length === 0;
+
+  if (noRM) {
+    showToast(
+      "error",
+      `${selectedProduct} raw materials are not in your chambers!`
+    );
+  }
+}, [selectedProduct, rawMaterials, rmLoading, rmInitialLoading]);
+
+useEffect(() => {
+  setField("products", product_items);
+}, [product_items]);
 
   useEffect(() => {
     setField("product_name", selectedProduct);
   }, [selectedProduct]);
+
   useEffect(() => {
     if (JSON.stringify(storeRawMaterials) !== JSON.stringify(rawMaterials)) {
       dispatch(setRawMaterials(rawMaterials));
@@ -485,10 +503,20 @@ const PackageScreen = () => {
             key: "product-package",
           },
         },
-         {
+       {
           type: "file-upload",
           data: {
-            label: "Upload product image",
+            label: "Upload package image",
+            title: "Upload image",
+            key: "package-image",
+          },
+        },
+        {
+          type: "file-upload",
+          data: {
+            label: "Upload image",
+            title: "Upload image",
+            key: "image",
           },
         },
       ],
@@ -671,10 +699,11 @@ const PackageScreen = () => {
             rating: ratingValue,
           })),
         }));
+        
 
         const packedChambersWithId = (choosedChamberSummary || [])
           .map((ch, idx) => ({
-            id: ch.chamber_id,
+            id: String(ch.chamber_id),
             quantity: Number(formData.packedChambers?.[idx]?.quantity || 0),
           }))
           .filter((item) => item.quantity > 0);
@@ -684,9 +713,10 @@ const PackageScreen = () => {
           products: productsWithRating,
           packedChambers: packedChambersWithId,
         };
+        // console.log("finalPayload", JSON.stringify(finalPayload, null, 2));
 
         setIsLoading(true);
-        createPacked(result.data)
+        createPacked(finalPayload);
         setIsLoading(false);
 
         resetForm();
@@ -749,6 +779,8 @@ const PackageScreen = () => {
     setIsLoading(false);
   };
 
+const selectedLabel = selectedProduct || "Select products";
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -767,10 +799,22 @@ const PackageScreen = () => {
               <ScrollView
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={{ flexGrow: 1 }}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={productPackageFetching || productsFetching || frozenChambersFetching || isSummaryFetching || rmLoading}
+                    onRefresh={() => {
+                      productPackageRefetch();
+                      productItemsRefetch();
+                      frozenChambersRefetch();
+                      refetchSummary();
+                      refetchRM();
+                    }}
+                  />
+                }
               >
                 <View style={styles.storageColumn}>
                   <Select
-                    value={selectedProduct || "Select products"}
+                    value={selectedLabel}
                     style={{ paddingHorizontal: 16 }}
                     showOptions={false}
                     onPress={handleToggleProductBottomSheet}
@@ -782,7 +826,12 @@ const PackageScreen = () => {
                     style={{ paddingHorizontal: 16 }}
                     showOptions={false}
                     onPress={handleToggleChamberBottomSheet}
-                    disabled={frozenChambers?.length === 0}
+                    disabled={
+                      frozenChambers?.length === 0 ||
+                      !selectedProduct ||
+                      rmLoading ||
+                      rawMaterials.length === 0
+                    }
                   >
                     Chambers
                   </Select>
@@ -1126,6 +1175,12 @@ const PackageScreen = () => {
                   data={formattedData}
                   keyExtractor={(item, index) =>
                     item.id?.toString() ?? index.toString()
+                  }
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={packageFetching}
+                      onRefresh={packageRefetch}
+                    />
                   }
                   renderItem={({ item }) => (
                     <PackageCard

@@ -41,14 +41,13 @@ const AddProductForm = ({
       </div>
 
       <div className="card-body">
-        {/* ================= BANNERS ================= */}
         <Banners
           name="Upload Product Image"
           getBanners={getBanners}
           deleteBanners={deleteBanners}
           setDeleteBanners={setDeleteBanners}
           fetchBanners={fetchBanners}
-          onFileChange={(e) => onFileChange(e.target.files[0])}
+          onFileChange={onFileChange}
         />
 
         {productErrors.sample_image && (

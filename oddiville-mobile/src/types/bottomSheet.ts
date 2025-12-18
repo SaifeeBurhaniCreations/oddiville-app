@@ -454,6 +454,9 @@ export type SectionConfig =
       type: "file-upload";
       data: {
         label: string;
+        title: string;
+        key: string;
+        uploadedTitle?: string;
       };
     };
 
@@ -749,6 +752,9 @@ export interface PoliciesCardProps {
 export interface FileUploadComponentProps {
   data: {
     label: string;
+    title: string;
+    uploadedTitle?: string;
+    key: string;
   };
 }
 
