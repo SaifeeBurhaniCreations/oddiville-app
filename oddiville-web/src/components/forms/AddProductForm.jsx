@@ -1,5 +1,4 @@
 import Banners from "@/components/Banners/Banners";
-import { useEffect } from "react";
 
 const AddProductForm = ({
   productForm,
