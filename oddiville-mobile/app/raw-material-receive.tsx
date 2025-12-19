@@ -218,6 +218,8 @@ const SupervisorRawMaterialDetailsScreen = () => {
     if (!orderData || isInitialized.current) return;
 
     const truckDetails = orderData?.truck_details;
+    console.log(truckDetails);
+    
     const arrivalDate = formatDateForDisplay(orderData.arrival_date);
     const quantityReceived = orderData.quantity_received?.toString() || "";
 
@@ -226,6 +228,12 @@ const SupervisorRawMaterialDetailsScreen = () => {
       : "";
     const tareWeightKg = truckDetails?.tare_weight
       ? truckDetails.tare_weight.toString()
+      : "";
+    const truckNumber = truckDetails?.truck_number
+      ? truckDetails.truck_number.toString()
+      : ""; 
+    const driverName = truckDetails?.driver_name
+      ? truckDetails.driver_name.toString()
       : "";
 
     let challanUrl: string | null = null;
@@ -241,6 +249,8 @@ const SupervisorRawMaterialDetailsScreen = () => {
       ["arrival_date", arrivalDate],
       ["quantity_received", quantityReceived],
       ["truck_weight", truckWeightKg],
+      ["truck_number", truckNumber],
+      ["driver_name", driverName],
       ["tare_weight", tareWeightKg],
       ["challan", challanUrl],
     ] as const;

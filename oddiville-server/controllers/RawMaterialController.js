@@ -241,7 +241,7 @@ const io = req.app.get("io");
           .json({ error: "est_arrival_date must be a valid date." });
       }
     }
-
+    
     const newOrders = await Promise.all(
       vendorQuantities?.map(async (vend) => {
         const createdOrder = await RawMaterialOrderClient.create({
@@ -426,10 +426,17 @@ router.patch("/order/:id", upload.single("challan"), async (req, res) => {
       ...otherFields
     } = req.body;
 
+    const orderedQty = Number(rawData?.quantity_ordered);
+    const receivedQty = Number(quantity_received);
+    const totalPrice = Number(rawData?.price);
+
+    const unitPrice = totalPrice / orderedQty;
+
     const updatedFields = {
       ...otherFields,
       updatedAt: new Date(),
-      quantity_received: Number(quantity_received),
+      quantity_received: receivedQty,
+      price: Number((unitPrice * receivedQty).toFixed(2))
     };
 
     const truckDetails = {};

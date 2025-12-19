@@ -113,7 +113,7 @@ const ItemCard = ({
             size="sm"
             onPress={() => {
               onActionPress && onActionPress(),
-                goTo("production-start", { id });
+                goTo("production-complete", { id });
             }}
           >
             {actionLabel}

@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const { Contractor } = require("../models");
 const {dispatchAndSendNotification} = require("../utils/dispatchAndSendNotification");
-const { Op, fn, col } = require("sequelize");
+const { Op, fn, col, json } = require("sequelize");
 
 router.post("/create", async (req, res) => {
   try {
@@ -84,8 +84,8 @@ router.post("/create", async (req, res) => {
       work_location: Array.isArray(c.work_location)
         ? c.work_location.map(loc => ({
             name: loc.name ?? "",
-            countMale: Number(loc.countMale || 0),
-            countFemale: Number(loc.countFemale || 0),
+            countMale: Number(loc.male_count || 0),
+            countFemale: Number(loc.female_count || 0),
             count: Number(loc.count || 0),
             enterCount: Boolean(loc.enterCount),
             notNeeded: Boolean(loc.notNeeded)

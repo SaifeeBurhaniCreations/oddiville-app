@@ -92,6 +92,7 @@ const PORT = process.env.PORT || 8022;
       await Admin.sync({ force: true });
       // await sequelize.authenticate();
       // await Lanes.sync({ force: true });
+
       // await ChamberStock.sync({ force: true });
       // await TruckDetails.sync({ force: true });
       // await Notifications.sync({ force: true });

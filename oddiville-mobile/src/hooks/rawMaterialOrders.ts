@@ -12,6 +12,8 @@ export interface Challan {
 export interface TruckDetails {
     truck_weight: string;
     tare_weight: string;
+    truck_number: string;
+    driver_name: string;
     challan: Challan;
 }
 
