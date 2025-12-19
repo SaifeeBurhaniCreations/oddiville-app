@@ -165,6 +165,17 @@ const OthersProductScreen = () => {
       }
     );
 
+    // sum all numbers in a Record<string, number>
+    const sumRecordValues = (obj: Record<string, number> | undefined) =>
+      Object.values(obj || {}).reduce((sum, val) => sum + (Number(val) || 0), 0);
+
+    const totalAdd = sumRecordValues(values.add_quantity);
+    const totalSub = sumRecordValues(values.sub_quantity);
+
+    // true when both add & sub have total 0
+    const isAllZero = totalAdd === 0 && totalSub === 0;
+
+
   useEffect(() => {
     setField("name", orderDetail.title);
     setField("chambers", queryIds);
@@ -226,7 +237,7 @@ const OthersProductScreen = () => {
 
   return (
     <View style={styles.pageContainer}>
-      <PageHeader page={"Third Party Product"} />
+      <PageHeader page={"Third Party Booking"} />
       <View style={styles.wrapper}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={[styles.VStack, styles.gap16]}>
@@ -277,7 +288,7 @@ const OthersProductScreen = () => {
                       error={(errors as any)?.add_quantity?.[chamber.id]}
                       style={styles.flexGrow}
                     >
-                      Add Quantity
+                      (+) Add Quantity
                     </PriceInput>
 
                     <PriceInput
@@ -294,7 +305,7 @@ const OthersProductScreen = () => {
                       error={(errors as any)?.sub_quantity?.[chamber.id]}
                       style={styles.flexGrow}
                     >
-                      Substract Quantity
+                      (-) Substract Quantity
                     </PriceInput>
                   </ItemsRepeater>
                 ))}
@@ -314,7 +325,7 @@ const OthersProductScreen = () => {
         <Button
           variant="fill"
           onPress={onSubmit}
-          disabled={!isValid}
+          disabled={!isValid || isAllZero}
           style={styles.mx16}
         >
           Done

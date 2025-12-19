@@ -225,6 +225,7 @@ router.post("/", upload.any(), async (req, res) => {
               product_name,
               category: "other",
               unit: "kg",
+              image: sampleImage,
               chamber: normalizedIncoming.map((c) => ({
                 id: c.id,
                 quantity: String(Math.max(0, c.add - c.sub)),
@@ -935,15 +936,123 @@ router.patch(
   }
 );
 
-  router.delete("/:id", async (req, res) => {
-    try {
-      const client = await thirdPartyClient.findByPk(req.params.id);
-      if (!client) return res.status(404).json({ error: "Not found" });
-      await client.destroy();
-      res.json({ message: "Deleted" });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+router.delete("/:id", async (req, res) => {
+  const clientId = req.params.id;
+
+  const t = await sequelize.transaction();
+  try {
+    const client = await thirdPartyClient.findByPk(clientId, {
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
+
+    if (!client) {
+      await t.rollback();
+      return res.status(404).json({ error: "Client not found" });
     }
-  });
+
+    // 1) Load all others items for this client
+    const items = await otherItemClient.findAll({
+      where: { client_id: client.id },
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
+
+    const itemIds = items.map((it) => it.id);
+    const productIds = items.map((it) => it.product_id);
+
+    // 2) Delete history for these items
+    if (itemIds.length > 0) {
+      await historyClient.destroy({
+        where: { product_id: itemIds },
+        transaction: t,
+      });
+    }
+
+    // 3) For each stock (ChamberStock), clean chamber JSON and chamber.items
+    if (productIds.length > 0) {
+      const stocks = await stockClient.findAll({
+        where: { id: productIds },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      for (const stock of stocks) {
+        const chamberArr = Array.isArray(stock.chamber) ? stock.chamber : [];
+
+        // Collect chamber IDs for this stock
+        const chamberIds = chamberArr.map((c) => String(c.id));
+
+        if (chamberIds.length > 0) {
+          const chambers = await chamberClient.findAll({
+            where: { id: chamberIds },
+            transaction: t,
+            lock: t.LOCK.UPDATE,
+          });
+
+          for (const chamber of chambers) {
+            const itemsArray = Array.isArray(chamber.items)
+              ? chamber.items.map((v) => String(v))
+              : [];
+
+            const filteredItems = itemsArray.filter(
+              (pid) => pid !== String(stock.id)
+            );
+
+            // If chamber has no more items, you can optionally clear its chamber stock,
+            // or leave it empty. Here, just update items.
+            chamber.items = filteredItems;
+            await chamber.save({ transaction: t });
+          }
+        }
+
+        // Option A: if this stock is only used by this client, delete it entirely
+        // Option B: if stock can be shared across clients, just leave it.
+        // For now, delete stock if no chambers refer to it anymore.
+
+        const stillChambers = chamberArr.length;
+        if (!stillChambers) {
+          await stock.destroy({ transaction: t });
+        } else {
+          // Or optionally clear quantities / leave as is
+          // stock.chamber = chamberArr;
+          // await stock.save({ transaction: t });
+        }
+      }
+    }
+
+    // 4) Delete OthersItem rows for this client
+    if (itemIds.length > 0) {
+      await otherItemClient.destroy({
+        where: { id: itemIds },
+        transaction: t,
+      });
+    }
+
+    // 5) Finally delete client itself
+    await client.destroy({ transaction: t });
+
+    await t.commit();
+    return res.status(200).json({ message: "Client and related data deleted" });
+  } catch (err) {
+    await t.rollback();
+    console.error("Delete client cascade error:", err);
+    return res
+      .status(500)
+      .json({ error: err.message || "Internal server error" });
+  }
+});
+
+
+  // router.delete("/:id", async (req, res) => {
+  //   try {
+  //     const client = await thirdPartyClient.findByPk(req.params.id);
+  //     if (!client) return res.status(404).json({ error: "Not found" });
+  //     await client.destroy();
+  //     res.json({ message: "Deleted" });
+  //   } catch (err) {
+  //     res.status(500).json({ error: err.message });
+  //   }
+  // });
 
   module.exports = router;
