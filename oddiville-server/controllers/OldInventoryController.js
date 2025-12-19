@@ -999,11 +999,11 @@ router.post("/bulk-ingest", async (req, res) => {
       : Array.isArray(body.chamberStockRows)
       ? body.chamberStockRows
       : [];
-const dispatchRowsInput = hasDispatchOrder
-  ? Array.isArray(dispatchBlock.rows)
-    ? dispatchBlock.rows
-    : []
-  : [];
+    const dispatchRowsInput = hasDispatchOrder
+      ? Array.isArray(dispatchBlock.rows)
+        ? dispatchBlock.rows
+        : []
+      : [];
 
     const rawMaterialChallanTop = rawMaterialBlock.challan || null;
     const dispatchChallanTop = dispatchBlock.challan || null;
@@ -1063,13 +1063,29 @@ const dispatchRowsInput = hasDispatchOrder
     }));
 
     // 0) Payload validation (strict required fields)
-const errors = [
-  ...validateVendors(vendors),
-  ...validateRMOs(raw_material_orders),
-  ...validateProductions(productions),
-  ...validateChamberStock(chamber_stock, allowedChambers),
-  ...(hasDispatchOrder ? validateDispatch(dispatch_orders) : []),
-];
+const errors = [];
+
+// vendors only if RMOs exist
+if (raw_material_orders.length > 0) {
+  errors.push(...validateVendors(vendors));
+  errors.push(...validateRMOs(raw_material_orders));
+}
+
+// productions only if provided
+if (productions.length > 0 && raw_material_orders.length > 0) {
+  errors.push(...validateProductions(productions));
+}
+
+// chamber stock can be standalone
+if (chamber_stock.length > 0) {
+  errors.push(...validateChamberStock(chamber_stock, allowedChambers));
+}
+
+// dispatch optional
+if (hasDispatchOrder) {
+  errors.push(...validateDispatch(dispatch_orders));
+}
+
 
     if (errors.length) {
       await t.rollback();
@@ -1080,29 +1096,34 @@ const errors = [
     }
 
     // 1) Ensure Raw Materials exist
-    const neededRawNames = [
-      ...new Set(
-        raw_material_orders
-          .map((r) => trimStr(r.raw_material_name))
-          .filter(Boolean)
-      ),
-    ];
-    for (const name of neededRawNames) {
-      await RawMaterialClient.findOrCreate({
-        where: { name },
-        defaults: { name },
-        transaction: t,
-      });
-    }
+ if (raw_material_orders.length > 0) {
+  const neededRawNames = [
+    ...new Set(
+      raw_material_orders
+        .map((r) => trimStr(r.raw_material_name))
+        .filter(Boolean)
+    ),
+  ];
 
-    const vendorByName = new Map(
-      vendors.map((v) => [trimStr(v.name), { ...v, name: trimStr(v.name) }])
-    );
-    const neededVendors = [
-      ...new Set(
-        raw_material_orders.map((r) => trimStr(r.vendor)).filter(Boolean)
-      ),
-    ];
+  for (const name of neededRawNames) {
+    await RawMaterialClient.findOrCreate({
+      where: { name },
+      defaults: { name },
+      transaction: t,
+    });
+  }
+}
+
+if (raw_material_orders.length > 0) {
+  const vendorByName = new Map(
+    vendors.map((v) => [trimStr(v.name), { ...v, name: trimStr(v.name) }])
+  );
+
+  const neededVendors = [
+    ...new Set(
+      raw_material_orders.map((r) => trimStr(r.vendor)).filter(Boolean)
+    ),
+  ];
 
     let existingVendorNames = new Set();
     if (neededVendors.length) {
@@ -1131,6 +1152,7 @@ const errors = [
         transaction: t,
       });
     }
+  }
 
     // 3) Create Raw Material Orders
     const mapRmo = new Map();
@@ -1233,91 +1255,78 @@ const errors = [
       return out;
     };
 
-    const mapProd = new Map();
-    const createdProds = [];
-    for (const p of productions) {
-      const id = uuid();
+const mapProd = new Map();
+const createdProds = [];
 
-      // ---------- Updated resolution logic ----------
-      let rawId =
-        p.raw_material_order_id ??
-        (p.raw_material_orderRef
-          ? mapRmo.get(p.raw_material_orderRef)
-          : undefined);
+if (productions.length > 0 && raw_material_orders.length > 0) {
+  for (const p of productions) {
+    const id = uuid();
 
-      if (!rawId) {
-        const prodStartIso = toIsoIfDateLike(p.start_time) || null;
-        const prodDateKey = prodStartIso
-          ? String(prodStartIso).slice(0, 10)
-          : null;
-        const prodRawName = trimStr(
-          p.raw_material_name || p.rawMaterialName || ""
-        );
+    let rawId =
+      p.raw_material_order_id ??
+      (p.raw_material_orderRef
+        ? mapRmo.get(p.raw_material_orderRef)
+        : undefined);
 
-        if (prodRawName && prodDateKey) {
-          const key = `${prodRawName}::${prodDateKey}`;
-          rawId = rmoByNameAndArrivalDate.get(key) || rawId;
-          if (rawId)
-            console.log(
-              `Auto-linked production (clientId=${
-                p.clientId || "?"
-              }) to RMO by name+date: ${key} -> ${rawId}`
-            );
-        }
-      }
-
-      if (!rawId) {
-        const prodRawName = trimStr(
-          p.raw_material_name || p.rawMaterialName || ""
-        );
-        if (prodRawName) {
-          rawId = rmoByName.get(prodRawName) || rawId;
-          if (rawId)
-            console.log(
-              `Auto-linked production (clientId=${
-                p.clientId || "?"
-              }) to latest RMO by name: ${prodRawName} -> ${rawId}`
-            );
-        }
-      }
-
-      if (!rawId) {
-        throw new Error(
-          `Production ${
-            p.clientId ?? ""
-          } missing raw_material_order_id/raw_material_orderRef (and auto-link by name/date failed)`
-        );
-      }
-
-      const payload = normalizeProduction({
-        ...p,
-        id,
-        raw_material_order_id: rawId,
-      });
-
-      if (!payload.batch_code) {
-        const datePart = payload.start_time
-          ? format(new Date(payload.start_time), "yyyy-MM-dd")
-          : format(new Date(), "yyyy-MM-dd");
-        payload.batch_code = `BATCH-${payload.product_name.toUpperCase()}-${datePart}`;
-      }
-      payload.batch_code = await ensureUniqueBatchCode(payload.batch_code, t);
-
-      delete payload.clientId;
-      delete payload.raw_material_orderRef;
-
-      const row = await ProductionClient.create(payload, { transaction: t });
-      createdProds.push(row.toJSON());
-      if (p.clientId) mapProd.set(p.clientId, id);
-
-      await RawMaterialOrderClient.update(
-        { production_id: id },
-        { where: { id: rawId }, transaction: t }
+    if (!rawId) {
+      const prodStartIso = toIsoIfDateLike(p.start_time) || null;
+      const prodDateKey = prodStartIso
+        ? String(prodStartIso).slice(0, 10)
+        : null;
+      const prodRawName = trimStr(
+        p.raw_material_name || p.rawMaterialName || ""
       );
 
-      const idx = createdRmos.findIndex((x) => x.id === rawId);
-      if (idx !== -1) createdRmos[idx].production_id = id;
+      if (prodRawName && prodDateKey) {
+        rawId = rmoByNameAndArrivalDate.get(
+          `${prodRawName}::${prodDateKey}`
+        );
+      }
     }
+
+    if (!rawId) {
+      const prodRawName = trimStr(
+        p.raw_material_name || p.rawMaterialName || ""
+      );
+      if (prodRawName) {
+        rawId = rmoByName.get(prodRawName);
+      }
+    }
+
+    if (!rawId) {
+      throw new Error(
+        `Production ${p.clientId ?? ""} missing raw material link`
+      );
+    }
+
+    const payload = normalizeProduction({
+      ...p,
+      id,
+      raw_material_order_id: rawId,
+    });
+
+    if (!payload.batch_code) {
+      const datePart = payload.start_time
+        ? format(new Date(payload.start_time), "yyyy-MM-dd")
+        : format(new Date(), "yyyy-MM-dd");
+      payload.batch_code = `BATCH-${payload.product_name.toUpperCase()}-${datePart}`;
+    }
+
+    payload.batch_code = await ensureUniqueBatchCode(payload.batch_code, t);
+
+    delete payload.clientId;
+    delete payload.raw_material_orderRef;
+
+    const row = await ProductionClient.create(payload, { transaction: t });
+    createdProds.push(row.toJSON());
+    if (p.clientId) mapProd.set(p.clientId, id);
+
+    await RawMaterialOrderClient.update(
+      { production_id: id },
+      { where: { id: rawId }, transaction: t }
+    );
+  }
+}
 
     // 5) Create Chamber Stock
     // const createdChamber = [];

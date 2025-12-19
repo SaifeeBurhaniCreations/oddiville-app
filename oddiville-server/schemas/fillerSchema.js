@@ -199,18 +199,16 @@ const getFillerSchema = ({
     : ["challan.png"];
 const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
 
-// console.log("Contractors", Contractors[0]?.work_location);
-
-
   return {
     "order-ready": {
       title: DispatchOrder?.customer_name,
+      createdAt: DispatchOrder?.createdAt ?? "",
       description: DispatchOrder?.address,
       "Product Details": getProductDetailsSection(
         DispatchOrder,
         product_details,
         totalQuantity,
-        {key: "created", value: authenticatedUser.name || "N/A"},
+        {key: "created", value: authenticatedUser && authenticatedUser.name ? authenticatedUser.name : "N/A"},
       ),
       Products:
         DispatchOrder?.products?.map((product) =>
@@ -230,12 +228,13 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
     },
     "order-shipped": {
       title: DispatchOrder?.customer_name,
+      createdAt: DispatchOrder?.createdAt ?? "",
       description: DispatchOrder?.address,
       "Product Details": getProductDetailsSection(
         DispatchOrder,
         product_details,
         totalQuantity,
-        {key: "shipped", value: authenticatedUser.name || "N/A"},
+        {key: "shipped", value: authenticatedUser && authenticatedUser.name ? authenticatedUser.name : "N/A"},
       ),
 
       fileName: DispatchOrder?.sample_images?.[0] || "no-challan.pdf",
@@ -283,6 +282,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
     },
     "order-reached": {
       title: DispatchOrder?.customer_name,
+      createdAt: DispatchOrder?.createdAt ?? "",
       description: DispatchOrder?.address,
       "Product Details": getProductDetailsSection(
         DispatchOrder,
@@ -314,6 +314,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
     },
     "production-start": {
       title: ProductionById?.product_name,
+      createdAt: ProductionById?.createdAt ?? "N/A",
       rating: Number(ProductionById?.rating),
       "image-full-width": RawMaterialOrderById?.sample_image?.url || "N/A",
       "Product detail": [
@@ -348,6 +349,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
     },
     "production-completed": {
       title: ProductionById?.product_name,
+      createdAt: ProductionById?.createdAt ?? "N/A",
       data: {
         "Production detail": [
           {
@@ -382,18 +384,21 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
             row_3: [
               {
                 label: "Recovery",
-                value:
-                  String(
-                    (
-                      (Number(ProductionById?.recovery) /
-                        Number(ProductionById?.quantity)) *
+              value:
+                ProductionById?.quantity
+                  ? `${(
+                      (Number(ProductionById.recovery) /
+                        Number(ProductionById.quantity)) *
                       100
-                    )?.toFixed(2),
-                    "%"
-                  ) ?? "--",
+                    ).toFixed(2)}%`
+                  : "--",
                 icon: "lane",
               },
-              {
+            ],
+          },
+          {
+            row_4: [
+             {
                 label: "Completed",
                 value:
                   Object.keys(ProductionById).length !== 0 &&
@@ -410,6 +415,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
     },
     "raw-material-ordered": {
       title: RawMaterialOrderById.raw_material_name,
+      createdAt: RawMaterialOrderById?.createdAt ?? "N/A",
       "Product Details": [
         {
           label: "Order",
@@ -421,7 +427,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
         },
         {
           label: "Ordered By",
-          value: `${authenticatedUser.name || "N/A"} `,
+          value: `${authenticatedUser && authenticatedUser.name ? authenticatedUser.name : "N/A"} `,
         },
       ],
       "Vendor detail": [
@@ -442,6 +448,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
     },
     "raw-material-reached": {
       title: RawMaterialOrderById.raw_material_name,
+      createdAt: RawMaterialOrderById?.createdAt ?? "N/A",
       "Product Details": [
         {
           label: "Order",
@@ -487,18 +494,17 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
         RawMaterialOrderById?.truck_details?.challan?.url ||
         "https://oddiville-bucket.s3.us-west-2.amazonaws.com/raw-materials/08392beb-8040-4cc2-9bce-d87ace1011a6-5362bd4e-9bc4-4630-9ec7-5763753707cd.jpeg",
     },
- 
-"add-raw-material": {
-  title: "Add raw materials",
-  productCard: safeRawMaterials.map((rawMaterial) => ({
-    name: rawMaterial?.name || "Unnamed",
-    image:
-      typeof rawMaterial?.sample_image === "string"
-        ? rawMaterial.sample_image
-        : rawMaterial?.sample_image?.url ?? "/images/fallback.png",
-    description: rawMaterial?.description || "No description available",
-  })),
-},
+    "add-raw-material": {
+      title: "Add raw materials",
+      productCard: safeRawMaterials.map((rawMaterial) => ({
+        name: rawMaterial?.name || "Unnamed",
+        image:
+          typeof rawMaterial?.sample_image === "string"
+            ? rawMaterial.sample_image
+            : rawMaterial?.sample_image?.url ?? "/images/fallback.png",
+        description: rawMaterial?.description || "No description available",
+      })),
+    },
     "add-product": {
       title: "Add Products",
       optionList: Products,
@@ -515,6 +521,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
         (acc, val) => acc + (val.male_count || 0) + (val.female_count || 0),
         0
       )} worker`,
+      createdAt: Contractors[0]?.createdAt ?? "",
       headerDetails: [
         {
           label: "Male",
@@ -529,9 +536,9 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
         return {
           label: contractor?.name,
           tableHeader: [
-            { label: "Locations", key: "location" },
-            { label: "Male", key: "countMale" },
-            { label: "Female", key: "countFemale" },
+            { label: "Locations", key: "location", align: "left", width: 140 },
+            { label: "Male", key: "countMale", align: "right", width: 60 },
+            { label: "Female", key: "countFemale", align: "right", width: 60 },
           ],
 
           tableBody: contractor?.work_location
@@ -551,6 +558,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
     },
     "worker-single": {
       title: "32 worker",
+      createdAt: Contractors[0]?.createdAt ?? "",
       "Vendor detail": [
         {
           row_1: [
@@ -638,6 +646,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
     },
     "lane-occupied": {
       title: LaneById?.name,
+      createdAt: LaneById?.createdAt ?? "N/A",
       data: {
         "Production detail": [
           {
@@ -663,7 +672,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
               },
               {
                 label: "Sample",
-                value: String(RawMaterialOrderById?.sample_quantity) ?? "--",
+                value: `${String(RawMaterialOrderById?.sample_quantity)} kg` ?? "--",
                 icon: "color-swatch",
               },
             ],
@@ -678,13 +687,14 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
       title:
         Object.keys(CalendarEvent).length !== 0 &&
         format(new Date(CalendarEvent.scheduled_date), "MMM d, yyyy"),
+      createdAt: CalendarEvent?.createdAt ?? "N/A",
       "Event Details": [
         {
-          label: "Product",
+          label: "Title",
           value: CalendarEvent.product_name,
         },
         {
-          label: "Area",
+          label: "Description",
           value: CalendarEvent.work_area,
         },
       ],
@@ -693,6 +703,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
       title:
         Object.keys(CalendarEvent).length !== 0 &&
         format(new Date(CalendarEvent.scheduled_date), "MMM d, yyyy"),
+      createdAt: CalendarEvent?.createdAt ?? "N/A",
       "Event Details": [
         {
           label: "Product",

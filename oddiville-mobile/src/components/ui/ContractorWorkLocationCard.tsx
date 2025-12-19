@@ -8,8 +8,24 @@ import Input from './Inputs/Input'
 import Table from './Table'
 import { useEffect } from 'react'
 import TrashIcon from '../icons/common/TrashIcon'
+import { ContractorLocationRow } from './Contractor/AddMultipleContractor'
 
-const ContractorWorkLocationCard = ({ workAssigned, isFirst, contractorIndex, isOpen, columns, setIsAddDisabled, onPress, handleRadioChange, handleInputChange, setWorkAssigned, setworkerCount, onLabourRemove, ...props }: ContractorWorkLocationCardProps) => {
+const ContractorWorkLocationCard = ({
+  workAssigned,
+  isFirst,
+  contractorIndex,
+  isOpen,
+  columns,
+  setIsAddDisabled,
+  onPress,
+  handleRadioChange,
+  handleInputChange,
+  setWorkAssigned,
+  setworkerCount,
+  onLabourRemove,
+  ...props
+}: ContractorWorkLocationCardProps) => {
+
   const isValidRadioKey = (key: string): key is "enterCount" | "notNeeded" =>
     key === "enterCount" || key === "notNeeded";
 
@@ -27,6 +43,11 @@ const ContractorWorkLocationCard = ({ workAssigned, isFirst, contractorIndex, is
     );   
   }, [isAddDisabled, handleInputChange, handleRadioChange, workAssigned])
 
+  const isGenderField = (field: string): field is "male" | "female" =>
+  field === "male" || field === "female"
+
+  console.log("columns", columns);
+  
   return (
     <View style={[styles.card, isFirst && styles.firstCard]} {...props}>
         <Pressable style={styles.cardHeader} onPress={onPress}>
@@ -110,13 +131,25 @@ const ContractorWorkLocationCard = ({ workAssigned, isFirst, contractorIndex, is
           columns={columns}
           content={workAssigned.locations}
           mergableRows={[[1, 2]]}
-          onRadioChange={(locationIndex, field) => {
-            if (!isValidRadioKey(field)) return;
-            handleRadioChange(contractorIndex, locationIndex, field);
+          onRadioChange={(
+            locationIndex: number,
+            field: keyof ContractorLocationRow
+          ) => {
+            if (!isValidRadioKey(field as string)) return
+            handleRadioChange(
+              contractorIndex,
+              locationIndex,
+              field as "enterCount" | "notNeeded"
+            )
           }}
-          onInputChange={(locationIndex, field, value) => {
-            handleInputChange(contractorIndex, locationIndex, field, value);
-          }}
+         onInputChange={(
+          locationIndex: number,
+          field: string,
+          value: string
+        ) => {
+          if (!isGenderField(field)) return
+          handleInputChange(contractorIndex, locationIndex, field, value)
+        }}
         />
       </View>
       }

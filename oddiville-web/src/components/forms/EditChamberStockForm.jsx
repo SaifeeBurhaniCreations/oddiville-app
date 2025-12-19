@@ -48,6 +48,14 @@ const chamberStockSafe = Array.isArray(chamberStock) ? chamberStock : [];
 
   if (isChamberStockLoading || isChamberLoading) return <div>Loading…</div>;
 
+  const newName =
+  (found &&
+    (found.name ?? found.chamber_name ?? found.displayName)) ??
+  c.chamber_name ??
+  c.name ??
+  String(cid ?? "");
+
+  
   return (
     <form onSubmit={handleSubmit}>
       <div className="card shadow-sm rounded-3">

@@ -539,7 +539,11 @@ const PRODUCTION_COMPLETED = {
                                     value: "",
                                     icon: "lane",
                                 },
-                                {
+                            ]
+                        },
+                        {
+                            row_4: [
+                               {
                                     label: "",
                                     value: "",
                                     icon: "calendar-year",
@@ -904,6 +908,7 @@ const CALENDAR_EVENT_SCHEDULED = {
     },
   ],
 };
+
 const SCHEDULED_DATE_EVENT = {
   sections: [
     {

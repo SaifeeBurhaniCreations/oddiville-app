@@ -6,6 +6,7 @@ function fillRawMaterialSchema(schema, filler) {
         // 🟦 HEADER
         if (section.type === "header" && typeof section.data === "object") {
             section.data.title = filler?.title || "Untitled";
+            section.data.value = filler?.createdAt || "";
         }
 
         // 🟦 DATA-GROUP
@@ -96,7 +97,9 @@ function fillWorkerMultipleSchema(schema, filler) {
     for (const section of updatedSchema.sections) {
         // 🟦 HEADER
         if (section.type === "header" && typeof section.data === "object") {
+
             section.data.title = filler?.title || "Untitled";
+            section.data.value = filler?.createdAt || "";
 
             if (Array.isArray(section.data.headerDetails) && Array.isArray(filler.headerDetails)) {
                 section.data.headerDetails.forEach((detail, index) => {
@@ -131,7 +134,10 @@ function fillWorkerSingleSchema(schema, filler) {
     for (const section of updatedSchema.sections) {
         // 🟦 HEADER
         if (section.type === "header" && typeof section.data === "object") {
+            console.log("filler?.createdAt", filler?.createdAt);
+
             section.data.title = filler?.title || "Untitled";
+            section.data.value = filler?.createdAt || "";
         }
 
         // 🟦 DATA (Vendor detail rows)
@@ -192,6 +198,7 @@ function fillOrderReadySchema(schema, filler) {
     if (section.type === "header" && typeof section.data === "object") {
       if (!section.data.title) {
         section.data.title = filler?.title || "Untitled";
+        section.data.value = filler?.createdAt || "";
       }
       if (!section.data.description) {
         section.data.description = filler?.description || "";
@@ -303,6 +310,7 @@ function fillProductionStartedSchema(schema, filler) {
         // 🟦 HEADER
         if (section.type === "header" && typeof section.data === "object") {
             section.data.title = filler?.title || "Untitled";
+            section.data.value = filler?.createdAt || "";
         }
 
         // 🟦 IMAGE-FULL-WIDTH
@@ -421,6 +429,7 @@ function fillCountrySchema(schema, filler) {
         // 🟦 HEADER
         if (section.type === "header" && typeof section.data === "object") {
             section.data.title = filler?.title || "Untitled";
+            section.data.value = filler?.createdAt || "";
         }
 
         if (section.type === "icon-title-with-heading" && Array.isArray(section.data)) {
@@ -439,6 +448,7 @@ function fillStateSchema(schema, filler) {
         // 🟦 HEADER
         if (section.type === "header" && typeof section.data === "object") {
             section.data.title = filler?.title || "Untitled";
+            section.data.value = filler?.createdAt || "";
         }
         
         // 🟦 OptionList
@@ -458,6 +468,7 @@ function fillCitySchema(schema, filler) {
         // 🟦 HEADER
         if (section.type === "header" && typeof section.data === "object") {
             section.data.title = filler?.title || "Untitled";
+            section.data.value = filler?.createdAt || "";
         }
 
         // 🟦 OptionList
@@ -476,6 +487,7 @@ function fillLaneOccupiedSchema(schema, filler) {
         // 🟦 HEADER
         if (section.type === "header" && typeof section.data === "object") {
             section.data.title = filler?.title || "Untitled";
+            section.data.value = filler?.createdAt || "";
         }
 
         // 🟦 DATA (Vendor detail rows)
@@ -522,6 +534,7 @@ function fillOrderShippedSchema(schema, filler) {
         if (section.type === "header" && typeof section.data === "object") {
             if (!section.data.title) {
                 section.data.title = filler?.title || "Untitled";
+                section.data.value = filler?.createdAt || "";
             }
             if (!section.data.description) {
                 section.data.description = filler?.description || "";
@@ -621,6 +634,7 @@ function fillOrderReachedSchema(schema, filler) {
         if (section.type === "header" && typeof section.data === "object") {
             if (!section.data.title) {
                 section.data.title = filler?.title || "Untitled";
+                section.data.value = filler?.createdAt || "";
             }
             if (!section.data.description) {
                 section.data.description = filler?.description || "";
@@ -710,6 +724,7 @@ function fillProductionCompletedSchema(schema, filler) {
         // 🟦 HEADER
         if (section.type === "header" && typeof section.data === "object") {
             section.data.title = filler?.title || "Untitled";
+            section.data.value = filler?.createdAt || "";
         }
 
         // 🟦 DATA (Vendor detail rows)
@@ -753,6 +768,7 @@ function fillCalendarEventSchema(schema, filler) {
     // 🟦 HEADER
     if (section.type === "header" && typeof section.data === "object") {
       section.data.title = filler?.title || "Untitled";
+        section.data.value = filler?.createdAt || "";
     }
 
     // 🟦 DATA-GROUP
@@ -777,6 +793,7 @@ function fillCalendarEventSchema(schema, filler) {
 
   return updatedSchema;
 }
+
 function fillScheduledDateEventSchema(schema, filler) {
   const updatedSchema = JSON.parse(JSON.stringify(schema));
 
@@ -784,6 +801,7 @@ function fillScheduledDateEventSchema(schema, filler) {
     // 🟦 HEADER
     if (section.type === "header" && typeof section.data === "object") {
       section.data.title = filler?.title || "Untitled";
+      section.data.value = filler?.createdAt || "";
     }
 
     // 🟦 DATA-GROUP

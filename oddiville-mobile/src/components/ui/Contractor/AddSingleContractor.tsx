@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
 import Button from "../Buttons/Button";
-import Table from "../Table";
+import Table, { TableColumn } from "../Table";
 import Input from "../Inputs/Input";
 import { useLocations } from "@/src/hooks/useFetchData";
 import { Controller, SubmitHandler, useForm } from "react-hook-form";
@@ -14,10 +14,19 @@ import Loader from "../Loader";
 import { renameKey } from "@/src/hooks/renameKey";
 import { WorkLocation } from "@/src/hooks/useContractor";
 
-const columns = [
+type SingleContractorRow = {
+  location: string
+  enterCount: boolean
+  notNeeded: boolean
+  countMale: string
+  countFemale: string
+  count: string
+}
+
+const columns: TableColumn<SingleContractorRow>[] = [
   { label: "Locations", key: "location" },
   { label: "Count", key: "enterCount" },
-];
+]
 
 const AddSingleContractor = ({
   setToast,
@@ -278,13 +287,17 @@ const AddSingleContractor = ({
         />
       </View>
 
-      <Table
-        columns={columns}
-        content={workAssigned}
-        mergableRows={[[1, 2]]}
-        onRadioChange={handleRadioChange}
-        onInputChange={handleInputChange}
-      />
+    <Table
+      columns={columns}
+      content={workAssigned}
+      mergableRows={[[1, 2]]}
+      onRadioChange={handleRadioChange}
+      onInputChange={(rowIndex, field, value) => {
+        if (field === "male" || field === "female") {
+          handleInputChange(rowIndex, field, value)
+        }
+      }}
+    />
 
       <Button
         disabled={isAddDisabled || loading || isSubmitting}

@@ -218,8 +218,12 @@ const PackageScreen = () => {
     refetch: productItemsRefetch,
   } = useProductItems();
 
-  const { data: frozenChambers, isLoading: frozenLoading, refetch: frozenChambersRefetch, isFetching: frozenChambersFetching } =
-    useFrozenChambers();
+  const {
+    data: frozenChambers,
+    isLoading: frozenLoading,
+    refetch: frozenChambersRefetch,
+    isFetching: frozenChambersFetching,
+  } = useFrozenChambers();
 
   const isProductLoading = useSelector(
     (state: RootState) => state.product.isProductLoading
@@ -236,22 +240,22 @@ const PackageScreen = () => {
     (state: RootState) => state.rawMaterial.selectedChambers
   );
 
-const {
-  rawMaterials,
-  isLoading: rmInitialLoading,
-  refetch: refetchRM,
-  isFetching: rmLoading
-} = useRawMaterialByProduct(selectedProduct);
+  const {
+    rawMaterials,
+    isLoading: rmInitialLoading,
+    refetch: refetchRM,
+    isFetching: rmLoading,
+  } = useRawMaterialByProduct(selectedProduct);
 
   const productPackageForm = useGlobalFormValidator<AddProductPackageForm>(
     "add-product-package"
   );
 
- const {
-  summaries: choosedChamberSummary,
-  refetch: refetchSummary,
-  isFetching: isSummaryFetching
-} = useChambersSummary(choosedChambers);
+  const {
+    summaries: choosedChamberSummary,
+    refetch: refetchSummary,
+    isFetching: isSummaryFetching,
+  } = useChambersSummary(choosedChambers);
 
   const [isLoading, setIsLoading] = useState(false);
   const [openTab, setOpenTab] = useState<number>(0);
@@ -362,25 +366,25 @@ const {
     );
   };
 
- useEffect(() => {
-  // nothing seleced -> do nothing
-  if (!selectedProduct) return;
+  useEffect(() => {
+    // nothing seleced -> do nothing
+    if (!selectedProduct) return;
 
-  if (rmLoading || rmInitialLoading) return;
+    if (rmLoading || rmInitialLoading) return;
 
-  const noRM = !Array.isArray(rawMaterials) || rawMaterials.length === 0;
+    const noRM = !Array.isArray(rawMaterials) || rawMaterials.length === 0;
 
-  if (noRM) {
-    showToast(
-      "error",
-      `${selectedProduct} raw materials are not in your chambers!`
-    );
-  }
-}, [selectedProduct, rawMaterials, rmLoading, rmInitialLoading]);
+    if (noRM) {
+      showToast(
+        "error",
+        `${selectedProduct} raw materials are not in your chambers!`
+      );
+    }
+  }, [selectedProduct, rawMaterials, rmLoading, rmInitialLoading]);
 
-useEffect(() => {
-  setField("products", product_items);
-}, [product_items]);
+  useEffect(() => {
+    setField("products", product_items);
+  }, [product_items]);
 
   useEffect(() => {
     setField("product_name", selectedProduct);
@@ -452,7 +456,7 @@ useEffect(() => {
         {
           type: "title-with-details-cross",
           data: {
-            title: "Add new Package",
+            title: "Add Packing Material",
           },
         },
         {
@@ -472,11 +476,12 @@ useEffect(() => {
         {
           type: "input-with-select",
           data: {
-            placeholder: "Enter title",
-            label: "Package title",
+            placeholder: "Enter SKU",
+            label: "Packing Size",
             key: "package-weight",
             formField_1: "size",
             label_second: "Unit",
+            keyboardType: "number-pad",
             source: "add-product-package",
           },
         },
@@ -484,7 +489,7 @@ useEffect(() => {
           type: "input",
           data: {
             placeholder: "Enter counts",
-            label: "Add package",
+            label: "No. of Pouches",
             keyboardType: "number-pad",
             formField: "quantity",
           },
@@ -505,18 +510,18 @@ useEffect(() => {
         {
           type: "file-upload",
           data: {
-            label: "Upload package image",
-            uploadedTitle: "Uploaded package image",
-            title: "Upload image",
+            label: "Upload pouch image",
+            uploadedTitle: "Uploaded pouch image",
+            title: "Upload pouch image",
             key: "package-image",
           },
         },
         {
           type: "file-upload",
           data: {
-            label: "Upload image",
-            uploadedTitle: "Uploaded image",
-            title: "Upload image",
+            label: "Upload packed image",
+            uploadedTitle: "Uploaded packed image",
+            title: "Upload packed image",
             key: "image",
           },
         },
@@ -700,7 +705,6 @@ useEffect(() => {
             rating: ratingValue,
           })),
         }));
-        
 
         const packedChambersWithId = (choosedChamberSummary || [])
           .map((ch, idx) => ({
@@ -780,7 +784,7 @@ useEffect(() => {
     setIsLoading(false);
   };
 
-const selectedLabel = selectedProduct || "Select products";
+  const selectedLabel = selectedProduct || "Select products";
 
   return (
     <KeyboardAvoidingView
@@ -789,10 +793,10 @@ const selectedLabel = selectedProduct || "Select products";
       keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
     >
       <View style={styles.pageContainer}>
-        <PageHeader page={"Package"} />
+        <PageHeader page={"Packing"} />
         <View style={styles.wrapper}>
           <Tabs
-            tabTitles={["Storage", "Packaging bag"]}
+            tabTitles={["Stock", "Packing material"]}
             color="green"
             style={styles.flexGrow}
           >
@@ -802,7 +806,13 @@ const selectedLabel = selectedProduct || "Select products";
                 contentContainerStyle={{ flexGrow: 1 }}
                 refreshControl={
                   <RefreshControl
-                    refreshing={productPackageFetching || productsFetching || frozenChambersFetching || isSummaryFetching || rmLoading}
+                    refreshing={
+                      productPackageFetching ||
+                      productsFetching ||
+                      frozenChambersFetching ||
+                      isSummaryFetching ||
+                      rmLoading
+                    }
                     onRefresh={() => {
                       productPackageRefetch();
                       productItemsRefetch();
@@ -822,75 +832,6 @@ const selectedLabel = selectedProduct || "Select products";
                   >
                     Product name
                   </Select>
-                  <Select
-                    value={chamberSelectLabel}
-                    style={{ paddingHorizontal: 16 }}
-                    showOptions={false}
-                    onPress={handleToggleChamberBottomSheet}
-                    disabled={
-                      frozenChambers?.length === 0 ||
-                      !selectedProduct ||
-                      rmLoading ||
-                      rawMaterials.length === 0
-                    }
-                  >
-                    Chambers
-                  </Select>
-                  <View style={[styles.Vstack, { paddingHorizontal: 16 }]}>
-                    {choosedChamberSummary?.map((chamber, idx) => (
-                      <View
-                        key={idx}
-                        style={[styles.chamberCard, styles.borderBottom]}
-                      >
-                        <View style={styles.Hstack}>
-                          <View style={styles.iconWrapper}>
-                            <ChamberIcon color={getColor("green")} size={32} />
-                          </View>
-                          <View style={styles.Vstack}>
-                            <B1>
-                              {String(chamber.chamber_name).slice(0, 12)}...
-                            </B1>
-                            <B4>{chamber.remaining}kg</B4>
-                          </View>
-                        </View>
-                        <View style={{ flex: 0.7 }}>
-                          <FormField
-                            name={`packedChambers.${idx}.quantity`}
-                            form={{ values, setField, errors }}
-                          >
-                            {({ value, onChange, error }) => (
-                              <Input
-                                placeholder="Quantity"
-                                addonText="KG"
-                                value={
-                                  value === 0 || value == null
-                                    ? ""
-                                    : String(value)
-                                }
-                                onChangeText={(text: string) => {
-                                  const numeric = text.replace(/[^0-9.]/g, "");
-                                  const enteredValue =
-                                    numeric === "" ? 0 : parseFloat(numeric);
-                                  const maxQuantity = Number(chamber.remaining);
-
-                                  if (enteredValue > maxQuantity) {
-                                    handleToggleToast();
-                                    return;
-                                  }
-
-                                  onChange(text);
-                                }}
-                                mask="addon"
-                                post
-                                keyboardType="decimal-pad"
-                                error={error}
-                              />
-                            )}
-                          </FormField>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
 
                   <View style={[styles.rawMaterialColumn, styles.borderBottom]}>
                     {product_items?.length > 0 &&
@@ -923,7 +864,7 @@ const selectedLabel = selectedProduct || "Select products";
                                 preIcon={Icon ?? FiveStarIcon}
                               />
 
-                              <View style={styles.separator} />
+                              {/* <View style={styles.separator} /> */}
                               {itemsToRender?.length > 0 &&
                                 itemsToRender.map((value, index) => {
                                   const productIndex =
@@ -980,7 +921,7 @@ const selectedLabel = selectedProduct || "Select products";
                                                   error,
                                                 }) => (
                                                   <Input
-                                                    placeholder="Quantity"
+                                                    placeholder="Qty."
                                                     addonText="KG"
                                                     value={
                                                       value === 0 ||
@@ -1034,14 +975,84 @@ const selectedLabel = selectedProduct || "Select products";
                       })}
                   </View>
 
+                  <Select
+                    value={chamberSelectLabel}
+                    style={{ paddingHorizontal: 16 }}
+                    showOptions={false}
+                    onPress={handleToggleChamberBottomSheet}
+                    disabled={
+                      frozenChambers?.length === 0 ||
+                      !selectedProduct ||
+                      rmLoading ||
+                      rawMaterials.length === 0
+                    }
+                  >
+                    Stacking Location
+                  </Select>
+                  <View style={[styles.Vstack, { paddingHorizontal: 16 }]}>
+                    {choosedChamberSummary?.map((chamber, idx) => (
+                      <View
+                        key={idx}
+                        style={[styles.chamberCard, styles.borderBottom]}
+                      >
+                        <View style={styles.Hstack}>
+                          <View style={styles.iconWrapper}>
+                            <ChamberIcon color={getColor("green")} size={32} />
+                          </View>
+                          <View style={styles.Vstack}>
+                            <B1>
+                              {String(chamber.chamber_name).slice(0, 12)}...
+                            </B1>
+                            <B4>{chamber.remaining}kg</B4>
+                          </View>
+                        </View>
+                        <View style={{ flex: 0.7 }}>
+                          <FormField
+                            name={`packedChambers.${idx}.quantity`}
+                            form={{ values, setField, errors }}
+                          >
+                            {({ value, onChange, error }) => (
+                              <Input
+                                placeholder="Qty."
+                                addonText="KG"
+                                value={
+                                  value === 0 || value == null
+                                    ? ""
+                                    : String(value)
+                                }
+                                onChangeText={(text: string) => {
+                                  const numeric = text.replace(/[^0-9.]/g, "");
+                                  const enteredValue =
+                                    numeric === "" ? 0 : parseFloat(numeric);
+                                  const maxQuantity = Number(chamber.remaining);
+
+                                  if (enteredValue > maxQuantity) {
+                                    handleToggleToast();
+                                    return;
+                                  }
+
+                                  onChange(text);
+                                }}
+                                mask="addon"
+                                post
+                                keyboardType="decimal-pad"
+                                error={error}
+                              />
+                            )}
+                          </FormField>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+
                   {/* --- PACKAGE UI (TOP LEVEL) --- */}
                   <View style={styles.packageWrapper}>
-                    <H3>Select package type</H3>
-                    <View style={[styles.sizeQtyRow, styles.borderBottom]}>
+                    <H3>Select SKU</H3>
+                    <View style={[styles.sizeQtyRow]}>
                       <View style={{ flex: 0.7 }}>
                         <Select
                           showOptions={false}
-                          options={["Package size"]}
+                          options={["Pouch size"]}
                           onPress={handleTogglePackageSizeBottomSheet}
                           disabled={selectedProduct?.length === 0}
                         />

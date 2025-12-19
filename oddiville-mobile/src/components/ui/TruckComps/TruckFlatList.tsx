@@ -32,14 +32,14 @@ const TruckFlatList = ({
       ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
       ListEmptyComponent={
         <View style={{ alignItems: 'center', marginTop: 20 }}>
-          <Text>No Vendors Found</Text>
+          <Text>No Trucks Found</Text>
         </View>
       }
       ListFooterComponent={
         isLoading
           ? <Loader />
           : !hasMore
-          ? <Text style={{ textAlign: 'center', marginVertical: 16 }}>No more vendors</Text>
+          ? <Text style={{ textAlign: 'center', marginVertical: 16 }}>No more trucks</Text>
           : null
       }
       onEndReached={hasMore ? fetchMore : undefined}

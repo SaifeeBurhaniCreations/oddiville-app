@@ -233,7 +233,7 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
                     <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between" }}>
                         <H4>{label.slice(0, 13)}...</H4>
                         <B4 color={getColor('green', 700)}>
-                            {remainingKg} Kg
+                            {key === "supervisor-production" ? `${remainingKg} Kg` : ""}
                         </B4>
                     </View>
                     <View style={[styles.inputWrapper, { borderColor: getColor('green', 100) }]}>

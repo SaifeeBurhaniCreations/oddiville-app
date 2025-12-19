@@ -106,7 +106,7 @@ const PackagingScreen = () => {
           type: "input",
           data: {
             placeholder: "Enter counts",
-            label: "Add package",
+            label: "No. of Pouches",
             keyboardType: "number-pad",
             formField: "quantity",
           },

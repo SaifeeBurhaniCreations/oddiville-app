@@ -17,12 +17,12 @@ import PurchaseIcon from "../components/icons/bottom-bar/PurchaseIcon";
 import PurchaseActiveIcon from "../components/icons/bottom-bar/PurchaseActiveIcon";
 
 export const BOTTOM_BAR_ITEMS: BottomBarProps = [
-  {
-    name: "Home",
-    component: "home",
-    icon: HomeIcon,
-    activeIcon: HomeActiveIcon,
-  },
+  // {
+  //   name: "Home",
+  //   component: "home",
+  //   icon: HomeIcon,
+  //   activeIcon: HomeActiveIcon,
+  // },
     {
     name: "Purchase",
     component: "purchase",
@@ -36,13 +36,13 @@ export const BOTTOM_BAR_ITEMS: BottomBarProps = [
     activeIcon: ProductionActiveIcon,
   },
   {
-    name: "Package",
+    name: "Packing",
     component: "package",
     icon: PackagingIcon,
     activeIcon: PackagingActiveIcon,
   },
   {
-    name: "Sales",
+    name: "Dispatch",
     component: "sales",
     icon: OrderIcon,
     activeIcon: OrderIconActive,

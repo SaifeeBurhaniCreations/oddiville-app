@@ -529,7 +529,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
               key: "label",
             },
             data: {
-              placeholder: "Quantity",
+              placeholder: "Qty.",
               label: chamberName,
               label_second: "Rating",
               value: quantityValue,

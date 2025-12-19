@@ -221,65 +221,62 @@ const isEditMode = editIndex !== null;
     setProductField("sample_image", previewUrl);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    const validationResult = validateClientForm();
-    if (!validationResult.success) {
-      toast.error("Please correct the client details errors.");
-      return;
-    }
+  const validationResult = validateClientForm();
+  if (!validationResult.success) {
+    toast.error("Please correct the client details errors.");
+    return;
+  }
 
-    if (productList.length === 0) {
-      toast.error("Please add at least one product before saving.");
-      return;
-    }
+  if (productList.length === 0) {
+    toast.error("Please add at least one product before saving.");
+    return;
+  }
 
+  setIsLoading(true);
+
+  try {
+    /* =====================
+       1️⃣ UPDATE DATA ONLY
+       ===================== */
     const submitValues = validationResult.data;
-    const formPayload = new FormData();
+    const dataPayload = new FormData();
 
-    formPayload.append("name", submitValues.name);
-    formPayload.append("company", submitValues.company);
-    formPayload.append("address", submitValues.address);
-    formPayload.append("phone", submitValues.phone);
+    dataPayload.append("name", submitValues.name);
+    dataPayload.append("company", submitValues.company);
+    dataPayload.append("address", submitValues.address);
+    dataPayload.append("phone", submitValues.phone);
 
     const productsWithoutFiles = productList.map(
-      ({ sample_image_file, ...rest }) => rest
+      ({ sample_image_file, sample_image, ...rest }) => rest
     );
 
-    formPayload.append("products", JSON.stringify(productsWithoutFiles));
+    dataPayload.append("products", JSON.stringify(productsWithoutFiles));
 
-    productList.forEach((product, index) => {
-      if (product.sample_image_file) {
-        formPayload.append(
-          `products[${index}][sample_image]`,
-          product.sample_image_file
-        );
-      }
-    });
+    await modify({ formData: dataPayload, id });
 
-    setIsLoading(true);
-try {
-      const response = id
-        ? await modify({ formData: formPayload, id })
-        : await create(formPayload);
+    /* =====================
+       2️⃣ UPDATE IMAGE ONLY
+       ===================== */
+    if (imageChanged && bannerFile) {
+      const imagePayload = new FormData();
+      imagePayload.append("sample_image", bannerFile);
 
-      if (response.status === 200 || response.status === 201) {
-        dispatch(
-          id ? handleModifyData(response.data) : handlePostData(response.data)
-        );
-        toast.success(id ? "Updated successfully!" : "Added successfully!");
-        navigate("/raw-material-other");
-      } else {
-        toast.error(response.data.error || "Failed to save client.");
-      }
-    } catch (error) {
-      toast.error("Error while saving client.");
-      console.error(error);
-    } finally {
-      setIsLoading(false);
+      await modifyImage({ formData: imagePayload, id }); // 👈 NEW API
     }
-  };
+
+    toast.success("Updated successfully!");
+    navigate("/raw-material-other");
+  } catch (error) {
+    toast.error("Error while saving client.");
+    console.error(error);
+  } finally {
+    setIsLoading(false);
+    setImageChanged(false);
+  }
+};
 
   /* ================= FETCH CHAMBERS ================= */
   useEffect(() => {

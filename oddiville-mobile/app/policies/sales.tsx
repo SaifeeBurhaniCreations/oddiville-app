@@ -118,8 +118,6 @@ const SalesScreen = () => {
   const canView = access.sales.view;
   const canEdit = access.sales.edit;
 
-
-
   const redirectedRef = React.useRef(false);
 
   useEffect(() => {
@@ -180,7 +178,7 @@ const secureOrders = useMemo(() => {
 
   return (
     <View style={styles.pageContainer}>
-      <PageHeader page="Sales" />
+      <PageHeader page="Dispatch" />
       <View style={styles.wrapper}>
         <Tabs
           tabTitles={["Upcoming", "In-progress", "Completed"]}

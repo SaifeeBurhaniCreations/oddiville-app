@@ -447,7 +447,7 @@ const useValidateAndOpenBottomSheet = () => {
       {
         type: 'select',
         data: {
-          placeholder: 'Select chambers', label: "Select chambers"
+          placeholder: 'Select chambers', label: "Select chambers", key: "supervisor-production"
         },
       },
       ...selectedChambers.map(chamberName => ({
@@ -458,7 +458,7 @@ const useValidateAndOpenBottomSheet = () => {
           key: 'label'
         },
         data: {
-          placeholder: 'Quantity',
+          placeholder: 'Qty.',
           label: chamberName,
           label_second: "Rating",
           value: "",
@@ -511,27 +511,44 @@ const useValidateAndOpenBottomSheet = () => {
       {
         type: 'title-with-details-cross',
         data: {
-          title: 'Add new Package',
+          title: "Add Packing Material",
         },
       },
-      {
-        type: 'input-with-select',
-        data: {
-          placeholder: 'Enter Product', label: 'Product name', placeholder_second: 'Enter RM', label_second: 'Raw Material', alignment: "half", key: "add-raw-material", formField_1: "product_name"
+            {
+          type: "input-with-select",
+          data: {
+            placeholder: "Enter Product",
+            label: "Product name",
+            placeholder_second: "Enter RM",
+            label_second: "Raw Material",
+            alignment: "half",
+            key: "add-raw-material",
+            formField_1: "product_name",
+            source: "add-product-package",
+            source2: "product-package",
+          },
         },
-      },
-      {
-        type: 'input-with-select',
-        data: {
-          placeholder: 'Enter title', label: 'Package title', key: "package-weight", formField_1: "size", label_second: 'Unit', source: "add-product-package", source2: "product-package",
+        {
+          type: "input-with-select",
+          data: {
+            placeholder: "Enter SKU",
+            label: "Packing Size",
+            key: "package-weight",
+            formField_1: "size",
+            label_second: "Unit",
+            keyboardType: "number-pad",
+            source: "add-product-package",
+          },
         },
-      },
-      {
-        type: 'input',
-        data: {
-          placeholder: 'Enter counts', label: 'Add package', keyboardType: 'number-pad', formField: "quantity"
+                {
+          type: "input",
+          data: {
+            placeholder: "Enter counts",
+            label: "No. of Pouches",
+            keyboardType: "number-pad",
+            formField: "quantity",
+          },
         },
-      },
       {
         type: "select",
         data: {
@@ -544,18 +561,18 @@ const useValidateAndOpenBottomSheet = () => {
      {
           type: "file-upload",
           data: {
-            label: "Upload package image",
-            uploadedTitle: "Uploaded package image",
-            title: "Upload image",
+            label: "Upload pouch image",
+            uploadedTitle: "Uploaded pouch image",
+            title: "Upload pouch image",
             key: "package-image",
           },
         },
         {
           type: "file-upload",
           data: {
-            label: "Upload image",
-            uploadedTitle: "Uploaded image",
-            title: "Upload image",
+            label: "Upload packed image",
+            uploadedTitle: "Uploaded packed image",
+            title: "Upload packed image",
             key: "image",
           },
         },

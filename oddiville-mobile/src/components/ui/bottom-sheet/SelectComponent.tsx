@@ -68,7 +68,7 @@ const SelectComponent = ({ data }: SelectComponentProps) => {
             <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between" }}>
                 <H4>{label}</H4>
                 <B4 color={getColor('green', 500)}>
-                    {total} Kg
+                    {key === "supervisor-production" ? `${total} kg` : ""}
                 </B4>
             </View>
             {SelectedElement}

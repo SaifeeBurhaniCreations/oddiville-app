@@ -13,6 +13,9 @@ const modify = async(dataModel) => {
     return response;
 }
 
+export const modifyImage = ({ formData, id }) =>
+  api.patch(`/other-product/${id}/image`, formData);
+
 const remove = async(id) => {
     const response = await api.delete(`/other-product/${id}`)
     return response;

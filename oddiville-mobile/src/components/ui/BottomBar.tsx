@@ -17,7 +17,7 @@ const BottomBar: React.FC<BottomTabBarProps> = ({ navigation, state, variant }) 
     function renderBottombarItems(items: BottomBarProps) {
         return items.map((item, index) => {
 
-            const isActive = activeTab === item.name || (!activeTab && state.index === index)
+        const isActive = state.routes[state.index]?.name === item.component;
 
             const isPressed = pressedTab === item.name;
 

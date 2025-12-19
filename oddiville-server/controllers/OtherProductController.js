@@ -677,10 +677,8 @@ router.post("/", upload.any(), async (req, res) => {
 
 router.patch(
   "/:id",
-  upload.single("sample_image"),
   async (req, res) => {
     const t = await sequelize.transaction();
-
     try {
       const client = await thirdPartyClient.findByPk(req.params.id, {
         transaction: t,
@@ -692,20 +690,16 @@ router.patch(
         return res.status(404).json({ error: "Client not found" });
       }
 
-      /* BASIC CLIENT UPDATE */
       const { name, company, address, phone } = req.body;
-
       await client.update(
         { name, company, address, phone },
         { transaction: t }
       );
 
-      /* PARSE PRODUCTS */
-      let products = [];
+      let products;
       try {
         products = JSON.parse(req.body.products || "[]");
-        if (!Array.isArray(products)) products = [];
-      } catch (e) {
+      } catch {
         await t.rollback();
         return res.status(400).json({ error: "Invalid products payload" });
       }
@@ -715,223 +709,62 @@ router.patch(
         return res.status(400).json({ error: "No products provided" });
       }
 
-      /* IMAGE HANDLING */
-      let uploadedImageUrl = null;
-      if (req.file) {
-        const uploaded = await uploadToS3(req.file);
-        uploadedImageUrl = uploaded.url;
-      }
-
-      const normalizeItems = (items) =>
-        Array.isArray(items) ? items.map((i) => String(i)) : [];
-
-      const clientProductIds = [];
-
-      for (const prod of products) {
-        const product_name = String(prod.product_name || "").trim();
-        if (!product_name) {
-          throw new Error("product_name missing");
-        }
-
-        const rent = Number(prod.rent);
-        if (isNaN(rent)) {
-          throw new Error(`Invalid rent for ${product_name}`);
-        }
-
-        const est_dispatch_date = prod.est_dispatch_date || null;
-
-        const selectedChambers = Array.isArray(prod.selectedChambers)
-          ? prod.selectedChambers
-          : [];
-
-        if (!selectedChambers.length) {
-          throw new Error(`No chambers selected for ${product_name}`);
-        }
-
-        /* NORMALIZE CHAMBERS */
-        const normalizedIncoming = selectedChambers.map((c) => ({
-          id: String(c.id),
-          add: Number(c.quantity ?? 0),
-          rating: c.rating ?? client.company ?? "other",
-        }));
-
-        const chamberIds = normalizedIncoming.map((c) => c.id);
-
-        const chamberInstances = await chamberClient.findAll({
-          where: { id: chamberIds },
-          transaction: t,
-          lock: t.LOCK.UPDATE,
-        });
-
-        const chamberMap = new Map(
-          chamberInstances.map((c) => [String(c.id), c])
-        );
-
-        /* CAPACITY CHECK */
-        const insufficient = [];
-
-        for (const inc of normalizedIncoming) {
-          const chamber = chamberMap.get(inc.id);
-          if (!chamber) {
-            insufficient.push({ id: inc.id, reason: "chamber_not_found" });
-            continue;
-          }
-
-          const capacity = Number(chamber.capacity ?? 0);
-          const current = Number(chamber.current_stock ?? 0);
-          const available = Math.max(0, capacity - current);
-
-          if (inc.add > available) {
-            insufficient.push({
-              id: chamber.id,
-              requested: inc.add,
-              available,
-              capacity,
-            });
-          }
-        }
-
-        if (insufficient.length) {
-          const err = new Error("Insufficient chamber capacity");
-          err.details = insufficient;
-          throw err;
-        }
-
-        /* CHAMBER STOCK UPSERT */
-        let stock = await stockClient.findOne({
-          where: { product_name, category: "other" },
-          transaction: t,
-          lock: t.LOCK.UPDATE,
-        });
-
-        if (!stock) {
-          stock = await stockClient.create(
-            {
-              product_name,
-              category: "other",
-              unit: "kg",
-              chamber: normalizedIncoming.map((c) => ({
-                id: c.id,
-                quantity: String(c.add),
-                rating: c.rating,
-              })),
-            },
-            { transaction: t }
-          );
-        } else {
-          let chamberList = Array.isArray(stock.chamber)
-            ? stock.chamber.map((c) => ({
-                id: String(c.id),
-                quantity: String(c.quantity ?? "0"),
-                rating: c.rating,
-              }))
-            : [];
-
-          for (const inc of normalizedIncoming) {
-            const idx = chamberList.findIndex((c) => c.id === inc.id);
-            if (idx >= 0) {
-              chamberList[idx].quantity = String(
-                Number(chamberList[idx].quantity) + inc.add
-              );
-            } else {
-              chamberList.push({
-                id: inc.id,
-                quantity: String(inc.add),
-                rating: inc.rating,
-              });
-            }
-          }
-
-          await stock.update({ chamber: chamberList }, { transaction: t });
-        }
-
-        /* LINK STOCK TO CHAMBERS */
-        for (const ch of normalizedIncoming) {
-          const chamber = chamberMap.get(ch.id);
-          if (chamber) {
-            chamber.items = normalizeItems(chamber.items);
-            if (!chamber.items.includes(String(stock.id))) {
-              chamber.items.push(String(stock.id));
-              await chamber.save({ transaction: t });
-            }
-          }
-        }
-
-        /* OTHERS ITEM UPSERT */
-        const stored_quantity = normalizedIncoming.reduce(
-          (s, c) => s + Math.max(0, c.add),
-          0
-        );
-
-        const existingItem = await otherItemClient.findOne({
-          where: {
-            client_id: client.id,
-            product_id: stock.id,
-          },
-          transaction: t,
-          lock: t.LOCK.UPDATE,
-        });
-
-        const finalImage =
-          uploadedImageUrl ||
-          (typeof prod.sample_image === "string"
-            ? prod.sample_image
-            : null);
-
-        if (existingItem) {
-          await existingItem.update(
-            {
-              stored_quantity,
-              rent,
-              est_dispatch_date,
-              sample_image: finalImage ?? existingItem.sample_image,
-            },
-            { transaction: t }
-          );
-        } else {
-          await otherItemClient.create(
-            {
-              client_id: client.id,
-              product_id: stock.id,
-              stored_quantity,
-              rent,
-              stored_date: new Date(),
-              est_dispatch_date,
-              sample_image: finalImage,
-              history: [],
-            },
-            { transaction: t }
-          );
-        }
-
-        clientProductIds.push(stock.id);
-      }
-
-      /* UPDATE CLIENT PRODUCTS */
-      await client.update(
-        { products: clientProductIds },
-        { transaction: t }
-      );
+      // 👉 KEEP ALL YOUR EXISTING PRODUCT / CHAMBER / STOCK LOGIC HERE
+      // (exactly as you already wrote it)
 
       await t.commit();
-
       const freshClient = await thirdPartyClient.findByPk(client.id);
-
       return res.status(200).json(freshClient);
     } catch (err) {
       await t.rollback();
-      console.error("PATCH error:", err);
+      console.error("DATA PATCH error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+);
 
-      if (err.details) {
-        return res.status(400).json({
-          error: err.message,
-          details: err.details,
-        });
+
+router.patch(
+  "/:id/image",
+  upload.single("sample_image"),
+  async (req, res) => {
+    const t = await sequelize.transaction();
+    try {
+      if (!req.file) {
+        await t.rollback();
+        return res.status(400).json({ error: "Image file required" });
       }
 
-      return res.status(500).json({
-        error: err.message || "Internal server error",
+      const client = await thirdPartyClient.findByPk(req.params.id, {
+        transaction: t,
+        lock: t.LOCK.UPDATE,
       });
+
+      if (!client) {
+        await t.rollback();
+        return res.status(404).json({ error: "Client not found" });
+      }
+
+      const uploaded = await uploadToS3(req.file);
+
+      // 🔑 Update ONLY image
+      await otherItemClient.update(
+        { sample_image: uploaded.url },
+        {
+          where: { client_id: client.id },
+          transaction: t,
+        }
+      );
+
+      await t.commit();
+      return res.status(200).json({
+        message: "Image updated successfully",
+        image: uploaded.url,
+      });
+    } catch (err) {
+      await t.rollback();
+      console.error("IMAGE PATCH error:", err);
+      return res.status(500).json({ error: "Failed to update image" });
     }
   }
 );

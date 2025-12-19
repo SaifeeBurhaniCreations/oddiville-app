@@ -207,7 +207,7 @@ const EditForm = ({ service, onCancel, onSave, saving }) => {
                     onChange={(e) =>
                       setChamberField(i, "quantity", e.target.value)
                     }
-                    placeholder="Quantity"
+                    placeholder="Qty."
                   />
                   {errors[`chamber_${i}_quantity`] && (
                     <div className="invalid-feedback">

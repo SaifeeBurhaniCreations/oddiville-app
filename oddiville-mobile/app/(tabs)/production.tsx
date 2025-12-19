@@ -109,7 +109,7 @@ const ProductionScreen = () => {
                   <SearchWithFilter
                     value=""
                     onChangeText={() => {}}
-                    placeholder="Search by material name"
+                    placeholder="Search product"
                     onFilterPress={handleLanePress}
                     icon={ProductionLane}
                   />
@@ -151,7 +151,7 @@ const ProductionScreen = () => {
                   <SearchWithFilter
                     value=""
                     onChangeText={() => {}}
-                    placeholder={"Search by material name"}
+                    placeholder={"Search product"}
                     onFilterPress={handleLanePress}
                     icon={ProductionLane}
                   />
@@ -195,7 +195,7 @@ const ProductionScreen = () => {
                 <SearchWithFilter
                   value=''
                   onChangeText={() => { }}
-                  placeholder={"Search by material name"}
+                  placeholder={"Search product"}
                   onFilterPress={handleLanePress}
                   icon={ProductionLane}
                 />

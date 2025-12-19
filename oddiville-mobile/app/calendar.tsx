@@ -74,7 +74,7 @@ const CalendarScreen = () => {
         },
         {
             work_area: [
-                { type: "required", message: "Labour Location Required!" }
+                { type: "required", message: "Description Required!" }
             ],
             product_name: [
                 { type: "required", message: "Product Name Required!" }
@@ -130,7 +130,7 @@ const CalendarScreen = () => {
                                     <Input
                                         value={value}
                                         onChangeText={onChange}
-                                        placeholder="Enter Product Name"
+                                        placeholder="Enter Title"
                                         error={error}
                                         style={styles.flexGrow}
                                     >
@@ -144,7 +144,7 @@ const CalendarScreen = () => {
                                     <Input
                                         value={value}
                                         onChangeText={onChange}
-                                        placeholder="Enter Work area"
+                                        placeholder="Enter Description"
                                         error={error}
                                         style={styles.flexGrow}
                                     >

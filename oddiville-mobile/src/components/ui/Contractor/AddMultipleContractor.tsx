@@ -9,12 +9,21 @@ import NoContractorBatchImg from "@/src/assets/images/illustrations/no-contracto
 import { workAssignedMultiple } from '@/src/types'
 import { createContractor } from '@/src/services/contractor.service'
 import { useContractor } from '@/src/hooks/useContractor'
+import { TableColumn } from '../Table'
 
+export type ContractorLocationRow = {
+  location: string
+  enterCount: boolean
+  notNeeded: boolean
+  count: string
+  countMale?: string
+  countFemale?: string
+}
 
-const columns = [
-    { label: "Locations", key: "location" },
-    { label: "Count", key: "enterCount" },
-];
+const columns: TableColumn<ContractorLocationRow>[] = [
+  { label: "Locations", key: "location" },
+  { label: "Count", key: "enterCount" },
+]
 
 
 const AddMultipleContractor = ({ setToast, onContractorAdded }: { setToast?: (val: boolean) => void, onContractorAdded?: (success: boolean, message: string) => void }) => {
@@ -218,21 +227,21 @@ const handleLabourRemove = (contractorIndex: number) => {
         <View style={[styles.flexGrow, { paddingTop: 16, gap: '24' }]}>
             {
                 workAssignedMultiple?.length > 0 ? workAssignedMultiple?.map((workAssigned, index) => (
-                    <ContractorWorkLocationCard
-                        key={index}
-                        workAssigned={workAssigned}
-                        setIsAddDisabled={setIsAddDisabled}
-                        setWorkAssigned={setWorkAssignedMultiple}
-                        contractorIndex={index}
-                        setworkerCount={setworkerCount}
-                        isFirst={index === 0}
-                        isOpen={selectedContractor === index}
-                        onPress={() => setSelectedContractor(index)}
-                        columns={columns}
-                        handleRadioChange={handleMultipleContractorRadioChange}
-                        handleInputChange={handleMultipleContractorInputChange}
-                        onLabourRemove={handleLabourRemove}
-                    />
+                 <ContractorWorkLocationCard
+                            key={index}
+                            workAssigned={workAssigned}
+                            setIsAddDisabled={setIsAddDisabled}
+                            setWorkAssigned={setWorkAssignedMultiple}
+                            contractorIndex={index}
+                            setworkerCount={setworkerCount}
+                            isFirst={index === 0}
+                            isOpen={selectedContractor === index}
+                            onPress={() => setSelectedContractor(index)}
+                            columns={columns}
+                            handleRadioChange={handleMultipleContractorRadioChange}
+                            handleInputChange={handleMultipleContractorInputChange}
+                            onLabourRemove={handleLabourRemove}
+                            />
                 ))
                     :
                     <View style={[styles.flexGrow, styles.emptyState]}>

@@ -139,6 +139,8 @@ const PackagingDetailsScreen = () => {
 
   const backRoute = resolveBackRoute(access, PACKAGE_BACK_ROUTES, resolveDefaultRoute(access));
   
+  console.log("uiPackages", JSON.stringify(uiPackages, null, 2));
+  
   return (
     <View style={styles.pageContainer}>
       <PageHeader page={'SKU'} />

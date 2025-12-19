@@ -159,7 +159,7 @@ const HomeScreen = () => {
         <SearchBar />
 
         <Tabs
-          tabTitles={["Recents", "Alerts", "Today's"]}
+          tabTitles={["Activities", "Actions", "Today"]}
           color="green"
           style={styles.flexGrow}
         >

@@ -27,7 +27,6 @@ router.get("/:type/:id", async (req, res) => {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ error: "Authorization token is missing or malformed." });
     }
-  
 
     const token = authHeader.split(" ")[1].trim();
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

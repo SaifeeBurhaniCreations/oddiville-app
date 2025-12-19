@@ -77,7 +77,7 @@ function toUrlArray(sample: any): string[] {
 
 const getChamberName = (chambers: Chamber[]) => chambers?.filter(ch => ch.tag !== "dry").map(ch => ch.chamber_name)
 
-const ProductionStartScreen = () => {
+const ProductionCompleteScreen = () => {
   const selectedChambers = useSelector(
     (state: RootState) => state.rawMaterial.selectedChambers
   );
@@ -102,6 +102,7 @@ const ProductionStartScreen = () => {
   );
   const [toastMessage, setToastMessage] = useState("");
   const [existingImage, setExistingImage] = useState<string[]>([]);
+const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const { id } = useParams("production-start", "id");
 
@@ -328,10 +329,11 @@ const ProductionStartScreen = () => {
       updateProduction.mutate(
         { id: id!, data: formData },
         {
-          onSuccess: (result) => {
-            goTo("production");
-            resetForm();
-          },
+            onSuccess: () => {
+              setHasUnsavedChanges(false);
+              goTo("production");
+              resetForm();
+            },
           onError: (error) => {
             showToast("error", "Failed to update production");
           },
@@ -345,6 +347,20 @@ const ProductionStartScreen = () => {
   };
 
 const isStarted = !!productionData?.isStarted;
+
+const canStart = !isStarted;
+
+const canSave =
+  isStarted &&
+  hasUnsavedChanges &&
+  !updateProduction.isPending &&
+  !productionLoading;
+
+const canComplete =
+  isStarted &&
+  !hasUnsavedChanges &&
+  !updateProduction.isPending &&
+  !productionLoading;
 
     const backRoute = resolveBackRoute(access, PRODUCTION_BACK_ROUTES, resolveDefaultRoute(access));
 
@@ -368,9 +384,10 @@ const isStarted = !!productionData?.isStarted;
                   type="radio"
                   data={formattedLanes}
                   activeValue={value}
-                  onChange={(selectedLaneId) => {
-                    onChange(selectedLaneId);
-                  }}
+                 onChange={(selectedLaneId) => {
+                  onChange(selectedLaneId);
+                  setHasUnsavedChanges(true);
+                }}
                   disabledValues={disabledLaneIds}
                 >
                   Select lane
@@ -380,35 +397,48 @@ const isStarted = !!productionData?.isStarted;
 
             <FormField name="sample_images" form={{ values, setField, errors }}>
               {({ value = [], onChange }) => (
-                <FileUploadGallery
-                  fileStates={[Array.isArray(value) ? value : [], onChange]}
-                  existingStates={[existingImage, setExistingImage]}
-                   maxImage={10}
-                >
-                  Capture photo
-                </FileUploadGallery>
+                  <FileUploadGallery
+                    fileStates={[
+                      Array.isArray(value) ? value : [],
+                      (files) => {
+                        onChange(files);
+                        setHasUnsavedChanges(true);
+                      },
+                    ]}
+                    existingStates={[existingImage, setExistingImage]}
+                    maxImage={10}
+                  >
+                    Capture photo
+                  </FileUploadGallery>
               )}
             </FormField>
             
           </View>
         </ScrollView>
         <View style={styles.buttonContainer}>
+            <Button
+              onPress={saved}
+              disabled={!canStart && !canSave}
+              variant="outline"
+            >
+              {updateProduction.isPending
+                ? isStarted
+                  ? "Saving..."
+                  : "Starting..."
+                : isStarted
+                ? "Save"
+                : "Start"}
+            </Button>
           <Button
-            onPress={saved}
-            disabled={updateProduction.isPending || productionLoading}
-            variant="outline"
-          >
-            {updateProduction.isPending ? isStarted ? "Saving..." : "Starting..." : isStarted ? "Save" : "Start"}
-          </Button>
-          <Button
-            onPress={openBottomSheet}
-            disabled={updateProduction.isPending || productionLoading}
-            style={styles.flexGrow}
-          >
-            {productionLoading
-              ? "Production completing..."
-              : "Production completed"}
-          </Button>
+  onPress={openBottomSheet}
+  disabled={!canComplete}
+  style={styles.flexGrow}
+>
+  {productionLoading
+    ? "Production completing..."
+    : "Production completed"}
+</Button>
+
         </View>
       </View>
       <BottomSheet color="green" />
@@ -428,6 +458,8 @@ const isStarted = !!productionData?.isStarted;
     </View>
   );
 };
+
+export default ProductionCompleteScreen;
 
 const styles = StyleSheet.create({
   pageContainer: {
@@ -484,4 +516,3 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ProductionStartScreen;

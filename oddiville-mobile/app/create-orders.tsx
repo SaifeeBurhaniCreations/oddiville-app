@@ -135,6 +135,7 @@ const CreateOrder = () => {
   }, [packedItemsData]);
 
   const { data: chambersData, isFetching: chambersLoading } = useChamber();
+  const canSeeAmount = access.isFullAccess; 
 
   const {
     values,
@@ -165,7 +166,7 @@ const CreateOrder = () => {
           message: "Customer name must be at least 2 characters!",
         },
       ],
-      amount: [
+      amount: canSeeAmount ? [
         { type: "required" as const, message: "Amount is required!" },
         {
           type: "custom" as const,
@@ -175,7 +176,7 @@ const CreateOrder = () => {
           },
           message: "Amount must be a valid positive number!",
         },
-      ],
+      ]  : [],
       products: [
         {
           type: "custom" as const,

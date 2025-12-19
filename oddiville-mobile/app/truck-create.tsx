@@ -261,9 +261,15 @@ const TruckCreateScreen = () => {
             {({ value, onChange, error }) => (
               <Input
                 placeholder="Truck Size"
-                value={value || ""}
-                onChangeText={onChange}
+                value={String(value ?? "")}
+                onChangeText={(text: string) => {
+                  const digitsOnly = text.replace(/\D+/g, ""); // remove everything except numbers
+                  onChange(digitsOnly === "" ? 0 : Number(digitsOnly));
+                }}
                 error={error}
+                addonText="Kg"
+                post
+                keyboardType="number-pad"
               >
                 Truck Size
               </Input>

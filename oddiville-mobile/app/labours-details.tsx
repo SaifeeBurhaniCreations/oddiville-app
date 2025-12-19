@@ -23,9 +23,54 @@ import {
   useContractorWorkLocations,
   useContractorSummary,
 } from '@/src/hooks/useContractor'
+import { TableColumn } from '@/src/components/ui/Table'
 
 import { getColor } from '@/src/constants/colors'
 import { OrderProps } from '@/src/types'
+
+function parseDisplayCount(display?: string | null): {
+  male: number
+  female: number
+} {
+  if (!display || typeof display !== 'string') {
+    return { male: 0, female: 0 }
+  }
+
+  const value = display.toLowerCase()
+
+  const maleWord = value.match(/male\s*[:\-]?\s*(\d+)/)
+  const femaleWord = value.match(/female\s*[:\-]?\s*(\d+)/)
+
+  if (maleWord || femaleWord) {
+    return {
+      male: maleWord ? Number(maleWord[1]) : 0,
+      female: femaleWord ? Number(femaleWord[1]) : 0,
+    }
+  }
+
+  const maleShort = value.match(/(\d+)\s*m\b/)
+  const femaleShort = value.match(/(\d+)\s*f\b/)
+
+  if (maleShort || femaleShort) {
+    return {
+      male: maleShort ? Number(maleShort[1]) : 0,
+      female: femaleShort ? Number(femaleShort[1]) : 0,
+    }
+  }
+
+  const numericPair = value.match(/(\d+)\s*[\/,\-]\s*(\d+)/)
+
+  if (numericPair) {
+    return {
+      male: Number(numericPair[1]),
+      female: Number(numericPair[2]),
+    }
+  }
+
+  // fallback
+  return { male: 0, female: 0 }
+}
+
 
 /* ---------------------------------- */
 /* TABLE CONFIG */
@@ -37,11 +82,12 @@ type WorkerRow = {
   countFemale: number
 }
 
-const columns = [
+const columns: TableColumn<WorkerRow>[] = [
   { key: 'label', label: 'Type', flex: 2 },
   { key: 'countMale', label: 'Male', flex: 1 },
   { key: 'countFemale', label: 'Female', flex: 1 },
-] as const
+]
+
 
 /* ---------------------------------- */
 /* SCREEN */
@@ -116,28 +162,36 @@ const SupervisorWorkerDetailsScreen = () => {
   /* TABLE DATA */
   /* ---------------------------------- */
 
-  const singleTableData: WorkerRow[] = useMemo(() => {
-    if (!workLocations) return []
+const singleTableData: WorkerRow[] = useMemo(() => {
+  if (!workLocations) return []
 
-    return workLocations.map(loc => ({
-      label: loc.name,
-      countMale: Number(loc.male_count ?? 0),
-      countFemale: Number(loc.female_count ?? 0),
-    }))
-  }, [workLocations])
+  return workLocations.map(loc => {
 
-  const multipleTables = useMemo(() => {
-    if (!contractors) return []
+    return {
+  label: loc.name,
+  countMale: loc.maleCount,
+  countFemale: loc.femaleCount,
+}
+  })
+}, [workLocations])
 
-    return contractors.map(c => ({
-      name: c.name,
-      data: c.workLocations.map(loc => ({
+
+const multipleTables = useMemo(() => {
+  if (!contractors) return []
+
+  return contractors.map(c => ({
+    name: c.name,
+    data: c.workLocations.map(loc => {
+
+    return {
         label: loc.name,
-        countMale: Number(loc.male_count ?? 0),
-        countFemale: Number(loc.female_count ?? 0),
-      })),
-    }))
-  }, [contractors])
+        countMale: loc.maleCount,
+        countFemale: loc.femaleCount,
+        }
+    }),
+  }))
+}, [contractors])
+
 
   const isLoading =
     mode === 'single'
@@ -161,6 +215,8 @@ const SupervisorWorkerDetailsScreen = () => {
 
       <View style={styles.wrapper}>
         <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.column}>
+
           <BackButton label="Detail" backRoute="labours" />
 
           {mode === 'single' && workerDetailSingle && (
@@ -170,7 +226,7 @@ const SupervisorWorkerDetailsScreen = () => {
                 color="green"
                 bgSvg={DatabaseIcon}
               />
-              <Table<WorkerRow> columns={columns} content={singleTableData} />
+              <Table columns={columns} content={singleTableData} />
             </>
           )}
 
@@ -192,7 +248,7 @@ const SupervisorWorkerDetailsScreen = () => {
 
               {multipleTables.map((t, i) => (
                 t.data.length > 0 && (
-                  <Table<WorkerRow>
+                  <Table
                     key={`${t.name}-${i}`}
                     columns={columns}
                     content={t.data}
@@ -203,6 +259,7 @@ const SupervisorWorkerDetailsScreen = () => {
               ))}
             </>
           )}
+          </View>
         </ScrollView>
       </View>
 
@@ -235,5 +292,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 16,
+  },
+  column: {
+   flexDirection: "column",
+   gap: 24
   },
 })

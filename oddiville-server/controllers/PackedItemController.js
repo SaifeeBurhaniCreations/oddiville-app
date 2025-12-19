@@ -4,6 +4,7 @@ const {
   Chambers: chambersClient,
   ChamberStock: chamberStockClient,
   DryWarehouse,
+  Packages: packagesClient,
   sequelize,
 } = require("../models");
 const multer = require("multer");
@@ -60,9 +61,7 @@ const parsedPackages = async ({ packages, product_name, transaction }) => {
   return result;
 };
 
-
 router.get("/", async (req, res) => {
-  console.log("packed claled");
   try {
     const packedItemChamberStock = await chamberStockClient.findAll({
       where: { category: "packed" },
@@ -376,6 +375,38 @@ router.post("/", async (req, res) => {
             err.status = 400;
             throw err;
           }
+
+          // --- PACKAGING TYPES DEDUCTION (FROM Packages TABLE) ---
+              for (const pkg of packageList) {
+                const usedQty = Number(pkg.quantity || 0);
+                if (!usedQty || usedQty <= 0) continue;
+
+                const packageRow = await packagesClient.findOne({
+                  where: { product_name },
+                  transaction: t,
+                });
+
+                if (!packageRow || !Array.isArray(packageRow.types)) continue;
+
+                const updatedTypes = packageRow.types.map((type) => {
+                  // match by size
+                  if (type.size !== pkg.size) return type;
+
+                  const currentQty = Number(type.quantity || 0);
+                  const remainingQty = Math.max(0, currentQty - usedQty);
+
+                  return {
+                    ...type,
+                    quantity: String(remainingQty), // keep as string
+                  };
+                });
+
+                await packageRow.update(
+                  { types: updatedTypes },
+                  { transaction: t }
+                );
+              }
+
 
           const currentQtyKg = Number(packItem.quantity_unit || "0");
           const remaining = Math.max(

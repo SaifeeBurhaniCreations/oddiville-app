@@ -35,6 +35,7 @@ import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { useAuth } from "@/src/context/AuthContext";
 import { useAdmin } from "@/src/hooks/useAdmin";
 import { useUnreadNotificationCount } from "@/src/hooks/useNotifications";
+import HomeLightIcon from "../icons/bottom-bar/HomeLightIcon";
 
 type PageVariant =
   | "welcome"
@@ -226,7 +227,7 @@ const PageHeader = ({ page }: { page: string }) => {
       <View style={styles.headerRow}>
    {role === "admin" || role === "superadmin" && (
         <Pressable style={styles.bellIconContainer} onPress={() => goTo("home")}>
-          <BellRingingIcon size={24} color={getColor("light")} />
+          <HomeLightIcon size={24} />
           {parseInt(notificationCount) > 0 && (
             <View style={styles.badgeContainer}>
               <B6 style={styles.badgeText}>{badgeLabel}</B6>

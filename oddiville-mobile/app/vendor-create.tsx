@@ -537,7 +537,7 @@ const onSubmit = async (userId: string | null) => {
             >
               {userId
                 ? !isSubmitting
-                  ? "Saved changes"
+                  ? "Save changes"
                   : "Saving changes..."
                 : !isSubmitting
                 ? "Add Vendor"

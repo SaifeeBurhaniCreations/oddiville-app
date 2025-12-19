@@ -451,7 +451,7 @@ useEffect(() => {
         {
           type: "title-with-details-cross",
           data: {
-            title: "Add new Package",
+            title: "Add Packing Material",
           },
         },
         {
@@ -471,10 +471,11 @@ useEffect(() => {
         {
           type: "input-with-select",
           data: {
-            placeholder: "Enter title",
-            label: "Package title",
+            placeholder: "Enter SKU",
+            label: "Packing Size",
             key: "package-weight",
             formField_1: "size",
+            keyboardType: "number-pad",
             label_second: "Unit",
             source: "add-product-package",
           },
@@ -483,7 +484,7 @@ useEffect(() => {
           type: "input",
           data: {
             placeholder: "Enter counts",
-            label: "Add package",
+            label: "No. of Pouches",
             keyboardType: "number-pad",
             formField: "quantity",
           },
@@ -504,18 +505,18 @@ useEffect(() => {
         {
           type: "file-upload",
           data: {
-            label: "Upload package image",
-            uploadedTitle: "Uploaded package image",
-            title: "Upload image",
+            label: "Upload pouch image",
+            uploadedTitle: "Uploaded pouch image",
+            title: "Upload pouch image",
             key: "package-image",
           },
         },
         {
           type: "file-upload",
           data: {
-            label: "Upload image",
-            uploadedTitle: "Uploaded image",
-            title: "Upload image",
+            label: "Upload packed image",
+            uploadedTitle: "Uploaded packed image",
+            title: "Upload packed image",
             key: "image",
           },
         },
@@ -788,10 +789,10 @@ const selectedLabel = selectedProduct || "Select products";
       keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
     >
       <View style={styles.pageContainer}>
-        <PageHeader page={"Package"} />
+        <PageHeader page={"Packing"} />
         <View style={styles.wrapper}>
           <Tabs
-            tabTitles={["Storage", "Packaging bag"]}
+            tabTitles={["Stock", "Packing material"]}
             color="green"
             style={styles.flexGrow}
           >
@@ -859,7 +860,7 @@ const selectedLabel = selectedProduct || "Select products";
                           >
                             {({ value, onChange, error }) => (
                               <Input
-                                placeholder="Quantity"
+                                placeholder="Qty."
                                 addonText="KG"
                                 value={
                                   value === 0 || value == null
@@ -979,7 +980,7 @@ const selectedLabel = selectedProduct || "Select products";
                                                   error,
                                                 }) => (
                                                   <Input
-                                                    placeholder="Quantity"
+                                                    placeholder="Qty."
                                                     addonText="KG"
                                                     value={
                                                       value === 0 ||

@@ -53,7 +53,9 @@ interface SelectedContractor {
 // --- Return Types ---
 interface FormattedWorkLocation {
     name: string;
-    count: number;
+    maleCount: number;
+    femaleCount: number;
+    totalCount: number;
     displayCount: string;
 }
 
@@ -239,11 +241,22 @@ export function useFormattedContractors() {
         return contractorData.reverse().map((contractor): FormattedContractor => {
             const totalCount = contractor.male_count + contractor.female_count;
             
-            const formattedWorkLocations: FormattedWorkLocation[] = contractor.work_location?.map((location) => ({
-                name: location.name || 'Unknown Location',
-                count: Number(location.count) || 0,
-                displayCount: `${Number(location.count) || 0}`,
-            })) || [];
+const formattedWorkLocations: FormattedWorkLocation[] =
+  contractor.work_location?.map((location) => {
+    const total = Number(location.count) || 0
+
+    // simple even split (can be changed later)
+    const male = Math.floor(total / 2)
+    const female = total - male
+
+    return {
+      name: location.name || 'Unknown Location',
+      maleCount: male,
+      femaleCount: female,
+      totalCount: total,
+      displayCount: `${male} Male / ${female} Female`,
+    }
+  }) || [];
 
             return {
                 id: contractor.id,
@@ -329,11 +342,20 @@ export function useContractorsByLocation() {
                 maleCount: contractor.male_count,
                 femaleCount: contractor.female_count,
                 totalCount,
-                workLocations: contractor.work_location?.map((location) => ({
-                    name: location.name,
-                    count: Number(location.count) || 0,
-                    displayCount: `${Number(location.count) || 0}`,
-                })) || [],
+                workLocations:
+                contractor.work_location?.map((location) => {
+                    const total = Number(location.count) || 0
+                    const male = Math.floor(total / 2)
+                    const female = total - male
+
+                    return {
+                    name: location.name || 'Unknown Location',
+                    maleCount: male,
+                    femaleCount: female,
+                    totalCount: total,
+                    displayCount: `${male} Male / ${female} Female`,
+                    }
+                }) || [],
                 displayMaleCount: `${contractor.male_count}`,
                 displayFemaleCount: `${contractor.female_count}`,
                 displayTotalCount: `${totalCount}`,
@@ -371,11 +393,19 @@ export function useContractorWorkLocations(contractorId: string) {
     const workLocations = useMemo(() => {
         if (!contractor?.work_location) return [];
 
-        return contractor.work_location.map((location): FormattedWorkLocation => ({
-            name: location.name || 'Unknown Location',
-            count: Number(location.count) || 0,
-            displayCount: `${Number(location.count) || 0}`,
-        }));
+return contractor.work_location.map((location): FormattedWorkLocation => {
+    const total = Number(location.count) || 0
+    const male = Math.floor(total / 2)
+    const female = total - male
+
+    return {
+        name: location.name || 'Unknown Location',
+        maleCount: male,
+        femaleCount: female,
+        totalCount: total,
+        displayCount: `${male} Male / ${female} Female`,
+    }
+})
     }, [contractor]);
 
     return {

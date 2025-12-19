@@ -121,7 +121,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
             {
               type: "title-with-details-cross",
               data: {
-                title: "Add new Package",
+                title: "Add Packing Material",
               },
             },
             {
@@ -141,11 +141,12 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
             {
               type: "input-with-select",
               data: {
-                placeholder: "Enter title",
-                label: "Package title",
+                placeholder: "Enter SKU",
+                label: "Packing Size",
                 key: "package-weight",
                 formField_1: "size",
                 label_second: "Unit",
+                keyboardType: "number-pad",
                 source: "add-product-package",
               },
             },
@@ -153,7 +154,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
               type: "input",
               data: {
                 placeholder: "Enter counts",
-                label: "Add package",
+                label: "No. of Pouches",
                 keyboardType: "number-pad",
                 formField: "quantity",
               },
@@ -173,18 +174,18 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
           {
           type: "file-upload",
           data: {
-            label: "Upload package image",
-            uploadedTitle: "Uploaded package image",
-            title: "Upload image",
+            label: "Upload pouch image",
+            uploadedTitle: "Uploaded pouch image",
+            title: "Upload pouch image",
             key: "package-image",
           },
         },
         {
           type: "file-upload",
           data: {
-            label: "Upload image",
-            uploadedTitle: "Uploaded package image",
-            title: "Upload image",
+            label: "Upload packed image",
+            uploadedTitle: "Uploaded packed image",
+            title: "Upload packed image",
             key: "image",
           },
         },

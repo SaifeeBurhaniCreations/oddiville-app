@@ -108,7 +108,7 @@ const SalesScreen = () => {
 
   return (
     <View style={styles.pageContainer}>
-      <PageHeader page="Sales" />
+      <PageHeader page="Dispatch" />
       <View style={styles.wrapper}>
         <Tabs
           tabTitles={["Upcoming", "In-progress", "Completed"]}

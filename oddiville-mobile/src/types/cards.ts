@@ -5,6 +5,8 @@ import { IconProps } from "./icon";
 import { BottomSheetSchemaKey } from "../schemas/BottomSheetSchema";
 import { RootStackParamList } from "./navigation";
 import { z } from "zod";
+import { TableColumn } from "@/src/components/ui/Table"
+import { ContractorLocationRow } from "@/src/components/ui/Contractor/AddMultipleContractor"
 
 export const validButtons = [
   "Send alert to manager",
@@ -195,32 +197,25 @@ export interface multipleContractorProps {
 }
 
 export interface ContractorWorkLocationCardProps {
-  workAssigned: {
-    contractorName: string;
-    male_count: string;
-    female_count: string;
-    locations: {
-      location: string;
-      enterCount: boolean;
-      notNeeded: boolean;
-      count: string;
-      countMale?: string;
-      countFemale?: string;
-    }[];
-  };
-  setIsAddDisabled: Dispatch<SetStateAction<boolean>>;
-  setworkerCount: Dispatch<SetStateAction<number>>;
-  setWorkAssigned: Dispatch<SetStateAction<workAssignedMultiple[]>>;
-  contractorIndex: number;
-  isFirst?: boolean;
-  isOpen: boolean;
-  columns: { label: string; key: string }[];
-  onPress: () => void;
-  handleRadioChange: (contractorIndex: number, locationIndex: number, field: "enterCount" | "notNeeded") => void
-  handleInputChange: (contractorIndex: number, locationIndex: number, field: "male" | "female", value: string) => void;
-  maleCount?: string;
-  femaleCount?: string;
-  onMaleChange?: (text: string) => void;
-  onFemaleChange?: (text: string) => void;
-  onLabourRemove?: (contractorIndex: number) => void;
+  columns: TableColumn<ContractorLocationRow>[]
+  workAssigned: workAssignedMultiple
+  contractorIndex: number
+  isFirst: boolean
+  isOpen: boolean
+  setIsAddDisabled: (val: boolean) => void
+  setWorkAssigned: React.Dispatch<React.SetStateAction<workAssignedMultiple[]>>
+  setworkerCount: (val: number) => void
+  onPress: () => void
+  handleRadioChange: (
+    contractorIndex: number,
+    locationIndex: number,
+    field: "enterCount" | "notNeeded"
+  ) => void
+  handleInputChange: (
+    contractorIndex: number,
+    locationIndex: number,
+    field: "male" | "female",
+    value: string
+  ) => void
+  onLabourRemove?: (index: number) => void
 }

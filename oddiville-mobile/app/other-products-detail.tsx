@@ -253,8 +253,9 @@ const OthersProductScreen = () => {
                 bgSvg={DatabaseIcon}
               />
             </View>
+            {/* , "Dispatch History" */}
             <Tabs
-              tabTitles={["Dispatch Entry", "Dispatch History"]}
+              tabTitles={["Dispatch Entry"]}
               color="green"
               style={styles.flexGrow}
             >
@@ -310,7 +311,7 @@ const OthersProductScreen = () => {
                   </ItemsRepeater>
                 ))}
               </View>
-              <ScrollView
+              {/* <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={[styles.pX16]}
               >
@@ -318,7 +319,7 @@ const OthersProductScreen = () => {
                   isVirtualised={false}
                   activities={activities}
                 />
-              </ScrollView>
+              </ScrollView> */}
             </Tabs>
           </View>
         </ScrollView>

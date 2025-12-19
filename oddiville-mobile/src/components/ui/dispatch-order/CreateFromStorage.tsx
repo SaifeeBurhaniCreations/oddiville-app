@@ -42,6 +42,8 @@ import {
 } from "@/src/redux/slices/bottomsheet/location.slice";
 import { usePackedItems } from "@/src/hooks/packedItem";
 import AddProductsForSell from "../AddProductsForSell";
+import { useAuth } from "@/src/context/AuthContext";
+import { resolveAccess } from "@/src/utils/policiesUtils";
 
 const convertToKg = (size: number, unit: string) => {
   const lowerUnit = unit.toLowerCase();
@@ -187,6 +189,11 @@ const handleRemoveProduct = (productName: string) => {
 
   setField("products", nextProducts);
 };
+  const { role, policies } = useAuth();
+  const safeRole = role ?? "guest";
+  const safePolicies = policies ?? [];
+  const access = resolveAccess(safeRole, safePolicies);
+  const canSeeAmount = access.isFullAccess; 
 
   const renderComponent = () => {
     if (handleGetStep === 1) {
@@ -294,7 +301,7 @@ const handleRemoveProduct = (productName: string) => {
                   mask="date"
                   error={error}
                 >
-                  Est. delivered date (Optional)
+                  ETD (Optional)
                 </Input>
               )}
             </FormField>
@@ -315,7 +322,7 @@ const handleRemoveProduct = (productName: string) => {
                 Products
               </Select>
             </View>
-            <View style={[styles.borderBottom, { paddingHorizontal: 12 }]}>
+            {canSeeAmount && <View style={[styles.borderBottom, { paddingHorizontal: 12 }]}>
               <FormField name={`amount`} form={{ values, setField, errors }}>
                 {({ value, onChange, error }) => (
                   <Input
@@ -336,7 +343,8 @@ const handleRemoveProduct = (productName: string) => {
                   />
                 )}
               </FormField>
-            </View>
+            </View>}
+            
            {itemsToRender?.length > 0 ? (
               itemsToRender.map((value, index) => (
                 <AddProductsForSell
