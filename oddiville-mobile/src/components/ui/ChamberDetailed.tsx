@@ -110,6 +110,10 @@ const ChamberDetailed = ({
           quantity: `${entry.quantity}${item.unit}`,
         }));
 
+        if(item.category === 'other')
+          console.log("jygyjjhfyuc",item);
+        
+
         const ratingStrings =
           item.category === "packed"
             ? []
