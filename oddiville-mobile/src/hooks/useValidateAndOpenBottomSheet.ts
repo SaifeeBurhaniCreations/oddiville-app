@@ -793,7 +793,8 @@ const useValidateAndOpenBottomSheet = () => {
          { name: 'Purchase', description: 'Source raw materials' },
          { name: 'Production', description: 'Convert materials into frozen goods' },
          { name: 'Package', description: 'Pack and label products for delivery' },
-         { name: 'Sales', description: 'Deliver products to customers' },
+         { name: 'Sales-view', description: 'View sales' },
+         { name: 'Sales-edit', description: 'Edit sales' },
         ]
       },
     ],

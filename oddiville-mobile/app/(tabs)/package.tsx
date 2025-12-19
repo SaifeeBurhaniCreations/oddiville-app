@@ -686,7 +686,6 @@ useEffect(() => {
   const onSubmit = async () => {
     try {
       const result = validateForm();
-console.log("result", result);
 
       if (result.success) {
         const formData = result.data as StorageForm;

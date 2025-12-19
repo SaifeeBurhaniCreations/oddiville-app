@@ -194,6 +194,9 @@ const getFillerSchema = ({
     : ["challan.png"];
 const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
 
+// console.log("Contractors", Contractors[0]?.work_location);
+
+
   return {
     "order-ready": {
       title: DispatchOrder?.customer_name,

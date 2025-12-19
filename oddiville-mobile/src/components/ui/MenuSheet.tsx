@@ -17,10 +17,13 @@ import CustomImage from "./CustomImage";
 import { B4, H1, H4 } from "../typography/Typography";
 import CrossIcon from "../icons/page/CrossIcon";
 import {
+  BASE_MENU_ITEMS,
   DISPATCH_MENU_ITEMS,
   MENU_ITEMS,
   PACKAGE_MENU_ITEMS,
   PRODUCTION_MENU_ITEMS,
+  PURCHASE_MENU_ITEMS,
+  PURCHASE_PRODUCTION_MENU_ITEMS,
   SUPERVISOR_MENU_ITEMS,
   SUPERVISOR_VIEW_MENU_ITEMS,
 } from "@/src/constants/MenuItems";
@@ -35,6 +38,7 @@ import { useAuth } from "@/src/context/AuthContext";
 import { closeFab } from "@/src/redux/slices/fab.Slice";
 import { changeViewTo } from "@/src/redux/slices/change-view.slice";
 import { useRouter } from "expo-router";
+import { resolveAccess } from "@/src/utils/policiesUtils";
 
 const user1 = require("@/src/assets/images/users/user-1.png");
 
@@ -46,7 +50,7 @@ const MenuSheet = () => {
   const admin = useAdmin();
   const router = useRouter();
 
-  const { logout } = useAuth();
+  const { logout, role } = useAuth();
   const currentView = useSelector(
     (state: RootState) => state.changeView.viewIs
   );
@@ -102,6 +106,11 @@ const MenuSheet = () => {
     if (isOpen) dispatch(closeFab());
   };
 
+  const access = resolveAccess(admin && admin?.role, admin && admin?.policies);
+
+  const hasPurchaseProductionCombo =
+  access.purchase && access.production;
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {isOpen && (
@@ -156,7 +165,7 @@ const MenuSheet = () => {
 
         <View style={styles.bodyContainer}>
           <View style={styles.userInfoContainer}>
-            <ActionButton icon={PencilIcon}>Edit profile</ActionButton>
+            <ActionButton icon={PencilIcon} disabled={role !== "superadmin" && role !== "admin"}>Edit profile</ActionButton>
             <H4 color={getColor("green", 700)}>{admin?.name}</H4>
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
@@ -169,44 +178,44 @@ const MenuSheet = () => {
 
           <ScrollView contentContainerStyle={styles.contentContainer}>
             <View style={styles.navigationContainer}>
-              {(admin?.role === "admin" || admin?.role === "superadmin") &&
-                MENU_ITEMS.map((item) => (
-                  <MenuCard
-                    key={item.name}
-                    item={item}
-                    onPress={handleMenuPress}
-                  />
-                ))}
+      {access.isFullAccess &&
+  MENU_ITEMS.map((item) => (
+    <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
+  ))}
 
-              {admin?.role === "supervisor" &&
-                admin?.policies?.[0] === "package" &&
-                PACKAGE_MENU_ITEMS.map((item) => (
-                  <MenuCard
-                    key={item.name}
-                    item={item}
-                    onPress={handleMenuPress}
-                  />
-                ))}
+{!access.isFullAccess && (
+  <>
+{!access.isFullAccess &&
+  (access.purchase || access.production || access.package) &&
+  BASE_MENU_ITEMS.map((item) => (
+    <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
+  ))}
 
-              {admin?.role === "supervisor" &&
-                admin?.policies?.[0] === "production" &&
-                PRODUCTION_MENU_ITEMS.map((item) => (
-                  <MenuCard
-                    key={item.name}
-                    item={item}
-                    onPress={handleMenuPress}
-                  />
-                ))}
+{hasPurchaseProductionCombo &&
+  PURCHASE_PRODUCTION_MENU_ITEMS.map((item) => (
+      <MenuCard
+        key={`combo-${item.name}`}
+        item={item}
+        onPress={handleMenuPress}
+      />
+    ))}
 
-              {admin?.role === "supervisor" &&
-                admin?.policies?.[0] === "sales" &&
-                DISPATCH_MENU_ITEMS.map((item) => (
-                  <MenuCard
-                    key={item.name}
-                    item={item}
-                    onPress={handleMenuPress}
-                  />
-                ))}
+{!hasPurchaseProductionCombo && (
+  <>
+    {access.purchase &&
+      PURCHASE_MENU_ITEMS.map((item) => (
+        <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
+      ))}
+
+    {access.production &&
+      PRODUCTION_MENU_ITEMS.map((item) => (
+        <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
+      ))}
+  </>
+)}
+  </>
+)}
+
             </View>
           </ScrollView>
 

@@ -62,6 +62,7 @@ const parsedPackages = async ({ packages, product_name, transaction }) => {
 
 
 router.get("/", async (req, res) => {
+  console.log("packed claled");
   try {
     const packedItemChamberStock = await chamberStockClient.findAll({
       where: { category: "packed" },

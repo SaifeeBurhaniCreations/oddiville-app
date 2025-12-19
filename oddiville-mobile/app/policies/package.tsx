@@ -218,8 +218,12 @@ const PackageScreen = () => {
     refetch: productItemsRefetch,
   } = useProductItems();
 
-  const { data: frozenChambers, isLoading: frozenLoading, refetch: frozenChambersRefetch, isFetching: frozenChambersFetching } =
-    useFrozenChambers();
+  const {
+    data: frozenChambers,
+    isLoading: frozenLoading,
+    refetch: frozenChambersRefetch,
+    isFetching: frozenChambersFetching,
+  } = useFrozenChambers();
 
   const isProductLoading = useSelector(
     (state: RootState) => state.product.isProductLoading
@@ -236,23 +240,22 @@ const PackageScreen = () => {
     (state: RootState) => state.rawMaterial.selectedChambers
   );
 
-const {
-  rawMaterials,
-  isLoading: rmInitialLoading,
-  refetch: refetchRM,
-  isFetching: rmLoading
-} = useRawMaterialByProduct(selectedProduct);
+  const {
+    rawMaterials,
+    isLoading: rmInitialLoading,
+    refetch: refetchRM,
+    isFetching: rmLoading,
+  } = useRawMaterialByProduct(selectedProduct);
 
   const productPackageForm = useGlobalFormValidator<AddProductPackageForm>(
     "add-product-package"
   );
 
- const {
-  summaries: choosedChamberSummary,
-  refetch: refetchSummary,
-  isFetching: isSummaryFetching
-} = useChambersSummary(choosedChambers);
-
+  const {
+    summaries: choosedChamberSummary,
+    refetch: refetchSummary,
+    isFetching: isSummaryFetching,
+  } = useChambersSummary(choosedChambers);
 
   const [isLoading, setIsLoading] = useState(false);
   const [openTab, setOpenTab] = useState<number>(0);
@@ -363,25 +366,25 @@ const {
     );
   };
 
- useEffect(() => {
-  // nothing seleced -> do nothing
-  if (!selectedProduct) return;
+  useEffect(() => {
+    // nothing seleced -> do nothing
+    if (!selectedProduct) return;
 
-  if (rmLoading || rmInitialLoading) return;
+    if (rmLoading || rmInitialLoading) return;
 
-  const noRM = !Array.isArray(rawMaterials) || rawMaterials.length === 0;
+    const noRM = !Array.isArray(rawMaterials) || rawMaterials.length === 0;
 
-  if (noRM) {
-    showToast(
-      "error",
-      `${selectedProduct} raw materials are not in your chambers!`
-    );
-  }
-}, [selectedProduct, rawMaterials, rmLoading, rmInitialLoading]);
+    if (noRM) {
+      showToast(
+        "error",
+        `${selectedProduct} raw materials are not in your chambers!`
+      );
+    }
+  }, [selectedProduct, rawMaterials, rmLoading, rmInitialLoading]);
 
-useEffect(() => {
-  setField("products", product_items);
-}, [product_items]);
+  useEffect(() => {
+    setField("products", product_items);
+  }, [product_items]);
 
   useEffect(() => {
     setField("product_name", selectedProduct);
@@ -503,7 +506,7 @@ useEffect(() => {
             key: "product-package",
           },
         },
-       {
+        {
           type: "file-upload",
           data: {
             label: "Upload package image",
@@ -699,7 +702,6 @@ useEffect(() => {
             rating: ratingValue,
           })),
         }));
-        
 
         const packedChambersWithId = (choosedChamberSummary || [])
           .map((ch, idx) => ({
@@ -779,7 +781,7 @@ useEffect(() => {
     setIsLoading(false);
   };
 
-const selectedLabel = selectedProduct || "Select products";
+  const selectedLabel = selectedProduct || "Select products";
 
   return (
     <KeyboardAvoidingView
@@ -801,7 +803,13 @@ const selectedLabel = selectedProduct || "Select products";
                 contentContainerStyle={{ flexGrow: 1 }}
                 refreshControl={
                   <RefreshControl
-                    refreshing={productPackageFetching || productsFetching || frozenChambersFetching || isSummaryFetching || rmLoading}
+                    refreshing={
+                      productPackageFetching ||
+                      productsFetching ||
+                      frozenChambersFetching ||
+                      isSummaryFetching ||
+                      rmLoading
+                    }
                     onRefresh={() => {
                       productPackageRefetch();
                       productItemsRefetch();

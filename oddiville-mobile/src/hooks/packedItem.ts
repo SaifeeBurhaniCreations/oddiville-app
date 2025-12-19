@@ -5,6 +5,8 @@ import {
   mapStorageFormToPackedDTO,
 } from "@/src/utils/mapStorageFormToPackedDTO";
 import { StorageForm } from "@/app/(tabs)/package";
+import { ChamberStockPage } from "./useChamberStock";
+import { useMemo } from "react";
 
 const CHAMBER_STOCK_KEY = ["chamber-stock"];
 const DRY_CHAMBER_QUERY_KEY: QueryKey = ["dry", "chamber", "summary"];
@@ -98,6 +100,7 @@ export const usePackedItems = () => {
     queryKey: CHAMBER_STOCK_KEY,
     queryFn: async () => {
       const cached = queryClient.getQueryData<PackedItem[]>(CHAMBER_STOCK_KEY);
+  console.log("cached", JSON.stringify(cached));
 
       if (Array.isArray(cached) && cached.length > 0) {
         return cached;
@@ -105,7 +108,7 @@ export const usePackedItems = () => {
 
       const res = await getPackedItems();
       const data = Array.isArray(res?.data) ? res.data : [];
-
+      
       return data;
     },
     select: (items) => items.filter((item) => item.category === "packed"),
@@ -114,3 +117,21 @@ export const usePackedItems = () => {
     refetchOnMount: false,
   });
 };
+
+export function usePackedItemsFromChamberStock() {
+  const queryClient = useQueryClient();
+
+  const cachedData = queryClient.getQueryData<{
+    pages: ChamberStockPage[];
+  }>(["chamber-stock"]);
+  
+  const packedItems = useMemo(() => {
+    if (!cachedData?.pages) return [];
+
+    return cachedData.pages
+      .flatMap((page) => page.data)
+      .filter((item) => item.category === "packed");
+  }, [cachedData]);
+
+  return packedItems;
+}

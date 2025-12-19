@@ -86,6 +86,7 @@ export interface ActionButtonProps {
   onPress?: () => void | Promise<void>;
   btnSize?: "sm" | "md" | "lg" | "xl";
   filled?: boolean;
+  disabled?: boolean;
   style?: any;
 }
 

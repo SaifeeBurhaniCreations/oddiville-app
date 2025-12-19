@@ -18,7 +18,7 @@ const MenuCard = ({ item, onPress, style }: MenuCardProps) => {
     return (
         <TouchableOpacity activeOpacity={0.7} style={[styles.card, style]} onPress={handlePress}> 
             <View style={[styles.HStack, styles.justifyBetween, styles.alignItemsCenter, styles.gap12]}>
-                <item.icon color={getColor("green", 700)} />
+                <item.icon color={getColor("green", 700)} size={item.style?.size} />
                 <H4 color={getColor("green", 700)}>{item.name}</H4>
             </View>
             <ForwardChevron color={getColor("green", 700)} />

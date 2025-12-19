@@ -6,6 +6,7 @@ import {
 import { useEffect } from "react";
 import {
   fetchChamberStock,
+  fetchChamberStockAll,
   fetchChamberStockById,
   fetchChamberStockRawMaterials,
   getChamberStockProduction,
@@ -129,6 +130,51 @@ export function useChamberStock() {
 
   return useQuery<ChamberStock[]>({
     queryKey: ["chamber-stock"],
+    queryFn: rejectEmptyOrNull(async () => {
+      const response = await fetchChamberStockAll();
+      return response?.data || [];
+    }),
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+}
+
+export function useChamberStockRawMaterials() {
+  const queryClient = useQueryClient();
+  const socket = useSocket();
+
+  useEffect(() => {
+    const listener = (updatedItem: ChamberStock) => {
+      if (!updatedItem?.id) return;
+
+      queryClient.setQueryData(
+        ["chamber-stock"],
+        (oldData: ChamberStock[] | undefined) => {
+          if (!oldData) return [updatedItem];
+
+          const index = oldData.findIndex((item) => item.id === updatedItem.id);
+
+          if (index !== -1) {
+            const newData = [...oldData];
+            newData[index] = updatedItem;
+            return newData;
+          } else {
+            return [...oldData, updatedItem];
+          }
+        }
+      );
+    };
+
+    socket.on("chamber-stock:receive", listener);
+
+    return () => {
+      socket.off("chamber-stock:receive", listener);
+    };
+  }, [queryClient]);
+
+  return useQuery<ChamberStock[]>({
+    queryKey: ["chamber-stock", "raw-materials"],
     queryFn: rejectEmptyOrNull(async () => {
       const response = await fetchChamberStockRawMaterials();
       return response?.data || [];

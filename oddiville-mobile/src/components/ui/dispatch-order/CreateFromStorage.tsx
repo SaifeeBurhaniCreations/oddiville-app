@@ -88,6 +88,9 @@ const filteredPackedItemsData = useMemo(() => {
   }));
 }, [packedItemsData]);
 
+console.log("filteredPackedItemsData", filteredPackedItemsData);
+
+
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const [openTab, setOpenTab] = useState<number>(0);
   const [toastVisible, setToastVisible] = useState(false);
@@ -194,7 +197,8 @@ const handleRemoveProduct = (productName: string) => {
         <View
           style={{
             justifyContent: "space-between",
-            height: "100%",
+            // height: "100%",
+            flexGrow: 1,
             paddingHorizontal: 16,
           }}
         >
@@ -412,7 +416,8 @@ const styles = StyleSheet.create({
   MainWrapper: {
     paddingVertical: 12,
     gap: 16,
-    height: "100%",
+    // height: "100%",
+    flexGrow: 1,
   },
   alignCenter: {
     alignItems: "center",

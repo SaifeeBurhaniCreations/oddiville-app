@@ -1,4 +1,6 @@
 import ContractorIcon from "../components/icons/bottom-bar/ContractorIcon";
+import ProductionIcon from "../components/icons/bottom-bar/ProductionIcon";
+import PurchaseIcon from "../components/icons/bottom-bar/PurchaseIcon";
 import WarehouseIcon from "../components/icons/bottom-bar/WarehouseIcon";
 import PackagingIcon from "../components/icons/menu/PackagingIcon";
 import ShopIcon from "../components/icons/menu/ShopIcon";
@@ -34,26 +36,59 @@ export const MENU_ITEMS: menuItemsProps[] = [
     },
 ]
 
+export const BASE_MENU_ITEMS: menuItemsProps[] = [
+  {
+    name: "Chambers",
+    icon: WarehouseIcon,
+    href: "chambers",
+  },
+];
+
+export const PURCHASE_MENU_ITEMS: menuItemsProps[] = [
+  {
+    name: "Purchase",
+    icon: PurchaseIcon,
+    href: "policies/purchase",
+  },
+];
+
 export const PRODUCTION_MENU_ITEMS: menuItemsProps[] = [
-    {
-        name: "Chambers",
-        icon: WarehouseIcon,
-        href: "chambers"
-    },
-]
+  {
+    name: "Production",
+    icon: ProductionIcon,
+    href: "policies/production",
+  },
+];
+
 export const PACKAGE_MENU_ITEMS: menuItemsProps[] = [
-    {
-        name: "Chambers",
-        icon: WarehouseIcon,
-        href: "chambers"
-    },
-]
+  {
+    name: "Package",
+    icon: PackagingIcon,
+    href: "policies/package",
+  },
+];
 
 export const DISPATCH_MENU_ITEMS: menuItemsProps[] = [
     {
         name: "Manage Trucks",
         icon: TruckIcon,
         href: "trucks"
+    },
+]
+
+
+export const PURCHASE_PRODUCTION_MENU_ITEMS: menuItemsProps[] = [
+    {
+        name: "Purchase",
+        icon: PurchaseIcon,
+        href: "policies/purchase",
+        style: { size: 20 }
+    },
+    {
+        name: "Production",
+        icon: ProductionIcon,
+        href: "policies/production",
+        style: { size: 20 }
     },
 ]
 

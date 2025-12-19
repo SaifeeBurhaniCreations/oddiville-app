@@ -6,9 +6,11 @@ export interface menuItemsProps {
     name: string;
     icon: ComponentType<IconProps>;
     href: keyof RootStackParamList;
+    style?: any;
 }
 
 export interface MenuCardProps { 
     item: menuItemsProps; 
     onPress: () => void; 
-    style?: any; }
+    style?: any;
+ }

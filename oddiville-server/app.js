@@ -89,7 +89,7 @@ const PORT = process.env.PORT || 8022;
     console.log("✅ Connected to Aiven PostgreSQL");
 
     if (process.env.SHOULD_SYNC === "true") {
-      // await Admin.sync({ force: true });
+      await Admin.sync({ force: true });
       // await sequelize.authenticate();
       // await Lanes.sync({ force: true });
 
@@ -105,7 +105,7 @@ const PORT = process.env.PORT || 8022;
       // await Packages.sync({ force: true });
       // await DryWarehouse.sync({ force: true });
       // await Chambers.sync({ force: true });
-      await DispatchOrder.sync({ force: true });
+      // await DispatchOrder.sync({ force: true });
       // await Calendar.sync({ force: true });
       // await Contractor.sync({ force: true });
       console.log("✅ Synced DB with models");

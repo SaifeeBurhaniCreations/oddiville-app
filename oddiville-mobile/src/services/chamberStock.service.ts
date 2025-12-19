@@ -12,6 +12,11 @@ export const fetchChamberStockRawMaterials = async () => {
 };
    
 
+export const fetchChamberStockAll = async () => {
+  return await api.get(`/chamber-stock/all`);
+};
+   
+
 export const fetchChamberStock = async (params: FetchChamberStockParams = {}) => {
   const queryParams = new URLSearchParams();
 

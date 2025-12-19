@@ -28,7 +28,7 @@ import { selectRole } from "@/src/redux/slices/select-role";
 import DetailsToast from "@/src/components/ui/DetailsToast";
 import ChipGroup from "@/src/components/ui/ChipGroup";
 import { allowedPolicies } from "@/src/constants/allowedPolicies";
-import { clearPolicies } from "@/src/redux/slices/bottomsheet/policies.slice";
+import { clearPolicies, setPolicies } from "@/src/redux/slices/bottomsheet/policies.slice";
 
 const EditUserScreen = () => {
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
@@ -127,9 +127,25 @@ const EditUserScreen = () => {
       phone: user.phone ?? "",
       role: user.role ?? "",
       profilepic: user.profilepic ?? "",
+      policies: user.policies ?? [],
     });
     dispatch(selectRole(user.role));
-  }, [isEdit, userLoading]);
+
+  dispatch(
+    setPolicies(
+      (user.policies ?? []).map((p: string) => ({
+        name: p,
+      }))
+    )
+  );
+
+  }, [isEdit, userLoading, user]);
+
+  useEffect(() => {
+  if (!username) {
+    dispatch(clearPolicies());
+  }
+}, [username]);
 
   useEffect(() => {
     if (selectedRole && values.role !== selectedRole) {
@@ -137,25 +153,25 @@ const EditUserScreen = () => {
     }
   }, [setFields]);
 
-useEffect(() => {
-  if (!isSelectionDone) return;
+  useEffect(() => {
+    if (!isSelectionDone) return;
 
-  const names = selectedPolicies.map((sp) => sp.name.toLowerCase());
+    const names = selectedPolicies.map((sp) => sp.name.toLowerCase());
 
-  if (
-    !Array.isArray(values.policies) ||
-    values.policies.length !== names.length ||
-    values.policies.some((v, i) => v !== names[i])
-  ) {
-    setField("policies", names);
-  }
-}, [isSelectionDone, selectedPolicies, setField, values.policies]);
+    if (
+      !Array.isArray(values.policies) ||
+      values.policies.length !== names.length ||
+      values.policies.some((v, i) => v !== names[i])
+    ) {
+      setField("policies", names);
+    }
+  }, [isSelectionDone, selectedPolicies, setField, values.policies]);
 
-  const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setToastVisible(true);
-  };
+    const showToast = (type: "success" | "error" | "info", message: string) => {
+      setToastType(type);
+      setToastMessage(message);
+      setToastVisible(true);
+    };
 
   const handleSubmit = async () => {
     try {
@@ -218,8 +234,8 @@ useEffect(() => {
             {({ value, onChange, error }) => (
               <Input
                 placeholder="Enter Username"
-                value={value}
-                onChangeText={onChange}
+                value={value.toLowerCase()}
+                onChangeText={(text: string) => onChange(text.toLowerCase())}
                 //   onBlur={onBlur}
                 error={error}
               >

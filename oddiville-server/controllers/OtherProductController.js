@@ -286,109 +286,301 @@ router.post("/", upload.any(), async (req, res) => {
   }
 });
 
-router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
-    const { id: stockIdParam, othersItemId } = req.params;
-    let { chambers = [], add_quantity = 0, sub_quantity = 0 } = req.body;
+// router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
+//     const { id: stockIdParam, othersItemId } = req.params;
+//     let { chambers = [], add_quantity = 0, sub_quantity = 0 } = req.body;
+//     console.log(req.body);
+    
+//     try {
+//       add_quantity = Number(add_quantity || 0);
+//       sub_quantity = Number(sub_quantity || 0);
+//       chambers = Array.isArray(chambers) ? chambers : [];
 
-    try {
-      add_quantity = Number(add_quantity || 0);
-      sub_quantity = Number(sub_quantity || 0);
-      chambers = Array.isArray(chambers) ? chambers : [];
+//       await sequelize.transaction(async (t) => {
+//         const stockRow = await stockClient.findByPk(stockIdParam, { transaction: t, lock: t.LOCK.UPDATE });
+//         if (!stockRow) throw Object.assign(new Error("Chamber stock not found"), { status: 404 });
 
-      await sequelize.transaction(async (t) => {
-        const stockRow = await stockClient.findByPk(stockIdParam, { transaction: t, lock: t.LOCK.UPDATE });
-        if (!stockRow) throw Object.assign(new Error("Chamber stock not found"), { status: 404 });
+//         const item = await otherItemClient.findByPk(othersItemId, { transaction: t, lock: t.LOCK.UPDATE });
+//         if (!item) throw Object.assign(new Error("OthersItem not found"), { status: 404 });
 
-        const item = await otherItemClient.findByPk(othersItemId, { transaction: t, lock: t.LOCK.UPDATE });
-        if (!item) throw Object.assign(new Error("OthersItem not found"), { status: 404 });
+//         const currentChambers = Array.isArray(stockRow.chamber) ? stockRow.chamber : [];
 
-        const currentChambers = Array.isArray(stockRow.chamber) ? stockRow.chamber : [];
+//         const chamberIdsToLock = currentChambers
+//           .filter((sc) => chambers.includes(sc.id))
+//           .map((sc) => sc.id);
 
-        const chamberIdsToLock = currentChambers
-          .filter((sc) => chambers.includes(sc.id))
-          .map((sc) => sc.id);
+//         const lockedChamberInstances = chamberIdsToLock.length
+//           ? await chamberClient.findAll({ where: { id: chamberIdsToLock }, transaction: t, lock: t.LOCK.UPDATE })
+//           : [];
 
-        const lockedChamberInstances = chamberIdsToLock.length
-          ? await chamberClient.findAll({ where: { id: chamberIdsToLock }, transaction: t, lock: t.LOCK.UPDATE })
-          : [];
+//         const chamberMap = new Map(lockedChamberInstances.map((c) => [String(c.id), c]));
 
-        const chamberMap = new Map(lockedChamberInstances.map((c) => [String(c.id), c]));
+//         if (add_quantity > 0) {
+//           const insufficient = [];
+//           for (const stockChamber of currentChambers) {
+//             if (!chambers.includes(stockChamber.id)) continue;
+//             const inst = chamberMap.get(String(stockChamber.id));
+//             if (!inst) {
+//               insufficient.push({ id: stockChamber.id, reason: "chamber_not_found" });
+//               continue;
+//             }
+//             const capacity = Number(inst.capacity ?? 0);
+//             const currentStock = Number(inst.current_stock ?? inst.stored_quantity ?? 0);
+//             const netAdd = add_quantity;
+//             const available = Math.max(0, capacity - currentStock);
+//             if (netAdd > available) {
+//               insufficient.push({
+//                 id: inst.id,
+//                 name: inst.name,
+//                 requested: netAdd,
+//                 available,
+//                 capacity,
+//                 currentStock,
+//               });
+//             }
+//           }
+//           if (insufficient.length > 0) {
+//             const err = new Error("Insufficient chamber capacity for requested add_quantity");
+//             err.details = insufficient;
+//             throw err;
+//           }
+//         }
 
-        if (add_quantity > 0) {
-          const insufficient = [];
-          for (const stockChamber of currentChambers) {
-            if (!chambers.includes(stockChamber.id)) continue;
-            const inst = chamberMap.get(String(stockChamber.id));
-            if (!inst) {
-              insufficient.push({ id: stockChamber.id, reason: "chamber_not_found" });
-              continue;
-            }
-            const capacity = Number(inst.capacity ?? 0);
-            const currentStock = Number(inst.current_stock ?? inst.stored_quantity ?? 0);
-            const netAdd = add_quantity;
-            const available = Math.max(0, capacity - currentStock);
-            if (netAdd > available) {
-              insufficient.push({
-                id: inst.id,
-                name: inst.name,
-                requested: netAdd,
-                available,
-                capacity,
-                currentStock,
-              });
-            }
-          }
-          if (insufficient.length > 0) {
-            const err = new Error("Insufficient chamber capacity for requested add_quantity");
-            err.details = insufficient;
-            throw err;
-          }
-        }
+//         const updatedChambers = currentChambers.map((stockChamber) => {
+//           if (!chambers.includes(stockChamber.id)) return stockChamber;
+//           let quantity = Number(stockChamber.quantity ?? 0);
+//           if (add_quantity) quantity += add_quantity;
+//           if (sub_quantity) quantity -= sub_quantity;
+//           if (quantity < 0) quantity = 0;
+//           return { ...stockChamber, quantity: quantity.toString() };
+//         });
 
-        const updatedChambers = currentChambers.map((stockChamber) => {
-          if (!chambers.includes(stockChamber.id)) return stockChamber;
-          let quantity = Number(stockChamber.quantity ?? 0);
-          if (add_quantity) quantity += add_quantity;
-          if (sub_quantity) quantity -= sub_quantity;
-          if (quantity < 0) quantity = 0;
-          return { ...stockChamber, quantity: quantity.toString() };
-        });
+//         await stockClient.update({ chamber: updatedChambers }, { where: { id: stockRow.id }, transaction: t });
 
-        await stockClient.update({ chamber: updatedChambers }, { where: { id: stockRow.id }, transaction: t });
+//         let stored_quantity = Number(item.stored_quantity ?? 0);
+//         if (add_quantity) stored_quantity += add_quantity;
+//         if (sub_quantity) stored_quantity -= sub_quantity;
+//         if (stored_quantity < 0) stored_quantity = 0;
 
-        let stored_quantity = Number(item.stored_quantity ?? 0);
-        if (add_quantity) stored_quantity += add_quantity;
-        if (sub_quantity) stored_quantity -= sub_quantity;
-        if (stored_quantity < 0) stored_quantity = 0;
+//         await otherItemClient.update({ stored_quantity }, { where: { id: othersItemId }, transaction: t });
 
-        await otherItemClient.update({ stored_quantity }, { where: { id: othersItemId }, transaction: t });
+//         const chamberMatch = updatedChambers.find((sc) => chambers.includes(sc.id));
+//         const chamberIdForHistory = chamberMatch ? chamberMatch.id : null;
 
-        const chamberMatch = updatedChambers.find((sc) => chambers.includes(sc.id));
-        const chamberIdForHistory = chamberMatch ? chamberMatch.id : null;
+//         await historyClient.create(
+//           {
+//             product_id: item.id,
+//             deduct_quantity: sub_quantity,
+//             remaining_quantity: stored_quantity,
+//             chamber_id: chamberIdForHistory,
+//           },
+//           { transaction: t }
+//         );
 
-        await historyClient.create(
-          {
-            product_id: item.id,
-            deduct_quantity: sub_quantity,
-            remaining_quantity: stored_quantity,
-            chamber_id: chamberIdForHistory,
-          },
-          { transaction: t }
+//       });
+
+//       const updatedStock = await stockClient.findByPk(stockIdParam, { raw: true });
+//       return res.status(200).json(updatedStock);
+//     } catch (error) {
+//       console.error("Error during update chamberStock by id:", error?.message || error);
+//       if (error && error.details) {
+//         return res.status(400).json({ error: error.message, details: error.details });
+//       }
+//       const status = error && error.status ? error.status : 500;
+//       return res.status(status).json({ error: error.message || "Internal server error, please try again later." });
+//     }
+//   });
+
+  router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
+  const { id: stockIdParam, othersItemId } = req.params;
+  let { chambers = [], add_quantity = 0, sub_quantity = 0 } = req.body;
+  
+  try {
+    // Parse chambers array from request body
+    // Expected format: chambers = [{ id: 'uuid', add_quantity: 500, sub_quantity: 0 }, ...]
+    chambers = Array.isArray(chambers) ? chambers : [];
+
+    await sequelize.transaction(async (t) => {
+      // Lock stock row
+      const stockRow = await stockClient.findByPk(stockIdParam, { 
+        transaction: t, 
+        lock: t.LOCK.UPDATE 
+      });
+      if (!stockRow) {
+        throw Object.assign(new Error("Chamber stock not found"), { status: 404 });
+      }
+
+      // Lock item row
+      const item = await otherItemClient.findByPk(othersItemId, { 
+        transaction: t, 
+        lock: t.LOCK.UPDATE 
+      });
+      if (!item) {
+        throw Object.assign(new Error("OthersItem not found"), { status: 404 });
+      }
+
+      // Get current chambers from stock
+      const currentChambers = Array.isArray(stockRow.chamber) ? stockRow.chamber : [];
+
+      // Extract chamber IDs from request
+      const chamberIdsFromRequest = chambers.map(c => c.id).filter(Boolean);
+      
+      if (chamberIdsFromRequest.length === 0) {
+        throw Object.assign(
+          new Error("At least one chamber must be specified"), 
+          { status: 400 }
         );
+      }
 
+      // Lock chamber instances
+      const lockedChamberInstances = await chamberClient.findAll({ 
+        where: { id: chamberIdsFromRequest }, 
+        transaction: t, 
+        lock: t.LOCK.UPDATE 
       });
 
-      const updatedStock = await stockClient.findByPk(stockIdParam, { raw: true });
-      return res.status(200).json(updatedStock);
-    } catch (error) {
-      console.error("Error during update chamberStock by id:", error?.message || error);
-      if (error && error.details) {
-        return res.status(400).json({ error: error.message, details: error.details });
+      const chamberMap = new Map(
+        lockedChamberInstances.map((c) => [String(c.id), c])
+      );
+
+      // Validate capacity for additions
+      const insufficient = [];
+      
+      for (const requestChamber of chambers) {
+        const chamberId = requestChamber.id;
+        const addQty = Number(requestChamber.add_quantity || 0);
+        
+        if (addQty <= 0) continue;
+
+        const chamberInstance = chamberMap.get(String(chamberId));
+        if (!chamberInstance) {
+          insufficient.push({ 
+            id: chamberId, 
+            reason: "chamber_not_found" 
+          });
+          continue;
+        }
+
+        const capacity = Number(chamberInstance.capacity ?? 0);
+        const currentStock = Number(
+          chamberInstance.current_stock ?? chamberInstance.stored_quantity ?? 0
+        );
+        const available = Math.max(0, capacity - currentStock);
+
+        if (addQty > available) {
+          insufficient.push({
+            id: chamberInstance.id,
+            name: chamberInstance.name,
+            requested: addQty,
+            available,
+            capacity,
+            currentStock,
+          });
+        }
       }
-      const status = error && error.status ? error.status : 500;
-      return res.status(status).json({ error: error.message || "Internal server error, please try again later." });
+
+      if (insufficient.length > 0) {
+        const err = new Error("Insufficient chamber capacity for requested quantities");
+        err.details = insufficient;
+        throw err;
+      }
+
+      // Update chamber quantities in stock
+      const updatedChambers = currentChambers.map((stockChamber) => {
+        // Find matching chamber from request
+        const requestChamber = chambers.find(c => c.id === stockChamber.id);
+        
+        if (!requestChamber) return stockChamber;
+
+        let quantity = Number(stockChamber.quantity ?? 0);
+        const addQty = Number(requestChamber.add_quantity || 0);
+        const subQty = Number(requestChamber.sub_quantity || 0);
+
+        quantity += addQty;
+        quantity -= subQty;
+        quantity = Math.max(0, quantity);
+
+        return { 
+          ...stockChamber, 
+          quantity: quantity.toString() 
+        };
+      });
+
+      // Update stock with new chamber quantities
+      await stockClient.update(
+        { chamber: updatedChambers }, 
+        { where: { id: stockRow.id }, transaction: t }
+      );
+
+      // Calculate total add/sub quantities across all chambers
+      const totalAddQuantity = chambers.reduce(
+        (sum, c) => sum + Number(c.add_quantity || 0), 
+        0
+      );
+      const totalSubQuantity = chambers.reduce(
+        (sum, c) => sum + Number(c.sub_quantity || 0), 
+        0
+      );
+
+      // Update item stored quantity
+      let stored_quantity = Number(item.stored_quantity ?? 0);
+      stored_quantity += totalAddQuantity;
+      stored_quantity -= totalSubQuantity;
+      stored_quantity = Math.max(0, stored_quantity);
+
+      await otherItemClient.update(
+        { stored_quantity }, 
+        { where: { id: othersItemId }, transaction: t }
+      );
+
+      // Create history entries for each chamber with activity
+      for (const requestChamber of chambers) {
+        const addQty = Number(requestChamber.add_quantity || 0);
+        const subQty = Number(requestChamber.sub_quantity || 0);
+        console.log("requestChamber", requestChamber);
+        console.log("item.id", item.id);
+        
+        
+
+        // Only create history if there's actual activity
+        if (addQty > 0 || subQty > 0) {
+          await historyClient.create(
+            {
+              product_id: item.id,
+              chamber_id: requestChamber.id, // This will never be null now
+              deduct_quantity: subQty,
+              add_quantity: addQty, // Include add_quantity if your schema supports it
+              remaining_quantity: stored_quantity,
+            },
+            { transaction: t }
+          );
+        }
+      }
+    });
+
+    // Fetch and return updated stock
+    const updatedStock = await stockClient.findByPk(stockIdParam, { raw: true });
+    return res.status(200).json({
+      success: true,
+      data: updatedStock
+    });
+
+  } catch (error) {
+    console.error("Error during update chamberStock by id:", error?.message || error);
+    
+    if (error && error.details) {
+      return res.status(400).json({ 
+        error: error.message, 
+        details: error.details 
+      });
     }
-  });
+    
+    const status = error && error.status ? error.status : 500;
+    return res.status(status).json({ 
+      error: error.message || "Internal server error, please try again later." 
+    });
+  }
+});
 
   // router.patch("/deduct-quantity/:othersItemId", async (req, res) => {
   //   const { sub_quantity } = req.body;

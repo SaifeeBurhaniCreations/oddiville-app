@@ -170,10 +170,10 @@ export type RootStackParamList = {
 
   "search-results": { query: string };
 
-  "supervisor-raw-material": undefined;
-  "supervisor-orders": undefined;
-  "supervisor-production": undefined;
-  "supervisor-contractor": undefined;
+  // "supervisor-raw-material": undefined;
+  // "supervisor-orders": undefined;
+  // "supervisor-production": undefined;
+  // "supervisor-contractor": undefined;
 
 
   "raw-material-detail": {

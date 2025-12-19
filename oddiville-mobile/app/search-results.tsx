@@ -125,7 +125,7 @@ const SearchResultsScreen = () => {
             }}
           >
             <View style={styles.wrapContainer}>
-              <BackButton label="Search result" backRoute="admin-home" style={{ marginHorizontal: 16 }} />
+              <BackButton label="Search result" backRoute="home" style={{ marginHorizontal: 16 }} />
 
               <SearchInput
                 value={searchText}
