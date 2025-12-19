@@ -790,7 +790,8 @@ const useValidateAndOpenBottomSheet = () => {
       {
         type: 'policies-card',
         data: [
-         { name: 'Purchase', description: 'Source raw materials' },
+         { name: 'Purchase-view', description: 'Source raw materials' },
+         { name: 'Purchase-edit', description: 'Source raw materials' },
          { name: 'Production', description: 'Convert materials into frozen goods' },
          { name: 'Package', description: 'Pack and label products for delivery' },
          { name: 'Sales-view', description: 'View sales' },

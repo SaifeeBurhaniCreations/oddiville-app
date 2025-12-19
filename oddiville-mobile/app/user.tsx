@@ -45,9 +45,11 @@ const UserScreen = () => {
   const users = useMemo<UserProps[]>(() => {
     if (!rawUsers) return [];
     const order = ["superadmin", "admin", "supervisor"];
-    const sortedUser = [...rawUsers].sort(
-      (a, b) => order.indexOf(a.role) - order.indexOf(b.role)
-    );
+    const sortedUser = [...rawUsers].sort((a, b) => {
+      const roleDiff = order.indexOf(a.role) - order.indexOf(b.role);
+      if (roleDiff !== 0) return roleDiff;
+      return (b.policies?.length ?? 0) - (a.policies?.length ?? 0);
+    });
 
     const s = (debouncedSearch ?? "").trim().toLowerCase();
     const filtered = s
@@ -64,6 +66,7 @@ const UserScreen = () => {
       name: u.name,
       username: u.username,
       role: u.role,
+      policies: u.policies,
       profileImg: user1,
       extra_details: `${u.phone ?? ""} • ${u.email ?? ""}`,
       label: "Access",

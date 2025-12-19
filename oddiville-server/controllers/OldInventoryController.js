@@ -865,12 +865,17 @@ router.post("/bulk-ingest", async (req, res) => {
   try {
     const body = req.body || {};
 
+    const hasDispatchOrder =
+      body.dispatchOrder &&
+      Array.isArray(body.dispatchOrder.rows) &&
+      body.dispatchOrder.rows.length > 0;
+
     const vendorsInput = body.vendors || body.vendorsList || [];
     const rawMaterialBlock = body.rawMaterial || {};
     const productionBlock = body.production || {};
     const chamberStockBlock = body.chamberStock || {};
     const dispatchBlock = body.dispatchOrder || {};
-    if (dispatchBlock) {
+      if (dispatchBlock && Array.isArray(dispatchBlock.rows)) {
       dispatchBlock.rows = dispatchBlock.rows.map((row) => {
         const chooseDelimiter = (s) => {
           if (!s || typeof s !== "string") return null;
@@ -994,13 +999,11 @@ router.post("/bulk-ingest", async (req, res) => {
       : Array.isArray(body.chamberStockRows)
       ? body.chamberStockRows
       : [];
-    const dispatchRowsInput = Array.isArray(dispatchBlock.rows)
-      ? dispatchBlock.rows
-      : Array.isArray(body.dispatch_orders)
-      ? body.dispatch_orders
-      : Array.isArray(body.dispatchOrderRows)
-      ? body.dispatchOrderRows
-      : [];
+const dispatchRowsInput = hasDispatchOrder
+  ? Array.isArray(dispatchBlock.rows)
+    ? dispatchBlock.rows
+    : []
+  : [];
 
     const rawMaterialChallanTop = rawMaterialBlock.challan || null;
     const dispatchChallanTop = dispatchBlock.challan || null;
@@ -1060,13 +1063,14 @@ router.post("/bulk-ingest", async (req, res) => {
     }));
 
     // 0) Payload validation (strict required fields)
-    const errors = [
-      ...validateVendors(vendors),
-      ...validateRMOs(raw_material_orders),
-      ...validateProductions(productions),
-      ...validateChamberStock(chamber_stock, allowedChambers),
-      ...validateDispatch(dispatch_orders),
-    ];
+const errors = [
+  ...validateVendors(vendors),
+  ...validateRMOs(raw_material_orders),
+  ...validateProductions(productions),
+  ...validateChamberStock(chamber_stock, allowedChambers),
+  ...(hasDispatchOrder ? validateDispatch(dispatch_orders) : []),
+];
+
     if (errors.length) {
       await t.rollback();
       console.log("errors----", errors);
@@ -1570,7 +1574,7 @@ router.post("/bulk-ingest", async (req, res) => {
       }
     }
 
-    if (requestedMap.size > 0) {
+    if (hasDispatchOrder && requestedMap.size > 0) {
       const packageIds = [
         ...new Set(Array.from(requestedMap.values()).map((x) => x.id)),
       ];
@@ -1642,31 +1646,35 @@ router.post("/bulk-ingest", async (req, res) => {
     // --- 6) Create Dispatch Orders (moved AFTER validation) ---
     const createdDispatch = [];
     const mapDo = new Map();
-    for (const d of dispatch_orders) {
-      const id = uuid();
-      const payload = { ...d, id };
-      delete payload.clientId;
 
-      if (Array.isArray(payload.products)) {
-        payload.products = payload.products.map((p) => ({
-          ...p,
-          quantity: Number(p.quantity),
-        }));
-      }
-      if (Array.isArray(payload.packages)) {
-        payload.packages = payload.packages.map((p) => ({
-          ...p,
-          quantity: Number(p.quantity),
-        }));
-      }
+    if (hasDispatchOrder) {
+      for (const d of dispatch_orders) {
+        const id = uuid();
+        const payload = { ...d, id };
+        delete payload.clientId;
 
-      const row = await DispatchOrdersClient.create(payload, {
-        transaction: t,
-      });
-
-      createdDispatch.push(row.toJSON());
-      if (d.clientId) mapDo.set(d.clientId, id);
+    if (Array.isArray(payload.products)) {
+      payload.products = payload.products.map((p) => ({
+        ...p,
+        quantity: Number(p.quantity),
+      }));
     }
+
+    if (Array.isArray(payload.packages)) {
+      payload.packages = payload.packages.map((p) => ({
+        ...p,
+        quantity: Number(p.quantity),
+      }));
+    }
+
+    const row = await DispatchOrdersClient.create(payload, {
+      transaction: t,
+    });
+
+    createdDispatch.push(row.toJSON());
+    if (d.clientId) mapDo.set(d.clientId, id);
+  }
+}
 
     // --- RAW MATERIAL ORDERS notifications ---
     for (const asJson of createdRmos) {
@@ -1744,6 +1752,7 @@ router.post("/bulk-ingest", async (req, res) => {
     }
 
     // --- DISPATCH ORDERS notifications ---
+    if (hasDispatchOrder) {
     for (const dj of createdDispatch) {
       const totalWeight = (dj?.products ?? []).reduce((productSum, p) => {
         if (Array.isArray(p?.chambers) && p.chambers.length) {
@@ -1793,7 +1802,7 @@ router.post("/bulk-ingest", async (req, res) => {
         );
       }
     }
-
+  }
     await t.commit();
 
     try {

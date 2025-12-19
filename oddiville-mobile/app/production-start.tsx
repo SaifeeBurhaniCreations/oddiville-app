@@ -31,10 +31,11 @@ import FormField from '@/src/sbc/form/FormField';
 import { useFormValidator } from '@/src/sbc/form';
 
 // 6. Types
-import { OrderProps, RootStackParamList } from '@/src/types';
+import { OrderProps } from '@/src/types';
 import DetailsToast from '@/src/components/ui/DetailsToast';
-import { productionStartBackRoute } from '@/src/constants/backRoute';
 import { useAuth } from '@/src/context/AuthContext';
+import { resolveAccess } from '@/src/utils/policiesUtils';
+import { PRODUCTION_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
 
 type RNImageFile = {
     uri: string;
@@ -56,7 +57,11 @@ const KG_TO_TONS = 1000;
 const DATE_FORMAT = "MMM d, yyyy";
 
 const ProductionStartScreen = () => {
-    const { role } = useAuth();
+    const { role, policies } = useAuth();
+
+    const safeRole = role ?? "guest";
+    const safePolicies = policies ?? [];
+    const access = resolveAccess(safeRole, safePolicies);
 
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [toastVisible, setToastVisible] = useState(false);
@@ -199,6 +204,7 @@ const ProductionStartScreen = () => {
             ],
         };
     }, [productionData, rawMaterialOrderData]);
+
     const truckDetails = useMemo(() => {
         const truckDetailsData = rawMaterialOrderData?.truck_details;
 
@@ -387,6 +393,8 @@ const ProductionStartScreen = () => {
         );
     }
 
+    const backRoute = resolveBackRoute(access, PRODUCTION_BACK_ROUTES, resolveDefaultRoute(access));
+    
     return (
         <View style={styles.pageContainer}>
             <PageHeader page="Production" />
@@ -395,7 +403,7 @@ const ProductionStartScreen = () => {
                     <View style={[styles.VStack, styles.gap16]}>
                         <BackButton
                             label="Production Start"
-                            backRoute={productionStartBackRoute[role ?? "supervisor"] as keyof RootStackParamList}
+                            backRoute={backRoute}
                         />
 
                         <SupervisorOrderDetailsCard

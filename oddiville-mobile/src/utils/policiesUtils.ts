@@ -1,7 +1,10 @@
-type Role = "superadmin" | "admin" | "supervisor" | "manager";
+import { RootStackParamList } from "../types";
+
+type Role = "superadmin" | "admin" | "supervisor" | "manager" | "guest";
 
 export type Policy =
-  | "purchase"
+  "purchase-view"
+  | "purchase-edit"
   | "production"
   | "package"
   | "sales-view"
@@ -16,16 +19,23 @@ export function resolveAccess(
     return {
       isFullAccess: true,
 
-      purchase: true,
+     purchase: { view: true, edit: true },
       production: true,
       package: true,
-
-      sales: {
-        view: true,
-        edit: true,
-      },
+      sales: { view: true, edit: true },
     };
   }
+
+  // 🔓 No access roles/policies
+  if (role === "guest") {
+    return {
+      isFullAccess: false,
+      purchase: { view: false, edit: false },
+      production: false,
+      package: false,
+      sales: { view: false, edit: false },
+  };
+}
 
   // 🔐 Policy-based roles
   const set = new Set(policies ?? []);
@@ -33,11 +43,14 @@ export function resolveAccess(
   return {
     isFullAccess: false,
 
-    purchase: set.has("purchase"),
+    purchase: {
+      view: set.has("purchase-view"),
+      edit: set.has("purchase-edit"),
+    },
     production: set.has("production"),
     package: set.has("package"),
 
-    sales: {
+    sales: {  
       view: set.has("sales-view"),
       edit: set.has("sales-edit"),
     },
@@ -45,3 +58,32 @@ export function resolveAccess(
 }
 
 export type Access = ReturnType<typeof resolveAccess>;
+
+export function resolveEntryRoute(
+  access: Access
+): keyof RootStackParamList | null {
+  // Admin / Superadmin
+  if (access.isFullAccess) {
+    return "home";
+  }
+
+  // Policy-based users (priority order)
+  if (access.purchase.view || access.purchase.edit) {
+    return "policies/purchase";
+  }
+
+  if (access.production) {
+    return "policies/production";
+  }
+
+  if (access.package) {
+    return "policies/package";
+  }
+
+  if (access.sales.view || access.sales.edit) {
+    return "policies/sales";
+  }
+
+  // No module access
+  return null;
+}

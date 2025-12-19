@@ -1,5 +1,5 @@
 // 1. React and React Native core
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 
 // 2. Third-party dependencies
@@ -31,6 +31,11 @@ import {
 import Button from "@/src/components/ui/Buttons/Button";
 import { H3 } from "@/src/components/typography/Typography";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
+import { useAuth } from "@/src/context/AuthContext";
+import { resolveAccess } from "@/src/utils/policiesUtils";
+import NoAccess from "@/src/components/ui/NoAccess";
+import { maskCurrency } from "@/src/utils/maskUtils";
+import { formatAmount } from "@/src/utils/common";
 
 const categorizeOrders = (
   orders: DispatchOrderList
@@ -81,6 +86,48 @@ const categorizeOrders = (
 
 const SalesScreen = () => {
   const { goTo } = useAppNavigation();
+  const { role, policies } = useAuth();
+
+  const SalesHeader = ({ canEdit }: { canEdit: boolean }) => (
+    <View
+      style={[
+        styles.HStack,
+        styles.justifyBetween,
+        styles.alignCenter,
+        { paddingTop: 16 },
+      ]}
+    >
+      <H3>Create Dispatch Order</H3>
+      {canEdit && (
+        <Button
+          variant="outline"
+          size="md"
+          onPress={() => goTo("create-orders")}
+        >
+          Create
+        </Button>
+      )}
+    </View>
+  );
+
+  const safeRole = role ?? "guest";
+  const safePolicies = policies ?? [];
+  const access = resolveAccess(safeRole, safePolicies);
+
+  const canSeeAmount = access.isFullAccess; 
+  const canView = access.sales.view;
+  const canEdit = access.sales.edit;
+
+
+
+  const redirectedRef = React.useRef(false);
+
+  useEffect(() => {
+    if (!redirectedRef.current && !canView && canEdit) {
+      redirectedRef.current = true;
+      goTo("create-orders");
+    }
+  }, [canView, canEdit]);
 
   const {
     data: orderData,
@@ -91,12 +138,26 @@ const SalesScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isCancelOrderModal, setIsCancelOrderModal] = useState(false);
 
+const secureOrders = useMemo(() => {
+  if (!orderData) return [];
+
+  return orderData.map(order => ({
+    ...order,
+
+    amount: order.amount,
+
+    amountLabel: canSeeAmount
+      ? formatAmount(Number(order.amount))
+      : maskCurrency(order.amount),
+  }));
+}, [orderData, canSeeAmount]);
+
   const categorizedOrders = useMemo(() => {
-    if (!orderData) {
+    if (!secureOrders) {
       return { upComingOrders: [], inProgressOrders: [], completedOrders: [] };
     }
-    return categorizeOrders(orderData);
-  }, [orderData]);
+    return categorizeOrders(secureOrders);
+  }, [secureOrders]);
 
   const { upComingOrders, inProgressOrders, completedOrders } =
     categorizedOrders;
@@ -105,7 +166,17 @@ const SalesScreen = () => {
     console.error("Error loading orders:", error);
   }
 
-  const showLoader = (ordersLoading && !orderData) || isLoading;
+  const showLoader = (ordersLoading && !secureOrders) || isLoading;
+
+  if (!canView && !canEdit) {
+    return <NoAccess />;
+  }
+
+  if (!canView && canEdit) {
+    return <Loader />;
+  }
+
+
 
   return (
     <View style={styles.pageContainer}>
@@ -117,24 +188,9 @@ const SalesScreen = () => {
           style={styles.flexGrow}
         >
           <View style={styles.flexGrow}>
-            <View
-              style={[
-                styles.HStack,
-                styles.justifyBetween,
-                styles.alignCenter,
-                { paddingTop: 16 },
-              ]}
-            >
-              <H3>Create Dispatch Order</H3>
-              <Button
-                variant="outline"
-                size="md"
-                onPress={() => goTo("create-orders")}
-              >
-                Create
-              </Button>
-            </View>
-            <UpComingOrders data={upComingOrders} />
+            <SalesHeader canEdit={canEdit} />
+
+            {canView && <UpComingOrders data={upComingOrders} />}
           </View>
           <View style={styles.flexGrow}>
             <View
@@ -146,35 +202,22 @@ const SalesScreen = () => {
               ]}
             >
               <H3>Create Dispatch Order</H3>
-              <Button
-                variant="outline"
-                size="md"
-                onPress={() => goTo("create-orders")}
-              >
-                Create
-              </Button>
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  size="md"
+                  onPress={() => goTo("create-orders")}
+                >
+                  Create
+                </Button>
+              )}
             </View>
-            <InProgressOrders data={inProgressOrders} />
+            {canView && <InProgressOrders data={inProgressOrders} />}
           </View>
           <View style={styles.flexGrow}>
-            <View
-              style={[
-                styles.HStack,
-                styles.justifyBetween,
-                styles.alignCenter,
-                { paddingTop: 16 },
-              ]}
-            >
-              <H3>Create Dispatch Order</H3>
-              <Button
-                variant="outline"
-                size="md"
-                onPress={() => goTo("create-orders")}
-              >
-                Create
-              </Button>
-            </View>
-            <CompletedOrders data={completedOrders} />
+            <SalesHeader canEdit={canEdit} />
+
+            {canView && <CompletedOrders data={completedOrders} />}
           </View>
         </Tabs>
       </View>

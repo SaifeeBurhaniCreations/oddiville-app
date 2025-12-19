@@ -40,6 +40,7 @@ export interface DispatchOrderPackage {
     country: string;                  
     phone: string;                  
     amount: number;                    
+    amountLabel?: string;                    
     createdAt: string | Date;  
     updatedAt: string | Date;
     dispatch_date: string | Date;      

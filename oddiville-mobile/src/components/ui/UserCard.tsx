@@ -20,6 +20,7 @@ const UserCard = memo(
     profileImg,
     extra_details,
     role = "supervisor",
+    policies = [],
     label,
     username,
     access,
@@ -36,8 +37,9 @@ const UserCard = memo(
   }: UserProps) => {
     const { goTo } = useAppNavigation();
     const { validateAndSetData } = useValidateAndOpenBottomSheet()
+    
     const tagColor =
-      role === "superadmin" ? "yellow" : role === "admin" ? "blue" : "red";
+      role === "superadmin" ? "yellow" : role === "admin" ? "blue" : role === "supervisor" && policies?.length === 6 ? "green" : "red";
     const mainColor = useMemo(
       () => getColor(color ?? "yellow", disabled ? 200 : 700),
       [color, disabled]

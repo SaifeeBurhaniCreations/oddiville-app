@@ -88,9 +88,6 @@ const filteredPackedItemsData = useMemo(() => {
   }));
 }, [packedItemsData]);
 
-console.log("filteredPackedItemsData", filteredPackedItemsData);
-
-
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const [openTab, setOpenTab] = useState<number>(0);
   const [toastVisible, setToastVisible] = useState(false);

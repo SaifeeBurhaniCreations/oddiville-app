@@ -18,6 +18,13 @@ const customDateFormatter = (rawDate) => {
   return isValid(parsedDate) ? format(parsedDate, "d MMM yyyy") : "N/A";
 };
 
+const normalizeUnit = (unit = "") => {
+  const u = unit?.toLowerCase();
+  if (u === "gm" || u === "g") return "gm";
+  if (u === "qn" || u === "quintal") return "qn";
+  return "kg";
+};
+
 
 function formatPackagesSentence(packages = []) {
   if (!packages.length) return "";
@@ -46,42 +53,40 @@ function formatPackagesSentence(packages = []) {
 }
 
 function mapProduct(product, DispatchOrder) {
-  const raw_weight =
-    Array.isArray(product?.chambers) ? product.chambers : []?.reduce(
-      (sum, chamber) => sum + Number(chamber.quantity),
-      0
-    ) || 0;
+  const raw_weight = Array.isArray(product?.chambers)
+    ? product.chambers.reduce(
+        (sum, chamber) => sum + Number(chamber.quantity || 0),
+        0
+      )
+    : 0;
 
-  const product_weight = formatWeight(raw_weight, { unit: "Kg" });
-  const packagesSentence = formatPackagesSentence(DispatchOrder.packages || []);
-
-  Array.isArray(product?.chambers) ? product.chambers : []?.forEach((c) => {
-    c.unit = "kg";
-  });
-
+  const product_weight = formatWeight(raw_weight, { unit: "kg" });
   const productName = product.product_name || product.name || "Unnamed product";
 
   return {
-    title: productName,                           
+    title: productName,
     image: product.image,
     weight: product_weight,
-    price: formatPrice(DispatchOrder.amount),      
+    price: formatPrice(DispatchOrder.amount),
     description: `${product_weight} in ${product.chambers?.length ?? 0} ${
       product.chambers?.length === 1 ? "chamber" : "chambers"
     }`,
-    chambers: product.chambers?.map((pc) => ({
-      ...pc,
-      quantity: String(pc.quantity),
-    })) || [],
-    // packages:
-    //   DispatchOrder.packages?.map((val) => ({
-    //     size: val.size,
-    //     unit: val.unit || "kg",
-    //     quantity: String(val.quantity),
-    //   })) || [],
-    // packagesSentence,
+    chambers:
+      product.chambers?.map((pc) => ({
+        ...pc,
+        unit: normalizeUnit(pc.unit),
+        quantity: String(pc.quantity ?? 0),
+      })) || [],
   };
 }
+
+// packages:
+//   DispatchOrder.packages?.map((val) => ({
+//     size: val.size,
+//     unit: val.unit || "kg",
+//     quantity: String(val.quantity),
+//   })) || [],
+// packagesSentence,
 
 // function mapProduct(product, DispatchOrder) {
 //   const raw_weight =

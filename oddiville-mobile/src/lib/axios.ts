@@ -12,14 +12,16 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-type Policy = "purchase" | "production" | "package" | "sales";
+type Policy = "purchase-view" | "purchase-edit" | "production" | "package" | "sales-view" | "sales-edit";
 
 export const blockPolicy: Record<Policy, string[]> = {
 
-  purchase: ["^/raw-material", "^/vendor", "^/admin", "^/bottomsheet", "^/package", "^/location", "^/contractor"],
+  "purchase-view": ["^/raw-material", "^/vendor", "^/admin", "^/bottomsheet", "^/package", "^/location", "^/contractor"],
+  "purchase-edit": ["^/raw-material", "^/vendor", "^/admin", "^/bottomsheet", "^/package", "^/location", "^/contractor"],
   production: ["^/production", "^/package", "^/chamber", "^/chamber-stock", "^/lane", "^/admin", "^/bottomsheet", "^/location", "^/contractor"],
   package: ["^/package", "^/chamber", "^/chamber-stock", "/chamber/type/dry", "^/admin", "^/bottomsheet", "^/location", "^/contractor"],
-  sales: ["^/package", "^/order", "^/truck", "^/admin", "^/bottomsheet", "^/location", "^/contractor"],
+  "sales-view": ["^/package", "^/order", "^/truck", "^/admin", "^/bottomsheet", "^/location", "^/contractor"],
+  "sales-edit": ["^/package", "^/order", "^/truck", "^/admin", "^/bottomsheet", "^/location", "^/contractor"],
 };
 
 // "regex:^/raw-material/\\d+/confirm$"

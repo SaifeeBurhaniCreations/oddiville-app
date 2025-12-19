@@ -30,6 +30,8 @@ import { RootStackParamList, TruckProps } from '@/src/types';
 // 8. Assets 
 // No items of this type
 
+import { resolveAccess } from '@/src/utils/policiesUtils';
+import { SALES_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
 
 const formatTruckData = (truckData: TruckDetailsProps[]): TruckProps[] => {
     return truckData.map((truck) => ({
@@ -49,12 +51,18 @@ const formatTruckData = (truckData: TruckDetailsProps[]): TruckProps[] => {
 };
 
 const TrucksScreen = () => {
-    const { role } = useAuth();
+  const { role, policies } = useAuth();
+
+  const safeRole = role ?? "guest";
+  const safePolicies = policies ?? [];
+  const access = resolveAccess(safeRole, safePolicies);
 
     const { goTo } = useAppNavigation()
     const { data: trucksData, isLoading: trucksLoading } = useTrucks();
 
     const formattedTrucks = trucksData ? formatTruckData(trucksData) : [];
+    
+    const backRoute = resolveBackRoute(access, SALES_BACK_ROUTES, resolveDefaultRoute(access));
     
     return (
         <View style={styles.pageContainer}>
@@ -62,7 +70,7 @@ const TrucksScreen = () => {
             <View style={styles.wrapper}>
                 <View style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}>
 
-                    <BackButton label={`Trucks (${formattedTrucks.length ?? 0})`} backRoute={truckBackRoute[role ?? "supervisor"] as keyof RootStackParamList} />
+                    <BackButton label={`Trucks (${formattedTrucks.length ?? 0})`} backRoute={backRoute} />
 
                     <Button variant='outline' onPress={() => goTo('truck-create')} size='md'>Add Truck</Button>
                 </View>

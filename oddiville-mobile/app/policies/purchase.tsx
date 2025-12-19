@@ -1,7 +1,12 @@
 // 1. React and React Native core
-import { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 
-import { ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
 // 2. Third-party dependencies
 import { formatDate } from "date-fns";
@@ -31,7 +36,6 @@ import { getColor } from "@/src/constants/colors";
 import { OrderProps, RawMaterialOrderProps } from "@/src/types";
 
 // 7. Schemas
-import { BottomSheetSchemaKey } from "@/src/schemas/BottomSheetSchema";
 import EmptyState from "@/src/components/ui/EmptyState";
 import { getEmptyStateData } from "@/src/utils/common";
 import { InfiniteData } from "@tanstack/query-core";
@@ -39,22 +43,37 @@ import Button from "@/src/components/ui/Buttons/Button";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { H3 } from "@/src/components/typography/Typography";
 import { RefreshControl } from "react-native-gesture-handler";
+import { useAuth } from "@/src/context/AuthContext";
+import { resolveAccess } from "@/src/utils/policiesUtils";
 
 // 8. Assets
 // No items of this type
 
+import NoAccess from "@/src/components/ui/NoAccess";
 const PurchaseScreen = () => {
   const { goTo } = useAppNavigation();
-const { height: screenHeight } = useWindowDimensions()
+  const { height: screenHeight } = useWindowDimensions();
+  const { role, policies } = useAuth();
+
+  const safeRole = role ?? "guest";
+  const safePolicies = policies ?? [];
+  const access = resolveAccess(safeRole, safePolicies);
 
   const [pendingSearch, setPendingSearch] = useState("");
   const [completedSearch, setCompletedSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   useAdmin();
 
-  const { data: pendingData = [], isFetching: pendingLoading, refetch: refetchRM } =
-    useRawMaterialOrders();
-  const { data: vendorData = [], isFetching: vendorLoading, refetch: refetchVendor } = useAllVendors();
+  const {
+    data: pendingData = [],
+    isFetching: pendingLoading,
+    refetch: refetchRM,
+  } = useRawMaterialOrders();
+  const {
+    data: vendorData = [],
+    isFetching: vendorLoading,
+    refetch: refetchVendor,
+  } = useAllVendors();
 
   const formatOrder = useCallback(
     (order: RawMaterialOrderProps): OrderProps => {
@@ -143,6 +162,48 @@ const { height: screenHeight } = useWindowDimensions()
 
   const emptyStateData = getEmptyStateData("no-order-pending");
 
+  const canView = access.purchase.view;
+  const canEdit = access.purchase.edit;
+
+  const redirectedRef = React.useRef(false);
+
+  useEffect(() => {
+    if (!redirectedRef.current && !canView && canEdit) {
+      redirectedRef.current = true;
+      goTo("raw-material-order");
+    }
+  }, [canView, canEdit]);
+
+  const PurchaseHeader = ({ canEdit }: { canEdit: boolean }) => (
+    <View
+      style={[
+        styles.HStack,
+        styles.justifyBetween,
+        styles.alignCenter,
+        { paddingTop: 16 },
+      ]}
+    >
+      <H3>Order raw material</H3>
+      {canEdit && (
+        <Button
+          variant="outline"
+          size="md"
+          onPress={() => goTo("raw-material-order")}
+        >
+          Add material
+        </Button>
+      )}
+    </View>
+  );
+
+  if (!canView && !canEdit) {
+    return <NoAccess />;
+  }
+
+  if (!canView && canEdit) {
+    return <Loader />;
+  }
+
   return (
     <View style={styles.pageContainer}>
       <PageHeader page={"Purchase"} />
@@ -153,75 +214,90 @@ const { height: screenHeight } = useWindowDimensions()
           style={styles.flexGrow}
         >
           <View style={styles.flexGrow}>
-            <View
-              style={[
-                styles.HStack,
-                styles.justifyBetween,
-                styles.alignCenter,
-                { paddingTop: 16 },
-              ]}
-            >
-              <H3>Order raw material</H3>
-            </View>
-            <View style={styles.searchinputWrapper}>
-              <SearchInput
-                style={{ borderWidth: 1 }}
-                value={pendingSearch}
-                onChangeText={setPendingSearch}
-                returnKeyType="search"
-                placeholder="Search by raw material & vendor name"
-              />
-            </View>
-            {pendingOrders?.length === 0 && (
-              <View style={{ alignItems: "center" }}>
-                <ScrollView contentContainerStyle={{ alignItems: "center", flex: 1 }} refreshControl={<RefreshControl refreshing={pendingLoading} onRefresh={() => {
-                  refetchRM()
-                  refetchVendor()
-                }} />}>
-                <EmptyState stateData={emptyStateData} style={{marginTop: -(screenHeight/ 7)}} />
-                </ScrollView>
-              </View>
+            <PurchaseHeader canEdit={canEdit} />
+            {canView && (
+              <>
+                <View style={styles.searchinputWrapper}>
+                  <SearchInput
+                    style={{ borderWidth: 1 }}
+                    value={pendingSearch}
+                    onChangeText={setPendingSearch}
+                    returnKeyType="search"
+                    placeholder="Search by raw material & vendor name"
+                  />
+                </View>
+                {pendingOrders?.length === 0 && (
+                  <View style={{ alignItems: "center" }}>
+                    <ScrollView
+                      contentContainerStyle={{ alignItems: "center", flex: 1 }}
+                      refreshControl={
+                        <RefreshControl
+                          refreshing={pendingLoading}
+                          onRefresh={() => {
+                            refetchRM();
+                            refetchVendor();
+                          }}
+                        />
+                      }
+                    >
+                      <EmptyState
+                        stateData={emptyStateData}
+                        style={{ marginTop: -(screenHeight / 7) }}
+                      />
+                    </ScrollView>
+                  </View>
+                )}
+                <SupervisorFlatlist
+                  data={pendingOrders}
+                  reFetchers={[refetchRM, refetchVendor]}
+                />
+              </>
             )}
-            <SupervisorFlatlist data={pendingOrders} reFetchers={[refetchRM, refetchVendor]} />
           </View>
           <View style={styles.flexGrow}>
-                 <View
-              style={[
-                styles.HStack,
-                styles.justifyBetween,
-                styles.alignCenter,
-                { paddingTop: 16 },
-              ]}
-            >
-              <H3>Order raw material</H3>
-            </View>
-            <View style={styles.searchinputWrapper}>
-              <SearchInput
-                style={{ borderWidth: 1 }}
-                value={completedSearch}
-                onChangeText={setCompletedSearch}
-                returnKeyType="search"
-                placeholder="Search by raw material & vendor name"
-              />
-            </View>
-            {completedOrders?.length === 0 && (
-              <View style={{ alignItems: "center" }}>
-                <ScrollView contentContainerStyle={{ alignItems: "center", flex: 1 }} refreshControl={<RefreshControl refreshing={completedFetching} onRefresh={() => {
-                  refetchCompleted()
-                  refetchRM()
-                }} />}>
-                <EmptyState stateData={emptyStateData} style={{marginTop: -(screenHeight/ 7)}} />
-                 </ScrollView>
-              </View>
+            <PurchaseHeader canEdit={canEdit} />
+            {canView && (
+              <>
+                <View style={styles.searchinputWrapper}>
+                  <SearchInput
+                    style={{ borderWidth: 1 }}
+                    value={completedSearch}
+                    onChangeText={setCompletedSearch}
+                    returnKeyType="search"
+                    placeholder="Search by raw material & vendor name"
+                  />
+                </View>
+                {completedOrders?.length === 0 && (
+                  <View style={{ alignItems: "center" }}>
+                    <ScrollView
+                      contentContainerStyle={{ alignItems: "center", flex: 1 }}
+                      refreshControl={
+                        <RefreshControl
+                          refreshing={completedFetching}
+                          onRefresh={() => {
+                            refetchCompleted();
+                            refetchRM();
+                          }}
+                        />
+                      }
+                    >
+                      <EmptyState
+                        stateData={emptyStateData}
+                        style={{ marginTop: -(screenHeight / 7) }}
+                      />
+                    </ScrollView>
+                  </View>
+                )}
+                <SupervisorFlatlist
+                  data={completedOrders}
+                  isEdit
+                  fetchNext={fetchNextPage}
+                  hasNext={hasNextPage}
+                  isFetchingNext={isFetchingNextPage}
+                  reFetchers={[refetchCompleted, refetchRM]}
+                />
+              </>
             )}
-            <SupervisorFlatlist
-              data={completedOrders}
-              isEdit
-              fetchNext={fetchNextPage}
-              hasNext={hasNextPage}
-              isFetchingNext={isFetchingNextPage}
-              reFetchers={[refetchCompleted, refetchRM]}
-            />
           </View>
         </Tabs>
       </View>

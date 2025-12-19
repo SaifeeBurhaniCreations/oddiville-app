@@ -36,12 +36,13 @@ import PencilIcon from "../src/components/icons/common/PencilIcon";
 import { useDispatch } from "react-redux";
 import { setAdmin } from "../src/redux/slices/admin.slice";
 import DetailsToast from "../src/components/ui/DetailsToast";
-import { useAppNavigation } from "../src/hooks/useAppNavigation";
 import * as SecureStorage from "expo-secure-store";
+import { useRouter } from "expo-router";
 
 const LoginScreen = () => {
   const dispatch = useDispatch();
-  const { goTo } = useAppNavigation();
+const router = useRouter();
+
   const otpRefs = Array.from({ length: 4 }, () => React.createRef<any>());
 
   const [loading, setLoading] = useState(false);
@@ -147,17 +148,9 @@ const LoginScreen = () => {
 
         await SecureStorage.setItemAsync("newsync", JSON.stringify(authData));
         dispatch(setAdmin(authData));
+router.replace("/");
 
         showToast("success", "Login successfully!");
-        if (authData.role === "superadmin" || authData.role === "admin")
-          goTo("home");
-        else if (authData.role === "supervisor" && authData.policies?.includes("purchase")) goTo("policies/purchase");
-        else if (authData.role === "supervisor" && authData.policies?.includes("production")) goTo("policies/production");
-        else if (authData.role === "supervisor" && authData.policies?.includes("package")) goTo("policies/package");
-        else if (authData.role === "supervisor" && authData.policies?.includes("sales")) goTo("policies/sales");
-        else {
-          showToast("error", "You don't have access to any module");
-        }
       }
     } catch (error: any) {
       console.log("Login failed:", error.response?.data || error.message);

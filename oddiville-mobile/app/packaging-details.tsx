@@ -38,9 +38,19 @@ import BagIcon from '@/src/components/icons/packaging/BagIcon';
 // 8. Assets 
 // No items of this type
 
+import { useAuth } from '@/src/context/AuthContext';
+import { resolveAccess } from '@/src/utils/policiesUtils';
+import { PACKAGE_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
+
 const EMPTY_BAG_WEIGHT_G = 1;
 
 const PackagingDetailsScreen = () => {
+  const { role, policies } = useAuth();
+
+  const safeRole = role ?? "guest";
+  const safePolicies = policies ?? [];
+  const access = resolveAccess(safeRole, safePolicies);
+  
   const { id: packageId, name: packageName } = useParams('packaging-details', 'id', "name");
   const { data: packageData, isFetching: packageLoading } = usePackageById(packageId!);
   const isLoadingPackage = useSelector((state: RootState) => state.fillPackage.isLoading);
@@ -127,6 +137,8 @@ const PackagingDetailsScreen = () => {
 
   const emptyStateData = getEmptyStateData("packaging-details");
 
+  const backRoute = resolveBackRoute(access, PACKAGE_BACK_ROUTES, resolveDefaultRoute(access));
+  
   return (
     <View style={styles.pageContainer}>
       <PageHeader page={'SKU'} />
@@ -134,7 +146,7 @@ const PackagingDetailsScreen = () => {
         <View style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}>
           <BackButton
             label={packageName ? packageName : "UnTitled"}
-            backRoute="package"
+            backRoute={backRoute}
           />
 
           <Button variant='outline' size='md' onPress={handleOpenAddNewSize}>

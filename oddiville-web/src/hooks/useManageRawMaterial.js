@@ -30,7 +30,8 @@ const useManageRawMaterial = () => {
   const [banners, setBanners] = useState(null);
   const [bannerFile, setBannerFile] = useState(null);
   const [productList, setProductList] = useState([]);
-  const [editIndex, setEditIndex] = useState(null);
+const [editIndex, setEditIndex] = useState(null);
+const isEditMode = editIndex !== null;
   const [fetchedBanners, setFetchedBanners] = useState(null);
   const [deleteBanners, setDeleteBanners] = useState(null);
 

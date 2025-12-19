@@ -24,7 +24,8 @@ import { clearVendors } from '@/src/redux/slices/bottomsheet/vendor.slice';
 import { useAppNavigation } from '@/src/hooks/useAppNavigation';
 import { Platform } from 'react-native';
 import { useAuth } from '@/src/context/AuthContext';
-import { rawMaterialOrderBackRoute } from '@/src/constants/backRoute';
+import { resolveAccess } from '@/src/utils/policiesUtils';
+import { PURCHASE_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
 
 type RawMaterialOrderForm = {
     quantity: number | null;
@@ -35,10 +36,13 @@ type RawMaterialOrderForm = {
     vendorQuantities: VendorInputState[];
 };
 
-
 const RawMaterialOrderScreen = () => {
-    const { role } = useAuth();
+  const { role, policies } = useAuth();
     
+    const safeRole = role ?? "guest";
+    const safePolicies = policies ?? [];
+    const access = resolveAccess(safeRole, safePolicies);
+
     const dispatch = useDispatch();
     const { validateAndSetData } = useValidateAndOpenBottomSheet();
     const selectedRM = useSelector((state: RootState) => state.rawMaterial.selectedRawMaterials);
@@ -214,6 +218,8 @@ const RawMaterialOrderScreen = () => {
 
     const isNotChoosed = selectedRM?.length === 0;
 
+    const backRoute = resolveBackRoute(access, PURCHASE_BACK_ROUTES, resolveDefaultRoute(access));
+    
     return (
         <View style={styles.pageContainer}>
             <PageHeader page={'Raw material'} />
@@ -225,7 +231,7 @@ const RawMaterialOrderScreen = () => {
                 >
                     <ScrollView>
                         <View style={styles.headerBodyWrapper}>
-                            <BackButton label='Order raw material'  backRoute={rawMaterialOrderBackRoute[role ?? "supervisor"] as keyof RootStackParamList} style={styles.paddingH16} />
+                            <BackButton label='Order raw material' backRoute={backRoute} style={styles.paddingH16} />
 
                             <View style={styles.body}>
                                 {!isNotChoosed ?

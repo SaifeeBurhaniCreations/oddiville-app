@@ -11,7 +11,7 @@ import { getColor } from "@/src/constants/colors";
 import Tabs from "@/src/components/ui/Tabs";
 import { useChamber } from "@/src/hooks/useChambers";
 import { ChamberStock, useChamberStock } from "@/src/hooks/useChamberStock";
-import { ChamberEntry, RootStackParamList, StockDataItem } from "@/src/types";
+import { ChamberEntry, StockDataItem } from "@/src/types";
 import ChamberDetailed from "@/src/components/ui/ChamberDetailed";
 import Loader from "@/src/components/ui/Loader";
 import { getEmptyStateData } from "@/src/utils/common";
@@ -20,15 +20,24 @@ import ChamberCard from "@/src/components/ui/ChamberCardComp";
 import { useDryChamberSummary } from "@/src/hooks/dryChamber";
 import BackButton from "@/src/components/ui/Buttons/BackButton";
 import { useAuth } from "@/src/context/AuthContext";
-import { chambersBackRoute } from "@/src/constants/backRoute";
+import { resolveAccess } from "@/src/utils/policiesUtils";
+import {
+  CHAMBERS_BACK_ROUTES,
+  resolveBackRoute,
+  resolveDefaultRoute,
+} from "@/src/utils/backRouteUtils";
 
 const screenWidth = Dimensions.get("window").width;
 const chamberSize = screenWidth / 2 - 30;
 
 const ChamberScreen = () => {
-    const { role, policies } = useAuth();
+  const { role, policies } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
-  
+
+  const safeRole = role ?? "guest";
+  const safePolicies = policies ?? [];
+  const access = resolveAccess(safeRole, safePolicies);
+
   const {
     data: chambersData = [],
     isFetching: chambersLoading,
@@ -111,12 +120,14 @@ const ChamberScreen = () => {
     setRefreshing(false);
   }, [refetchChambers, refetchStocks]);
 
+  const backRoute = resolveBackRoute(access, CHAMBERS_BACK_ROUTES, resolveDefaultRoute(access));
+
   return (
     <View style={styles.rootContainer}>
       <PageHeader page={"Chamber"} />
       <View style={styles.wrapper}>
         <View style={[styles.paddingTLR16]}>
-          <BackButton label="Chambers" backRoute={chambersBackRoute[role === "supervisor" && policies?.[0] === "production" ? "production" : role ?? "supervisor"] as keyof RootStackParamList} />
+          <BackButton label="Chambers" backRoute={backRoute} />
         </View>
         <Tabs
           tabTitles={["Overview", "Detail"]}

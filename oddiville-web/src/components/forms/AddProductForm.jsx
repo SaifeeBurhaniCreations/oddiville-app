@@ -17,6 +17,11 @@ const AddProductForm = ({
     fetchBanners,
     onFileChange,
     editMode,
+    setBanners,
+    setBannerFile,
+    setFetchedBanners,
+    resetProductForm,
+    setEditIndex,
   } = bannersProps;
 
 
@@ -33,6 +38,15 @@ const AddProductForm = ({
 
   const svg = `<svg stroke='white' fill='none' stroke-width='3' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M5 13l4 4L19 7'/></svg>`;
   const encoded = encodeURIComponent(svg);
+
+    const switchToAddMode = () => {
+    resetProductForm();
+    setEditIndex(null);
+    setBanners(null);
+    setBannerFile(null);
+    setFetchedBanners(null);
+    setDeleteBanners(null);
+  };
 
   return (
     <div className="card">
@@ -165,14 +179,26 @@ const AddProductForm = ({
             );
           })
         )}
+    <div className="d-flex gap-2">
+      <button
+        type="button"
+        className={`btn mt-3 ${editMode ? "btn-warning" : "btn-success"}`}
+        onClick={addProductToList}
+      >
+        {editMode ? "Update Product" : "Add Product"}
+      </button>
 
+      {editMode && (
         <button
           type="button"
-          className={`btn mt-3 ${editMode ? "btn-warning" : "btn-success"}`}
-          onClick={addProductToList}
+          className="btn mt-3 btn-secondary"
+          onClick={switchToAddMode}
         >
-          {editMode ? "Update Product" : "Add Product"}
+          Add New Product
         </button>
+      )}
+    </div>
+
       </div>
     </div>
   );

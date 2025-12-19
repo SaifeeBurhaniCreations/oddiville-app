@@ -59,7 +59,7 @@ export const formatOrder = {
     bottomDetails: [
       {
         name: "Amount",
-        value: `${formatAmount(Number(order.amount))}`,
+        value: order.amountLabel ? order.amountLabel : `${formatAmount(Number(order.amount), { unit: "rs" })}`,
         icon: <CashIcon size={16} />,
       },
       {
@@ -90,7 +90,7 @@ export const formatOrder = {
       bottomDetails: [
         {
           name: "Amount",
-          value: `${formatAmount(Number(order.amount))}`,
+          value: order.amountLabel ? order.amountLabel : `${formatAmount(Number(order.amount), { unit: "rs" })}`,
           icon: <CashIcon size={16} />,
         },
         {
@@ -154,8 +154,7 @@ export const formatOrder = {
       bottomDetails: [
         {
           name: "Amount",
-          value: `${formatAmount(Number(order.amount), { unit: "rs" })}`,
-          icon: <CashIcon size={16} />,
+          value: order.amountLabel ? order.amountLabel : `${formatAmount(Number(order.amount), { unit: "rs" })}`,
         },
         {
           name: "Est Dis",

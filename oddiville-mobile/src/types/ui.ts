@@ -264,6 +264,7 @@ export interface UserProps {
   profileImg?: string | number;
   extra_details: string;
   role?: "superadmin" | "admin" | "supervisor";
+  policies?: string[];
   label?: string;
   id?: string;
   username?: string;
@@ -556,7 +557,7 @@ export interface TableProps {
 export interface BackButtonProps {
   label: string;
   backParams?: any;
-  backRoute?: keyof RootStackParamList | "";
+  backRoute?: keyof RootStackParamList;
   style?: any;
   onPress?: () => void;
 }

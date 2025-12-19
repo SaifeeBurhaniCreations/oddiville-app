@@ -33,11 +33,18 @@ const STEPS_CONFIG = [
     title: "Dispatch Order entry",
     acceptsImage: true,
     buttonLabel: "Add Dispatch Order",
+    optional: true 
   },
 ];
 
 export default function OldInventory() {
-  const { step, next, prev } = useStep(1, STEPS_CONFIG.length);
+const [enableDispatchOrder, setEnableDispatchOrder] = useState(false);
+const totalSteps = enableDispatchOrder
+  ? STEPS_CONFIG.length
+  : STEPS_CONFIG.length - 1;
+
+const { step, next, prev } = useStep(1, totalSteps);
+
   const { validateExcel } = useInventoryValidator();
 
   const [excelRows, setExcelRows] = useState([]);
@@ -329,11 +336,20 @@ export default function OldInventory() {
 
     setFullData(finalMerged);
 
-    if (step === STEPS_CONFIG.length) {
-      // console.log("FINAL MERGED INVENTORY JSON:", JSON.stringify(finalMerged, null, 2));
+const isFinalStep =
+  step === STEPS_CONFIG.length ||
+  (step === 3 && !enableDispatchOrder);
+
+if (isFinalStep) {
+      console.log("FINAL MERGED INVENTORY JSON:", JSON.stringify(finalMerged, null, 2));
       toast.success("All steps completed!");
 
       const defensivelyNormalized = { ...finalMerged };
+
+      if (!enableDispatchOrder) {
+        delete defensivelyNormalized.dispatchOrder;
+      }
+
       if (defensivelyNormalized.rawMaterial?.rows) {
         defensivelyNormalized.rawMaterial.rows =
           defensivelyNormalized.rawMaterial.rows.map((r) =>
@@ -386,6 +402,9 @@ export default function OldInventory() {
     toast.success(
       `${currentCfg.title} completed! Proceed to ${nextCfg.title}.`
     );
+    if (step === 3 && !enableDispatchOrder) {
+      return; 
+    }
     next();
     setExcelRows([]);
   };
@@ -517,7 +536,11 @@ export default function OldInventory() {
           {/* Right column: steps 3 & 4 */}
           <div className="col-md-6">
             <div className="d-flex flex-column gap-3">
-              {STEPS_CONFIG.slice(2).map((cfg) => (
+
+            {STEPS_CONFIG
+              .slice(2)
+              .filter(cfg => enableDispatchOrder || cfg.key !== 4)
+              .map((cfg) => (
                 <div key={cfg.key} className="card">
                   <div className="d-flex justify-content-between align-items-center card-header">
                     <h6>
@@ -526,6 +549,19 @@ export default function OldInventory() {
                         <span className="text-muted ms-2">(Optional)</span>
                       )}
                     </h6>
+              {cfg.key === 3 &&   
+            <div className="form-check form-switch mb-2">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={enableDispatchOrder}
+                    onChange={(e) => setEnableDispatchOrder(e.target.checked)}
+                    id="dispatchSwitch"
+                  />
+                  <label className="form-check-label" htmlFor="dispatchSwitch">
+                    Enable Dispatch Order
+                  </label>
+                </div>}
                   </div>
 
                   <div className="card-body">
@@ -592,13 +628,15 @@ export default function OldInventory() {
                     )} */}
 
                     <div className="d-flex gap-2 mt-3">
-                      <button
+                     <button
                         type="button"
                         className="btn btn-success"
                         onClick={onClickNext}
                         disabled={cfg.key !== step}
                       >
-                        {cfg.buttonLabel}
+                        {step === 3 && !enableDispatchOrder
+                          ? "Submit Inventory"
+                          : cfg.buttonLabel}
                       </button>
 
                       {cfg.optional && cfg.key === step && (

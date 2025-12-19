@@ -40,13 +40,14 @@ import { setCurrentProduct } from "@/src/redux/slices/store-product.slice";
 import { initFromSelection } from "@/src/redux/slices/bottomsheet/chamber-ratings.slice";
 import { setId } from "@/src/redux/slices/bottomsheet/store-productId.slice";
 import { setProductName } from "@/src/redux/slices/production-begin.slice";
-import { Chamber, useChamber, useFrozenChambers } from "@/src/hooks/useChambers";
-import { options } from "axios";
-import { useAuth } from "@/src/context/AuthContext";
-import { productionCompletedBackRoute } from "@/src/constants/backRoute";
+import { Chamber, useFrozenChambers } from "@/src/hooks/useChambers";
 
 // 8. Assets
 // No items of this type
+
+import { useAuth } from '@/src/context/AuthContext';
+import { resolveAccess } from '@/src/utils/policiesUtils';
+import { PRODUCTION_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
 
 type DuringProduction = {
   lane: string;
@@ -87,8 +88,12 @@ const ProductionStartScreen = () => {
   );
 
   const dispatch = useDispatch();
-  const { role } = useAuth();
-  
+  const { role, policies } = useAuth();
+
+  const safeRole = role ?? "guest";
+  const safePolicies = policies ?? [];
+  const access = resolveAccess(safeRole, safePolicies);
+
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const [isLoading, setIsLoading] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
@@ -341,13 +346,15 @@ const ProductionStartScreen = () => {
 
 const isStarted = !!productionData?.isStarted;
 
+    const backRoute = resolveBackRoute(access, PRODUCTION_BACK_ROUTES, resolveDefaultRoute(access));
+
   return (
     <View style={styles.pageContainer}>
       <PageHeader page={"Production"} />
       <View style={styles.wrapper}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={[styles.VStack, styles.gap16]}>
-            <BackButton label="Production Complete" backRoute={productionCompletedBackRoute[role ?? "supervisor"] as keyof RootStackParamList} />
+            <BackButton label="Production Complete" backRoute={backRoute} />
 
             <SupervisorOrderDetailsCard
               order={orderDetail}

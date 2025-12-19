@@ -31,6 +31,9 @@ import { CountryProps } from "@/src/types";
 import { clearLocations } from "@/src/redux/slices/bottomsheet/location.slice";
 import { clearRawMaterials } from "@/src/redux/slices/bottomsheet/raw-material.slice";
 import { clearProduct } from "@/src/redux/slices/product.slice";
+import { useAuth } from '@/src/context/AuthContext';
+import { resolveAccess } from '@/src/utils/policiesUtils';
+import { SALES_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
 
 // 7. Schemas
 // No items of this type
@@ -39,7 +42,6 @@ import { clearProduct } from "@/src/redux/slices/product.slice";
 // No items of this type
 
 // Redux slice actions
-
 
 interface Chamber {
   id: string;
@@ -97,6 +99,12 @@ const validateProductChambers = (products: Product[]): boolean => {
 };
 
 const CreateOrder = () => {
+    const { role, policies } = useAuth();
+    
+    const safeRole = role ?? "guest";
+    const safePolicies = policies ?? [];
+    const access = resolveAccess(safeRole, safePolicies);
+
   const dispatch = useDispatch();
   const [step, setStep] = useState<number>(1);
   const [toastVisible, setToastVisible] = useState(false);
@@ -114,20 +122,21 @@ const CreateOrder = () => {
     (state: RootState) => state.product
   );
   const dispatchOrder = useDispatchOrder();
-  const { data: packedItemsData ,isFetching: packedItemsLoading } = usePackedItems();
+  const { data: packedItemsData, isFetching: packedItemsLoading } =
+    usePackedItems();
 
   const filteredPackedItemsData = useMemo(() => {
-    return packedItemsData?.map(item => ({
+    return packedItemsData?.map((item) => ({
       ...item,
       chamber: item.chamber.filter(
-        chamber => !chamber.id.toLowerCase().includes("dry")
-      )
+        (chamber) => !chamber.id.toLowerCase().includes("dry")
+      ),
     }));
   }, [packedItemsData]);
 
-  const { data: chambersData ,isFetching: chambersLoading } = useChamber();
+  const { data: chambersData, isFetching: chambersLoading } = useChamber();
 
-    const {
+  const {
     values,
     setField,
     errors,
@@ -184,15 +193,15 @@ const CreateOrder = () => {
         {
           type: "custom" as const,
           validate: (val: string) => {
-              if (!val) return true;
+            if (!val) return true;
 
-              const parsedDate = parse(val, "MMM dd, yyyy", new Date());
-              if (!isDateValid(parsedDate)) return false;
+            const parsedDate = parse(val, "MMM dd, yyyy", new Date());
+            if (!isDateValid(parsedDate)) return false;
 
-              const today = startOfDay(new Date());
-              const selected = startOfDay(parsedDate);
+            const today = startOfDay(new Date());
+            const selected = startOfDay(parsedDate);
 
-              return selected >= today;
+            return selected >= today;
           },
           message: "Delivery date cannot be in the past!",
         },
@@ -243,71 +252,69 @@ const CreateOrder = () => {
       debounce: 300,
     }
   );
-      
-    useEffect(() => {
-      if (!selectedProduct || !filteredPackedItemsData?.length) return;
 
-      const packed = filteredPackedItemsData.find(
-        (p) => p.product_name === selectedProduct
-      );
-      if (!packed) return;
+  useEffect(() => {
+    if (!selectedProduct || !filteredPackedItemsData?.length) return;
 
-      const currentProducts = Array.isArray(values.products)
-        ? values.products
-        : [];
+    const packed = filteredPackedItemsData.find(
+      (p) => p.product_name === selectedProduct
+    );
+    if (!packed) return;
 
-      const alreadyExists = currentProducts.some(
-        (p) => p.name === packed.product_name
-      );
-      if (alreadyExists) return;
+    const currentProducts = Array.isArray(values.products)
+      ? values.products
+      : [];
 
-      const mappedChambers =
-        (packed.chamber || []).map((c) => {
-          const chamberInfo = chambersData?.find(
-            (ch) => String(ch.id) === String(c.id)
-          );
+    const alreadyExists = currentProducts.some(
+      (p) => p.name === packed.product_name
+    );
+    if (alreadyExists) return;
 
-          return {
-            id: c.id,
-            name: chamberInfo?.chamber_name ?? String(c.id),
-            stored_quantity: c.quantity,
-            quantity: "",
-          };
-        }) ?? [];
+    const mappedChambers =
+      (packed.chamber || []).map((c) => {
+        const chamberInfo = chambersData?.find(
+          (ch) => String(ch.id) === String(c.id)
+        );
 
-      const newProduct = {
-        name: packed.product_name,
-        chambers: mappedChambers,
-      };
+        return {
+          id: c.id,
+          name: chamberInfo?.chamber_name ?? String(c.id),
+          stored_quantity: c.quantity,
+          quantity: "",
+        };
+      }) ?? [];
 
-      setField("products", [...currentProducts, newProduct]);
-
-    }, [selectedProduct, filteredPackedItemsData, values.products, chambersData]);
-
-    const showToast = (type: "success" | "error" | "info", message: string) => {
-      setToastType(type);
-      setToastMessage(message);
-      setToastVisible(true);
+    const newProduct = {
+      name: packed.product_name,
+      chambers: mappedChambers,
     };
 
-    useEffect(() => {
-      if (selectedCountry?.label && selectedCountry?.icon) {
-        setField("country", selectedCountry);
-      }
-    }, [selectedCountry]);
+    setField("products", [...currentProducts, newProduct]);
+  }, [selectedProduct, filteredPackedItemsData, values.products, chambersData]);
 
-    useEffect(() => {
-      if (selectedState) {
-        setField("state", selectedState);
-      }
-    }, [selectedState]);
+  const showToast = (type: "success" | "error" | "info", message: string) => {
+    setToastType(type);
+    setToastMessage(message);
+    setToastVisible(true);
+  };
 
-    useEffect(() => {
-      if (selectedCity) {
-        setField("city", selectedCity);
-      }
-    }, [selectedCity]);
+  useEffect(() => {
+    if (selectedCountry?.label && selectedCountry?.icon) {
+      setField("country", selectedCountry);
+    }
+  }, [selectedCountry]);
 
+  useEffect(() => {
+    if (selectedState) {
+      setField("state", selectedState);
+    }
+  }, [selectedState]);
+
+  useEffect(() => {
+    if (selectedCity) {
+      setField("city", selectedCity);
+    }
+  }, [selectedCity]);
 
   // useEffect(() => {
   //   if (!selectedProduct || !selectedProduct?.length) return;
@@ -359,27 +366,36 @@ const CreateOrder = () => {
     }
   };
 
+  const backRoute = resolveBackRoute(
+  access,
+  SALES_BACK_ROUTES,
+  resolveDefaultRoute(access)
+);
+
   return (
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-        >
-    <View style={styles.pageContainer}>
-      <PageHeader page={"Sales"} />
-      <View style={styles.wrapper}>
-        <View style={[styles.HStack, { paddingHorizontal: 16 }]}>
-          <View style={{ paddingBottom: 8 }}>
-            <BackButton
-              label="Create Dispatch Order"
-              backRoute=""
-              onPress={() => {
-                step === 2 ? setStep(1) : goTo("sales");
-              }}
-            />
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    >
+      <View style={styles.pageContainer}>
+        <PageHeader page={"Sales"} />
+        <View style={styles.wrapper}>
+          <View style={[styles.HStack, { paddingHorizontal: 16 }]}>
+            <View style={{ paddingBottom: 8 }}>
+              <BackButton
+                label="Create Dispatch Order"
+                onPress={() => {
+                  if (step === 2) {
+                    setStep(1);
+                  } else {
+                    goTo(backRoute);
+                  }
+                }}
+              />
+            </View>
           </View>
-        </View>
-        {/* <Tabs
+          {/* <Tabs
                     color="green"
                     variant="ghost"
                     renderTabHeader={({ activeTab, setActiveTab }) => (
@@ -395,37 +411,39 @@ const CreateOrder = () => {
                     }
                 >
                 </Tabs> */}
-        <CreateFromStorage
-          handleGetStep={step}
-          controlledForm={{ values, setField, errors }}
-        />
-        <View style={{ paddingHorizontal: 16 }}>
-          {step === 1 ? (
-            <Button
-              onPress={onSubmit}
-              variant="fill"
-              disabled={!isCurrentStepValid}
-            >
-              Next
-            </Button>
-          ) : (
-            <Button
-              onPress={onFinalSubmit}
-              disabled={dispatchOrder.isPending}
-              variant="fill"
-            >
-              {dispatchOrder.isPending ? "Creating Dispatch..." : "Create Dispatch"}
-            </Button>
-          )}
+          <CreateFromStorage
+            handleGetStep={step}
+            controlledForm={{ values, setField, errors }}
+          />
+          <View style={{ paddingHorizontal: 16 }}>
+            {step === 1 ? (
+              <Button
+                onPress={onSubmit}
+                variant="fill"
+                disabled={!isCurrentStepValid}
+              >
+                Next
+              </Button>
+            ) : (
+              <Button
+                onPress={onFinalSubmit}
+                disabled={dispatchOrder.isPending}
+                variant="fill"
+              >
+                {dispatchOrder.isPending
+                  ? "Creating Dispatch..."
+                  : "Create Dispatch"}
+              </Button>
+            )}
+          </View>
         </View>
+        <DetailsToast
+          type={toastType}
+          message={toastMessage}
+          visible={toastVisible}
+          onHide={() => setToastVisible(false)}
+        />
       </View>
-      <DetailsToast
-        type={toastType}
-        message={toastMessage}
-        visible={toastVisible}
-        onHide={() => setToastVisible(false)}
-      />
-    </View>
     </KeyboardAvoidingView>
   );
 };
