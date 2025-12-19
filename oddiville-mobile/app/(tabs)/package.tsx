@@ -108,6 +108,25 @@ export type StorageForm = {
   packedChambers?: PackedChamber[];
 };
 
+const validateRawMaterialSum = (
+  products: Product[],
+  totalPackedQty: number
+): { valid: boolean; totalRM: number } => {
+  let totalRM = 0;
+
+  for (const product of products) {
+    for (const chamber of product.chambers || []) {
+      const qty = Number(chamber.quantity) || 0;
+      totalRM += qty;
+    }
+  }
+
+  return {
+    valid: totalRM === totalPackedQty,
+    totalRM,
+  };
+};
+
 const convertToKg = (size: number, unit: string) => {
   const lowerUnit = unit?.toLowerCase();
   if (lowerUnit === "kg") return size;
@@ -347,8 +366,7 @@ const PackageScreen = () => {
     setToastVisible(true);
   };
 
-  const getMaxPackagesFor = (pkg: PackageItem) => {
-    const match = productPackages?.find(
+  const getMaxPackagesFor = (pkg: PackageItem) => { const match = productPackages?.find(
       (pp) => pp.rawSize === pkg.rawSize && pp.unit === pkg.unit
     );
     if (!match) return null;
@@ -581,6 +599,18 @@ const PackageScreen = () => {
     return calculateTotalPackedQuantity(values.packedChambers);
   }, [values.packedChambers]);
 
+  const totalRawMaterialUsed = useMemo(() => {
+  return (values.products || []).reduce((sum, product) => {
+    return (
+      sum +
+      (product.chambers || []).reduce(
+        (cSum, ch) => cSum + (Number(ch.quantity) || 0),
+        0
+      )
+    );
+  }, 0);
+}, [values.products]);
+
   const handlePackageQuantityChange = useCallback(
     (index: number, text: string) => {
       const numeric = parseFloat(text.replace(/[^0-9.]/g, "") || "0");
@@ -688,59 +718,79 @@ const PackageScreen = () => {
   }
   // --- END PACKAGE LOGIC ---
 
-  const onSubmit = async () => {
-    try {
-      const result = validateForm();
+const onSubmit = async () => {
+  try {
 
-      if (result.success) {
-        const formData = result.data as StorageForm;
+  const totalRM = (values.products || []).reduce((sum, p) => {
+      return (
+        sum +
+        (p.chambers || []).reduce(
+          (cSum, ch) => cSum + (Number(ch.quantity) || 0),
+          0
+        )
+      );
+    }, 0);
 
-        const ratingValue =
-          storageRMRating?.rating != null ? Number(storageRMRating.rating) : 5;
-
-        const productsWithRating = (formData.products || []).map((p) => ({
-          ...p,
-          chambers: (p.chambers || []).map((ch) => ({
-            ...ch,
-            rating: ratingValue,
-          })),
-        }));
-
-        const packedChambersWithId = (choosedChamberSummary || [])
-          .map((ch, idx) => ({
-            id: String(ch.chamber_id),
-            quantity: Number(formData.packedChambers?.[idx]?.quantity || 0),
-          }))
-          .filter((item) => item.quantity > 0);
-
-        const finalPayload: StorageForm = {
-          ...formData,
-          products: productsWithRating,
-          packedChambers: packedChambersWithId,
-        };
-        // console.log("finalPayload", JSON.stringify(finalPayload, null, 2));
-
-        setIsLoading(true);
-        createPacked(finalPayload);
-        setIsLoading(false);
-
-        resetForm();
-
-        dispatch(clearProduct());
-        dispatch(setRawMaterials([]));
-
-        dispatch(resetPackageSizes());
-        dispatch(clearChambers());
-        dispatch(setSource("choose"));
-
-        setSearchText("");
-        setOpenTab(0);
-        showToast("success", "Packed item created!");
-      }
-    } catch (error) {
-      console.error("Error submitting form:", error);
+    if (totalRM === 0) {
+      showToast(
+        "error",
+        "Please enter raw material quantity before submitting."
+      );
+      return;
     }
-  };
+
+    if (totalRM !== totalPackedQuantity) {
+      showToast(
+        "error",
+        `Raw material quantity (${totalRM} kg) must exactly match packed quantity (${totalPackedQuantity} kg).`
+      );
+      return;
+    }
+
+    const result = validateForm();
+    if (!result.success) return;
+
+    const formData = result.data as StorageForm;
+
+    const ratingValue =
+      storageRMRating?.rating != null ? Number(storageRMRating.rating) : 5;
+
+    const productsWithRating = formData.products.map((p) => ({
+      ...p,
+      chambers: p.chambers.map((ch) => ({
+        ...ch,
+        rating: ratingValue,
+      })),
+    }));
+
+    const packedChambersWithId = (choosedChamberSummary || [])
+      .map((ch, idx) => ({
+        id: String(ch.chamber_id),
+        quantity: Number(formData.packedChambers?.[idx]?.quantity || 0),
+      }))
+      .filter((item) => item.quantity > 0);
+
+    const finalPayload: StorageForm = {
+      ...formData,
+      products: productsWithRating,
+      packedChambers: packedChambersWithId,
+    };
+
+    setIsLoading(true);
+    createPacked(finalPayload);
+    setIsLoading(false);
+
+    resetForm();
+    dispatch(clearProduct());
+    dispatch(setRawMaterials([]));
+    dispatch(resetPackageSizes());
+    dispatch(clearChambers());
+
+    showToast("success", "Packed item created!");
+  } catch (error) {
+    console.error("Error submitting form:", error);
+  }
+};
 
   const handleToggleChamberBottomSheet = async () => {
     if (frozenChambers?.length === 0) return;
@@ -785,6 +835,38 @@ const PackageScreen = () => {
   };
 
   const selectedLabel = selectedProduct || "Select products";
+
+  const rmMatchStatus = useMemo(() => {
+  if (totalRawMaterialUsed === 0) return "neutral";
+  if (totalRawMaterialUsed < totalPackedQuantity) return "less";
+  if (totalRawMaterialUsed > totalPackedQuantity) return "more";
+  return "equal";
+}, [totalRawMaterialUsed, totalPackedQuantity]);
+
+const rmColor = {
+  neutral: getColor("green", 700),
+  less: getColor("red", 500),
+  more: getColor("yellow", 500),
+  equal: getColor("green", 500),
+}[rmMatchStatus];
+
+const packageMatchStatus = useMemo(() => {
+  if (totalPackageQuantityKg === 0) return "neutral";
+  if (totalPackageQuantityKg < totalPackedQuantity) return "less";
+  if (totalPackageQuantityKg > totalPackedQuantity) return "more";
+  return "equal";
+}, [totalPackageQuantityKg, totalPackedQuantity]);
+
+const packageColor = {
+  neutral: getColor("green", 700),
+  less: getColor("red", 500),
+  more: getColor("yellow", 500),
+  equal: getColor("green", 500),
+}[packageMatchStatus];
+
+const allGood =
+  rmMatchStatus === "equal" &&
+  packageMatchStatus === "equal";
 
   return (
     <KeyboardAvoidingView
@@ -989,6 +1071,7 @@ const PackageScreen = () => {
                   >
                     Stacking Location
                   </Select>
+                  
                   <View style={[styles.Vstack, { paddingHorizontal: 16 }]}>
                     {choosedChamberSummary?.map((chamber, idx) => (
                       <View
@@ -1057,12 +1140,26 @@ const PackageScreen = () => {
                           disabled={selectedProduct?.length === 0}
                         />
                       </View>
-                      <View style={styles.quantityCard}>
-                        <H6>Packed Qty:</H6>
-                        <B4>
+                  <View
+                        style={[
+                          styles.quantityCard,
+                          { borderColor: allGood ? getColor("green", 500) : getColor("green", 100) },
+                        ]}
+                      >
+                      <View style={{ alignItems: "center" }}>
+                        <H6>Packed Qty</H6>
+                        <B4 style={{ color: packageColor }}>
                           {totalPackageQuantityKg} / {totalPackedQuantity} kg
                         </B4>
                       </View>
+
+                      <View style={{ alignItems: "center" }}>
+                        <H6>RM Used</H6>
+                        <B4 style={{ color: rmColor }}>
+                          {totalRawMaterialUsed} / {totalPackedQuantity} kg
+                        </B4>
+                      </View>
+                    </View>
                     </View>
 
                     <View
@@ -1085,6 +1182,7 @@ const PackageScreen = () => {
                       ) : (
                         values.packages.map((pkg, index) => {
                           const Icon = mapPackageIcon(pkg);
+                          
                           const maxPackages = getMaxPackagesFor(pkg);
 
                           const currentQty = Number(
@@ -1378,7 +1476,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: getColor("light", 400),
     flex: 1,
-    gap: 4,
+    gap: 16,
   },
   packageWrapper: {
     paddingHorizontal: 12,
