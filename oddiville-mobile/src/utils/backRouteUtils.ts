@@ -34,6 +34,17 @@ export const CHAMBERS_BACK_ROUTES: BackRouteRule[] = [
   { when: (a) => a.sales.view || a.sales.edit, route: "policies/sales" },
 ];
 
+export const  TRUCKS_BACK_ROUTES: BackRouteRule[] = [
+  { when: (a) => a.isFullAccess, route: "trucks" },
+  { when: (a) => a.trucks, route: "trucks" },
+];
+
+export const  LABOURS_BACK_ROUTES: BackRouteRule[] = [
+  { when: (a) => a.isFullAccess, route: "labours" },
+  { when: (a) => a.labours, route: "labours" },
+];
+
+
 export function resolveBackRoute(
   access: Access,
   rules: BackRouteRule[],

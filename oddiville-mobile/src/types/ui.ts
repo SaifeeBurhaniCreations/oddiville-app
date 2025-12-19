@@ -663,6 +663,7 @@ export interface TruckDetails {
   type: string;
   number: string;
   challan: string;
+  truck_number?: number;
   truck_weight?: number | string;
   tare_weight?: number | string;
 }

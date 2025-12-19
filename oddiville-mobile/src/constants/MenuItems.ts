@@ -76,6 +76,20 @@ export const DISPATCH_MENU_ITEMS: menuItemsProps[] = [
         href: "policies/sales"
     },
 ]
+export const TRUCKS_MENU_ITEMS: menuItemsProps[] = [
+    {
+        name: "Trucks",
+        icon: TruckIcon,
+        href: "trucks"
+    },
+]
+export const LABOURS_MENU_ITEMS: menuItemsProps[] = [
+     {
+        name: "Labours",
+        icon: ContractorIcon,
+        href: "labours"
+    },
+]
 
 // export const DISPATCH_MENU_EDIT_ITEMS: menuItemsProps[] = [
 //       {

@@ -20,8 +20,16 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/src/redux/store";
 import { setDeleteUserPopup } from "@/src/redux/slices/delete-popup-slice";
 import { removeUser } from "@/src/services/user.service";
+import { useAuth } from "@/src/context/AuthContext";
+import { resolveAccess } from "@/src/utils/policiesUtils";
 
 const UserScreen = () => {
+      const { role, policies } = useAuth();
+    
+      const safeRole = role ?? "guest";
+      const safePolicies = policies ?? [];
+      const access = resolveAccess(safeRole, safePolicies);
+    
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const { goTo } = useAppNavigation();
   const username = useSelector(
@@ -75,6 +83,10 @@ const UserScreen = () => {
       href: "user-form",
     }));
   }, [rawUsers, debouncedSearch]);
+
+    if (!access.isFullAccess) {
+  return null;
+}
 
   const handleSearchFilter = () => {
     runFilter({

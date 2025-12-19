@@ -813,6 +813,8 @@ const useValidateAndOpenBottomSheet = () => {
          { name: 'Package', description: 'Pack and label products for delivery' },
          { name: 'Sales-view', description: 'View sales' },
          { name: 'Sales-edit', description: 'Edit sales' },
+         { name: 'Trucks', description: 'Manage trucks' },
+         { name: 'Labours', description: 'Manage labours' },
         ]
       },
     ],

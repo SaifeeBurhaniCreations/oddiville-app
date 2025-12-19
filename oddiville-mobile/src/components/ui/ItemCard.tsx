@@ -20,16 +20,19 @@ const ItemCard = ({
   actionLabel,
   disabled = false,
   isProduction = false,
+  isProductionCompleted = false,
   backgroundIcon: BackgroundIcon,
   isActive,
   style,
   lane,
 }: ItemCardProps) => {
   const { goTo } = useAppNavigation();
-
+  
   const handlePress = () => {
     if (isProduction) {
       goTo("production-complete", { id });
+    } else if (isProductionCompleted) {
+
     } else {
       goTo("production-start", { rmId: id });
     }

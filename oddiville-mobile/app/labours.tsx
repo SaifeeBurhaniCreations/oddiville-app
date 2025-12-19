@@ -48,9 +48,19 @@
   import NoContractorBatchImg from "@/src/assets/images/illustrations/no-contractor-batch.png"
   import BackButton from "@/src/components/ui/Buttons/BackButton";
 
+import { resolveAccess } from '@/src/utils/policiesUtils';
+import { LABOURS_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
+import { useAuth } from "@/src/context/AuthContext";
+
   const options = [{ text: "Add multiple" }, { text: "Add single" }];
 
-  const SupervisorContractorScreen = () => {
+  const LaboursScreen = () => {
+      const { role, policies } = useAuth();
+    
+      const safeRole = role ?? "guest";
+      const safePolicies = policies ?? [];
+      const access = resolveAccess(safeRole, safePolicies);
+    
     const { goTo } = useAppNavigation();
     const {
       createContractors,
@@ -197,13 +207,19 @@
 
     const isLoading = contractorsLoading;
 
+    const backRoute = resolveBackRoute(
+  access,
+  LABOURS_BACK_ROUTES,
+  resolveDefaultRoute(access)
+);
+
     if (contractorsError && !contractors?.length) {
       return (
         <View style={styles.pageContainer}>
           <PageHeader page={"Labour"} />
           <View style={styles.wrapper}>
             <View style={[styles.paddingTLR16]}>
-              <BackButton label="Labours" backRoute="home" />
+              <BackButton label="Labours" backRoute={backRoute} />
             </View>
             <View style={styles.errorContainer}>
               <TouchableOpacity onPress={onRefresh} style={styles.retryButton}>
@@ -227,7 +243,7 @@
         <PageHeader page={"Labour"} />
         <View style={styles.wrapper}>
           <View style={[styles.paddingTLR16]}>
-            <BackButton label="Labours" backRoute="home" /> 
+            <BackButton label="Labours" backRoute={backRoute} /> 
             </View>
           <Tabs
             tabTitles={["Today's worker", "History"]}
@@ -328,7 +344,7 @@
     );
   };
 
-  export default SupervisorContractorScreen;
+  export default LaboursScreen;
 
   const styles = StyleSheet.create({
     pageContainer: {

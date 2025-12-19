@@ -29,8 +29,11 @@ import DetailsToast from "@/src/components/ui/DetailsToast";
 import ChipGroup from "@/src/components/ui/ChipGroup";
 import { allowedPolicies } from "@/src/constants/allowedPolicies";
 import { clearPolicies, setPolicies } from "@/src/redux/slices/bottomsheet/policies.slice";
+import { useAuth } from "@/src/context/AuthContext";
+import { resolveAccess } from "@/src/utils/policiesUtils";
 
 const EditUserScreen = () => {
+
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const selectedRole = useSelector(
     (state: RootState) => state.selectRole.selectedRole
@@ -172,6 +175,10 @@ const EditUserScreen = () => {
       setToastMessage(message);
       setToastVisible(true);
     };
+
+    if (!access.isFullAccess) {
+      return null;
+    }
 
   const handleSubmit = async () => {
     try {

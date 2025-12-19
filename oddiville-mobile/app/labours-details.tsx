@@ -201,7 +201,7 @@ const multipleTables = useMemo(() => {
   if (isLoading) {
     return (
       <View style={styles.pageContainer}>
-        <PageHeader page="Contractor" />
+        <PageHeader page="Labour" />
         <View style={styles.wrapper}>
           <Loader />
         </View>
@@ -211,7 +211,7 @@ const multipleTables = useMemo(() => {
 
   return (
     <View style={styles.pageContainer}>
-      <PageHeader page="Contractor" />
+      <PageHeader page="Labour" />
 
       <View style={styles.wrapper}>
         <ScrollView showsVerticalScrollIndicator={false}>

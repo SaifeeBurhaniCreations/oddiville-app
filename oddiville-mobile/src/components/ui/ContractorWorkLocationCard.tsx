@@ -46,8 +46,6 @@ const ContractorWorkLocationCard = ({
   const isGenderField = (field: string): field is "male" | "female" =>
   field === "male" || field === "female"
 
-  console.log("columns", columns);
-  
   return (
     <View style={[styles.card, isFirst && styles.firstCard]} {...props}>
         <Pressable style={styles.cardHeader} onPress={onPress}>

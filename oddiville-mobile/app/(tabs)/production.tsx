@@ -55,10 +55,11 @@ const ProductionScreen = () => {
     }
   }
 
-  const { inQueue, inPending, inProgress } = useMemo(() => {
+  const { inQueue, inPending, inProgress, inCompleted } = useMemo(() => {
     const inQueue: ItemCardProps[] = [];
     const inPending: ItemCardProps[] = [];
     const inProgress: ItemCardProps[] = [];
+    const inCompleted: ItemCardProps[] = [];
 
     if (!isLoading) {
       productionData?.forEach((item: any) => {
@@ -68,7 +69,7 @@ const ProductionScreen = () => {
           weight: `${item.quantity} ${item.unit || "kg"}`,
           rating: item.rating || "0",
           isActive: false,
-          lane: item?.lane ? getLaneNameById(item?.lane) : null,
+          lane: item.status === "completed" ? null : (item?.lane ? getLaneNameById(item?.lane) : null),
         };
 
         if (item.status === "in-queue") {
@@ -79,11 +80,13 @@ const ProductionScreen = () => {
           inPending.push(formattedItem);
         } else if (item.status === "in-progress") {
           inProgress.push(formattedItem);
+        }else if (item.status === "completed") {
+          inCompleted.push(formattedItem);
         }
       });
     }
 
-    return { inQueue, inPending, inProgress };
+    return { inQueue, inPending, inProgress, inCompleted };
   }, [productionData]);
 
   const handleLanePress = () => {
@@ -96,7 +99,7 @@ const ProductionScreen = () => {
       <PageHeader page={"Production"} />
       <View style={styles.wrapper}>
         <Tabs
-          tabTitles={["Pending", "Production"]}
+          tabTitles={["Pending", "Production", "Completed"]}
           color="green"
           style={styles.flexGrow}
         >
@@ -157,6 +160,48 @@ const ProductionScreen = () => {
                   />
                 </View>
                 <ItemsFlatList isProduction={true} items={inProgress} />
+              </View>
+            )}
+            ListEmptyComponent={
+              <View
+                style={[
+                  styles.flexGrow,
+                  {
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  },
+                ]}
+              >
+                <EmptyState
+                  image={noBatchImageProduction}
+                  stateData={emptyStateData}
+                />
+              </View>
+            }
+            keyExtractor={(_, index) => index.toString()}
+            refreshControl={
+              <RefreshControl
+                refreshing={productionLoading}
+                onRefresh={productionRefetch}
+              />
+            }
+          />
+          <FlatList
+            data={inCompleted ?? []}
+            contentContainerStyle={{ flexGrow: 1 }}
+            renderItem={({ item }) => (
+              <View style={styles.flexGrow}>
+                <View style={styles.searchinputWrapper}>
+                  <SearchWithFilter
+                    value=""
+                    onChangeText={() => {}}
+                    placeholder={"Search product"}
+                    onFilterPress={handleLanePress}
+                    icon={ProductionLane}
+                  />
+                </View>
+                <ItemsFlatList items={inCompleted} isProductionCompleted={true} />
               </View>
             )}
             ListEmptyComponent={

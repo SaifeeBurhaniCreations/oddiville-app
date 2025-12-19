@@ -5,14 +5,14 @@ import { ItemCardProps, ItemsFlatListProps } from "@/src/types";
 import ItemCard from './ItemCard';
 import { getRandomBackground } from '@/src/utils/arrayUtils';
 
-const ItemsFlatList = ({ items: initialItems, isProduction = false, onActionPress }: ItemsFlatListProps) => {
+const ItemsFlatList = ({ items: initialItems, isProduction = false, onActionPress, isProductionCompleted = false }: ItemsFlatListProps) => {
   const [items, setItems] = useState(initialItems);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMoreData, setHasMoreData] = useState(true);
   
   const renderWarehouseItemCard = useCallback(({ item }: { item: ItemCardProps }) => {
     const randomBg = getRandomBackground();
-    return <ItemCard {...item} isProduction={isProduction} onActionPress={onActionPress} backgroundIcon={randomBg} />;
+    return <ItemCard {...item} isProduction={isProduction} onActionPress={onActionPress} backgroundIcon={randomBg} isProductionCompleted={isProductionCompleted} />;
   }, []);
 
   const loadMoreData = async () => {

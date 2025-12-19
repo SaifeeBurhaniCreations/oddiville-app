@@ -53,8 +53,9 @@ import { formatDateForDisplay } from "@/src/utils/dateUtils";
 import DetailsToast from "@/src/components/ui/DetailsToast";
 import { hasUrlField, isChallanObject } from "@/src/utils/urlUtils";
 import { queryClient } from "@/src/lib/react-query";
-import { rawMaterialReceiveBackRoute } from "@/src/constants/backRoute";
-import { useAuth } from "@/src/context/AuthContext";
+import { useAuth } from '@/src/context/AuthContext';
+import { resolveAccess } from '@/src/utils/policiesUtils';
+import { PURCHASE_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
 
 type RawMaterialReceived = {
   arrival_date: string;
@@ -100,6 +101,12 @@ const formatOrder = (order: any): OrderProps => ({
 });
 
 const SupervisorRawMaterialDetailsScreen = () => {
+      const { role, policies } = useAuth();
+  
+      const safeRole = role ?? "guest";
+      const safePolicies = policies ?? [];
+      const access = resolveAccess(safeRole, safePolicies);
+  
   const [loading, setLoading] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -111,7 +118,6 @@ const SupervisorRawMaterialDetailsScreen = () => {
   const [toastMessage, setToastMessage] = useState("");
 
   const isInitialized = useRef(false);
-    const { role } = useAuth();
 
   const { goTo } = useAppNavigation();
   const { rmId } = useParams("raw-material-receive", "rmId");
@@ -478,6 +484,8 @@ const SupervisorRawMaterialDetailsScreen = () => {
     return !!orderData?.arrival_date;
   }, [orderData?.arrival_date]);
 
+  const backRoute = resolveBackRoute(access, PURCHASE_BACK_ROUTES, resolveDefaultRoute(access));
+  
   if (isFetching) {
     return (
       <View style={styles.loadingContainer}>
@@ -491,12 +499,12 @@ const SupervisorRawMaterialDetailsScreen = () => {
       <View style={styles.pageContainer}>
         <PageHeader page={"Raw Material"} />
         <View style={styles.wrapper}>
-          <BackButton label="Raw material receive" backRoute="purchase" />
+          <BackButton label="Raw material receive" backRoute={backRoute} />
           <View style={styles.errorContainer}>
             <B5 color={getColor("red", 600)}>
               Failed to load order details. Please try again.
             </B5>
-            <Button variant="outline" onPress={() => goTo("purchase")}>
+            <Button variant="outline" onPress={() => goTo(backRoute)}> 
               Go Back
             </Button>
           </View>
@@ -526,7 +534,7 @@ const SupervisorRawMaterialDetailsScreen = () => {
     <View style={styles.pageContainer}>
       <PageHeader page={"Raw Material"} />
       <View style={styles.wrapper}>
-        <BackButton label="Raw material receive" backRoute={rawMaterialReceiveBackRoute[role ?? "supervisor"] as keyof RootStackParamList} />
+        <BackButton label="Raw material receive" backRoute={backRoute} />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}

@@ -30,6 +30,8 @@ import {
 } from "@/src/hooks/useNotifications";
 import { AdminNotification } from "@/src/types/notification";
 import { getCreatedAt, getDescription } from "@/src/utils/formatUtils";
+import { useAuth } from "@/src/context/AuthContext";
+import { resolveAccess } from "@/src/utils/policiesUtils";
 
 const informativeNotificationsDataFormatter = (
   data: AdminNotification[]
@@ -82,6 +84,12 @@ const todaysNotificationsDataFormatter = (
   }));
 
 const HomeScreen = () => {
+    const { role, policies } = useAuth();
+  
+    const safeRole = role ?? "guest";
+    const safePolicies = policies ?? [];
+    const access = resolveAccess(safeRole, safePolicies);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isDisabled, setIsDisabled] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
@@ -143,6 +151,9 @@ const HomeScreen = () => {
     getUserFromStorage();
   }, []);
 
+  if (!access.isFullAccess) {
+  return null;
+}
   const handleOpen = async (id: string, type: BottomSheetSchemaKey) => {
     setIsLoading(true);
     await validateAndSetData(id, type);

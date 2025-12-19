@@ -8,7 +8,9 @@ export type Policy =
   | "production"
   | "package"
   | "sales-view"
-  | "sales-edit";
+  | "sales-edit"
+  | "trucks"
+  | "labours";
 
 export function resolveAccess(
   role: Role,
@@ -23,6 +25,8 @@ export function resolveAccess(
       production: true,
       package: true,
       sales: { view: true, edit: true },
+      trucks: true,
+      labours: true,
     };
   }
 
@@ -34,8 +38,10 @@ export function resolveAccess(
       production: false,
       package: false,
       sales: { view: false, edit: false },
-  };
-}
+      trucks: false,
+      labours: false,
+    };
+  }
 
   // 🔐 Policy-based roles
   const set = new Set(policies ?? []);
@@ -54,6 +60,8 @@ export function resolveAccess(
       view: set.has("sales-view"),
       edit: set.has("sales-edit"),
     },
+    trucks: set.has("trucks"),
+    labours: set.has("labours"),
   };
 }
 
@@ -82,6 +90,14 @@ export function resolveEntryRoute(
 
   if (access.sales.view || access.sales.edit) {
     return "policies/sales";
+  }
+
+  if (access.trucks) {
+    return "trucks";
+  }
+
+  if (access.labours) {
+    return "labours";
   }
 
   // No module access

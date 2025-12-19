@@ -23,6 +23,8 @@ import {
   PACKAGE_MENU_ITEMS,
   PRODUCTION_MENU_ITEMS,
   PURCHASE_MENU_ITEMS,
+  TRUCKS_MENU_ITEMS,
+LABOURS_MENU_ITEMS,
 } from "@/src/constants/MenuItems";
 import MenuCard from "./MenuCard";
 import LogoutIcon from "../icons/menu/LogoutIcon";
@@ -236,6 +238,25 @@ const MenuSheet = () => {
                         onPress={handleMenuPress}
                       />
                     ))}
+
+                     {access.trucks &&
+                    TRUCKS_MENU_ITEMS.map((item) => (
+                      <MenuCard
+                        key={item.name}
+                        item={item}
+                        onPress={handleMenuPress}
+                      />
+                    ))}
+
+                    {access.labours &&
+                    LABOURS_MENU_ITEMS.map((item) => (
+                      <MenuCard
+                        key={item.name}
+                        item={item}
+                        onPress={handleMenuPress}
+                      />
+                    ))}
+
                 </>
               )}
             </View>

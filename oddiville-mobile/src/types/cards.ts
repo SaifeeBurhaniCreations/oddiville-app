@@ -118,6 +118,7 @@ export interface ItemCardProps {
   actionLabel?: string;
   disabled?: boolean;
   isProduction?: boolean;
+  isProductionCompleted?: boolean;
   backgroundIcon?: ComponentType<any>;
   isActive?: boolean;
   style?: ViewStyle;
@@ -127,6 +128,7 @@ export interface ItemCardProps {
 export interface ItemsFlatListProps {
   items: ItemCardProps[],
   isProduction?: boolean,
+  isProductionCompleted?: boolean,
   onActionPress?: () => void,
 }
   export interface SupervisorOrderCardProps {

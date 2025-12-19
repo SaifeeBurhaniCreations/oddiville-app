@@ -11,7 +11,6 @@ import SearchWithFilter from '@/src/components/ui/Inputs/SearchWithFilter';
 import BackButton from '@/src/components/ui/Buttons/BackButton';
 import TruckFlatList from '@/src/components/ui/TruckComps/TruckFlatList';
 import Loader from '@/src/components/ui/Loader';
-import { truckBackRoute } from '@/src/constants/backRoute';
 
 // 4. Project hooks
 import { useAppNavigation } from '@/src/hooks/useAppNavigation';
@@ -31,7 +30,7 @@ import { RootStackParamList, TruckProps } from '@/src/types';
 // No items of this type
 
 import { resolveAccess } from '@/src/utils/policiesUtils';
-import { SALES_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
+import { TRUCKS_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
 
 const formatTruckData = (truckData: TruckDetailsProps[]): TruckProps[] => {
     return truckData.map((truck) => ({
@@ -62,7 +61,7 @@ const TrucksScreen = () => {
 
     const formattedTrucks = trucksData ? formatTruckData(trucksData) : [];
     
-    const backRoute = resolveBackRoute(access, SALES_BACK_ROUTES, resolveDefaultRoute(access));
+    const backRoute = resolveBackRoute(access, TRUCKS_BACK_ROUTES, resolveDefaultRoute(access));
     
     return (
         <View style={styles.pageContainer}>
