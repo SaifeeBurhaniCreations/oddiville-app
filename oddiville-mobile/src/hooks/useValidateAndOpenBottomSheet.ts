@@ -16,6 +16,7 @@ const useValidateAndOpenBottomSheet = () => {
 
   const { product } = useSelector((state: RootState) => state.storeProduct);
   const selectedChambers = useSelector((state: RootState) => state.rawMaterial.selectedChambers);
+    const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
 
   const { data: DryChambersRaw } = useDryChambers()
   const DryChambers = DryChambersRaw || [];
@@ -469,6 +470,21 @@ const useValidateAndOpenBottomSheet = () => {
         },
       })),
       {
+          type: "input-with-select",
+          data: {
+            placeholder: "Enter Size in kg",
+            label: "Size (Kg)",
+            placeholder_second: "Choose type",
+            label_second: "Type",
+            alignment: "half",
+            value: packageTypeProduction ?? "bag",
+            key: "select-package-type",
+            formField_1: "product_name",
+            source: "add-product-package",
+            source2: "product-package",
+          },
+        },
+      {
         type: 'addonInput',
         conditionKey: 'hideUntilChamberSelected',
         data: {
@@ -833,7 +849,8 @@ const useValidateAndOpenBottomSheet = () => {
           options: [
             "bag",
             "box",
-          ]
+          ],
+          key: "select-package-type"
         }
       },
     ],

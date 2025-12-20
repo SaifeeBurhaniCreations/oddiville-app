@@ -415,7 +415,7 @@ router.patch("/complete/:id", async (req, res) => {
   const io = req.app.get("io");
   const redis = req.app.get("redis");
 
-  const { end_time, chambers = [], wastage_quantity = 0 } = req.body;
+  const { end_time, chambers = [], wastage_quantity = 0, packaging_type = "bag", packaging_size = 0 } = req.body;
 
   let tx;
   try {
@@ -477,6 +477,8 @@ router.patch("/complete/:id", async (req, res) => {
 
     const newProduction = await updateProductionCompletion(
       production,
+      packaging_type,
+      packaging_size,
       end_time,
       wastage_quantity,
       recovery,
@@ -509,6 +511,11 @@ router.patch("/complete/:id", async (req, res) => {
         batch_code: newProduction.batch_code,
         end_time: newProduction.end_time,
         status: newProduction.status,
+        packaging: {
+          type: newProduction.packaging.type,
+          size: newProduction.packaging.size,
+          count: newProduction.packaging.count
+        },
         chambers: lockedChambers.map((c) => ({
           id: c.id,
           quantity: String(chambers.find((x) => String(x.id) === String(c.id))?.quantity ?? 0),

@@ -289,6 +289,7 @@ const AddressSection = z.object({
     icon: z.enum(['calendar', 'calendarCheck', 'database', 'parcel', 'location']).optional(),
   })
 });
+
 // Section: input with select
 const InputWithSelectSection = z.object({
   type: z.literal('input-with-select'),
@@ -302,7 +303,7 @@ const InputWithSelectSection = z.object({
     conditionKey: z.enum(['hideUntilChamberSelected']).optional(),
     hasUniqueProp: z.object({ key: z.string(), identifier: z.string() }).optional(),
     alignment: z.enum(["full", "half"]).default("full").optional(),
-    key: z.enum(["add-raw-material", "package-weight", "supervisor-production"]),
+    key: z.enum(["add-raw-material", "package-weight", "supervisor-production", "select-package-type"]),
     formField_1: z.string().optional(),
     formField_2: z.string().optional(),
     source: z.enum(["add-product-package", "add-package", "supervisor-production"]).optional(),

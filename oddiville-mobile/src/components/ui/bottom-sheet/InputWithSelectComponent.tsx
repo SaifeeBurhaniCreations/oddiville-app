@@ -39,6 +39,7 @@ export type AddPackageSizeForm = {
 const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
     const dispatch = useDispatch()
     const { slectedUnit } = useSelector((state: RootState) => state.selectUnit);
+    const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
     const selectedRawMaterial = useSelector((state: RootState) => state.rawMaterial.selectedRawMaterials);
     const chamberRatingsById = useSelector((state: RootState) => state.chamberRatings.byId);
     const { meta } = useSelector((state: RootState) => state.bottomSheet);
@@ -111,12 +112,13 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
             dispatch(setRmSource(mapped));
           }
 
-
         if (['package-weight', 'add-raw-material'].includes(key)) {
             validateAndSetData('Abc123', key);
         } else if (source === 'supervisor-production') {
             validateAndSetData('Abc123', 'rating');
             dispatch(selectChamber(formField_1))
+        } else if (key === 'select-package-type') {
+            validateAndSetData('Abc123', 'select-package-type');
         }
     };
 
@@ -132,14 +134,15 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
     const rawMap = {
         'add-raw-material': addRawMaterialValue,
         'supervisor-production': chamberRating,
-        'package-weight': slectedUnit
+        'package-weight': slectedUnit,
+        'select-package-type': packageTypeProduction
     };
 
     const placeholder_second_val = placeholder_second ? placeholder_second : "Select";
 
     const raw = rawMap[key] !== undefined ? rawMap[key] : false;
 
-    const currentValue = computeCurrentValue(key, raw, chamberRating, placeholder_second_val);
+    const currentValue = computeCurrentValue(key, raw, chamberRating, placeholder_second_val, packageTypeProduction);
 
     const currentChamberName = String(formField_1);
 
@@ -154,7 +157,7 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
             <>
                 <TextInput
                     style={styles.textInput}
-                    keyboardType={(meta?.type === 'add-product-package' || meta?.type === 'add-package') ? 'default' : 'number-pad'}
+                    keyboardType={(meta?.type === 'add-product-package' || meta?.type === 'add-package' || key !== 'select-package-type') ? 'default' : 'number-pad'}
                     placeholder={placeholder}
                    onChangeText={(val) => {
                         if (meta?.type === "supervisor-production") {

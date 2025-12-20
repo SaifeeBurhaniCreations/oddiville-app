@@ -12,25 +12,25 @@ const ORDER_READY = {
                     details: [
                         {
                             row_1: [
-                                {
-                                    label: "Amount",
-                                    value: "",
-                                    icon: "money",
-                                },
+                                // {
+                                //     label: "Amount",
+                                //     value: "",
+                                //     icon: "money",
+                                // },
                                 {
                                     label: "Product",
                                     value: "",
                                     icon: "box",
                                 },
-                            ]
-                        },
-                        {
-                            row_2: [
                                 {
                                     label: "Quantity",
                                     value: "",
                                     icon: "database",
                                 },
+                            ]
+                        },
+                        {
+                            row_2: [
                                 {
                                     label: "Dis Date",
                                     value: "",
@@ -97,25 +97,25 @@ const ORDER_SHIPPED = {
                     details: [
                         {
                             row_1: [
-                                {
-                                    label: "Amount",
-                                    value: "",
-                                    icon: "money",
-                                },
+                                // {
+                                //     label: "Amount",
+                                //     value: "",
+                                //     icon: "money",
+                                // },
                                 {
                                     label: "Product",
                                     value: "",
                                     icon: "box",
                                 },
-                            ]
-                        },
-                        {
-                            row_2: [
                                 {
                                     label: "Quantity",
                                     value: "",
                                     icon: "database",
                                 },
+                            ]
+                        },
+                        {
+                            row_2: [
                                 {
                                     label: "Dis Date",
                                     value: "",
@@ -199,25 +199,25 @@ const ORDER_REACHED = {
                     details: [
                         {
                             row_1: [
-                                {
-                                    label: "Amount",
-                                    value: "",
-                                    icon: "money",
-                                },
+                                // {
+                                //     label: "Amount",
+                                //     value: "",
+                                //     icon: "money",
+                                // },
                                 {
                                     label: "Product",
                                     value: "",
                                     icon: "box",
                                 },
-                            ]
-                        },
-                        {
-                            row_2: [
                                 {
                                     label: "Quantity",
                                     value: "",
                                     icon: "database",
                                 },
+                            ]
+                        },
+                        {
+                            row_2: [
                                 {
                                     label: "Dis Date",
                                     value: "",
@@ -397,7 +397,8 @@ const RAW_MATERIAL_REACHED = {
                     title: "Product Details", details: [
                         { label: "", value: "", icon: "database" },
                         { label: "", value: "", icon: "database" },
-                        { label: "", value: "", icon: "money" }
+                        { label: "", value: "", icon: "money" },
+                        { label: "", value: "", icon: "box" }
                     ],
                     fileName: "Challan"
                 },
@@ -538,6 +539,11 @@ const PRODUCTION_COMPLETED = {
                                     label: "",
                                     value: "",
                                     icon: "lane",
+                                },
+                                {
+                                    label: "",
+                                    value: "",
+                                    icon: "box",
                                 },
                             ]
                         },

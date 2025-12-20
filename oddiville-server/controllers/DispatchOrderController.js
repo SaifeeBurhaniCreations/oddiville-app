@@ -239,23 +239,14 @@ router.post("/create", async (req, res) => {
       city,
       est_delivered_date,
       products,
-      amount,
     } = req.body;
 
     const validatedProducts = validateProducts(products);
 
-    const numericAmount = Number(amount);
-    if (!amount || isNaN(numericAmount) || numericAmount <= 0) {
-      return res
-        .status(400)
-        .json({ error: "Amount is required and must be greater than 0." });
-    }
-
     if (!customer_name) {
       return res.status(400).json({ error: "Customer name is required." });
     }
-
-    const parsedAmount = numericAmount;
+    
     const parsedProducts = parseProducts(validatedProducts);
 
     for (const product of parsedProducts ?? []) {
@@ -294,7 +285,6 @@ router.post("/create", async (req, res) => {
       est_delivered_date,
       products: parsedProducts,
       packages: [],
-      amount: parsedAmount,
     });
 
     const totalWeight = (parsedProducts ?? []).reduce((productSum, product) => {

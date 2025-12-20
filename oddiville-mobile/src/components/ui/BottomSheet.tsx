@@ -100,6 +100,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
   const PackageSizeSearched = useSelector(
     (state: RootState) => state.packageSizeSearch.packageSizeSearched
   );
+  const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
 
   const { runAction } = useBottomSheetActions(meta);
 
@@ -200,6 +201,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
         return acc;
       }, {} as Record<string, ChamberValue>),
       discard_quantity: 0,
+      packaging_type: 0,
+      packaging_quantity: 0,
     };
 
     const validationRules: Partial<
@@ -243,6 +246,22 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
         validate: (value: any) =>
           value !== null && value !== undefined && value >= 0,
         message: "Wastage quantity must be zero or more",
+      },
+    ];
+
+    validationRules["packaging_type"] = [
+      {
+        type: "custom",
+        validate: (value: any) => value,
+        message: "Packaging type is required!",
+      },
+    ];
+
+    validationRules["packaging_quantity"] = [
+      {
+        type: "custom",
+        validate: (value: any) => value,
+        message: "Packaging quantity is required!",
       },
     ];
 
@@ -540,6 +559,21 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
             },
           };
         }),
+        {
+          type: "input-with-select",
+          data: {
+            placeholder: "Enter Size in kg",
+            label: "Size (Kg)",
+            placeholder_second: "Choose type",
+            label_second: "Type",
+            alignment: "half",
+            value: packageTypeProduction ?? "bag",
+            key: "select-package-type",
+            formField_1: "product_name",
+            source: "add-product-package",
+            source2: "product-package",
+          },
+        },
         {
           type: "addonInput",
           conditionKey: "hideUntilChamberSelected",

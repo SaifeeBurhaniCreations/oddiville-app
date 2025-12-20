@@ -670,14 +670,17 @@ function fillOrderReachedSchema(schema, filler) {
                                 rowItems.forEach((item, idx) => {
                                     const fillerItem = fillerItems[idx] || {};
 
-                                    if (!item.label) {
-                                        item.label = fillerItem.label || "";
-                                    }
-                                    if (!item.value) {
-                                        item.value = fillerItem.value || "";
-                                    }
-                                    if (!item.icon) {
-                                        item.icon = fillerItem.icon || "";
+                                    if(fillerItem.value) {
+                                        
+                                        if (!item.label) {
+                                            item.label = fillerItem.label || "";
+                                        }
+                                        if (!item.value) {
+                                            item.value = fillerItem.value || "";
+                                        }
+                                        if (!item.icon) {
+                                            item.icon = fillerItem.icon || "";
+                                        }
                                     }
                                 });
                             }

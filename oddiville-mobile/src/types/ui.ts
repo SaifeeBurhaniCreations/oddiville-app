@@ -818,4 +818,5 @@ export interface RawMaterialOrderProps {
   arrival_date?: string | null;
   createdAt: string;
   updatedAt: string;
+  bags: string;
 }

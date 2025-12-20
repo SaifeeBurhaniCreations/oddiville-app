@@ -35,6 +35,7 @@ import packageSizeSearchReducer from "./slices/bottomsheet/package-size-search.s
 import deleteUserPopupReducer from "./slices/delete-popup-slice";
 import storageReducer from "./slices/bottomsheet/storage.slice";
 import policiesReducer from "./slices/bottomsheet/policies.slice";
+import packageTypeProductionReducer from "./slices/bottomsheet/package-type-production.slice";
 
 export const store = configureStore({
   reducer: {
@@ -73,6 +74,7 @@ export const store = configureStore({
     deletePopup: deleteUserPopupReducer,
     StorageRMRating: storageReducer,
     policies: policiesReducer,
+    packageTypeProduction: packageTypeProductionReducer,
   },
 });
 

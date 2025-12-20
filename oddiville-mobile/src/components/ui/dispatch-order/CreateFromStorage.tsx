@@ -322,28 +322,6 @@ const handleRemoveProduct = (productName: string) => {
                 Products
               </Select>
             </View>
-            {canSeeAmount && <View style={[styles.borderBottom, { paddingHorizontal: 12 }]}>
-              <FormField name={`amount`} form={{ values, setField, errors }}>
-                {({ value, onChange, error }) => (
-                  <Input
-                    placeholder="Enter amount"
-                    value={
-                      value === 0 || value === null || value === undefined
-                        ? ""
-                        : String(value)
-                    }
-                    addonText="Rs"
-                    onChangeText={(text: string) => {
-                      onChange(text);
-                    }}
-                    error={error}
-                    keyboardType="decimal-pad"
-                    mask="addon"
-                    post
-                  />
-                )}
-              </FormField>
-            </View>}
             
            {itemsToRender?.length > 0 ? (
               itemsToRender.map((value, index) => (

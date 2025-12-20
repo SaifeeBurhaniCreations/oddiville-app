@@ -58,6 +58,10 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.ENUM("pending", "in-queue", "in-progress", "completed", "cancelled"),
       defaultValue: "pending"
     },
+    packaging: {
+      type: Sequelize.JSON, 
+      allowNull: true
+    },
     batch_code: {
       type: Sequelize.STRING,
       allowNull: true,
@@ -70,7 +74,7 @@ module.exports = (sequelize, Sequelize) => {
     sample_images: {
       type: Sequelize.JSON, 
       allowNull: true
-  },
+    },
   }, {
     timestamps: true,
   });

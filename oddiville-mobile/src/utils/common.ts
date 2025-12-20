@@ -294,11 +294,11 @@ export function getStatusDescription(
 }
 
 
-export  function computeCurrentValue(key: string, raw: string | false, chamberRating: string, placeholder_second: string) {
+export  function computeCurrentValue(key: string, raw: string | false, chamberRating: string, placeholder_second: string, productionPackageType: string) {
     if (!!raw && typeof raw === 'string' && raw.trim() !== '') {
         if (key === 'add-raw-material') return raw;
         if (key === 'supervisor-production') return chamberRating || raw;
+        if (key === 'select-package-type') return productionPackageType || raw;
         return raw;
     }
-    return placeholder_second || 'Select';
-}
+    return placeholder_second || 'Select'; }

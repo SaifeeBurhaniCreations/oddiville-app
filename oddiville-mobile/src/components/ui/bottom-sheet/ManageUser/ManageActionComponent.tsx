@@ -30,6 +30,7 @@ import { selectUnit } from '@/src/redux/slices/unit-select.slice';
     const chamberQuantity = useSelector((state: RootState) => state.chamberRatings.chamberQty);
     const id = useSelector((state: RootState) => state.idStore.id);
     const currentProductId = useSelector((state: RootState) => state.currentProduct.currentProductId);
+    const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
 
     const dispatch = useDispatch();
 
@@ -71,6 +72,21 @@ import { selectUnit } from '@/src/redux/slices/unit-select.slice';
                 },
             };
         }),
+        {
+          type: "input-with-select",
+          data: {
+            placeholder: "Enter Size in kg",
+            label: "Size (Kg)",
+            placeholder_second: "Choose type",
+            label_second: "Type",
+            alignment: "half",
+            value: packageTypeProduction ?? "bag",
+            key: "select-package-type",
+            formField_1: "product_name",
+            source: "add-product-package",
+            source2: "product-package",
+          },
+        },
           {
               type: 'addonInput',
               conditionKey: 'hideUntilChamberSelected',

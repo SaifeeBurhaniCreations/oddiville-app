@@ -9,6 +9,8 @@ export type StoreMaterialForm = {
     unit: string;
     size: string;
     quantity: string;
+    packaging_size: string;
+    packaging_type: string;
 };
 
 const AddonInputComponent = ({ data, conditionKey }: AddonInputComponentProps) => {

@@ -109,6 +109,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const { data: productionData } = useProductionById(id!);
   const rawOrderId = productionData?.raw_material_order_id;
   const { data: rawMaterialOrderData } = useRawMaterialOrderById(rawOrderId);
+    const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
 
   const { goTo } = useAppNavigation();
 
@@ -132,7 +133,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
         {
           name: "Quantity",
           value: rawMaterialOrderData
-            ? `${rawMaterialOrderData.quantity_received ?? "--"} ${
+            ? `${productionData?.quantity ?? "--"} ${
                 rawMaterialOrderData.unit ?? ""
               }`
             : "--",
@@ -216,7 +217,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
             description: "Pick chambers to store your materials in",
             details: {
               label: "Quantity",
-              value: `${rawMaterialOrderData?.quantity_received} ${rawMaterialOrderData?.unit}`,
+              value: `${productionData?.quantity} ${rawMaterialOrderData?.unit}`,
               icon: "database",
             },
           },
@@ -244,7 +245,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
             label_second: "Rating",
             value: "",
             addonText: "Kg",
-            key: "production",
+            key: "supervisor-production",
             formField_1: chamberName,
             source: "supervisor-production",
           },
@@ -252,12 +253,13 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
           {
           type: "input-with-select",
           data: {
-            placeholder: "Enter Count",
-            label: "Count",
+            placeholder: "Enter Size in kg",
+            label: "Size (Kg)",
             placeholder_second: "Choose type",
             label_second: "Type",
             alignment: "half",
-            key: "select-count",
+            value: packageTypeProduction ?? "bag",
+            key: "select-package-type",
             formField_1: "product_name",
             source: "add-product-package",
             source2: "product-package",
@@ -360,7 +362,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     }
   };
 
-const isStarted = !!productionData?.isStarted;
+const isStarted = productionData?.start_time !== null;
 
 const canStart = !isStarted;
 
@@ -444,14 +446,14 @@ const canComplete =
                 : "Start"}
             </Button>
           <Button
-  onPress={openBottomSheet}
-  disabled={!canComplete}
-  style={styles.flexGrow}
->
-  {productionLoading
-    ? "Production completing..."
-    : "Production completed"}
-</Button>
+            onPress={openBottomSheet}
+            disabled={!canComplete}
+            style={styles.flexGrow}
+          >
+            {productionLoading
+              ? "Production completing..."
+              : "Production completed"}
+          </Button>
 
         </View>
       </View>

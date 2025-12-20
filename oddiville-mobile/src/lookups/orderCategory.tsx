@@ -57,11 +57,11 @@ export const formatOrder = {
       icon: <BoxIcon size={16} />,
     },
     bottomDetails: [
-      {
-        name: "Amount",
-        value: order.amountLabel ? order.amountLabel : `${formatAmount(Number(order.amount), { unit: "rs" })}`,
-        icon: <CashIcon size={16} />,
-      },
+      // {
+      //   name: "Amount",
+      //   value: order.amountLabel ? order.amountLabel : `${formatAmount(Number(order.amount), { unit: "rs" })}`,
+      //   icon: <CashIcon size={16} />,
+      // },
       {
         name: "Est Dis",
         value: safeFormatDate(order.est_delivered_date),
@@ -88,11 +88,11 @@ export const formatOrder = {
         icon: <BoxIcon size={16} />,
       },
       bottomDetails: [
-        {
-          name: "Amount",
-          value: order.amountLabel ? order.amountLabel : `${formatAmount(Number(order.amount), { unit: "rs" })}`,
-          icon: <CashIcon size={16} />,
-        },
+        // {
+        //   name: "Amount",
+        //   value: order.amountLabel ? order.amountLabel : `${formatAmount(Number(order.amount), { unit: "rs" })}`,
+        //   icon: <CashIcon size={16} />,
+        // },
         {
           name: "Est Dis",
           value: safeFormatDate(order.est_delivered_date),
@@ -151,17 +151,17 @@ export const formatOrder = {
         value: Array.isArray(order.products) ? order.products?.length : 0,
         icon: <BoxIcon size={16} />,
       },
-      bottomDetails: [
-        {
-          name: "Amount",
-          value: order.amountLabel ? order.amountLabel : `${formatAmount(Number(order.amount), { unit: "rs" })}`,
-        },
-        {
-          name: "Est Dis",
-          value: safeFormatDate(order.est_delivered_date),
-          icon: <CalandarCheckIcon size={16} />,
-        },
-      ],
+      // bottomDetails: [
+      //   // {
+      //   //   name: "Amount",
+      //   //   value: order.amountLabel ? order.amountLabel : `${formatAmount(Number(order.amount), { unit: "rs" })}`,
+      //   // },
+      //   {
+      //     name: "Est Dis",
+      //     value: safeFormatDate(order.delivered_date),
+      //     icon: <CalandarCheckIcon size={16} />,
+      //   },
+      // ],
       dispatchDetails: [
         {
           value: safeFormatDate(order.dispatch_date),

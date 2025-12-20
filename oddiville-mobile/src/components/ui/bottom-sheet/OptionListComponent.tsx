@@ -23,6 +23,8 @@ import { setDeleteUserPopup, setVendorDeletePopup } from "@/src/redux/slices/del
 import Modal from "../modals/Modal";
 import { useDeleteVendor } from "@/src/hooks/vendor";
 import { FilterEnum } from "@/src/schemas/BottomSheetSchema";
+import { ChamberQty } from "@/src/redux/slices/bottomsheet/chamber-ratings.slice";
+import { selectPackageType } from "@/src/redux/slices/bottomsheet/package-type-production.slice";
 
 const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
   
@@ -41,11 +43,19 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
     "add-product-package"
   );
   const { setField } = productPackageForm;
-  const { data: DryChambersRaw } = useDryChambers();
+    const selectedChambers = useSelector(
+      (state: RootState) => state.rawMaterial.selectedChambers
+    );
+      const chamberQuantity = useSelector(
+        (state: RootState) => state.chamberRatings.chamberQty
+      );
+      const { data: DryChambersRaw } = useDryChambers();
   const DryChambers = DryChambersRaw || [];
   const username = useSelector(
     (state: RootState) => state.bottomSheet.meta?.id
   );
+    const { product } = useSelector((state: RootState) => state.storeProduct);
+
   const { goTo } = useAppNavigation();
   const deleteVendorMutation = useDeleteVendor();
 
@@ -53,7 +63,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
     async (
       route: validRouteOptionList | undefined,
       item: string | { name: string; isoCode: string },
-      key?: "user-action" | "vendor-action" | "supervisor-production" | "product-package" | string
+      key?: "user-action" | "vendor-action" | "supervisor-production" | "product-package" | "select-package-type" | string
     ) => {
       const value = typeof item === "object" ? item.name : item;
 
@@ -68,6 +78,112 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
         );
 
         dispatch(closeBottomSheet());
+        return;
+      }
+          
+ 
+
+      if (key === "select-package-type") {
+        console.log("item", item);
+        
+        selectPackageType(item)
+         const supervisorProduction = {
+            sections: [
+              {
+                type: "title-with-details-cross",
+                data: {
+                  title: "Store material",
+                  description: "Pick chambers to store your materials in",
+                  details: {
+                    label: "Quantity",
+                    value: `${product?.quantity} ${product?.unit}`,
+                    icon: "database",
+                  },
+                },
+              },
+              {
+                type: "select",
+                data: {
+                  placeholder: "Select chambers",
+                  label: "Select chambers",
+                },
+              },
+              ...selectedChambers.map((chamberName) => {
+                const quantityValue =
+                  chamberQuantity[chamberName]?.find(
+                    (chamber: ChamberQty) => chamber.name === chamberName
+                  )?.quantity ?? "";
+      
+                return {
+                  type: "input-with-select",
+                  conditionKey: "hideUntilChamberSelected",
+                  hasUniqueProp: {
+                    identifier: "addonInputQuantity",
+                    key: "label",
+                  },
+                  data: {
+                    placeholder: "Qty.",
+                    label: chamberName,
+                    label_second: "Rating",
+                    value: quantityValue,
+                    addonText: "Kg",
+                    key: "supervisor-production",
+                    formField_1: chamberName,
+                    source: "supervisor-production",
+                  },
+                };
+              }),
+              {
+          type: "input-with-select",
+          data: {
+            placeholder: "Enter Size in kg",
+            label: "Size (Kg)",
+            placeholder_second: "Choose type",
+            label_second: "Type",
+            alignment: "half",
+            value: item ?? "bag",
+            key: "select-package-type",
+            formField_1: "product_name",
+            source: "add-product-package",
+            source2: "product-package",
+          },
+        },
+              {
+                type: "addonInput",
+                conditionKey: "hideUntilChamberSelected",
+                data: {
+                  placeholder: "Enter quantity",
+                  label: "Discard quantity",
+                  value: "0",
+                  addonText: "Kg",
+                  formField: "discard_quantity",
+                },
+              },
+            ],
+            buttons: [
+              {
+                text: "Cancel",
+                variant: "outline",
+                color: "green",
+                alignment: "half",
+                disabled: false,
+              },
+              {
+                text: "Store",
+                variant: "fill",
+                color: "green",
+                alignment: "half",
+                disabled: false,
+                actionKey: "store-product",
+              },
+            ],
+          };
+
+          validateAndSetData(
+                product?.id,
+                "supervisor-production",
+                supervisorProduction
+              );
         return;
       }
 

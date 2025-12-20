@@ -63,7 +63,6 @@ type RMChamberQuantityMap = {
 
 export type OrderStorageForm = {
   customer_name: string;
-  amount: string;
   est_delivered_date: string;
   address: string;
   country: CountryProps;
@@ -156,7 +155,6 @@ const CreateOrder = () => {
   } = useMultiStepFormValidator<OrderStorageForm>(
     {
       customer_name: "",
-      amount: "",
       est_delivered_date: "",
       address: "",
       country: selectedCountry ?? { label: "India", icon: "", isoCode: "IN" },
@@ -173,17 +171,6 @@ const CreateOrder = () => {
           message: "Customer name must be at least 2 characters!",
         },
       ],
-      amount: canSeeAmount ? [
-        { type: "required" as const, message: "Amount is required!" },
-        {
-          type: "custom" as const,
-          validate: (val: string) => {
-            const amount = Number(val);
-            return !isNaN(amount) && amount > 0;
-          },
-          message: "Amount must be a valid positive number!",
-        },
-      ]  : [],
       products: [
         {
           type: "custom" as const,
@@ -253,7 +240,7 @@ const CreateOrder = () => {
         "city",
         "est_delivered_date",
       ],
-      2: ["products", "amount"],
+      2: ["products"],
     } as Record<number, (keyof OrderStorageForm)[]>,
     {
       validateOnChange: true,

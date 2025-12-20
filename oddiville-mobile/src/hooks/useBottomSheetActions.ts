@@ -48,6 +48,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const metaBottomSheet = useSelector(
     (state: RootState) => state.bottomSheet.meta
   );
+    const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
 
   const dispatch = useDispatch<AppDispatch>();
   const { goTo } = useAppNavigation();
@@ -446,14 +447,21 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
           storeQuantityForm?.validateForm(updatedValues);
 
         if (result_store_quantity_form.success) {
-          dispatch(setProductionLoading(true));
+          // dispatch(setProductionLoading(true));
 
           const formData = formatStoreProduct(result_store_quantity_form?.data);
+
+          const newFormData = {
+            ...formData,
+            packaging_type: packageTypeProduction,
+            packaging_size: updatedValues.product_name.value,
+            
+          }
 
           try {
             await completeProduction.mutateAsync({
               id: meta.id,
-              data: formData,
+              data: newFormData,
             });
             dispatch(clearChambers());
             dispatch(setProductionLoading(false));
