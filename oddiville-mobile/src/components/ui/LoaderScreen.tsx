@@ -25,7 +25,7 @@ const LoaderScreen = () => {
   >
       <StatusBar backgroundColor={getColor("green")} style="light" />
 
-      <CustomImage src={require("@/src/assets/images/logo.png")} width={logoWidth} height={logoHeight} />
+      <CustomImage src={require("@/src/assets/images/icon-main.png")} width={logoWidth} height={logoHeight} />
     </MotiView>
   )
 }

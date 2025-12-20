@@ -4,7 +4,7 @@
     "slug": "oddiville-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/images/icon-new.png",
+    "icon": "./src/assets/images/icon-main.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -19,14 +19,15 @@
       "router": {
         "origin": false
       },
-      "API_URL": "https://0a190af18077.ngrok-free.app",
+      "API_URL": "https://oddiapi.sbcws.com",
       "eas": {
+        "projectId": "ed40e76d-b0ed-40cc-af22-1cf28030d635"
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/images/icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./src/assets/images/icon-main.png",
+        "backgroundColor": "#3D874C"
       },
       "package": "com.oddiville.mobile"
     },
@@ -43,7 +44,7 @@
           "image": "./src/assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#3D874C"
         }
       ],
       "expo-font",
@@ -52,6 +53,7 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "owner": "sbc_6"
   }
 }
