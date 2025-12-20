@@ -4,3 +4,4 @@
 
 expo-env.d.ts
 # @end expo-clioddiville-web/src/test_xlsx/vendors.xlsx
+*.xlsx
