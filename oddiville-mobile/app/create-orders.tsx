@@ -55,6 +55,12 @@ interface Product {
   chambers: Chamber[];
 }
 
+type RMChamberQuantityMap = {
+  [rmName: string]: {
+    [chamberId: string]: number;
+  };
+};
+
 export type OrderStorageForm = {
   customer_name: string;
   amount: string;
@@ -64,6 +70,7 @@ export type OrderStorageForm = {
   state: string | { name: string; isoCode: string };
   city: string | { name: string; isoCode: string };
   products: Product[];
+  rmChamberQuantities: RMChamberQuantityMap;
 };
 
 const validateProductChambers = (products: Product[]): boolean => {

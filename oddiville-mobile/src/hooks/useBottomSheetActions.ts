@@ -391,6 +391,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
         console.log("error in add-package-count", error.message);
       } finally {
         packageQuantityForm.resetForm();
+        dispatch(setIsLoadingPackage(false));
       }
     },
 

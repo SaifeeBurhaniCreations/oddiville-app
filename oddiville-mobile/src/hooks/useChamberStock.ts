@@ -95,6 +95,11 @@ export function useChamberStockById(id: string | null) {
   });
 }
 
+export function useChamberStockByName(names: string[]) {
+    const { data: chamberStock } = useChamberStock();
+    return chamberStock?.filter((item) => names.includes(item.product_name));
+}
+
 export function useChamberStock() {
   const queryClient = useQueryClient();
   const socket = useSocket();

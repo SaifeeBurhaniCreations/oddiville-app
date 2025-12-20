@@ -7,9 +7,9 @@ import { ActionButtonConfig, ActivityProps } from "@/src/types";
 import { getColor } from "@/src/constants/colors";
 import { StyleSheet, View } from "react-native";
 import { useAdmin } from "@/src/hooks/useAdmin";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
-import { BottomSheetSchemaKey } from "@/src/schemas/BottomSheetSchema";
+import { BottomSheetSchemaKey, FilterEnum } from "@/src/schemas/BottomSheetSchema";
 import Loader from "@/src/components/ui/Loader";
 import {
   Notification,
@@ -32,6 +32,12 @@ import { AdminNotification } from "@/src/types/notification";
 import { getCreatedAt, getDescription } from "@/src/utils/formatUtils";
 import { useAuth } from "@/src/context/AuthContext";
 import { resolveAccess } from "@/src/utils/policiesUtils";
+import SearchWithFilter from "@/src/components/ui/Inputs/SearchWithFilter";
+import { filterItems, flattenFilters } from "@/src/utils/filterUtils";
+import { filterHandlers } from "@/src/lookups/filters";
+import { useSelector } from "react-redux";
+import { RootState } from "@/src/redux/store";
+import { runFilter } from "@/src/utils/bottomSheetUtils";
 
 const informativeNotificationsDataFormatter = (
   data: AdminNotification[]
@@ -84,6 +90,8 @@ const todaysNotificationsDataFormatter = (
   }));
 
 const HomeScreen = () => {
+    const nestedFilters = useSelector((state: RootState) => state.filter.filters);
+  
     const { role, policies } = useAuth();
   
     const safeRole = role ?? "guest";
@@ -92,9 +100,21 @@ const HomeScreen = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isDisabled, setIsDisabled] = useState(false);
-  const [username, setUsername] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);    
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastType, setToastType] = useState<"success" | "error" | "info">(
+    "info"
+  );
+  const [toastMessage, setToastMessage] = useState("");
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   useAdmin();
+const [allPagesLoaded, setAllPagesLoaded] = useState(false);
+
+  const showToast = (type: "success" | "error" | "info", message: string) => {
+    setToastType(type);
+    setToastMessage(message);
+    setToastVisible(true);
+  };
   const {
     data: informativenotifications,
     fetchNextPage: fetchNextInformativePage,
@@ -162,7 +182,67 @@ const HomeScreen = () => {
 
 // console.log("formatedInformativeNotifications", JSON.stringify(formatedInformativeNotifications, null, 2));
 
+const allNotifications = useMemo(
+  () => formatedInformativeNotifications ?? [],
+  [formatedInformativeNotifications]
+);
 
+const filtersApplied = useMemo(() => {
+  return Object.values(nestedFilters || {}).some(
+    (v) => Array.isArray(v) && v.length > 0
+  );
+}, [nestedFilters]);
+
+useEffect(() => {
+  const applyFilters = async () => {
+    if (filtersApplied && hasNextInformativePage) {
+      await fetchAllPagesIfNeeded();
+    }
+  };
+  applyFilters();
+}, [filtersApplied]);
+
+
+  const filters = useMemo(
+    () => flattenFilters(nestedFilters) as Record<FilterEnum, string[]>,
+    [nestedFilters]
+  );
+
+const fetchAllPagesIfNeeded = async () => {
+  while (hasNextInformativePage) {
+    await fetchNextInformativePage();
+  }
+  setAllPagesLoaded(true);
+};
+
+const filteredNotifications = useMemo(() => {
+  if (filtersApplied && !allPagesLoaded) return [];
+  return filterItems(allNotifications, filters, filterHandlers);
+}, [allNotifications, filters, filtersApplied, allPagesLoaded]);
+
+const informativeListData = useMemo(() => {
+  return filtersApplied
+    ? filteredNotifications
+    : formatedInformativeNotifications;
+}, [filtersApplied, filteredNotifications, formatedInformativeNotifications]);
+
+const canPaginateInformative = !filtersApplied;
+
+useEffect(() => {
+  if (allNotifications.length > 200) {
+    showToast("error", "Too many notifications to filter");
+  }
+}, [allNotifications.length]);
+
+  const handleSearchFilter = () => {
+    setIsLoading(true);
+    runFilter({
+      key: "home:activities",
+      validateAndSetData,
+      mode: "select-main",
+    });
+    setIsLoading(false);
+  };
   return (
     <View style={styles.pageContainer}>
       <PageHeader page={"Home"} />
@@ -174,7 +254,19 @@ const HomeScreen = () => {
           color="green"
           style={styles.flexGrow}
         >
-          <ActivitesFlatList
+        <View style={[styles.flexGrow, {flexDirection: "column"}]}>
+                  <View style={styles.searchinputWrapper}>
+          <SearchWithFilter
+            placeholder={"Search activities"}
+            value={""}
+            cross={true}
+            onFilterPress={handleSearchFilter}
+            onSubmitEditing={() => {}}
+            onChangeText={(text) => () => {}}
+            onClear={() => () => {}}
+          />
+        </View>
+           {/* <ActivitesFlatList
             isVirtualised={true}
             onPress={handleOpen}
             fetchMore={() => {
@@ -187,7 +279,28 @@ const HomeScreen = () => {
             listKey={"recent_activities"}
             extraData={formatedInformativeNotifications}
             refetch={refetchInformative}
+          /> */}
+          <ActivitesFlatList
+            isVirtualised={true}
+            onPress={handleOpen}
+            fetchMore={() => {
+              if (
+                canPaginateInformative &&
+                hasNextInformativePage &&
+                !isFetchingNextInformativePage
+              ) {
+                fetchNextInformativePage();
+              }
+            }}
+            hasMore={canPaginateInformative && hasNextInformativePage}
+            activities={informativeListData}
+            isLoading={isFetchingInformativeNotifications}
+            listKey={"recent_activities"}
+            extraData={informativeListData}
+            refetch={refetchInformative}
           />
+
+   </View>
           <ActivitesFlatList
             isVirtualised={true}
             onPress={handleOpen}
@@ -259,6 +372,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+    searchinputWrapper: {
+    height: 44,
+    marginTop: 16,
   },
 });
 

@@ -824,6 +824,21 @@ const useValidateAndOpenBottomSheet = () => {
     ],
   }
 
+    const selectPackageType = {
+    sections: [
+      {
+        type: 'optionList',
+        data: {
+          isCheckEnable: false,
+          options: [
+            "bag",
+            "box",
+          ]
+        }
+      },
+    ],
+  };
+
   const validateAndSetData = async (id: string, type: BottomSheetSchemaKey, overrideConfig?: any) => {
     if (!type || !(type in bottomSheetSchemas)) {
       console.log(`[validateAndSetData] No bottom sheet configured for type: ${type}`);
@@ -896,6 +911,9 @@ const useValidateAndOpenBottomSheet = () => {
           break;
         case "select-policies":
           data = selectPolicies;
+          break;
+        case "select-package-type":
+          data = selectPackageType;
           break;
         // case "calendar-event":
         //   data = calendarEvent;

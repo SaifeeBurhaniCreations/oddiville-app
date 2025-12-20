@@ -79,7 +79,7 @@ export interface BottomSheetProps {
 export type validRouteOptionList = "state" | "city" | "product" | "chamber";
 
 type aligmentEnum = "full" | "half";
-type keyEnum = "add-raw-material" | "package-weight" | "supervisor-production";
+type keyEnum = "add-raw-material" | "package-weight" | "supervisor-production" | "package-count";
 type sourceEnum =
   | "add-product-package"
   | "add-package"

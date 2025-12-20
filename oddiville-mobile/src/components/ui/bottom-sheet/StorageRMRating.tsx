@@ -1,7 +1,7 @@
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import React from "react";
-import { setStorageRmRating } from "@/src/redux/slices/bottomsheet/storage.slice";
-import { useDispatch } from "react-redux";
+// import { setStorageRmRating } from "@/src/redux/slices/bottomsheet/storage.slice";
+import { useDispatch, useSelector } from "react-redux";
 import { getColor } from "@/src/constants/colors";
 import { H4 } from "../../typography/Typography";
 import ForwardChevron from "../../icons/navigation/ForwardChevron";
@@ -13,6 +13,8 @@ import TwoStarIcon from "@/src/components/icons/page/Rating/TwoStarIcon";
 import Tag from "../Tag";
 import StarIcon from "../../icons/page/StarIcon";
 import { closeBottomSheet } from "@/src/redux/slices/bottomsheet.slice";
+import { RootState } from "@/src/redux/store";
+import { setRatingForRM } from "@/src/redux/slices/bottomsheet/storage.slice";
 
 const StorageRMRatingComponent = ({
   data,
@@ -20,6 +22,20 @@ const StorageRMRatingComponent = ({
   data: { rating: string; message: string }[];
 }) => {
   const dispatch = useDispatch();
+  const meta = useSelector((state: RootState) => state.bottomSheet.meta)
+
+  const [rawMaterial, ratingStr] = meta && meta.id ? meta.id.split(":") : ["", ""];
+
+const rating = Number(ratingStr);
+
+const ratingToMessageMap: Record<number, string> = {
+  5: "Excellent",
+  4: "Very Good",
+  3: "Good",
+  2: "Average",
+  1: "Poor",
+};
+
   return (
     <View style={[styles.container]}>
       {data.map((item, index) => {
@@ -36,8 +52,18 @@ const StorageRMRatingComponent = ({
             activeOpacity={0.7}
             style={[styles.card]}
             onPress={() => {
-                dispatch(setStorageRmRating(item));
-                dispatch(closeBottomSheet());
+                const selectedRating = Number(item.rating);
+               dispatch(
+                setRatingForRM({
+                  rawMaterial,
+                  rating: {
+                    rating: selectedRating,
+                    message: ratingToMessageMap[rating],
+                  },
+                })
+              );
+
+              dispatch(closeBottomSheet());
             }}
             key={item.rating}
           >

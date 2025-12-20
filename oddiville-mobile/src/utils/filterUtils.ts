@@ -21,7 +21,6 @@ export function filterItems<T>(
     );
 }
 
-
 export function flattenFilters(
     node: Record<string, FilterNode>,
     parentKey: string = "",

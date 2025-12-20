@@ -141,6 +141,8 @@ router.get("/", async (req, res) => {
 // });
 
 router.post("/", async (req, res) => {
+  const t = await sequelize.transaction();
+
   try {
     const {
       product_name,
@@ -157,285 +159,207 @@ router.post("/", async (req, res) => {
       !Array.isArray(chambers) ||
       chambers.length === 0
     ) {
+      await t.rollback();
       return res.status(400).json({
-        error:
-          "product_name, unit and chambers (with id & quantity) are required.",
+        error: "product_name, unit and chambers are required.",
       });
     }
 
     const validChambers = chambers.filter(
-      (c) => c && c.id != null && !isNaN(Number(c.quantity))
+      (c) => c?.id && !isNaN(Number(c.quantity))
     );
 
-    if (validChambers.length === 0) {
+    if (!validChambers.length) {
+      await t.rollback();
       return res.status(400).json({
-        error: "Each chamber must contain id and a valid numeric quantity.",
+        error: "Invalid chamber payload.",
       });
     }
 
-    const packedItemChamberStock = await sequelize.transaction(
-      async (t) => {
-        const packageList = await parsedPackages({
-          packages,
-          product_name,
-          transaction: t,
-        });
+    const packageList = await parsedPackages({
+      packages,
+      product_name,
+      transaction: t,
+    });
 
-        const chamberIds = validChambers.map((c) => String(c.id));
+    const chamberIds = validChambers.map((c) => String(c.id));
 
-        const existing = await chamberStockClient.findOne({
-          where: { product_name, category: "packed" },
-          transaction: t,
-        });
+    const chambersFromDB = await chambersClient.findAll({
+      where: { id: { [Op.in]: chamberIds } },
+      transaction: t,
+    });
 
-        const chambersFromDB = await chambersClient.findAll({
-          where: { id: { [Op.in]: chamberIds } },
-          transaction: t,
-        });
+    if (!chambersFromDB.length) {
+      await t.rollback();
+      return res.status(404).json({ error: "Chambers not found." });
+    }
 
-        if (!chambersFromDB || chambersFromDB.length === 0) {
-          const err = new Error("No chambers found for requested IDs.");
-          err.status = 404;
-          throw err;
-        }
+    const dryChamberIds = new Set(
+      chambersFromDB.filter(c => c.tag === "dry").map(c => String(c.id))
+    );
 
-        const foundIds = new Set(chambersFromDB.map((c) => String(c.id)));
-        const missingIds = chamberIds.filter((id) => !foundIds.has(String(id)));
+    const newChamberData = validChambers
+      .filter(c => !dryChamberIds.has(String(c.id)))
+      .map(c => ({
+        id: String(c.id),
+        quantity: String(c.quantity),
+        rating: "5",
+      }));
 
-        if (missingIds.length > 0) {
-          const err = new Error(
-            `Some chambers are invalid: ${missingIds.join(", ")}`
+    if (!newChamberData.length) {
+      await t.rollback();
+      return res.status(400).json({
+        error: "Packed items must be stored in non-dry chambers.",
+      });
+    }
+
+    // CREATE / UPDATE PACKED STOCK 
+    let packedStock = await chamberStockClient.findOne({
+      where: { product_name, category: "packed" },
+      transaction: t,
+    });
+
+    if (packedStock) {
+      const merged = [...(packedStock.chamber || [])];
+
+      for (const incoming of newChamberData) {
+        const idx = merged.findIndex(c => c.id === incoming.id);
+        if (idx >= 0) {
+          merged[idx].quantity = String(
+            Number(merged[idx].quantity) + Number(incoming.quantity)
           );
-          err.status = 400;
-          throw err;
-        }
-
-        const dryChamberIds = new Set(
-          chambersFromDB
-            .filter((c) => c.tag === "dry")
-            .map((c) => String(c.id))
-        );
-
-        const newChamberData = validChambers
-          .filter((c) => !dryChamberIds.has(String(c.id)))
-          .map((c) => ({
-            id: String(c.id),
-            quantity: String(c.quantity),
-            rating: "5",
-          }));
-
-        if (newChamberData.length === 0) {
-          const err = new Error(
-            "Packed items must be stored in at least one non-dry chamber. Dry warehouse is for packaging only."
-          );
-          err.status = 400;
-          throw err;
-        }
-
-        let packedItemChamberStock;
-
-        // CREATE / UPDATE CHAMBER STOCK (PACKED)
-        if (existing) {
-          const mergedChambers = [...(existing.chamber || [])];
-
-          for (const incoming of newChamberData) {
-            const idx = mergedChambers.findIndex(
-              (c) => String(c.id) === String(incoming.id)
-            );
-
-            if (idx >= 0) {
-              const prevQty = Number(mergedChambers[idx].quantity || 0);
-              const addQty = Number(incoming.quantity || 0);
-
-              mergedChambers[idx] = {
-                ...mergedChambers[idx],
-                quantity: String(prevQty + addQty),
-                rating:
-                  mergedChambers[idx].rating ?? incoming.rating ?? "5",
-              };
-            } else {
-              mergedChambers.push(incoming);
-            }
-          }
-
-          await existing.update(
-            {
-              unit,
-              image: image || existing.image,
-              chamber: mergedChambers,
-              packages: packageList.length ? packageList : existing.packages,
-            },
-            { transaction: t }
-          );
-
-          packedItemChamberStock = existing;
         } else {
-          packedItemChamberStock = await chamberStockClient.create(
-            {
-              product_name,
-              category: "packed",
-              unit,
-              image: image || null,
-              chamber: newChamberData,
-              packages: packageList.length ? packageList : null,
-            },
-            { transaction: t }
-          );
+          merged.push(incoming);
         }
+      }
 
-        for (const chamber of chambersFromDB) {
-          if (chamber.tag === "dry") continue;
+      await packedStock.update(
+        {
+          unit,
+          image: image || packedStock.image,
+          chamber: merged,
+          packages: packageList.length ? packageList : packedStock.packages,
+        },
+        { transaction: t }
+      );
+    } else {
+      packedStock = await chamberStockClient.create(
+        {
+          product_name,
+          category: "packed",
+          unit,
+          image: image || null,
+          chamber: newChamberData,
+          packages: packageList.length ? packageList : null,
+        },
+        { transaction: t }
+      );
+    }
 
-          const itemsSet = new Set(chamber.items || []);
-          itemsSet.add(packedItemChamberStock.id);
+    // RAW MATERIAL DEDUCTION
+    for (const raw of Array.isArray(rawProducts) ? rawProducts : []) {
+      const rawStock = await chamberStockClient.findOne({
+        where: { product_name: raw.product_name, category: "material" },
+        transaction: t,
+      });
 
-          chamber.items = Array.from(itemsSet);
-          await chamber.save({ transaction: t });
-        }
+      if (!rawStock) continue;
 
-        // --- RAW MATERIAL DEDUCTION ---
-        const rawProductsArray = Array.isArray(rawProducts)
-          ? rawProducts
-          : [];
+      const updatedChambers = rawStock.chamber.map(c => {
+        const used = raw.chambers?.find(u => String(u.id) === String(c.id));
+        if (!used) return c;
 
-        for (const raw of rawProductsArray) {
-          const rawStock = await chamberStockClient.findOne({
-            where: {
-              product_name: raw.product_name,
-              category: "material",
-            },
-            transaction: t,
-          });
+        return {
+          ...c,
+          quantity: String(
+            Math.max(0, Number(c.quantity) - Number(used.quantity))
+          ),
+        };
+      });
 
-          if (!rawStock) continue;
+      await rawStock.update(
+        { chamber: updatedChambers },
+        { transaction: t }
+      );
+    }
 
-          const updatedChamber = (rawStock.chamber || []).map((c) => {
-            const used = (raw.chambers || []).find(
-              (u) => String(u.id) === String(c.id)
-            );
-            if (!used) return c;
+    // DRY WAREHOUSE DEDUCTION
+    const usageBySize = {};
 
-            const remaining =
-              Number(c.quantity) - Number(used.quantity);
+for (const pkg of packageList) {
+  const key = String(pkg.size);
+  usageBySize[key] = (usageBySize[key] || 0) + Number(pkg.quantity || 0);
+}
+
+    for (const pkg of packageList) {
+      const count = Number(pkg.quantity || 0);
+      if (count <= 0) continue;
+
+      const unitLower = (pkg.unit || "").toLowerCase();
+      const emptyBagGram = unitLower === "kg" ? 1.5 : 1;
+      const usedKg = (count * emptyBagGram) / 1000;
+
+      const dryItemName = `${product_name}:${pkg.size}`;
+
+      const dryItem = await DryWarehouse.findOne({
+        where: { item_name: dryItemName, unit: unitLower || "gm" },
+        transaction: t,
+      });
+
+      if (!dryItem) {
+        await t.rollback();
+        return res.status(400).json({
+          error: `DryWarehouse item not found: ${dryItemName}`,
+        });
+      }
+
+      dryItem.quantity_unit = String(
+        Math.max(0, Number(dryItem.quantity_unit) - usedKg)
+      );
+
+      await dryItem.save({ transaction: t });
+    }
+
+    // PACKAGES.TYPES DEDUCTION
+    const packageRow = await packagesClient.findOne({
+      where: { product_name },
+      transaction: t,
+    });
+
+    if (packageRow && Array.isArray(packageRow.types)) {
+
+      const updatedTypes = packageRow.types.map(type => {
+            const used = usageBySize[String(type.size)] || 0;
+            if (!used) return type;
+            if (used > Number(type.quantity)) {
+              throw new Error(
+                `Insufficient package stock for size ${type.size}`
+              );
+            }
+
             return {
-              ...c,
-              quantity: String(Math.max(remaining, 0)),
+              ...type,
+              quantity: String(
+                Math.max(0, Number(type.quantity || 0) - used)
+              ),
             };
           });
 
-          await rawStock.update(
-            { chamber: updatedChamber },
-            { transaction: t }
-          );
-        }
-
-        // --- PACKAGING DEDUCTION FROM DRY WAREHOUSE ---
-        const pkgList = Array.isArray(packageList) ? packageList : [];
-
-        if (!pkgList.length) {
-          console.log(
-            "[PACKAGING] No packages in payload, skipping deduction."
-          );
-        }
-
-        for (const pkg of pkgList) {
-          const pkgUnit = (pkg.unit || "").toLowerCase();
-          const count = Number(pkg.quantity || 0); 
-
-          if (!count || Number.isNaN(count) || count <= 0) {
-            continue;
-          }
-
-          // rule:
-          // - unit "gm" -> 1 gram per empty packet
-          // - unit "kg" -> 1.5 grams per empty packet
-          const emptyBagWeightGram =
-            pkgUnit === "kg" ? 1.5 : 1;
-
-          const packagingUsedKg =
-            (count * emptyBagWeightGram) / 1000;
-
-          if (packagingUsedKg <= 0) continue;
-
-          const dryItemName = `${product_name}:${pkg.size}`;
-
-          const packItem = await DryWarehouse.findOne({
-            where: {
-              item_name: dryItemName,
-              unit: pkgUnit || "gm",
-            },
-            transaction: t,
-          });
-
-          if (!packItem) {
-            const err = new Error(
-              `No DryWarehouse row found for item ${dryItemName} with unit ${pkgUnit ||
-                "gm"}`
-            );
-            err.status = 400;
-            throw err;
-          }
-
-          // --- PACKAGING TYPES DEDUCTION (FROM Packages TABLE) ---
-              for (const pkg of packageList) {
-                const usedQty = Number(pkg.quantity || 0);
-                if (!usedQty || usedQty <= 0) continue;
-
-                const packageRow = await packagesClient.findOne({
-                  where: { product_name },
-                  transaction: t,
-                });
-
-                if (!packageRow || !Array.isArray(packageRow.types)) continue;
-
-                const updatedTypes = packageRow.types.map((type) => {
-                  // match by size
-                  if (type.size !== pkg.size) return type;
-
-                  const currentQty = Number(type.quantity || 0);
-                  const remainingQty = Math.max(0, currentQty - usedQty);
-
-                  return {
-                    ...type,
-                    quantity: String(remainingQty), // keep as string
-                  };
-                });
-
-                await packageRow.update(
-                  { types: updatedTypes },
-                  { transaction: t }
-                );
-              }
-
-
-          const currentQtyKg = Number(packItem.quantity_unit || "0");
-          const remaining = Math.max(
-            0,
-            currentQtyKg - packagingUsedKg
-          );
-
-          packItem.quantity_unit = String(remaining);
-          await packItem.save({ transaction: t });
-        }
-
-        return packedItemChamberStock;
-      }
-    );
-
-    return res.status(201).json(packedItemChamberStock);
-  } catch (error) {
-    console.error(
-      "Error during creating packed chamber stock:",
-      error?.message || error
-    );
-
-    if (error?.status === 400 || error?.status === 404) {
-      return res.status(error.status).json({ error: error.message });
+      await packageRow.update(
+        { types: updatedTypes },
+        { transaction: t }
+      );
     }
 
-    return res
-      .status(500)
-      .json({ error: "Internal server error, try later." });
+    await t.commit();
+    return res.status(201).json(packedStock);
+
+  } catch (error) {
+    await t.rollback();
+    console.error("PACK ERROR:", error);
+    return res.status(500).json({
+      error: error.message || "Internal server error",
+    });
   }
 });
 

@@ -11,7 +11,7 @@ import * as SecureStorage from "expo-secure-store"
 
 const noSearchResultImg = require("@/src/assets/images/illustrations/no-result.png");
     
-    const EmptyState = ({ stateData, color = "green", image = noSearchResultImg, style, button = {
+    const EmptyState = ({ stateData, color = "green", compact=false, image = noSearchResultImg, style, button = {
     text: "",
     href: "login",
 }, ...props }: EmptyStateProps) => {
@@ -25,7 +25,7 @@ const noSearchResultImg = require("@/src/assets/images/illustrations/no-result.p
 
     }
     return (
-        <View style={[styles.emptyStateWrapper, style]} {...props}>
+        <View style={[styles.emptyStateWrapper, style, {minHeight: compact ? 60 : 240,}]} {...props}>
             <CustomImage src={image} width={80} height={80} />
             <VStack gap={16}>
                 <VStack gap={8}>
@@ -54,5 +54,5 @@ const styles = StyleSheet.create({
     },
     textCenter: {
         textAlign: "center",
-    }
+    },
 })

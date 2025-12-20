@@ -42,18 +42,18 @@ export const mapStorageFormToPackedDTO = (
       quantity: Number(ch.quantity),
     }));
 
-  const rawProducts = (form.products || [])
-    .map((p) => ({
-      product_name: p.name,
-      chambers: (p.chambers || [])
-        .filter((ch) => Number(ch.quantity) > 0)
-        .map((ch) => ({
-          id: String(ch.id),
-          quantity: Number(ch.quantity),
-          rating: Number(ch.rating ?? 0),
-        })),
-    }))
-    .filter((p) => p.chambers.length > 0);
+const rawProducts = Object.entries(form.rmChamberQuantities || {})
+  .map(([product_name, chambers]) => ({
+    product_name,
+    chambers: Object.entries(chambers)
+      .filter(([, v]) => Number(v.quantity) > 0)
+      .map(([id, v]) => ({
+        id: String(id),
+        quantity: Number(v.quantity),
+        rating: Number(v.rating ?? 5),
+      })),
+  }))
+  .filter(p => p.chambers.length > 0);
 
   const packages =
   (form.packages || [])

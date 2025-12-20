@@ -67,7 +67,7 @@ import {
 // 8. Assets
 import noPackageImage from "@/src/assets/images/illustrations/no-packaging.png";
 import { useFormValidator } from "@/src/sbc/form";
-import { PackageItem } from "@/src/types";
+import { IconRatingProps, PackageItem } from "@/src/types";
 import DetailsToast from "@/src/components/ui/DetailsToast";
 import FiveStarIcon from "@/src/components/icons/page/Rating/FiveStarIcon";
 import FourStarIcon from "@/src/components/icons/page/Rating/FourStarIcon";
@@ -79,8 +79,15 @@ import TrashIcon from "@/src/components/icons/common/TrashIcon";
 import FormField from "@/src/sbc/form/FormField";
 import ChamberIcon from "@/src/components/icons/common/ChamberIcon";
 import { useCreatePackedItem } from "@/src/hooks/packedItem";
-import { resetPackageSizes } from "@/src/redux/slices/bottomsheet/package-size.slice";
+import {
+  resetPackageSizes,
+  setPackageSizes,
+} from "@/src/redux/slices/bottomsheet/package-size.slice";
 import { RefreshControl } from "react-native-gesture-handler";
+import {
+  useChamberStock,
+  useChamberStockByName,
+} from "@/src/hooks/useChamberStock";
 
 interface Chamber {
   id: string | number;
@@ -95,36 +102,40 @@ interface Product {
   chambers: Chamber[];
 }
 
+interface SubmitChamber {
+  id: string;
+  quantity: number;
+  rating: number;
+}
+
+interface SubmitProduct {
+  name: string;
+  chambers: SubmitChamber[];
+}
+
 interface PackedChamber {
   id: string;
   quantity: number | string;
 }
+
+type RMChamberQuantityMap = {
+  [rmName: string]: {
+    [chamberId: string]: {
+      quantity: number;
+      rating: number;
+    };
+  };
+};
+
 
 export type StorageForm = {
   image: string;
   product_name: string;
   packages: PackageItem[];
   products: Product[];
+  submitProducts?: SubmitProduct[];
   packedChambers?: PackedChamber[];
-};
-
-const validateRawMaterialSum = (
-  products: Product[],
-  totalPackedQty: number
-): { valid: boolean; totalRM: number } => {
-  let totalRM = 0;
-
-  for (const product of products) {
-    for (const chamber of product.chambers || []) {
-      const qty = Number(chamber.quantity) || 0;
-      totalRM += qty;
-    }
-  }
-
-  return {
-    valid: totalRM === totalPackedQty,
-    totalRM,
-  };
+  rmChamberQuantities: RMChamberQuantityMap;
 };
 
 const convertToKg = (size: number, unit: string) => {
@@ -214,9 +225,9 @@ const PackageScreen = () => {
     isFetching: packageFetching,
   } = usePackages(searchText);
 
-  const storageRMRating = useSelector(
-    (state: RootState) => state.StorageRMRating.storageRmRating
-  );
+  // const storageRMRating = useSelector(
+  //   (state: RootState) => state.StorageRMRating.storageRmRating
+  // );
   const {
     productPackages,
     isLoading: productPackagesLoading,
@@ -258,6 +269,18 @@ const PackageScreen = () => {
   const choosedChambers = useSelector(
     (state: RootState) => state.rawMaterial.selectedChambers
   );
+  const chamberStock = useChamberStockByName(selectedRawMaterials);
+  const chamberRatingMap = useMemo(() => {
+    const map = new Map<string, number>();
+
+    chamberStock?.forEach((stock) => {
+      stock.chamber?.forEach((ch) => {
+        map.set(ch.id, Number(ch.rating));
+      });
+    });
+
+    return map;
+  }, [chamberStock]);
 
   const {
     rawMaterials,
@@ -293,6 +316,7 @@ const PackageScreen = () => {
         packages: [],
         products: [],
         packedChambers: [],
+        rmChamberQuantities: {},
       },
       {
         packages: [
@@ -339,20 +363,9 @@ const PackageScreen = () => {
         product_name: [
           { type: "required" as const, message: "Product name is required!" },
         ],
-        products: [
-          {
-            type: "custom" as const,
-            validate: (products: Product[]) => {
-              if (!Array.isArray(products) || products?.length === 0) {
-                return false;
-              }
-              return validateProductChambers(products);
-            },
-            message:
-              "Each product must have a valid name and at least one chamber with quantity > 0 (not exceeding stored quantity).",
-          },
-        ],
+        products: [],
         image: [],
+        rmChamberQuantities: [],
       },
       {
         validateOnChange: true,
@@ -366,16 +379,33 @@ const PackageScreen = () => {
     setToastVisible(true);
   };
 
-  const getMaxPackagesFor = (pkg: PackageItem) => { const match = productPackages?.find(
-      (pp) => pp.rawSize === pkg.rawSize && pp.unit === pkg.unit
-    );
-    if (!match) return null;
+const getPacketWeightInGrams = (pkg: PackageItem): number => {
+  const unit = pkg.unit?.toLowerCase();
+  const size = Number(pkg.size);
 
-    const stored = Number(match.stored_quantity) || 0;
-    const size = Number(pkg.size) || 1;
+  if (unit === "gm") {
+    return 1;
+  }
 
-    return Math.floor(stored / size);
-  };
+  if (unit === "kg") {
+    if (size > 1) return 1.5;
+    return 1;               
+  }
+
+  return 1;
+};
+
+
+const getMaxPackagesFor = (pkg: PackageItem) => {
+  const storedKg = Number(pkg.stored_quantity) || 0;
+  const storedGrams = storedKg * 1000;
+
+  const packetWeight = getPacketWeightInGrams(pkg);
+
+  if (packetWeight <= 0) return null;
+
+  return Math.floor(storedGrams / packetWeight);
+};
 
   const handleToggleToast = () => {
     showToast(
@@ -385,7 +415,6 @@ const PackageScreen = () => {
   };
 
   useEffect(() => {
-    // nothing seleced -> do nothing
     if (!selectedProduct) return;
 
     if (rmLoading || rmInitialLoading) return;
@@ -452,6 +481,10 @@ const PackageScreen = () => {
       setField("packages", updated);
     }
   }, [productPackages, selectedPackage, values.packages]);
+
+  const ratingByRM = useSelector(
+    (state: RootState) => state.StorageRMRating.ratingByRM
+  );
 
   const formattedData = useMemo(() => {
     return !packageLoading
@@ -599,55 +632,85 @@ const PackageScreen = () => {
     return calculateTotalPackedQuantity(values.packedChambers);
   }, [values.packedChambers]);
 
-  const totalRawMaterialUsed = useMemo(() => {
-  return (values.products || []).reduce((sum, product) => {
+const totalRawMaterialUsed = useMemo(() => {
+  const rmMap = values.rmChamberQuantities || {};
+
+  return Object.values(rmMap).reduce((rmSum, chamberMap) => {
     return (
-      sum +
-      (product.chambers || []).reduce(
-        (cSum, ch) => cSum + (Number(ch.quantity) || 0),
+     Object.values(chamberMap || {}).reduce(
+        (sum, v) => sum + (Number(v?.quantity) || 0),
         0
       )
     );
   }, 0);
-}, [values.products]);
+}, [values.rmChamberQuantities]);
 
-  const handlePackageQuantityChange = useCallback(
-    (index: number, text: string) => {
-      const numeric = parseFloat(text.replace(/[^0-9.]/g, "") || "0");
+const handlePackageQuantityChange = useCallback(
+  (index: number, text: string) => {
+    const numeric = parseInt(text.replace(/[^0-9]/g, ""), 10);
 
-      if (isNaN(numeric)) return;
+    if (isNaN(numeric)) {
+      setField(`packages.${index}.quantity`, "");
+      return;
+    }
 
-      const updatedPackages = [...(values.packages || [])];
-      const currentPackage = updatedPackages[index];
-      if (!currentPackage) return;
+    const updatedPackages = [...(values.packages || [])];
+    const currentPackage = updatedPackages[index];
+    if (!currentPackage) return;
 
-      const newTotalKg = updatedPackages.reduce((sum, pkg, i) => {
-        const qty = i === index ? numeric : Number(pkg.quantity) || 0;
-        return sum + convertToKg(Number(pkg.size), pkg.unit!) * qty;
-      }, 0);
+    const maxPackages = getMaxPackagesFor(currentPackage);
 
-      if (newTotalKg > totalPackedQuantity) {
-        showToast(
-          "error",
-          "Total package quantity (in KG) cannot exceed total packed chamber quantity!"
-        );
-        return;
-      }
+    let finalQty = numeric;
 
-      updatedPackages[index] = {
-        ...currentPackage,
-        quantity: String(numeric),
-      };
+    if (maxPackages !== null && numeric > maxPackages) {
+      finalQty = maxPackages;
 
-      setField("packages", updatedPackages);
-    },
-    [values.packages, setField, totalPackedQuantity]
-  );
+      showToast(
+        "error",
+        `You can pack maximum ${maxPackages} units for this SKU`
+      );
+    }
 
-  const handleRemovePackage = (index: number) => {
-    const updatedPackages =
-      values.packages?.filter((_, i) => i !== index) || [];
+    // 🔒 CHECK TOTAL KG ALSO
+    const newTotalKg = updatedPackages.reduce((sum, pkg, i) => {
+      const qty = i === index ? finalQty : Number(pkg.quantity) || 0;
+      return sum + convertToKg(Number(pkg.size), pkg.unit!) * qty;
+    }, 0);
+
+    if (newTotalKg > totalPackedQuantity) {
+      showToast(
+        "error",
+        "Total package quantity cannot exceed packed chamber quantity"
+      );
+      return;
+    }
+
+    updatedPackages[index] = {
+      ...currentPackage,
+      quantity: String(finalQty),
+    };
+
     setField("packages", updatedPackages);
+  },
+  [values.packages, setField, totalPackedQuantity]
+);
+
+  const chamberNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+
+    frozenChambers?.forEach((ch) => {
+      map.set(String(ch.id), ch.chamber_name);
+    });
+
+    return map;
+  }, [frozenChambers]);
+
+  const handleRemovePackage = (pkg: PackageItem) => {
+    dispatch(
+      setPackageSizes(
+        selectedPackage.filter((sp) => sp.rawSize !== pkg.rawSize)
+      )
+    );
   };
 
   async function handleTogglePackageSizeBottomSheet() {
@@ -718,79 +781,86 @@ const PackageScreen = () => {
   }
   // --- END PACKAGE LOGIC ---
 
-const onSubmit = async () => {
-  try {
+  const onSubmit = async () => {
+    try {
+        const totalRM = Object.values(values.rmChamberQuantities || {})
+          .reduce((rmSum, chamberMap) => {
+            return (
+              rmSum +
+             Object.values(chamberMap || {}).reduce(
+              (sum, v) => sum + (Number(v?.quantity) || 0),
+              0
+            )
+            );
+          }, 0);
 
-  const totalRM = (values.products || []).reduce((sum, p) => {
-      return (
-        sum +
-        (p.chambers || []).reduce(
-          (cSum, ch) => cSum + (Number(ch.quantity) || 0),
-          0
-        )
-      );
-    }, 0);
+      if (totalRM === 0) {
+        showToast(
+          "error",
+          "Please enter raw material quantity before submitting."
+        );
+        return;
+      }
 
-    if (totalRM === 0) {
-      showToast(
-        "error",
-        "Please enter raw material quantity before submitting."
+      if (totalRM !== totalPackedQuantity) {
+        showToast(
+          "error",
+          `Raw material quantity (${totalRM} kg) must exactly match packed quantity (${totalPackedQuantity} kg).`
+        );
+        return;
+      }
+
+      const result = validateForm();
+
+      
+      if (!result.success) return;
+
+      const formData = result.data as StorageForm;
+      // console.log("formData", JSON.stringify(formData, null, 2));
+
+      const rmChamberEntries = Object.entries(values.rmChamberQuantities || {});
+
+      const submitProducts: SubmitProduct[] = rmChamberEntries.map(
+        ([rmName, chambers]) => ({
+          name: rmName,
+          chambers: Object.entries(chambers)
+            .filter(([, qty]) => qty.quantity > 0)
+          .map(([chamberId, data]) => ({
+                  id: chamberId,
+                  quantity: data.quantity,
+                  rating: data.rating,
+                }))
+        })
       );
-      return;
+
+      const packedChambersWithId = (choosedChamberSummary || [])
+        .map((ch, idx) => ({
+          id: String(ch.chamber_id),
+          quantity: Number(formData.packedChambers?.[idx]?.quantity || 0),
+        }))
+        .filter((item) => item.quantity > 0);
+
+      const finalPayload: StorageForm = {
+        ...formData,
+        packedChambers: packedChambersWithId,
+        submitProducts,
+      };
+
+      setIsLoading(true);
+      createPacked(finalPayload);
+      setIsLoading(false);
+
+      resetForm();
+      dispatch(clearProduct());
+      dispatch(setRawMaterials([]));
+      dispatch(resetPackageSizes());
+      dispatch(clearChambers());
+
+      showToast("success", "Packed item created!");
+    } catch (error) {
+      console.error("Error submitting form:", error);
     }
-
-    if (totalRM !== totalPackedQuantity) {
-      showToast(
-        "error",
-        `Raw material quantity (${totalRM} kg) must exactly match packed quantity (${totalPackedQuantity} kg).`
-      );
-      return;
-    }
-
-    const result = validateForm();
-    if (!result.success) return;
-
-    const formData = result.data as StorageForm;
-
-    const ratingValue =
-      storageRMRating?.rating != null ? Number(storageRMRating.rating) : 5;
-
-    const productsWithRating = formData.products.map((p) => ({
-      ...p,
-      chambers: p.chambers.map((ch) => ({
-        ...ch,
-        rating: ratingValue,
-      })),
-    }));
-
-    const packedChambersWithId = (choosedChamberSummary || [])
-      .map((ch, idx) => ({
-        id: String(ch.chamber_id),
-        quantity: Number(formData.packedChambers?.[idx]?.quantity || 0),
-      }))
-      .filter((item) => item.quantity > 0);
-
-    const finalPayload: StorageForm = {
-      ...formData,
-      products: productsWithRating,
-      packedChambers: packedChambersWithId,
-    };
-
-    setIsLoading(true);
-    createPacked(finalPayload);
-    setIsLoading(false);
-
-    resetForm();
-    dispatch(clearProduct());
-    dispatch(setRawMaterials([]));
-    dispatch(resetPackageSizes());
-    dispatch(clearChambers());
-
-    showToast("success", "Packed item created!");
-  } catch (error) {
-    console.error("Error submitting form:", error);
-  }
-};
+  };
 
   const handleToggleChamberBottomSheet = async () => {
     if (frozenChambers?.length === 0) return;
@@ -834,39 +904,68 @@ const onSubmit = async () => {
     setIsLoading(false);
   };
 
+  // console.log("selectedRawMaterials", selectedRawMaterials);
+  // console.log("storeRawMaterials", storeRawMaterials);
+  // console.log("chamberStock", chamberStock);
+
+  type StockChamber = {
+    id: string | number;
+    name: string | number;
+    quantity: number;
+    stored_quantity: number | string;
+    rating?: number | string;
+  };
+
+  type ChambersByRM = Map<string, StockChamber[]>;
+
+  const chambersByRM: ChambersByRM = useMemo(() => {
+    const map = new Map<string, StockChamber[]>();
+
+    chamberStock?.forEach((stock: any) => {
+      const rmName = stock.product_name;
+      if (!rmName) return;
+
+      if (!map.has(rmName)) {
+        map.set(rmName, []);
+      }
+
+      map.get(rmName)!.push(...(stock.chamber || []));
+    });
+
+    return map;
+  }, [chamberStock]);
+
   const selectedLabel = selectedProduct || "Select products";
 
   const rmMatchStatus = useMemo(() => {
-  if (totalRawMaterialUsed === 0) return "neutral";
-  if (totalRawMaterialUsed < totalPackedQuantity) return "less";
-  if (totalRawMaterialUsed > totalPackedQuantity) return "more";
-  return "equal";
-}, [totalRawMaterialUsed, totalPackedQuantity]);
+    if (totalRawMaterialUsed === 0) return "neutral";
+    if (totalRawMaterialUsed < totalPackedQuantity) return "less";
+    if (totalRawMaterialUsed > totalPackedQuantity) return "more";
+    return "equal";
+  }, [totalRawMaterialUsed, totalPackedQuantity]);
 
-const rmColor = {
-  neutral: getColor("green", 700),
-  less: getColor("red", 500),
-  more: getColor("yellow", 500),
-  equal: getColor("green", 500),
-}[rmMatchStatus];
+  const rmColor = {
+    neutral: getColor("green", 700),
+    less: getColor("red", 500),
+    more: getColor("yellow", 500),
+    equal: getColor("green", 500),
+  }[rmMatchStatus];
 
-const packageMatchStatus = useMemo(() => {
-  if (totalPackageQuantityKg === 0) return "neutral";
-  if (totalPackageQuantityKg < totalPackedQuantity) return "less";
-  if (totalPackageQuantityKg > totalPackedQuantity) return "more";
-  return "equal";
-}, [totalPackageQuantityKg, totalPackedQuantity]);
+  const packageMatchStatus = useMemo(() => {
+    if (totalPackageQuantityKg === 0) return "neutral";
+    if (totalPackageQuantityKg < totalPackedQuantity) return "less";
+    if (totalPackageQuantityKg > totalPackedQuantity) return "more";
+    return "equal";
+  }, [totalPackageQuantityKg, totalPackedQuantity]);
 
-const packageColor = {
-  neutral: getColor("green", 700),
-  less: getColor("red", 500),
-  more: getColor("yellow", 500),
-  equal: getColor("green", 500),
-}[packageMatchStatus];
+  const packageColor = {
+    neutral: getColor("green", 700),
+    less: getColor("red", 500),
+    more: getColor("yellow", 500),
+    equal: getColor("green", 500),
+  }[packageMatchStatus];
 
-const allGood =
-  rmMatchStatus === "equal" &&
-  packageMatchStatus === "equal";
+  const allGood = rmMatchStatus === "equal" && packageMatchStatus === "equal";
 
   return (
     <KeyboardAvoidingView
@@ -878,7 +977,7 @@ const allGood =
         <PageHeader page={"Packing"} />
         <View style={styles.wrapper}>
           <Tabs
-            tabTitles={["Stock", "Packing material"]}
+            tabTitles={["Stock", "Packing material", "Daily packing"]}
             color="green"
             style={styles.flexGrow}
           >
@@ -918,13 +1017,39 @@ const allGood =
                   <View style={[styles.rawMaterialColumn, styles.borderBottom]}>
                     {product_items?.length > 0 &&
                       selectedRawMaterials.map((item: string) => {
-                        const Icon = {
-                          "5": FiveStarIcon,
-                          "4": FourStarIcon,
-                          "3": ThreeStarIcon,
-                          "2": TwoStarIcon,
-                          "1": OneStarIcon,
-                        }[storageRMRating?.rating];
+                        const ratingForThisRM = ratingByRM[item] ?? {
+                          rating: 5,
+                          message: "Excellent",
+                        };
+
+                        const selectedRating = ratingForThisRM.rating;
+
+                        const rmChambers = chambersByRM.get(item) || [];
+
+                        const visibleChambers = rmChambers.filter((chamber) => {
+                          const chamberRating =
+                            chamberRatingMap.get(String(chamber.id)) ?? 5;
+
+                          return (
+                            chamberRating === selectedRating &&
+                            Number(chamber.quantity) > 0
+                          );
+                        });
+
+                        const RatingIconMap: Record<
+                          number,
+                          React.FC<IconRatingProps>
+                        > = {
+                          5: FiveStarIcon,
+                          4: FourStarIcon,
+                          3: ThreeStarIcon,
+                          2: TwoStarIcon,
+                          1: OneStarIcon,
+                        };
+
+                        const RatingIcon =
+                          RatingIconMap[selectedRating] ?? FiveStarIcon;
+
                         return (
                           <ItemsRepeater
                             key={item}
@@ -934,16 +1059,16 @@ const allGood =
                           >
                             <View style={styles.cardBody}>
                               <Select
-                                value={storageRMRating?.message || "Excellent"}
-                                style={{ flex: 0.5 }}
+                                value={ratingForThisRM.message}
                                 showOptions={false}
+                                preIcon={RatingIcon ?? FiveStarIcon}
+                                style={{ flex: 0.5 }}
                                 onPress={() =>
                                   validateAndSetData(
-                                    storageRMRating?.rating || "5",
+                                    `${item}:${ratingForThisRM.rating}`,
                                     "storage-rm-rating"
                                   )
                                 }
-                                preIcon={Icon ?? FiveStarIcon}
                               />
 
                               {/* <View style={styles.separator} /> */}
@@ -956,98 +1081,133 @@ const allGood =
                                   const currentProduct = values.products?.[
                                     productIndex
                                   ] || { packages: [], chambers: [] };
+                                  const rmChambers = chambersByRM.get(item);
+
+                                  if (!rmChambers) {
+                                    return (
+                                      <View
+                                        style={styles.inlineEmptyState}
+                                        key={index}
+                                      >
+                                        <EmptyState
+                                          stateData={{
+                                            title: "No stock found",
+                                            description: `${item} is not available in any chamber`,
+                                          }}
+                                          compact
+                                        />
+                                      </View>
+                                    );
+                                  }
 
                                   return (
                                     <View style={styles.Vstack} key={index}>
-                                      {currentProduct.chambers?.map(
-                                        (chamber, idx) => (
+                                      {visibleChambers.map((chamber, idx) => {
+                                        const chamberName =
+                                          chamberNameMap.get(
+                                            String(chamber.id)
+                                          ) ?? "Unknown Chamber";
+
+                                        const currentQty =
+                                              values.rmChamberQuantities?.[item]?.[
+                                            String(chamber.id)
+                                          ]?.quantity ?? "";
+
+                                        return (
                                           <View
-                                            key={`${index}-${idx}`}
+                                            key={`${item}-${idx}`}
                                             style={[
                                               styles.chamberCard,
                                               styles.borderBottom,
                                             ]}
                                           >
-                                            <View style={styles.Hstack}>
-                                              <View style={styles.iconWrapper}>
-                                                <ChamberIcon
-                                                  color={getColor("green")}
-                                                  size={32}
-                                                />
+                                            <View
+                                              key={`${index}-${idx}`}
+                                              style={[
+                                                styles.chamberCard,
+                                                styles.borderBottom,
+                                              ]}
+                                            >
+                                              <View style={styles.Hstack}>
+                                                <View
+                                                  style={styles.iconWrapper}
+                                                >
+                                                  <ChamberIcon
+                                                    color={getColor("green")}
+                                                    size={32}
+                                                  />
+                                                </View>
+                                                <View style={styles.Vstack}>
+                                                  <B1>
+                                                    {String(
+                                                      chamberName ??
+                                                        "Unknown Chamber"
+                                                    ).slice(0, 12)}
+                                                    ...
+                                                  </B1>
+                                                  <B4>
+                                                    {chamber.quantity}
+                                                    kg
+                                                  </B4>
+                                                </View>
                                               </View>
-                                              <View style={styles.Vstack}>
-                                                <B1>
-                                                  {String(chamber.name).slice(
-                                                    0,
-                                                    12
-                                                  )}
-                                                  ...
-                                                </B1>
-                                                <B4>
-                                                  {chamber.stored_quantity}kg
-                                                </B4>
-                                              </View>
-                                            </View>
-                                            <View style={{ flex: 0.7 }}>
-                                              <FormField
-                                                name={`products.${productIndex}.chambers.${idx}.quantity`}
-                                                form={{
-                                                  values,
-                                                  setField,
-                                                  errors,
-                                                }}
-                                              >
-                                                {({
-                                                  value,
-                                                  onChange,
-                                                  error,
-                                                }) => (
-                                                  <Input
-                                                    placeholder="Qty."
-                                                    addonText="KG"
-                                                    value={
-                                                      value === 0 ||
-                                                      value === null ||
-                                                      value === undefined
-                                                        ? ""
-                                                        : String(value)
-                                                    }
-                                                    onChangeText={(
-                                                      text: string
-                                                    ) => {
-                                                      const numeric =
-                                                        text.replace(
-                                                          /[^0-9.]/g,
-                                                          ""
+                                              <View style={{ flex: 0.7 }}>
+                                                <FormField
+                                                  name={`products.${productIndex}.chambers.${idx}.quantity`}
+                                                  form={{
+                                                    values,
+                                                    setField,
+                                                    errors,
+                                                  }}
+                                                >
+                                                  {({
+                                                    value,
+                                                    onChange,
+                                                    error,
+                                                  }) => (
+                                                    <Input
+                                                      placeholder="Qty."
+                                                      addonText="KG"
+                                                     value={currentQty === 0 ? "" : String(currentQty)}
+                                                      keyboardType="decimal-pad"
+                                                      onChangeText={(
+                                                        text: string
+                                                      ) => {
+                                                        const numeric = Number(
+                                                          text.replace(
+                                                            /[^0-9.]/g,
+                                                            ""
+                                                          )
                                                         );
-                                                      const enteredValue =
-                                                        numeric === ""
-                                                          ? 0
-                                                          : parseFloat(numeric);
-                                                      const maxQuantity =
-                                                        Number(
+                                                        const max = Number(
                                                           chamber.stored_quantity
                                                         );
-                                                      if (
-                                                        enteredValue >
-                                                        maxQuantity
-                                                      ) {
-                                                        handleToggleToast();
-                                                        return;
-                                                      }
-                                                      onChange(text);
-                                                    }}
-                                                    mask="addon"
-                                                    post
-                                                    keyboardType="decimal-pad"
-                                                    error={error}
-                                                  />
-                                                )}
-                                              </FormField>
+
+                                                        if (numeric > max) {
+                                                          handleToggleToast();
+                                                          return;
+                                                        }
+
+                                                       setField(
+                                                          `rmChamberQuantities.${item}.${chamber.id}`,
+                                                          {
+                                                            quantity: numeric,
+                                                            rating: selectedRating,
+                                                          }
+                                                        );
+
+                                                      }}
+                                                      mask="addon"
+                                                      post
+                                                      error={error}
+                                                    />
+                                                  )}
+                                                </FormField>
+                                              </View>
                                             </View>
                                           </View>
-                                        )
-                                      )}
+                                        );
+                                      })}
                                     </View>
                                   );
                                 })}
@@ -1071,7 +1231,7 @@ const allGood =
                   >
                     Stacking Location
                   </Select>
-                  
+
                   <View style={[styles.Vstack, { paddingHorizontal: 16 }]}>
                     {choosedChamberSummary?.map((chamber, idx) => (
                       <View
@@ -1140,26 +1300,30 @@ const allGood =
                           disabled={selectedProduct?.length === 0}
                         />
                       </View>
-                  <View
+                      <View
                         style={[
                           styles.quantityCard,
-                          { borderColor: allGood ? getColor("green", 500) : getColor("green", 100) },
+                          {
+                            borderColor: allGood
+                              ? getColor("green", 500)
+                              : getColor("green", 100),
+                          },
                         ]}
                       >
-                      <View style={{ alignItems: "center" }}>
-                        <H6>Packed Qty</H6>
-                        <B4 style={{ color: packageColor }}>
-                          {totalPackageQuantityKg} / {totalPackedQuantity} kg
-                        </B4>
-                      </View>
+                        <View style={{ alignItems: "center" }}>
+                          <H6>Packed Qty</H6>
+                          <B4 style={{ color: packageColor }}>
+                            {totalPackageQuantityKg} / {totalPackedQuantity} kg
+                          </B4>
+                        </View>
 
-                      <View style={{ alignItems: "center" }}>
-                        <H6>RM Used</H6>
-                        <B4 style={{ color: rmColor }}>
-                          {totalRawMaterialUsed} / {totalPackedQuantity} kg
-                        </B4>
+                        <View style={{ alignItems: "center" }}>
+                          <H6>RM Used</H6>
+                          <B4 style={{ color: rmColor }}>
+                            {totalRawMaterialUsed} / {totalPackedQuantity} kg
+                          </B4>
+                        </View>
                       </View>
-                    </View>
                     </View>
 
                     <View
@@ -1182,7 +1346,7 @@ const allGood =
                       ) : (
                         values.packages.map((pkg, index) => {
                           const Icon = mapPackageIcon(pkg);
-                          
+
                           const maxPackages = getMaxPackagesFor(pkg);
 
                           const currentQty = Number(
@@ -1194,7 +1358,7 @@ const allGood =
                               : null;
 
                           return (
-                            <View key={index} style={[styles.packageRow]}>
+                            <View key={pkg.rawSize} style={[styles.packageRow]}>
                               <View style={styles.row}>
                                 <View style={styles.iconWrapper}>
                                   {Icon && (
@@ -1231,7 +1395,7 @@ const allGood =
                                   )}
                                 </FormField>
                                 <Pressable
-                                  onPress={() => handleRemovePackage(index)}
+                                  onPress={() => handleRemovePackage(pkg)}
                                 >
                                   <TrashIcon color={getColor("green")} />
                                 </Pressable>
@@ -1250,6 +1414,69 @@ const allGood =
                   {isPending ? "Packing product..." : "Pack product"}
                 </Button>
               </View>
+            </View>
+            <View style={styles.flexGrow}>
+              <View
+                style={[
+                  styles.HStack,
+                  styles.justifyBetween,
+                  styles.alignCenter,
+                  { paddingTop: 16, paddingHorizontal: 16 },
+                ]}
+              >
+                <H3>Package</H3>
+                <Button
+                  variant="outline"
+                  size="md"
+                  onPress={handleOpenAddNewPackage}
+                >
+                  Add package
+                </Button>
+              </View>
+              <View style={styles.searchinputWrapper}>
+                <SearchInput
+                  border
+                  value={searchText}
+                  cross={true}
+                  onChangeText={(text: string) => setSearchText(text)}
+                  onClear={() => setSearchText("")}
+                  returnKeyType="search"
+                  placeholder={"Search by product name"}
+                />
+              </View>
+              <FlatList
+                style={{ flex: 1, paddingHorizontal: 16 }}
+                data={formattedData}
+                keyExtractor={(item, index) =>
+                  item.id?.toString() ?? index.toString()
+                }
+                renderItem={({ item }) => (
+                  <PackageCard
+                    name={item.name}
+                    id={item.id}
+                    href={item.href}
+                    bundle={item.bundle}
+                    img={item.img}
+                  />
+                )}
+                numColumns={2}
+                columnWrapperStyle={{
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+                contentContainerStyle={{ paddingBottom: 120 }}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={packageFetching}
+                    onRefresh={packageRefetch}
+                  />
+                }
+                ListEmptyComponent={
+                  <View style={{ alignItems: "center", marginTop: 80 }}>
+                    <EmptyState stateData={emptyStateData} />
+                  </View>
+                }
+              />
             </View>
             <View style={styles.flexGrow}>
               <View
@@ -1496,6 +1723,13 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: getColor("green", 100),
+  },
+  inlineEmptyState: {
+    height: 200,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
 

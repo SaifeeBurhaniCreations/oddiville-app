@@ -102,8 +102,6 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
     };
 
     const handlePress = () => {
-        console.log("source2", source2);
-        
         dispatch(setSource(source));
         const mapKey = `${key}:${source}`;
         const mapped = RMSoruceMap[mapKey];

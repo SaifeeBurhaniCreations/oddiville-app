@@ -62,11 +62,10 @@ const ProductionScreen = () => {
     const inCompleted: ItemCardProps[] = [];
 
     if (!isLoading) {
-      console.log("productionData", JSON.stringify(productionData));
       productionData?.forEach((item: any) => {
         const ratio =
           item.quantity > 0
-            ? (item.recovery / item.quantity).toFixed(2)
+            ? ((item.recovery / item.quantity) * 100).toFixed(2)
             : "0.00";
 
         const formattedItem: ItemCardProps = {
@@ -109,132 +108,64 @@ const ProductionScreen = () => {
           color="green"
           style={styles.flexGrow}
         >
-          <FlatList
-            data={inPending?.concat(inQueue) ?? []}
-            contentContainerStyle={{ flexGrow: 1 }}
-            renderItem={({ item }) => (
-              <View style={styles.flexGrow}>
-                <View style={styles.searchinputWrapper}>
-                  <SearchWithFilter
-                    value=""
-                    onChangeText={() => {}}
-                    placeholder="Search product"
-                    onFilterPress={handleLanePress}
-                    icon={ProductionLane}
-                  />
-                </View>
+  <View style={styles.flexGrow}>
+  <View style={styles.searchinputWrapper}>
+    <SearchWithFilter
+      value=""
+      onChangeText={() => {}}
+      placeholder="Search product"
+      onFilterPress={handleLanePress}
+      icon={ProductionLane}
+    />
+  </View>
 
-                <ItemsFlatList items={inPending?.concat(inQueue) ?? []} />
-              </View>
-            )}
-            ListEmptyComponent={
-              <View
-                style={[
-                  styles.flexGrow,
-                  { justifyContent: "center", alignItems: "center", flex: 1 },
-                ]}
-              >
-                <EmptyState
-                  image={noBatchImage}
-                  stateData={{
-                    title: "No active batches",
-                    description: "No active batches right now. Enjoy the calm!",
-                  }}
-                />
-              </View>
-            }
-            keyExtractor={(_, index) => index.toString()}
-            refreshControl={
-              <RefreshControl
-                refreshing={productionLoading}
-                onRefresh={productionRefetch}
-              />
-            }
-          />
-          <FlatList
-            data={inProgress ?? []}
-            contentContainerStyle={{ flexGrow: 1 }}
-            renderItem={({ item }) => (
-              <View style={styles.flexGrow}>
-                <View style={styles.searchinputWrapper}>
-                  <SearchWithFilter
-                    value=""
-                    onChangeText={() => {}}
-                    placeholder={"Search product"}
-                    onFilterPress={handleLanePress}
-                    icon={ProductionLane}
-                  />
-                </View>
-                <ItemsFlatList isProduction={true} items={inProgress} />
-              </View>
-            )}
-            ListEmptyComponent={
-              <View
-                style={[
-                  styles.flexGrow,
-                  {
-                    flexDirection: "row",
-                    justifyContent: "center",
-                    alignItems: "center",
-                  },
-                ]}
-              >
-                <EmptyState
-                  image={noBatchImageProduction}
-                  stateData={emptyStateData}
-                />
-              </View>
-            }
-            keyExtractor={(_, index) => index.toString()}
-            refreshControl={
-              <RefreshControl
-                refreshing={productionLoading}
-                onRefresh={productionRefetch}
-              />
-            }
-          />
-          <FlatList
-            data={inCompleted ?? []}
-            contentContainerStyle={{ flexGrow: 1 }}
-            renderItem={({ item }) => (
-              <View style={styles.flexGrow}>
-                <View style={styles.searchinputWrapper}>
-                  <SearchWithFilter
-                    value=""
-                    onChangeText={() => {}}
-                    placeholder={"Search product"}
-                    onFilterPress={handleLanePress}
-                    icon={ProductionLane}
-                  />
-                </View>
-                <ItemsFlatList items={inCompleted} isProductionCompleted={true} />
-              </View>
-            )}
-            ListEmptyComponent={
-              <View
-                style={[
-                  styles.flexGrow,
-                  {
-                    flexDirection: "row",
-                    justifyContent: "center",
-                    alignItems: "center",
-                  },
-                ]}
-              >
-                <EmptyState
-                  image={noBatchImageProduction}
-                  stateData={emptyStateData}
-                />
-              </View>
-            }
-            keyExtractor={(_, index) => index.toString()}
-            refreshControl={
-              <RefreshControl
-                refreshing={productionLoading}
-                onRefresh={productionRefetch}
-              />
-            }
-          />
+  {inPending.length === 0 && inQueue.length === 0 ? (
+    <EmptyState
+      image={noBatchImage}
+      stateData={{
+        title: "No active batches",
+        description: "No active batches right now. Enjoy the calm!",
+      }}
+    />
+  ) : (
+    <ItemsFlatList items={inPending.concat(inQueue)} />
+  )}
+</View>
+<View style={styles.flexGrow}>
+  <View style={styles.searchinputWrapper}>
+    <SearchWithFilter
+      value=""
+      onChangeText={() => {}}
+      placeholder="Search product"
+      onFilterPress={handleLanePress}
+      icon={ProductionLane}
+    />
+  </View>
+
+  {inProgress.length === 0 ? (
+    <EmptyState image={noBatchImageProduction} stateData={emptyStateData} />
+  ) : (
+    <ItemsFlatList isProduction items={inProgress} />
+  )}
+</View>
+<View style={styles.flexGrow}>
+  <View style={styles.searchinputWrapper}>
+    <SearchWithFilter
+      value=""
+      onChangeText={() => {}}
+      placeholder="Search product"
+      onFilterPress={handleLanePress}
+      icon={ProductionLane}
+    />
+  </View>
+
+  {inCompleted.length === 0 ? (
+    <EmptyState image={noBatchImageProduction} stateData={emptyStateData} />
+  ) : (
+    <ItemsFlatList isProductionCompleted items={inCompleted} />
+  )}
+</View>
+
 
           {/* {inProgress?.length === 0 ? (
             <View style={[styles.flexGrow, { flexDirection: "row", justifyContent: "center", alignItems: "center" }]}>

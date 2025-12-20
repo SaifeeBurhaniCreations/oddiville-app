@@ -249,6 +249,20 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
             source: "supervisor-production",
           },
         })),
+          {
+          type: "input-with-select",
+          data: {
+            placeholder: "Enter Count",
+            label: "Count",
+            placeholder_second: "Choose type",
+            label_second: "Type",
+            alignment: "half",
+            key: "select-count",
+            formField_1: "product_name",
+            source: "add-product-package",
+            source2: "product-package",
+          },
+        },
         {
           type: "addonInput",
           conditionKey: "hideUntilChamberSelected",

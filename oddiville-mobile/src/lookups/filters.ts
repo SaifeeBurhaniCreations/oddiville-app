@@ -1,4 +1,6 @@
-    export const filterHandlers: Record<string, (item: any, subKey: string, selected: string[]) => boolean> = {
+  import { isToday, isAfter, subDays, subHours } from "date-fns";
+
+  export const filterHandlers: Record<string, (item: any, subKey: string, selected: string[]) => boolean> = {
         "raw-material:overview": (item, subKey, selected) => {
             if (subKey === "Name") {
                 if (selected.includes("All")) return true;
@@ -16,24 +18,55 @@
             return true;
         },
       "chamber:detailed": (item, subKey, selected) => {
-    if (!selected || selected.length === 0) return true;
-console.log("item.category", item.category);
+          if (!selected || selected.length === 0) return true;
 
-    const cat = (item.category ?? "").toLowerCase();
-console.log("cat", cat);
- 
-    if (subKey === "Material") {
-      return cat === "material";
-    }
+          const cat = (item.category ?? "").toLowerCase();
+      
+          if (subKey === "Material") {
+            return cat === "material";
+          }
 
-    if (subKey === "Others") {
-      return cat === "other";
-    }
+          if (subKey === "Others") {
+            return cat === "other";
+          }
 
-    if (subKey === "Packed") {
-      return cat === "packed";
-    }
+          if (subKey === "Packed") {
+            return cat === "packed";
+          }
 
-    return true;
-  },
+          return true;
+        },
+
+"home:activities": (item, _, selected) => {
+  if (!selected || !item.createdAt) return true;
+
+  const selectedValues = Array.isArray(selected)
+    ? selected
+    : Object.keys(selected);
+
+  if (selectedValues.length === 0) return true;
+
+  const itemDate = new Date(item.createdAt);
+  if (isNaN(itemDate.getTime())) return false;
+
+  const now = new Date();
+
+  if (selectedValues.includes("Last 14 hours")) {
+    return isAfter(itemDate, subHours(now, 14));
+  }
+
+  if (selectedValues.includes("Today")) {
+    return isToday(itemDate);
+  }
+
+  if (selectedValues.includes("Last 7 days")) {
+    return isAfter(itemDate, subDays(now, 7));
+  }
+
+  if (selectedValues.includes("Last 30 days")) {
+    return isAfter(itemDate, subDays(now, 30));
+  }
+
+  return true;
+}
     };

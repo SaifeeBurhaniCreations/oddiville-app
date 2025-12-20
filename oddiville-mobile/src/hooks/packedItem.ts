@@ -100,7 +100,6 @@ export const usePackedItems = () => {
     queryKey: CHAMBER_STOCK_KEY,
     queryFn: async () => {
       const cached = queryClient.getQueryData<PackedItem[]>(CHAMBER_STOCK_KEY);
-  console.log("cached", JSON.stringify(cached));
 
       if (Array.isArray(cached) && cached.length > 0) {
         return cached;

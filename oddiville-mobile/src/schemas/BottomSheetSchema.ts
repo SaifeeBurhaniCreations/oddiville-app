@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 export const filterEnum = z.enum([
   "chamber:detailed",
+  "home:activities",
   "order:upcoming",
   "order:inprogress",
   "order:completed",
@@ -671,6 +672,11 @@ export const PoliciesBottomSheetConfigSchema = z.object({
   buttons: z.array(ButtonSchema).optional()
 });
 
+export const PackageTypeBottomSheetConfigSchema = z.object({
+  sections: z.array(z.discriminatedUnion('type', [OptionListSection])),
+  buttons: z.array(ButtonSchema).optional()
+});
+
 // ------------------- Type Inference ------------------- //
 
 export type OrderReadyBottomSheetConfig = z.infer<typeof OrderReadyBottomSheetConfigSchema>;
@@ -712,6 +718,7 @@ export type ScheduledCalendarEventBottomSheetConfig = z.infer<typeof ScheduledCa
 export type UserActionBottomSheetConfig = z.infer<typeof UserActionBottomSheetConfigSchema>;
 export type StorageRMRatingConfig = z.infer<typeof StorageRMRatingConfigSchema>;
 export type PoliciesBottomSheetConfig = z.infer<typeof PoliciesBottomSheetConfigSchema>;
+export type PackageTypeBottomSheetConfig = z.infer<typeof PackageTypeBottomSheetConfigSchema>;
 // ------------------- Central Schema Registry ------------------- //
 
 export const bottomSheetSchemas = {
@@ -756,6 +763,7 @@ export const bottomSheetSchemas = {
   "user-action": UserActionBottomSheetConfigSchema,
   "storage-rm-rating": StorageRMRatingConfigSchema,
   "select-policies": PoliciesBottomSheetConfigSchema,
+  "select-package-type": PackageTypeBottomSheetConfigSchema,
 } as const;
 
 export type BottomSheetSchemaKey = keyof typeof bottomSheetSchemas;

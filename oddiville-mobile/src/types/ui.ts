@@ -109,6 +109,7 @@ export interface TitleDescriptionProps {
 export interface EmptyStateProps {
   stateData: TitleDescriptionProps;
   color?: "red" | "green" | "blue" | "yellow";
+  compact?: boolean;
   image?: string | ImageSourcePropType;
   style?: any;
   button?: {
