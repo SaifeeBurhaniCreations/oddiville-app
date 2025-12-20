@@ -62,6 +62,9 @@ const ChamberCard = ({
     }
   };
 
+  console.log("rating", rating);
+  
+
   const resultRating =
     rating?.trim().replace(/(\d+(\.\d+)?) - \1/g, "$1") ?? "";
 
@@ -71,13 +74,20 @@ const ChamberCard = ({
   if (category === "other") {
     color = "blue";
     Icon = ShopIcon;
+    const ratingNumber = Math.round(Number(resultRating));
+    const clampedRating = Math.min(5, Math.max(1, ratingNumber));
+    // color = getRatingColor(clampedRating as 1 | 2 | 3 | 4 | 5);
   } else if (category === "packed") {
     color = "yellow";
     Icon = ShopIcon;
-  } else {
     const ratingNumber = Math.round(Number(resultRating));
     const clampedRating = Math.min(5, Math.max(1, ratingNumber));
-    color = getRatingColor(clampedRating as 1 | 2 | 3 | 4 | 5);
+    // color = getRatingColor(clampedRating as 1 | 2 | 3 | 4 | 5);
+  } else {
+    color = "green";
+    const ratingNumber = Math.round(Number(resultRating));
+    const clampedRating = Math.min(5, Math.max(1, ratingNumber));
+    // color = getRatingColor(clampedRating as 1 | 2 | 3 | 4 | 5);
   }
 
   const tagIcon = <Icon size={12} color={getColor("light")} />;
@@ -128,9 +138,9 @@ const resolvedImage =
               Order
             </Button>
           ) : rating ? (
-            <Tag color={color} size="xs" style={styles.tag} icon={tagIcon}>
-              {resultRating}
-            </Tag>
+            <>
+            
+            </>
           ) : (
             <Tag
               color="blue"
@@ -141,8 +151,13 @@ const resolvedImage =
               Untitled
             </Tag>
           )}
+          {category && (
+            <Tag color={color} size="xs" style={styles.tag} icon={tagIcon}>
+              {category}
+            </Tag>
+          )}
         </View>
-        {description && <C1 color={getColor("green", 400)}>{description}</C1>}
+        {description && <C1 color={getColor("green", 400)}>{description} | <Icon /> {resultRating}</C1>}
       </View>
     </TouchableOpacity>
   );
@@ -191,3 +206,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 });
+
+
+// <Tag color={color} size="xs" style={styles.tag} icon={tagIcon}>
+//               {resultRating}
+//             </Tag>

@@ -65,12 +65,24 @@ type RawMaterialReceived = {
   challan: null | string | { key: string; url: string };
   truck_number: string;
   driver_name: string;
+  bags: string; // NEW
 };
 
-const parseWeight = (weight: string): number => {
-  const parsed = parseFloat(weight?.replace(/[^\d.-]/g, "") || "0");
+
+const parseWeight = (weight: any): number => {
+  if (weight == null) return 0;
+
+  // if already number
+  if (typeof weight === "number") {
+    return isNaN(weight) ? 0 : Math.max(0, weight);
+  }
+
+  // ensure string
+  const str = String(weight);
+  const parsed = parseFloat(str.replace(/[^\d.-]/g, "") || "0");
   return isNaN(parsed) ? 0 : Math.max(0, parsed);
 };
+
 
 const formatOrder = (order: any): OrderProps => ({
   id: order?.id,
@@ -155,6 +167,7 @@ const SupervisorRawMaterialDetailsScreen = () => {
         challan: null,
         truck_number: "",
         driver_name: "",
+        bags: "",
       },
       {
         arrival_date: [
@@ -200,6 +213,7 @@ const SupervisorRawMaterialDetailsScreen = () => {
         driver_name: [
           { type: "required", message: "Driver name is required!" },
         ],
+        bags: [],
       },
       {
         validateOnChange: true,
@@ -213,6 +227,24 @@ const SupervisorRawMaterialDetailsScreen = () => {
     const net = truckWeight - tareWeight;
     return net > 0 ? net : 0;
   }, [values.truck_weight, values.tare_weight]);
+
+  const finalQuantityKg = useMemo(() => {
+    const productWeight = netWeightKg;
+    const bagsCount = parseWeight(values.bags || "0"); // bags as number, 1 bag = 1 kg
+    const bagsWeight = bagsCount; // 1 bag = 1 kg
+    const final = productWeight - bagsWeight;
+    return final > 0 ? final : 0;
+  }, [netWeightKg, values.bags]);
+
+  useEffect(() => {
+    // only update when we have at least truck & tare
+    if (!values.truck_weight || !values.tare_weight) return;
+    const final = finalQuantityKg;
+    // keep it as string in form
+    setField("quantity_received", final > 0 ? final.toString() : "0");
+  }, [finalQuantityKg, values.truck_weight, values.tare_weight, values.bags]);
+
+
 
   const isWeightLogicValid = useMemo(() => {
     const truckWeight = parseWeight(values.truck_weight);
@@ -242,6 +274,11 @@ const SupervisorRawMaterialDetailsScreen = () => {
       ? truckDetails.driver_name.toString()
       : "";
 
+      const bagsStr =
+      orderData.bags !== undefined && orderData.bags !== null
+        ? String(orderData.bags)
+        : "";
+
     let challanUrl: string | null = null;
     if (truckDetails?.challan) {
       if (typeof truckDetails.challan === "string") {
@@ -258,6 +295,7 @@ const SupervisorRawMaterialDetailsScreen = () => {
       ["truck_number", truckNumber],
       ["driver_name", driverName],
       ["tare_weight", tareWeightKg],
+      ["bags", bagsStr],
       ["challan", challanUrl],
     ] as const;
 
@@ -373,10 +411,15 @@ const SupervisorRawMaterialDetailsScreen = () => {
       formData.append("tare_weight", tareWeightTons);
       formData.append("truck_number", result.data.truck_number);
       formData.append("driver_name", result.data.driver_name);
+
+      const bagsCount = parseWeight(result.data.bags || "0").toString();
+      formData.append("bags", bagsCount);
+      
       formData.append(
         "quantity_received",
         parseWeight(result.data.quantity_received).toString()
       );
+
 
       const challan = orderData?.truck_details?.challan;
       if (isChallanObject(challan)) {
@@ -569,7 +612,7 @@ const SupervisorRawMaterialDetailsScreen = () => {
                 )}
 
               <View style={styles.titleWithDataInputs}>
-                <FormField
+                {/* <FormField
                   name="quantity_received"
                   form={{ values, setField, errors }}
                 >
@@ -594,7 +637,58 @@ const SupervisorRawMaterialDetailsScreen = () => {
                       Quantity received
                     </Input>
                   )}
-                </FormField>
+                </FormField> */}
+                <FormField
+  name="quantity_received"
+  form={{ values, setField, errors }}
+>
+  {({ value, error }) => (
+    <Input
+      value={value}
+      onChangeText={() => { /* no-op, controlled by bags/weights */ }}
+      placeholder="Enter received quantity"
+      error={touched.quantity_received ? error : undefined}
+      keyboardType="numeric"
+      disabled={true}          // ALWAYS disabled – auto calculated
+      addonText="kg"
+      mask="addon"
+      post
+    >
+      Quantity received
+    </Input>
+  )}
+</FormField>
+
+<FormField
+  name="bags"
+  form={{ values, setField, errors }}
+>
+  {({ value, onChange, error }) => (
+    <Input
+      value={value}
+      onChangeText={(text: string) => {
+        // allow only numbers
+        const cleaned = text.replace(/[^\d]/g, "");
+        setField("bags", cleaned);
+        setTouched((t) => ({ ...t, bags: true }));
+      }}
+      onBlur={() =>
+        setTouched((t) => ({ ...t, bags: true }))
+      }
+      placeholder="Enter number of bags"
+      error={touched.bags ? error : undefined}
+      keyboardType="number-pad"
+      disabled={!!isEditable}
+      addonText="bags"
+      mask="addon"
+      post
+    >
+      Number of bags (optional)
+    </Input>
+  )}
+</FormField>
+
+
 
                 <FormField
                   name="arrival_date"

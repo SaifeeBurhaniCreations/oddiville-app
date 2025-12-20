@@ -162,15 +162,30 @@ async function validateAndFetchRawMaterial(id) {
 
 async function updateProductionCompletion(
   production,
+  packaging_type,
+  packaging_size,
   endTime,
   wastage_quantity,
   recovery,
   opts = {}
 ) {
+  const qty = Number(production.quantity) || 0;
+  const parseSize = Number(packaging_size)
+  const rec = Number(recovery) || 0;
+  const wastage = Number(wastage_quantity) || 0;
+
+  production.wastage_quantity =
+    wastage === 0
+      ? String(qty - rec)
+      : String(wastage);
   production.end_time = endTime || new Date();
   production.status = "completed";
-  production.wastage_quantity = wastage_quantity;
   production.recovery = recovery;
+  production.packaging = {
+    type: packaging_type,
+    size: packaging_size,
+    count: parseInt(qty/parseSize)
+  };
   const saved = await production.save({ transaction: opts.tx });
   return saved; 
 }

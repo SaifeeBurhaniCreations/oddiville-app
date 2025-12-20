@@ -132,7 +132,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
         {
           name: "Quantity",
           value: rawMaterialOrderData
-            ? `${rawMaterialOrderData.quantity_received ?? "--"} ${
+            ? `${productionData?.quantity ?? "--"} ${
                 rawMaterialOrderData.unit ?? ""
               }`
             : "--",
@@ -216,7 +216,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
             description: "Pick chambers to store your materials in",
             details: {
               label: "Quantity",
-              value: `${rawMaterialOrderData?.quantity_received} ${rawMaterialOrderData?.unit}`,
+              value: `${productionData?.quantity} ${rawMaterialOrderData?.unit}`,
               icon: "database",
             },
           },
@@ -346,7 +346,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     }
   };
 
-const isStarted = !!productionData?.isStarted;
+const isStarted = productionData?.start_time !== null;
 
 const canStart = !isStarted;
 
@@ -430,14 +430,14 @@ const canComplete =
                 : "Start"}
             </Button>
           <Button
-  onPress={openBottomSheet}
-  disabled={!canComplete}
-  style={styles.flexGrow}
->
-  {productionLoading
-    ? "Production completing..."
-    : "Production completed"}
-</Button>
+            onPress={openBottomSheet}
+            disabled={!canComplete}
+            style={styles.flexGrow}
+          >
+            {productionLoading
+              ? "Production completing..."
+              : "Production completed"}
+          </Button>
 
         </View>
       </View>

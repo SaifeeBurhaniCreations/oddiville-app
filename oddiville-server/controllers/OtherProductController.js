@@ -723,7 +723,6 @@ router.patch(
   }
 );
 
-
 router.patch(
   "/:id/image",
   upload.single("sample_image"),

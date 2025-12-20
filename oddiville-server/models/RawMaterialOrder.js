@@ -57,6 +57,7 @@ module.exports = (sequelize, Sequelize) => {
         },
         sample_image: Sequelize.JSON,
         sample_quantity: Sequelize.DECIMAL,
+        bags: Sequelize.INTEGER,
         quantity_ordered: Sequelize.DECIMAL,
         quantity_received: Sequelize.DECIMAL,
         warehoused_date: { type: Sequelize.DATE, allowNull: true },

@@ -64,7 +64,7 @@ module.exports = (sequelize, Sequelize) => {
       // },
       amount: {
         type: Sequelize.FLOAT,
-        allowNull: false,
+        allowNull: true,
         defaultValue: 0,
       },
       truck_details: {

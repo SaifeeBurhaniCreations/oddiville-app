@@ -94,86 +94,164 @@ const ChamberDetailed = ({
     setIsLoading(false);
   };
 
+  // const parsedStock: RawMaterialProps[] = useMemo(() => {
+  //   if (!chamberData?.id || flatStockData?.length === 0) return [];
+
+  //   return flatStockData
+  //     .map((item) => {
+  //       const matchingChamberData = item.chamber?.filter(
+  //         (entry) => entry.id === chamberData.id
+  //       );
+  //       if (!matchingChamberData || matchingChamberData.length === 0)
+  //         return null;
+
+  //       const detailByRating = matchingChamberData.map((entry) => ({
+  //         rating: item.category === "packed" ? "packed" : entry.rating,
+  //         quantity: `${entry.quantity}${item.unit}`,
+  //       }));
+
+
+  //       const ratingStrings =
+  //         item.category === "packed"
+  //           ? []
+  //           : matchingChamberData.map((entry) => entry.rating).filter(Boolean);
+
+  //       const ratingNumbers = ratingStrings
+  //         .map((r) => parseFloat(r))
+  //         .filter((n) => !isNaN(n));
+
+  //       const minRating = ratingNumbers.length
+  //         ? Math.min(...ratingNumbers).toFixed(1)
+  //         : "";
+  //       const maxRating = ratingNumbers.length
+  //         ? Math.max(...ratingNumbers).toFixed(1)
+  //         : "";
+
+  //       const totalQuantity = matchingChamberData.reduce(
+  //         (sum, entry) => sum + parseFloat(entry.quantity || "0"),
+  //         0
+  //       );
+
+  //       const disabled = totalQuantity <= 0;
+
+  //       const ratingDisplay =
+  //         item.category === "packed"
+  //           ? "packed"
+  //           : item.category === "other"
+  //           ? ratingStrings.join(", ")
+  //           : minRating && maxRating
+  //           ? `${minRating} - ${maxRating}`
+  //           : "";
+
+  //       const matchedMaterial = rawMaterial.find(
+  //         (m) =>
+  //           m?.name?.trim().toLowerCase() ===
+  //           item.product_name?.trim().toLowerCase()
+  //       );
+
+  //       const image = matchedMaterial?.sample_image?.url
+  //         ? matchedMaterial.sample_image.url
+  //         : item.category === "other"
+  //         ? require("@/src/assets/images/fallback/others-stock-fallback.png")
+  //         : require("@/src/assets/images/fallback/chamber-stock-fallback.png");
+
+  //       return {
+  //         name: item.product_name,
+  //         description: `${totalQuantity} ${item.unit}`,
+  //         rating: ratingDisplay,
+  //         disabled,
+  //         href: item.category === "other" ? "other-products-detail" : "",
+  //         quantity: detailByRating[0]?.quantity ?? "",
+  //         detailByRating,
+  //         category: item.category,
+  //         chambers: item.category === "other" ? item.chamber : null,
+  //         id: item.category === "other" ? item.id : null,
+  //         image,
+  //       };
+  //     })
+  //     .filter(Boolean) as RawMaterialProps[];
+  // }, [flatStockData, chamberData, rawMaterial]);
+
   const parsedStock: RawMaterialProps[] = useMemo(() => {
-    if (!chamberData?.id || flatStockData?.length === 0) return [];
+  if (!chamberData?.id || flatStockData?.length === 0) return [];
 
-    return flatStockData
-      .map((item) => {
-        const matchingChamberData = item.chamber?.filter(
-          (entry) => entry.id === chamberData.id
-        );
-        if (!matchingChamberData || matchingChamberData.length === 0)
-          return null;
+  return flatStockData
+    .map((item) => {
+      const matchingChamberData = item.chamber?.filter(
+        (entry) => entry.id === chamberData.id
+      );
+      if (!matchingChamberData || matchingChamberData.length === 0) {
+        return null;
+      }
 
-        const detailByRating = matchingChamberData.map((entry) => ({
-          rating: item.category === "packed" ? "packed" : entry.rating,
-          quantity: `${entry.quantity}${item.unit}`,
-        }));
+      const detailByRating = matchingChamberData.map((entry) => ({
+        rating: item.category === "packed" ? "packed" : entry.rating,
+        quantity: `${entry.quantity}${item.unit}`,
+      }));
 
-        if(item.category === 'other')
-          console.log("jygyjjhfyuc",item);
-        
+      const ratingStrings =
+        matchingChamberData.map((entry) => entry.rating).filter(Boolean);
 
-        const ratingStrings =
-          item.category === "packed"
-            ? []
-            : matchingChamberData.map((entry) => entry.rating).filter(Boolean);
+      const ratingNumbers = ratingStrings
+        .map((r) => parseFloat(r))
+        .filter((n) => !isNaN(n));
 
-        const ratingNumbers = ratingStrings
-          .map((r) => parseFloat(r))
-          .filter((n) => !isNaN(n));
+      const minRating = ratingNumbers.length
+        ? Math.min(...ratingNumbers).toFixed(1)
+        : "";
+      const maxRating = ratingNumbers.length
+        ? Math.max(...ratingNumbers).toFixed(1)
+        : "";
 
-        const minRating = ratingNumbers.length
-          ? Math.min(...ratingNumbers).toFixed(1)
-          : "";
-        const maxRating = ratingNumbers.length
-          ? Math.max(...ratingNumbers).toFixed(1)
-          : "";
+      const totalQuantity = matchingChamberData.reduce(
+        (sum, entry) => sum + parseFloat(entry.quantity || "0"),
+        0
+      );
 
-        const totalQuantity = matchingChamberData.reduce(
-          (sum, entry) => sum + parseFloat(entry.quantity || "0"),
-          0
-        );
+      const disabled = totalQuantity <= 0;
 
-        const disabled = totalQuantity <= 0;
+      // Always produce some rating text
+      let ratingDisplay = "";
+      if (minRating && maxRating) {
+        ratingDisplay =
+          minRating === maxRating
+            ? minRating // single value
+            : `${minRating} - ${maxRating}`; // range
+      } else if (item.category === "other") {
+        ratingDisplay = ratingStrings.join(", ") || "other";
+      } else {
+        ratingDisplay = ratingStrings.join(", ") || "N/A";
+      }
 
-        const ratingDisplay =
-          item.category === "packed"
-            ? "packed"
-            : item.category === "other"
-            ? ratingStrings.join(", ")
-            : minRating && maxRating
-            ? `${minRating} - ${maxRating}`
-            : "";
+      const matchedMaterial = rawMaterial.find(
+        (m) =>
+          m?.name?.trim().toLowerCase() ===
+          item.product_name?.trim().toLowerCase()
+      );
 
-        const matchedMaterial = rawMaterial.find(
-          (m) =>
-            m?.name?.trim().toLowerCase() ===
-            item.product_name?.trim().toLowerCase()
-        );
+      const image = matchedMaterial?.sample_image?.url
+        ? matchedMaterial.sample_image.url
+        : item.category === "other"
+        ? require("@/src/assets/images/fallback/others-stock-fallback.png")
+        : require("@/src/assets/images/fallback/chamber-stock-fallback.png");
 
-        const image = matchedMaterial?.sample_image?.url
-          ? matchedMaterial.sample_image.url
-          : item.category === "other"
-          ? require("@/src/assets/images/fallback/others-stock-fallback.png")
-          : require("@/src/assets/images/fallback/chamber-stock-fallback.png");
+      return {
+        name: item.product_name,
+        description: `${totalQuantity} ${item.unit}`,
+        rating: ratingDisplay, // always set
+        disabled,
+        href: item.category === "other" ? "other-products-detail" : "",
+        quantity: detailByRating[0]?.quantity ?? "",
+        detailByRating,
+        category: item.category,
+        chambers: item.category === "other" ? item.chamber : null,
+        id: item.category === "other" ? item.id : null,
+        image,
+      };
+    })
+    .filter(Boolean) as RawMaterialProps[];
+}, [flatStockData, chamberData, rawMaterial]);
 
-        return {
-          name: item.product_name,
-          description: `${totalQuantity} ${item.unit}`,
-          rating: ratingDisplay,
-          disabled,
-          href: item.category === "other" ? "other-products-detail" : "",
-          quantity: detailByRating[0]?.quantity ?? "",
-          detailByRating,
-          category: item.category,
-          chambers: item.category === "other" ? item.chamber : null,
-          id: item.category === "other" ? item.id : null,
-          image,
-        };
-      })
-      .filter(Boolean) as RawMaterialProps[];
-  }, [flatStockData, chamberData, rawMaterial]);
 
   const filters = useMemo(
     () => flattenFilters(nestedFilters) as Record<FilterEnum, string[]>,

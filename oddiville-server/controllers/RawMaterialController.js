@@ -410,6 +410,9 @@ router.patch("/order/:id", upload.single("challan"), async (req, res) => {
   const { id } = req.params;
   const io = req.app.get("io");
 
+  // console.log("====================",req.body);
+  // return;
+
   try {
     const rawData = await RawMaterialOrderClient.findByPk(id);
     if (!rawData) {

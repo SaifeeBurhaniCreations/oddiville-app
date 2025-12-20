@@ -132,13 +132,13 @@ function getProductDetailsSection(
   return [
     {
       row_1: [
-        { label: "Amount", value: formatPrice(DispatchOrder.amount) },
+        // { label: "Amount", value: formatPrice(DispatchOrder.amount) },
         { label: "Product", value: product_details },
+        { label: "Quantity", value: formatWeight(totalQuantity, { unit: "Kg" }) },
       ],
     },
     {
       row_2: [
-        { label: "Quantity", value: formatWeight(totalQuantity, { unit: "Kg" }) },
         {
           label: "Dis",
           value:
@@ -374,7 +374,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
                 icon: "database",
               },
               {
-                label: "Sample",
+                label: "Discard",
                 value: String(ProductionById?.wastage_quantity) ?? "--",
                 icon: "trash",
               },
@@ -394,11 +394,16 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
                   : "--",
                 icon: "lane",
               },
+              {
+                label: ProductionById?.packaging?.type,
+                value: String(ProductionById?.packaging?.count) ?? "--",
+                icon: "box",
+              },
             ],
           },
           {
             row_4: [
-             {
+              {
                 label: "Completed",
                 value:
                   Object.keys(ProductionById).length !== 0 &&
@@ -461,6 +466,10 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
         {
           label: "Amount",
           value: `${formatAmount(RawMaterialOrderById.price)}`,
+        },
+        {
+          label: "Bags",
+          value: RawMaterialOrderById.bags ? `${RawMaterialOrderById.bags} Bags` : "No Bags",
         },
       ],
       "Vendor detail": [

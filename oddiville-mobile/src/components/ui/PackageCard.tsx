@@ -14,12 +14,13 @@ const PackageCard = ({ name, img, style, href, bundle, id, ...props }: PackageCa
       
       {/* Main product image */}
       <View style={styles.mainImage} {...props}>
-        <CustomImage src={bundle} width={130} style={{height: '100%', width: '100%', objectFit: 'contain',}} height={150} borderRadius={0}  />
+        <CustomImage src={img} width={130}  style={{height: '100%', width: '100%', objectFit: 'cover',}} height={150} borderRadius={0}  />
       </View>
 
-      <View style={styles.productImage}>
+      {/* <View style={styles.productImage}>
         <CustomImage src={img} width={56} height={56} style={{height: '100%', width: '100%', objectFit: 'contain',}}  borderRadius={0}  />
-      </View>
+      </View> */}
+
       {/* Overlay */}
       <View style={styles.title}>
         <H6 style={{width: '100%'}}>
@@ -48,7 +49,7 @@ const styles = StyleSheet.create({
   },
   title: {
     position: 'absolute',
-    bottom: '30%',
+    bottom: '2%',
     left: '50%',
     transform: [{ translateX: -68 }],
     flexWrap: 'wrap',
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
   },
   overlayStyle: {
     position: 'absolute',
-    bottom: -3,
+    bottom: -45,
     left: '50%',
     transform: [{ translateX: -75 }],
     zIndex: -1,

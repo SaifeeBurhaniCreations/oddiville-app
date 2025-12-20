@@ -19,7 +19,7 @@
       "router": {
         "origin": false
       },
-      "API_URL": "https://judie-cruciferous-carlita.ngrok-free.dev",
+      "API_URL": "https://192412db71e1.ngrok-free.app",
       "eas": {
       }
     },
