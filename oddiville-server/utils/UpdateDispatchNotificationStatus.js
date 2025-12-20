@@ -1,4 +1,4 @@
-export async function updateDispatchOrderNotificationStatus(id, newStatus) {
+module.exports = async function updateDispatchOrderNotificationStatus(id, newStatus) {
   const notification = await NotificationsClient.findOne({
     where: {
       itemId: id,

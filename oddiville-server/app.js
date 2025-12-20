@@ -6,7 +6,6 @@ const dotenv = require("dotenv");
 const { Server } = require("socket.io");
 const redis = require('./devops/redis');
 const routes = require("./config/routes");
-const sequelize = require("./config/database");
 
 const {
   Notifications,
@@ -28,6 +27,7 @@ const {
   Contractor,
   Admin,
   TruckDetails,
+  sequelize
 } = require("./models");
 const { setIO } = require("./config/socket");
 
@@ -89,7 +89,8 @@ const PORT = process.env.PORT || 8022;
     console.log("✅ Connected to Aiven PostgreSQL");
 
     if (process.env.SHOULD_SYNC === "true") {
-      // await Admin.sync({ force: true });
+      await Admin.sync({ force: true });
+      // await sequelize.sync({ alter: true });
       // await sequelize.authenticate();
       // await Lanes.sync({ force: true });
       // await ChamberStock.sync({ force: true });
