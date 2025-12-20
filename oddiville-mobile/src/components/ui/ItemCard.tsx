@@ -10,6 +10,7 @@ import DatabaseIcon from "../icons/page/DatabaseIcon";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { getImageSource } from "@/src/utils/arrayUtils";
 import LaneIcon from "../icons/common/LaneIcon";
+import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
 
 const ItemCard = ({
   name,
@@ -27,12 +28,12 @@ const ItemCard = ({
   lane,
 }: ItemCardProps) => {
   const { goTo } = useAppNavigation();
-  
+  const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const handlePress = () => {
     if (isProduction) {
       goTo("production-complete", { id });
     } else if (isProductionCompleted) {
-
+        validateAndSetData(id ?? "", "production-completed")
     } else {
       goTo("production-start", { rmId: id });
     }
@@ -87,7 +88,7 @@ const ItemCard = ({
               <View style={[styles.detailsContainer, { gap: 4 }]}>
                 {!lane ? (
                   <React.Fragment>
-                    <B3 color={getColor("green", 700)}>Total weight: </B3>
+                    { isProductionCompleted ? <B3 color={getColor("green", 700)}>Recover weight: </B3> : <B3 color={getColor("green", 700)}>Total weight: </B3>}
                     <B4 color={getColor("green", 700)}>{weight}</B4>
                   </React.Fragment>
                 ) : (

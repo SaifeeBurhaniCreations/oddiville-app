@@ -62,11 +62,17 @@ const ProductionScreen = () => {
     const inCompleted: ItemCardProps[] = [];
 
     if (!isLoading) {
+      console.log("productionData", JSON.stringify(productionData));
       productionData?.forEach((item: any) => {
+        const ratio =
+          item.quantity > 0
+            ? (item.recovery / item.quantity).toFixed(2)
+            : "0.00";
+
         const formattedItem: ItemCardProps = {
           id: item.id,
           name: item.product_name,
-          weight: `${item.quantity} ${item.unit || "kg"}`,
+          weight: `${item.status === "completed" ? item.recovery : item.quantity} ${item.unit || "kg" } ${item.status === "completed" ? `(${ratio}%)` : ""}`,
           rating: item.rating || "0",
           isActive: false,
           lane: item.status === "completed" ? null : (item?.lane ? getLaneNameById(item?.lane) : null),
