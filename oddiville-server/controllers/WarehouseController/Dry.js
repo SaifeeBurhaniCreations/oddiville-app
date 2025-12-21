@@ -1,28 +1,10 @@
 const router = require("express").Router();
 const { DryWarehouse: DryWarehousesClient, Chambers: chamberClient } = require("../../models");
-const multer = require("multer");
-const { v4: uuidv4 } = require("uuid");
-const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const s3 = require("../../utils/s3Client");
+const { uploadToS3, deleteFromS3 } = require("../../services/s3Service");  
+const upload = require("../../middlewares/upload");
+
 const { Op } = require("sequelize");
-const upload = multer();
 
-const uploadToS3 = async (file) => {
-  const id = uuidv4();
-  const fileKey = `warehouses/dry/${id}-${file.originalname}`;
-  const bucketName = process.env.AWS_BUCKET_NAME;
-
-  await s3.send(new PutObjectCommand({
-    Bucket: bucketName,
-    Key: fileKey,
-    Body: file.buffer,
-    ContentType: file.mimetype,
-  }));
-
-  const url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
-
-  return { url, key: fileKey };
-};
 
 // CREATE
 router.post("/", upload.single("sample_image"), async (req, res) => {
@@ -51,7 +33,7 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
 
     let sample_image = null;
     if (req.file) {
-      const uploaded = await uploadToS3(req.file);
+      const uploaded = await uploadToS3(req.file, "warehouses/dry");
       sample_image = {
         url: uploaded.url,
         key: uploaded.key
@@ -281,25 +263,26 @@ router.delete("/:id", async (req, res) => {
     const item = await DryWarehousesClient.findByPk(req.params.id);
     if (!item) return res.status(404).json({ error: "Item not found." });
 
-    // Use item.chamber_id to find the associated chamber
-    if (item?.chamber_id) {
-      const chamber = await chamberClient.findOne({ where: { chamber_name: item?.chamber_id } });
+    if (item.sample_image?.key) {
+      await deleteFromS3(item.sample_image.key);
+    }
 
+    if (item.chamber_id) {
+      const chamber = await chamberClient.findOne({
+        where: { chamber_name: item.chamber_id },
+      });
       if (chamber) {
-        const currentItems = chamber.items || [];
-        // Filter out the deleted item's ID from the chamber's items array
-        chamber.items = currentItems.filter(id => id !== item.id);
+        chamber.items = (chamber.items || []).filter(
+          (id) => id !== item.id
+        );
         await chamber.save();
-      } else {
-        // Log the correct chamber ID if not found
-        console.warn(`Chamber with ID ${item.chamber_id} not found.`);
       }
     }
 
     await item.destroy();
     res.status(200).json({ message: "Deleted successfully", data: item });
   } catch (error) {
-    console.error("Delete Dry Error:", error.message);
+    console.error("Delete Dry Error:", error);
     res.status(500).json({ error: "Internal server error." });
   }
 });

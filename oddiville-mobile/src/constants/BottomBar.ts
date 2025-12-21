@@ -1,104 +1,41 @@
-import HomeIcon from "@/src/components/icons/bottom-bar/HomeIcon";
-import HomeActiveIcon from "@/src/components/icons/bottom-bar/HomeActiveIcon";
-import WarehouseIcon from "@/src/components/icons/bottom-bar/WarehouseIcon";
-import WarehouseIconActive from "@/src/components/icons/bottom-bar/WarehouseActiveIcon";
+import { Dimensions } from "react-native";
+
 import { BottomBarProps } from "@/src/types";
 import OrderIcon from "@/src/components/icons/bottom-bar/OrderIcon";
 import OrderIconActive from "@/src/components/icons/bottom-bar/OrderActiveIcon";
 import ProductionIcon from "@/src/components/icons/bottom-bar/ProductionIcon";
-import ProductionActiveIcon from "../components/icons/bottom-bar/ProductionActiveIcon";
-import RawMaterialIcon from "../components/icons/bottom-bar/PurchaseIcon";
-import RawMaterialActiveIcon from "../components/icons/bottom-bar/PurchaseActiveIcon";
-import ContractorIcon from "../components/icons/bottom-bar/ContractorIcon";
-import ContractorActiveIcon from "../components/icons/bottom-bar/ContractorActiveIcon";
-import PackagingIcon from "../components/icons/bottom-bar/PackagingIcon";
-import PackagingActiveIcon from "../components/icons/bottom-bar/PackagingActiveIcon";
-import PurchaseIcon from "../components/icons/bottom-bar/PurchaseIcon";
-import PurchaseActiveIcon from "../components/icons/bottom-bar/PurchaseActiveIcon";
+import ProductionActiveIcon from "@/src/components/icons/bottom-bar/ProductionActiveIcon";
+import PackagingIcon from "@/src/components/icons/bottom-bar/PackagingIcon";
+import PackagingActiveIcon from "@/src/components/icons/bottom-bar/PackagingActiveIcon";
+import PurchaseIcon from "@/src/components/icons/bottom-bar/PurchaseIcon";
+import PurchaseActiveIcon from "@/src/components/icons/bottom-bar/PurchaseActiveIcon";
+
+const { width } = Dimensions.get("screen");
+const isSmallDevice = width <= 360;
 
 export const BOTTOM_BAR_ITEMS: BottomBarProps = [
-  // {
-  //   name: "Home",
-  //   component: "home",
-  //   icon: HomeIcon,
-  //   activeIcon: HomeActiveIcon,
-  // },
-    {
-    name: "Purchase",
+  {
+    name: isSmallDevice ? "Buy" : "Purchase",
     component: "purchase",
     icon: PurchaseIcon,
     activeIcon: PurchaseActiveIcon,
   },
-    {
-    name: "Production",
+  {
+    name: isSmallDevice ? "Prod" : "Production",
     component: "production",
     icon: ProductionIcon,
     activeIcon: ProductionActiveIcon,
   },
   {
-    name: "Packing",
+    name: isSmallDevice ? "Pack" : "Packing",
     component: "package",
     icon: PackagingIcon,
     activeIcon: PackagingActiveIcon,
   },
   {
-    name: "Dispatch",
+    name: isSmallDevice ? "Ship" : "Dispatch",
     component: "sales",
     icon: OrderIcon,
     activeIcon: OrderIconActive,
-  },
-];
-
-export const BOTTOM_BAR_ITEMS_ADMIN: BottomBarProps = [
-  {
-    name: "Home",
-    component: "home",
-    icon: HomeIcon,
-    activeIcon: HomeActiveIcon,
-  },
-  {
-    name: "Dispatch",
-    component: "admin-orders",
-    icon: OrderIcon,
-    activeIcon: OrderIconActive,
-  },
-  {
-    name: "Chambers",
-    component: "admin-chambers",
-    icon: WarehouseIcon,
-    activeIcon: WarehouseIconActive,
-  },
-  {
-    name: "Production",
-    component: "admin-production",
-    icon: ProductionIcon,
-    activeIcon: ProductionActiveIcon,
-  },
-];
-
-export const BOTTOM_BAR_ITEMS_SUPERVISOR: BottomBarProps = [
-  {
-    name: "Raw Material",
-    component: "supervisor-raw-material",
-    icon: RawMaterialIcon,
-    activeIcon: RawMaterialActiveIcon,
-  },
-  {
-    name: "Orders",
-    component: "supervisor-orders",
-    icon: OrderIcon,
-    activeIcon: OrderIconActive,
-  },
-  {
-    name: "Production",
-    component: "supervisor-production",
-    icon: ProductionIcon,
-    activeIcon: ProductionActiveIcon,
-  },
-  {
-    name: "Labour",
-    component: "supervisor-contractor",
-    icon: ContractorIcon,
-    activeIcon: ContractorActiveIcon,
   },
 ];

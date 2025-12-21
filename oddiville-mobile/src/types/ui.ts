@@ -570,6 +570,7 @@ export interface PriceInputProps {
   value: string;
   error?: string;
   addonText: string;
+  keyboardType?: TextInputProps["keyboardType"],
   onChangeText: (qty: string) => void;
   onBlur?: React.ComponentProps<typeof TextInput>['onBlur'];
   style?: any;

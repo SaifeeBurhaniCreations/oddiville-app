@@ -110,96 +110,81 @@ const isEditMode = editIndex !== null;
     setProductField(name, value);
   };
 
-  const addProductToList = useCallback(() => {
-    const productValidationResult = validateProductForm();
+const addProductToList = useCallback(() => {
+  const productValidationResult = validateProductForm();
 
-    if (
-      !Array.isArray(newProduct.selectedChambers) ||
-      newProduct.selectedChambers.length === 0
-    ) {
-      toast.error("Please select at least one Chamber.");
-      return;
-    }
+  if (!newProduct.selectedChambers?.length) {
+    toast.error("Please select at least one Chamber.");
+    return;
+  }
 
-    if (!productValidationResult.success) {
-      toast.error("Please fill in all product details correctly.");
-      return;
-    }
+  if (!productValidationResult.success) {
+    toast.error("Please fill product details correctly.");
+    return;
+  }
 
-    const updatedList =
-      editIndex !== null
-        ? productList.map((item, idx) =>
-            idx === editIndex
-              ? {
-                  ...newProduct,
-                  sample_image: banners,
-                  sample_image_file: bannerFile, // ✅ FILE STORED
-                }
-              : item
-          )
-        : [
-            ...productList,
-            {
-              ...newProduct,
-              sample_image: banners,
-              sample_image_file: bannerFile, // ✅ FILE STORED
-            },
-          ];
+  const productPayload = {
+    ...newProduct,
+    sample_image: banners,
+    sample_image_file: bannerFile,
+  };
 
-    setProductList(updatedList);
-    setClientField("products", updatedList);
+  let updatedList;
 
-    setBannerFile(null);
-    setBanners(null);
-    setEditIndex(null);
-    setFetchedBanners(null);
-    setDeleteBanners(null);
-  }, [
-    newProduct,
-    editIndex,
-    productList,
-    banners,
-    setClientField,
-    resetProductForm,
-    validateProductForm,
-  ]);
+  if (editIndex !== null) {
+    // UPDATE
+    updatedList = productList.map((item, idx) =>
+      idx === editIndex ? productPayload : item
+    );
+  } else {
+    // ADD
+    updatedList = [...productList, productPayload];
+  }
+
+  setProductList(updatedList);
+  setClientField("products", updatedList);
+
+  resetProductForm();
+  setEditIndex(null);
+  setBanners(null);
+  setBannerFile(null);
+  setFetchedBanners(null);
+  setDeleteBanners(null);
+
+}, [
+  newProduct,
+  editIndex,
+  productList,
+  banners,
+  bannerFile,
+  validateProductForm,
+]);
 
   const formatDateForInput = (date) => {
     if (!date) return "";
     return new Date(date).toISOString().split("T")[0];
   };
 
-  const handleEditProduct = useCallback(
-    (index) => {
-      const item = productList[index];
-      if (!item) return;
+const handleEditProduct = useCallback((index) => {
+  const item = productList[index];
+  if (!item) return;
 
-      setProductFields({
-        product_name: item.product_name || "",
-        rent: item.rent || "",
-        est_dispatch_date: formatDateForInput(item.est_dispatch_date),
-        selectedChambers: (item.selectedChambers || []).map((ch) => ({
-          id: ch.id,
-          quantity: ch.quantity ?? "",
-        })),
-        sample_image: item.sample_image || null,
-      });
+  setProductFields({
+    product_name: item.product_name,
+    rent: item.rent,
+    est_dispatch_date: formatDateForInput(item.est_dispatch_date),
+    selectedChambers: item.selectedChambers || [],
+    sample_image: item.sample_image || null,
+  });
 
-      const imageToUse =
-        typeof item.sample_image === "string" && item.sample_image
-          ? item.sample_image
-          : FALLBACK_IMAGE;
+  setBanners(item.sample_image || FALLBACK_IMAGE);
+  setFetchedBanners(item.sample_image || FALLBACK_IMAGE);
+  setBannerFile(item.sample_image_file || null);
 
-      setBanners(imageToUse);
-      setFetchedBanners(imageToUse);
-      // setBannerFile(null);
+  setEditIndex(index);
+}, [productList]);
 
-      setEditIndex(index);
-    },
-    [productList]
-  );
-
-  const handleDeleteProduct = useCallback(
+const handleDeleteProduct = useCallback(
     (index) => {
       const updated = [...productList];
       updated.splice(index, 1);
@@ -209,9 +194,9 @@ const isEditMode = editIndex !== null;
     [productList, setClientField]
   );
 
-  const fetchBanners = (img) => setBanners(img);
+const fetchBanners = (img) => setBanners(img);
 
-  const onFileChange = (file) => {
+const onFileChange = (file) => {
     if (!(file instanceof File)) return;
 
     const previewUrl = URL.createObjectURL(file);
@@ -255,17 +240,34 @@ const handleSubmit = async (e) => {
 
     dataPayload.append("products", JSON.stringify(productsWithoutFiles));
 
-    await modify({ formData: dataPayload, id });
+      productList.forEach((product, index) => {
+        if (product.sample_image_file instanceof File) {
+          dataPayload.append(
+            `products[${index}][sample_image]`,
+            product.sample_image_file
+          );
+        }
+      });
+
+    const isEditPage = Boolean(id && id !== "undefined");
+
+    if (isEditPage) {
+          await modify({ formData: dataPayload, id });
+          toast.success("Updated successfully!");
+        } else {
+          await create(dataPayload);
+          toast.success("Created successfully!");
+        }
 
     /* =====================
        2️⃣ UPDATE IMAGE ONLY
        ===================== */
-    if (imageChanged && bannerFile) {
-      const imagePayload = new FormData();
-      imagePayload.append("sample_image", bannerFile);
+    // if (isEditPage && imageChanged && bannerFile) {
+    //       const imagePayload = new FormData();
+    //       imagePayload.append("sample_image", bannerFile);
 
-      await modifyImage({ formData: imagePayload, id }); // 👈 NEW API
-    }
+    //   await modifyImage({ formData: imagePayload, id }); 
+    // }
 
     toast.success("Updated successfully!");
     navigate("/raw-material-other");
@@ -274,8 +276,16 @@ const handleSubmit = async (e) => {
     console.error(error);
   } finally {
     setIsLoading(false);
-    setImageChanged(false);
   }
+};
+
+const resetToAddMode = () => {
+  resetProductForm();
+  setEditIndex(null);
+  setBanners(null);
+  setBannerFile(null);
+  setFetchedBanners(null);
+  setDeleteBanners(null);
 };
 
   /* ================= FETCH CHAMBERS ================= */
@@ -336,28 +346,29 @@ const handleSubmit = async (e) => {
     productList,
   };
 
-  return {
-    id,
-    isLoading,
-    clientForm,
-    productForm,
-    productdata,
-    handleProductInputChange,
-    toggleChamber,
-    updateQuantity,
-    addProductToList,
-    handleEditProduct,
-    handleDeleteProduct,
-    handleSubmit,
-    bannersProps: {
-      getBanners: fetchedBanners,
-      deleteBanners,
-      setDeleteBanners,
-      fetchBanners,
-      onFileChange,
-      editMode: editIndex !== null,
-    },
-  };
+ return {
+  id,
+  isLoading,
+  clientForm,
+  productForm,
+  productdata,
+  handleProductInputChange,
+  toggleChamber,
+  updateQuantity,
+  addProductToList,
+  handleEditProduct,
+  handleDeleteProduct,
+  handleSubmit,
+  bannersProps: {
+    getBanners: fetchedBanners,
+    deleteBanners,
+    setDeleteBanners,
+    fetchBanners,
+    onFileChange,
+    editMode: editIndex !== null,
+    resetToAddMode, 
+  },
+};
 };
 
 export default useManageRawMaterial;

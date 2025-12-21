@@ -1,28 +1,7 @@
 const router = require("express").Router();
 const { WorkLocation } = require("../models");
-const multer = require("multer");
-const { v4: uuidv4 } = require("uuid");
-const { PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
-const s3 = require("../utils/s3Client");
-
-const upload = multer();
-
-const uploadToS3 = async (file) => {
-    const id = uuidv4();
-    const fileKey = `work-location/${id}-${file.originalname}`;
-    const bucketName = process.env.AWS_BUCKET_NAME;
-
-    await s3.send(new PutObjectCommand({
-        Bucket: bucketName,
-        Key: fileKey,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-    }));
-
-    const url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
-
-    return { url, key: fileKey };
-};
+const { uploadToS3, deleteFromS3 } = require("../services/s3Service");  
+const upload = require("../middlewares/upload");
 
 // CREATE
 router.post("/", upload.single("sample_image"), async (req, res) => {
@@ -41,7 +20,7 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
 
         let sample_image = null;
         if (req.file) {
-            const uploaded = await uploadToS3(req.file);
+            const uploaded = await uploadToS3(req.file, "work-location");
             sample_image = {
                 url: uploaded.url,
                 key: uploaded.key,
@@ -118,7 +97,7 @@ router.put("/:id", upload.single("sample_image"), async (req, res) => {
     try {
       if (req.file) {
         console.info(`[PUT /work-location/${id}] req.file present: name=${req.file.originalname}, size=${req.file.size}`);
-        newUploaded = await uploadToS3(req.file);
+        newUploaded = await uploadToS3(req.file, "work-location");
 
         if (!newUploaded || !newUploaded.url || !newUploaded.key) {
           console.warn(`[PUT /work-location/${id}] uploadToS3 returned unexpected value:`, newUploaded);
@@ -143,12 +122,7 @@ router.put("/:id", upload.single("sample_image"), async (req, res) => {
       if (count === 0) {
         if (newUploaded) {
           try {
-            await s3.send(
-              new DeleteObjectCommand({
-                Bucket: process.env.AWS_BUCKET_NAME,
-                Key: newUploaded.key,
-              })
-            );
+            await deleteFromS3(newUploaded.key);
             console.info(`[PUT /work-location/${id}] cleaned up newly uploaded key=${newUploaded.key} after DB failure`);
           } catch (cleanupErr) {
             console.warn(`[PUT /work-location/${id}] cleanup failed for newly uploaded object:`, cleanupErr);
@@ -161,12 +135,7 @@ router.put("/:id", upload.single("sample_image"), async (req, res) => {
 
       if (oldKey && ((newUploaded && newUploaded.key) || updatePayload.sample_image === null)) {
         try {
-          await s3.send(
-            new DeleteObjectCommand({
-              Bucket: process.env.AWS_BUCKET_NAME,
-              Key: oldKey,
-            })
-          );
+          await deleteFromS3(oldKey);
           console.info(`[PUT /work-location/${id}] deleted old S3 object key=${oldKey}`);
         } catch (delErr) {
           console.warn(`[PUT /work-location/${id}] failed to delete old S3 object key=${oldKey}`, delErr);
@@ -177,12 +146,7 @@ router.put("/:id", upload.single("sample_image"), async (req, res) => {
     } catch (innerErr) {
       if (newUploaded) {
         try {
-          await s3.send(
-            new DeleteObjectCommand({
-              Bucket: process.env.AWS_BUCKET_NAME,
-              Key: newUploaded.key,
-            })
-          );
+          await deleteFromS3(newUploaded.key);
           console.info(`[PUT /work-location/${id}] cleaned up new upload due to inner error (key=${newUploaded.key})`);
         } catch (cleanupErr) {
           console.warn(`[PUT /work-location/${id}] cleanup of new upload failed after inner error:`, cleanupErr);
@@ -198,16 +162,15 @@ router.put("/:id", upload.single("sample_image"), async (req, res) => {
 
 // DELETE
 router.delete("/:id", async (req, res) => {
-    try {
-        const workLocation = await WorkLocation.findByPk(req.params.id);
-        if (!workLocation) return res.status(404).json({ error: "Work location not found." });
+  const workLocation = await WorkLocation.findByPk(req.params.id);
+  if (!workLocation) return res.status(404).json({ error: "Not found" });
 
-        await workLocation.destroy();
-        res.status(200).json({ message: "Deleted successfully", data: workLocation });
-    } catch (error) {
-        console.error("Delete Work Location Error:", error.message);
-        res.status(500).json({ error: "Internal server error." });
-    }
+  if (workLocation.sample_image?.key) {
+    await deleteFromS3(workLocation.sample_image.key);
+  }
+
+  await workLocation.destroy();
+  res.status(200).json({ message: "Deleted successfully" });
 });
 
 module.exports = router;

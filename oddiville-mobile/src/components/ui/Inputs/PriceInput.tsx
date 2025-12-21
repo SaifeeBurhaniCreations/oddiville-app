@@ -13,6 +13,7 @@ const PriceInput = ({
     style,
     error, 
     editable,
+    keyboardType = "number-pad",
     ...props
 }: PriceInputProps) => {
     const renderAddonText = (text: string) => (
@@ -36,7 +37,7 @@ const PriceInput = ({
                     style={styles.textInput}
                     placeholder={placeholder}
                     editable={editable}
-                    keyboardType="number-pad"
+                    keyboardType={keyboardType}
                     onChangeText={onChangeText}
                     onBlur={onBlur}
                     placeholderTextColor={getColor("green", 700, 0.7)}

@@ -5,35 +5,13 @@ const {
   Chambers: chamberClient,
   RawMaterialOrder: rawMaterialOrderClient,
 } = require("../models");
-const { v4: uuidv4 } = require("uuid");
-const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const s3 = require("./s3Client");
 const {dispatchAndSendNotification} = require("./dispatchAndSendNotification");
-const notificationTypes = require("../types/notification-types");
 require("dotenv").config();
-const { sendProductionCompleteNotification } = require("./notification");
-
-const uploadToS3 = async (file) => {
-  const id = uuidv4();
-  const fileKey = `production/${id}-${file.originalname}`;
-  const bucketName = process.env.AWS_BUCKET_NAME;
-
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: bucketName,
-      Key: fileKey,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    })
-  );
-
-  const url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
-
-  return { url, key: fileKey };
-};
+const { uploadToS3 } = require("../services/s3Service");  
 
 function parseExistingImages(rawImages) {
   if (!rawImages) return [];
+  if (Array.isArray(rawImages)) return rawImages;
   try {
     return JSON.parse(rawImages);
   } catch {
@@ -42,7 +20,7 @@ function parseExistingImages(rawImages) {
 }
 
 async function uploadNewImages(files) {
-  return Promise.all(files.map((file) => uploadToS3(file))); // expected to return { url, key }
+  return Promise.all(files.map((file) => uploadToS3(file, "production"))); // expected to return { url, key }
 }
 
 async function fetchProductionOrFail(id) {
@@ -185,7 +163,7 @@ async function updateProductionCompletion(
   production.packaging = {
     type: packaging_type,
     size: packaging_size,
-    count: parseInt((rec)/parseSize)
+    count: parseSize > 0 ? Math.floor(rec / parseSize) : 0
   };
   const saved = await production.save({ transaction: opts.tx });
   return saved; 
@@ -328,7 +306,6 @@ module.exports = {
   updateChamberStocks,
   updateRawMaterialStoreDate,
   clearLaneAssignment,
-  uploadToS3,
   createAndSendProductionStartNotification,
   createAndSendProductionCompleteNotification,
   // validateAndFetchRawMaterial,

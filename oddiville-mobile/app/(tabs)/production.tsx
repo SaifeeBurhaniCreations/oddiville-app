@@ -1,199 +1,181 @@
-// 1. React and React Native core
 import React, { useMemo, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
 
-// 2. Third-party dependencies
-// No items of this type
-
-// 3. Project components
 import BottomSheet from "@/src/components/ui/BottomSheet";
 import PageHeader from "@/src/components/ui/PageHeader";
 import Tabs from "@/src/components/ui/Tabs";
 import ItemsFlatList from "@/src/components/ui/ItemsFlatList";
 import EmptyState from "@/src/components/ui/EmptyState";
 import SearchWithFilter from "@/src/components/ui/Inputs/SearchWithFilter";
-import SearchInput from "@/src/components/ui/SearchInput";
 import Loader from "@/src/components/ui/Loader";
 
-// 4. Project hooks
-import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
 import { useProduction } from "@/src/hooks/production";
 import { useLanes } from "@/src/hooks/useFetchData";
-
-// 5. Project constants/utilities
-import { getEmptyStateData } from "@/src/utils/common";
 import { getColor } from "@/src/constants/colors";
-
-// 6. Types
 import { ItemCardProps } from "@/src/types";
 
-// 7. Schemas
-// No items of this type
-
-// 8. Assets
 import noBatchImage from "@/src/assets/images/illustrations/no-batch.png";
 import noBatchImageProduction from "@/src/assets/images/illustrations/no-production-batch.png";
 import ProductionLane from "@/src/components/icons/common/ProductionLane";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
-import { RefreshControl } from "react-native-gesture-handler";
+
+import RefreshableContent from "@/src/components/ui/RefreshableContent";
 
 const ProductionScreen = () => {
   const { goTo } = useAppNavigation();
+  const { height: screenHeight } = useWindowDimensions();
 
-  const [isLoading, setIsLoading] = useState(false);
-  const { validateAndSetData } = useValidateAndOpenBottomSheet();
-  const {
-    data: productionData,
-    isFetching: productionLoading,
-    refetch: productionRefetch,
-  } = useProduction();
+  const { data: productionData, isFetching, refetch } = useProduction();
+  const { data: lanes } = useLanes();
 
-  const { data: lanes, isFetching: laneLoading } = useLanes();
-  function getLaneNameById(id: string) {
-    if (!laneLoading) {
-      return lanes?.find((lane: any) => lane.id === id)?.name;
-    }
-  }
+  const getLaneNameById = (id: string) =>
+    lanes?.find((l: any) => l.id === id)?.name;
 
   const { inQueue, inPending, inProgress, inCompleted } = useMemo(() => {
-    const inQueue: ItemCardProps[] = [];
-    const inPending: ItemCardProps[] = [];
-    const inProgress: ItemCardProps[] = [];
-    const inCompleted: ItemCardProps[] = [];
+    const buckets = {
+      inQueue: [] as ItemCardProps[],
+      inPending: [] as ItemCardProps[],
+      inProgress: [] as ItemCardProps[],
+      inCompleted: [] as ItemCardProps[],
+    };
 
-    if (!isLoading) {
-      productionData?.forEach((item: any) => {
-        const ratio =
-          item.quantity > 0
-            ? ((item.recovery / item.quantity) * 100).toFixed(2)
-            : "0.00";
+    productionData?.forEach((item: any) => {
+      const ratio =
+        item.quantity > 0
+          ? ((item.recovery / item.quantity) * 100).toFixed(2)
+          : "0.00";
 
-        const formattedItem: ItemCardProps = {
-          id: item.id,
-          name: item.product_name,
-          weight: `${item.status === "completed" ? item.recovery : item.quantity} ${item.unit || "kg" } ${item.status === "completed" ? `(${ratio}%)` : ""}`,
-          rating: item.rating || "0",
-          isActive: false,
-          lane: item.status === "completed" ? null : (item?.lane ? getLaneNameById(item?.lane) : null),
-        };
+      const formatted: ItemCardProps = {
+        id: item.id,
+        name: item.product_name,
+        weight: `${item.status === "completed" ? item.recovery : item.quantity} ${
+          item.unit || "kg"
+        } ${item.status === "completed" ? `(${ratio}%)` : ""}`,
+        rating: item.rating || "0",
+        isActive: item.status === "in-queue",
+        lane:
+          item.status === "completed"
+            ? null
+            : item.lane
+            ? getLaneNameById(item.lane)
+            : null,
+        actionLabel:
+          item.status === "in-queue" ? "Start production" : undefined,
+      };
 
-        if (item.status === "in-queue") {
-          formattedItem.isActive = true;
-          formattedItem.actionLabel = "Start production";
-          inQueue.push(formattedItem);
-        } else if (item.status === "pending") {
-          inPending.push(formattedItem);
-        } else if (item.status === "in-progress") {
-          inProgress.push(formattedItem);
-        }else if (item.status === "completed") {
-          inCompleted.push(formattedItem);
-        }
-      });
-    }
+      if (item.status === "in-queue") buckets.inQueue.push(formatted);
+      else if (item.status === "pending") buckets.inPending.push(formatted);
+      else if (item.status === "in-progress")
+        buckets.inProgress.push(formatted);
+      else if (item.status === "completed")
+        buckets.inCompleted.push(formatted);
+    });
 
-    return { inQueue, inPending, inProgress, inCompleted };
-  }, [productionData]);
+    return buckets;
+  }, [productionData, lanes]);
 
-  const handleLanePress = () => {
-    goTo("lane");
-  };
-  const emptyStateData = getEmptyStateData("production");
+  const renderSearch = () => (
+    <View style={styles.searchinputWrapper}>
+      <SearchWithFilter
+        value=""
+        onChangeText={() => {}}
+        placeholder="Search product"
+        onFilterPress={() => goTo("lane")}
+        icon={ProductionLane}
+      />
+    </View>
+  );
 
   return (
     <View style={styles.pageContainer}>
-      <PageHeader page={"Production"} />
+      <PageHeader page="Production" />
+
       <View style={styles.wrapper}>
-        <Tabs
-          tabTitles={["Pending", "Production", "Completed"]}
-          color="green"
-          style={styles.flexGrow}
-        >
-  <View style={styles.flexGrow}>
-  <View style={styles.searchinputWrapper}>
-    <SearchWithFilter
-      value=""
-      onChangeText={() => {}}
-      placeholder="Search product"
-      onFilterPress={handleLanePress}
-      icon={ProductionLane}
-    />
-  </View>
-
-  {inPending.length === 0 && inQueue.length === 0 ? (
-    <EmptyState
-      image={noBatchImage}
-      stateData={{
-        title: "No active batches",
-        description: "No active batches right now. Enjoy the calm!",
-      }}
-    />
-  ) : (
-    <ItemsFlatList items={inPending.concat(inQueue)} />
-  )}
-</View>
-<View style={styles.flexGrow}>
-  <View style={styles.searchinputWrapper}>
-    <SearchWithFilter
-      value=""
-      onChangeText={() => {}}
-      placeholder="Search product"
-      onFilterPress={handleLanePress}
-      icon={ProductionLane}
-    />
-  </View>
-
-  {inProgress.length === 0 ? (
-    <EmptyState image={noBatchImageProduction} stateData={emptyStateData} />
-  ) : (
-    <ItemsFlatList isProduction items={inProgress} />
-  )}
-</View>
-<View style={styles.flexGrow}>
-  <View style={styles.searchinputWrapper}>
-    <SearchWithFilter
-      value=""
-      onChangeText={() => {}}
-      placeholder="Search product"
-      onFilterPress={handleLanePress}
-      icon={ProductionLane}
-    />
-  </View>
-
-  {inCompleted.length === 0 ? (
-    <EmptyState image={noBatchImageProduction} stateData={emptyStateData} />
-  ) : (
-    <ItemsFlatList isProductionCompleted items={inCompleted} />
-  )}
-</View>
-
-
-          {/* {inProgress?.length === 0 ? (
-            <View style={[styles.flexGrow, { flexDirection: "row", justifyContent: "center", alignItems: "center" }]}>
-              <EmptyState image={noBatchImageProduction} stateData={emptyStateData} />
-            </View>
-          ) : (
-            <View style={styles.flexGrow}>
-              <View style={styles.searchinputWrapper}>
-                <SearchWithFilter
-                  value=''
-                  onChangeText={() => { }}
-                  placeholder={"Search product"}
-                  onFilterPress={handleLanePress}
-                  icon={ProductionLane}
+        <Tabs tabTitles={["Pending", "Production", "Completed"]} color="green">
+          {/* ---------------- PENDING TAB ---------------- */}
+          <View style={styles.flexGrow}>
+            {renderSearch()}
+            <RefreshableContent
+              isEmpty={inPending.length === 0 && inQueue.length === 0}
+              refreshing={isFetching}
+              onRefresh={refetch}
+              emptyComponent={
+                  <View style={styles.emptyStateWrapper}>
+                <EmptyState
+                style={{marginTop: -(screenHeight/ 7)}}
+                  image={noBatchImage}
+                  stateData={{
+                    title: "No active batches",
+                    description: "No active batches right now. Enjoy the calm!",
+                  }}
                 />
-              </View>
-              <ItemsFlatList isProduction={true} items={inProgress} />
-            </View>
+                </View>
+              }
+              listComponent={
+                <ItemsFlatList items={[...inPending, ...inQueue]} />
+              }
+            />
+          </View>
 
-          )} */}
+          {/* ---------------- PRODUCTION TAB ---------------- */}
+          <View style={styles.flexGrow}>
+            {renderSearch()}
+            <RefreshableContent
+              isEmpty={inProgress.length === 0}
+              refreshing={isFetching}
+              onRefresh={refetch}
+              emptyComponent={
+                  <View style={styles.emptyStateWrapper}>
+                <EmptyState
+                style={{marginTop: -(screenHeight/ 7)}}
+                  image={noBatchImageProduction}
+                  stateData={{
+                    title: "No production running",
+                    description: "Start a batch to see live production here.",
+                  }}
+                />
+                </View>
+              }
+              listComponent={
+                <ItemsFlatList isProduction items={inProgress} /> }
+            />
+          </View>
+
+          {/* ---------------- COMPLETED TAB ---------------- */}
+          <View style={styles.flexGrow}>
+            {renderSearch()}
+            <RefreshableContent
+              isEmpty={inCompleted.length === 0}
+              refreshing={isFetching}
+              onRefresh={refetch}
+              emptyComponent={
+                  <View style={styles.emptyStateWrapper}>
+                <EmptyState
+                style={{marginTop: -(screenHeight/ 7)}}
+                  image={noBatchImageProduction}
+                  stateData={{
+                    title: "No completed batches",
+                    description: "Completed batches will appear here.",
+                  }}
+                />
+                </View>
+              }
+              listComponent={
+                <ItemsFlatList
+                  isProductionCompleted
+                  items={inCompleted}
+                />
+              }
+            />
+          </View>
         </Tabs>
       </View>
+
       <BottomSheet color="green" />
-      {(isLoading || productionLoading || laneLoading) && (
+
+      {isFetching && (
         <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <Loader />
-          </View>
+          <Loader />
         </View>
       )}
     </View>
@@ -230,6 +212,11 @@ const styles = StyleSheet.create({
     height: 44,
     marginTop: 24,
     marginBottom: 24,
+  },
+  emptyStateWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
   },
 });
 

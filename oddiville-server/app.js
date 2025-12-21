@@ -30,6 +30,7 @@ const {
   sequelize
 } = require("./models");
 const { setIO } = require("./config/socket");
+const multerErrorHandler = require("./middlewares/multerErrorHandler");
 
 require("./models/Admin");
 
@@ -61,6 +62,7 @@ app.use("/flags", express.static(path.join(__dirname, "assets/flags")));
 app.use("/challan", express.static(path.join(__dirname, "assets/challan")));
 
 app.use(routes);
+app.use(multerErrorHandler);
 
 const server = http.createServer(app);
 

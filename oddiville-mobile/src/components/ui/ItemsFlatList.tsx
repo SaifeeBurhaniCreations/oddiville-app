@@ -5,7 +5,7 @@ import { ItemCardProps, ItemsFlatListProps } from "@/src/types";
 import ItemCard from './ItemCard';
 import { getRandomBackground } from '@/src/utils/arrayUtils';
 
-const ItemsFlatList = ({ items: initialItems, isProduction = false, onActionPress, isProductionCompleted = false }: ItemsFlatListProps) => {
+const ItemsFlatList = ({ items: initialItems, refreshing, onRefresh, isProduction = false, onActionPress, isProductionCompleted = false }: ItemsFlatListProps) => {
   const [items, setItems] = useState(initialItems);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMoreData, setHasMoreData] = useState(true);
@@ -58,6 +58,8 @@ const ItemsFlatList = ({ items: initialItems, isProduction = false, onActionPres
       onEndReached={loadMoreData}
       onEndReachedThreshold={0.1}
       showsVerticalScrollIndicator={false}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
     />
   );
 };

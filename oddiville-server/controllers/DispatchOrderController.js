@@ -2,7 +2,7 @@ const router = require("express").Router();
 const {
   DispatchOrder: orderClient,
   ChamberStock: stockClient,
-  Packages: packageClient,
+  // Packages: packageClient,
   TruckDetails: truckClient,
   sequelize,
 } = require("../models");
@@ -10,36 +10,14 @@ const {
   updateDispatchOrderNotificationStatus,
 } = require("../utils/UpdateDispatchNotificationStatus");
 
-const { v4: uuidv4 } = require("uuid");
-const multer = require("multer");
-const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const s3 = require("../utils/s3Client");
 const {
   dispatchAndSendNotification,
 } = require("../utils/dispatchAndSendNotification");
 const notificationTypes = require("../types/notification-types");
 require("dotenv").config();
 
-const upload = multer();
-
-const uploadToS3 = async (file) => {
-  const id = uuidv4();
-  const fileKey = `dispatchOrder/challan/${id}-${file.originalname}`;
-  const bucketName = process.env.AWS_BUCKET_NAME;
-
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: bucketName,
-      Key: fileKey,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    })
-  );
-
-  const url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
-
-  return { url, key: fileKey };
-};
+const { uploadToS3, deleteFromS3 } = require("../services/s3Service");  
+const upload = require("../middlewares/upload");
 
 const allocateChamberQuantities = async (parsedProducts) => {
   const updatedChamberAllocations = [];
@@ -230,6 +208,8 @@ router.get("/:id", async (req, res) => {
 });
 
 router.post("/create", async (req, res) => {
+  const t = await sequelize.transaction();
+
   try {
     const {
       customer_name,
@@ -244,14 +224,18 @@ router.post("/create", async (req, res) => {
     const validatedProducts = validateProducts(products);
 
     if (!customer_name) {
+      await t.rollback();
       return res.status(400).json({ error: "Customer name is required." });
     }
-    
+
     const parsedProducts = parseProducts(validatedProducts);
 
+    // 🔒 STOCK DEDUCTION (TRANSACTIONAL)
     for (const product of parsedProducts ?? []) {
       const stock = await stockClient.findOne({
         where: { product_name: product.name },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
       });
 
       if (!stock || !Array.isArray(stock.chamber)) continue;
@@ -271,22 +255,29 @@ router.post("/create", async (req, res) => {
 
       await stockClient.update(
         { chamber: stock.chamber },
-        { where: { id: stock.id } }
+        { where: { id: stock.id }, transaction: t }
       );
     }
 
-    const order = await orderClient.create({
-      customer_name,
-      address,
-      state: typeof state === "object" ? state.name : state,
-      country: country?.label || country,
-      city,
-      status: "pending",
-      est_delivered_date,
-      products: parsedProducts,
-      packages: [],
-    });
+    // ✅ CREATE ORDER (SAME TRANSACTION)
+    const order = await orderClient.create(
+      {
+        customer_name,
+        address,
+        state: typeof state === "object" ? state.name : state,
+        country: country?.label || country,
+        city,
+        status: "pending",
+        est_delivered_date,
+        products: parsedProducts,
+        packages: [],
+      },
+      { transaction: t }
+    );
 
+    await t.commit();
+
+    // 🔔 NOTIFICATION (AFTER COMMIT)
     const totalWeight = (parsedProducts ?? []).reduce((productSum, product) => {
       const chambersQuantity = (product.chambers ?? []).reduce(
         (chamberSum, chamber) => {
@@ -317,6 +308,10 @@ router.post("/create", async (req, res) => {
 
     return res.status(201).json(order);
   } catch (error) {
+    try {
+      await t.rollback();
+    } catch (_) {}
+
     console.error("Error creating order:", error?.message || error);
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -526,7 +521,7 @@ router.patch("/status/:id", async (req, res) => {
   }
 });
 
-router.patch("/update/:id", upload.any("sample_images"), async (req, res) => {
+router.patch("/update/:id", upload.any(), async (req, res) => {
   const t = await sequelize.transaction();   
 
   try {
@@ -570,12 +565,17 @@ router.patch("/update/:id", upload.any("sample_images"), async (req, res) => {
       }
     }
 
+    const uploadedKeys = [];
     if (req.files && req.files.length > 0) {
       const uploadPromises = req.files.map(async (file) => {
         try {
-          const uploaded = await uploadToS3(file);
+          const uploaded = await uploadToS3(file, "dispatchOrder/challan");
+          uploadedKeys.push(uploaded.key)
           return uploaded.url;
         } catch (uploadError) {
+          for (const key of uploadedKeys) {
+            await deleteFromS3(key);
+          }
           console.error("Error uploading file:", uploadError);
           throw new Error(`Failed to upload file: ${file.originalname}`);
         }

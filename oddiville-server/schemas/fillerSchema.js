@@ -25,32 +25,31 @@ const normalizeUnit = (unit = "") => {
   return "kg";
 };
 
+// function formatPackagesSentence(packages = []) {
+//   if (!packages.length) return "";
 
-function formatPackagesSentence(packages = []) {
-  if (!packages.length) return "";
+//   const totalPackagesQuantity = packages.reduce(
+//     (sum, pkg) => sum + Number(pkg.quantity || 0),
+//     0
+//   );
 
-  const totalPackagesQuantity = packages.reduce(
-    (sum, pkg) => sum + Number(pkg.quantity || 0),
-    0
-  );
+//   const packagesSize = packages
+//     .map((pkg) => `${pkg.size}${pkg.unit}`)
+//     .filter(Boolean);
 
-  const packagesSize = packages
-    .map((pkg) => `${pkg.size}${pkg.unit}`)
-    .filter(Boolean);
+//   if (packagesSize.length === 1)
+//     return `${totalPackagesQuantity} packages of ${packagesSize[0]}`;
+//   if (packagesSize.length === 2)
+//     return `${totalPackagesQuantity} packages of ${packagesSize.join(" & ")}`;
+//   if (packagesSize.length > 2) {
+//     const last = packagesSize.pop();
+//     return `${totalPackagesQuantity} packages of ${packagesSize.join(
+//       ", "
+//     )} & ${last}`;
+//   }
 
-  if (packagesSize.length === 1)
-    return `${totalPackagesQuantity} packages of ${packagesSize[0]}`;
-  if (packagesSize.length === 2)
-    return `${totalPackagesQuantity} packages of ${packagesSize.join(" & ")}`;
-  if (packagesSize.length > 2) {
-    const last = packagesSize.pop();
-    return `${totalPackagesQuantity} packages of ${packagesSize.join(
-      ", "
-    )} & ${last}`;
-  }
-
-  return "";
-}
+//   return "";
+// }
 
 function mapProduct(product, DispatchOrder) {
   const raw_weight = Array.isArray(product?.chambers)
@@ -123,6 +122,7 @@ function mapProduct(product, DispatchOrder) {
 //   };
 // }
 
+
 function getProductDetailsSection(
   DispatchOrder,
   product_details,
@@ -173,6 +173,7 @@ const getFillerSchema = ({
   CalendarEvent = {},
   authenticatedUser = {},
 }) => {
+console.log("ProductionById", ProductionById?.packaging);
   
   const listSections = ["Recent", "Countries"];
 
@@ -396,7 +397,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
               },
               {
                 label: ProductionById?.packaging?.type,
-                value: String(ProductionById?.packaging?.count) ?? "--",
+                value: String(ProductionById?.packaging?.count || "no bags") ?? "--",
                 icon: "box",
               },
             ],

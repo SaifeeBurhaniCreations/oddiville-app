@@ -5,16 +5,10 @@ const {
   RawMaterialOrder: rawMaterialOrderClient,
   Chambers: chambersClient,
 } = require("../models");
-const multer = require("multer");
-const {
-  sendProductionStartNotification,
-  sendProductionCompleteNotification,
-} = require("../utils/notification");
 
 const {
   dispatchAndSendNotification,
 } = require("../utils/dispatchAndSendNotification");
-const notificationTypes = require("../types/notification-types");
 
 const {
   parseExistingImages,
@@ -29,14 +23,13 @@ const {
   updateChamberStocks,
   updateRawMaterialStoreDate,
   clearLaneAssignment,
-  uploadToS3,
   createAndSendProductionStartNotification,
   createAndSendProductionCompleteNotification,
 } = require("../utils/ProductionUtils");
 require("dotenv").config();
 const sequelize = require("../config/database");
-
-const upload = multer();
+const { uploadToS3, deleteFromS3 } = require("../services/s3Service");  
+const upload = require("../middlewares/upload");
 
 router.post("/", upload.single("sample_image"), async (req, res) => {
   try {
@@ -121,7 +114,7 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
 
     let sampleImage = null;
     if (req.file) {
-      const uploaded = await uploadToS3(req.file);
+      const uploaded = await uploadToS3(req.file, "production");
       if (!uploaded?.url || !uploaded?.key) {
         return res
           .status(500)
@@ -244,9 +237,11 @@ router.patch("/:id", upload.array("sample_images"), async (req, res) => {
   const files = req.files;
   const redis = req.app.get("redis");
 
+  let newImages = []; 
+
   try {
     const existingImages = parseExistingImages(existing_sample_images);
-    const newImages = files?.length ? await uploadNewImages(files) : [];
+    newImages = files?.length ? await uploadNewImages(files) : [];
     const allImages = [...existingImages, ...newImages];
 
     const currentProduction = await fetchProductionOrFail(id);
@@ -273,120 +268,145 @@ router.patch("/:id", upload.array("sample_images"), async (req, res) => {
       return res.status(404).json({ error: "Production not found" });
     }
 
-    // Set production_id on new lane if not already set
-    if (lane && !laneRecord.production_id) {
-      const [laneCount, updatedLane] = await lanesClient.update(
-        { production_id: id },
-        { where: { id: lane }, returning: true }
-      );
-      const productionData = updatedProduction?.dataValues;
-      const laneData = updatedLane[0]?.dataValues;
+    await redis.set(`production:save:${id}`, true);
+    const raw = await redis.get(`production:save:${id}`);
+    const isStarted = raw === "true";
 
-      const description = [
-        productionData?.product_name,
-        `${productionData?.quantity}${productionData?.unit}`,
-      ];
-
-      dispatchAndSendNotification({
-        type: "lane-occupied",
-        description,
-        title: laneData?.name,
-        id: productionData?.id,
-      });
-
-      // Remove production_id from old lane if lane is being changed
-      if (oldLaneId && oldLaneId !== lane) {
-        const [_, updatedOldLane] = await lanesClient.update(
-          { production_id: null },
-          { where: { id: oldLaneId }, returning: true }
-        );
-        dispatchAndSendNotification({
-          type: "lane-empty",
-          title: updatedOldLane[0]?.dataValues?.name,
-          id: productionData?.id,
-        });
+    return res.status(200).json({
+      ...updatedProduction.dataValues,
+      isStarted: isStarted ?? false,
+    });
+  } catch (error) {
+    // ✅ SAFE CLEANUP
+    if (newImages.length) {
+      for (const img of newImages) {
+        if (img?.key) {
+          try {
+            await deleteFromS3(img.key);
+          } catch (delErr) {
+            console.warn("Failed to cleanup S3 image:", img.key, delErr);
+          }
+        }
       }
     }
 
-    await redis.set(`production:save:${id}`, true);
-const raw = await redis.get(`production:save:${id}`);
-const isStarted = raw === "true"; 
-
-
-    return res.status(200).json({...updatedProduction?.dataValues, isStarted: isStarted ?? false});
-  } catch (error) {
-    console.error("Error during updating Production:", error?.message || error);
-    return res
-      .status(500)
-      .json({ error: "Internal server error, please try again later." });
+    console.error("Error during updating Production:", error);
+    return res.status(500).json({
+      error: "Internal server error, please try again later.",
+    });
   }
 });
 
 router.patch("/start/:id", upload.single("sample_image"), async (req, res) => {
   const { id } = req.params;
-  const { status, start_time, rating, sample_quantity, ...otherFields } =
-    req.body;
+  const {
+    status,
+    start_time,
+    rating,
+    sample_quantity,
+    supervisor,
+    ...otherFields
+  } = req.body;
+
+  console.log("START PATCH PAYLOAD", {
+    id,
+    body: req.body,
+    file: !!req.file,
+  });
 
   try {
-    const rawData = await productionClient.findByPk(id);
-    if (!rawData) {
+    // 1️⃣ Fetch production
+    const production = await productionClient.findByPk(id);
+    if (!production) {
       return res.status(404).json({ error: "Production not found" });
     }
 
+    // 2️⃣ Validate status transition
     if (!status || !["in-queue", "in-progress"].includes(status)) {
-      return res
-        .status(400)
-        .json({ error: "Invalid or missing status value." });
+      return res.status(400).json({
+        error: "Invalid status. Allowed: in-queue, in-progress",
+      });
     }
 
-    const { lane } = rawData;
-    const laneRecord = lane ? await validateLaneAssignment(lane, id) : null;
+    // ⛔ Prevent restarting an already running production
+    if (production.status === "in-progress" && status === "in-progress") {
+      return res.status(400).json({
+        error: "Production already started",
+      });
+    }
 
+    // 3️⃣ Validate lane ONLY if starting production
+    let laneRecord = null;
+    if (status === "in-progress" && production.lane) {
+      laneRecord = await validateLaneAssignment(production.lane, id);
+    }
+
+    // 4️⃣ Build update payload (SAFE)
     const updatedFields = {
       status,
-      rating,
+      rating: rating ? Number(rating) : production.rating,
+      supervisor: supervisor ?? production.supervisor,
       updatedAt: new Date(),
       ...otherFields,
     };
 
-    if (status === "in-progress" && laneRecord) {
-      updatedFields.start_time = start_time || new Date();
-      await createAndSendProductionStartNotification(rawData, laneRecord?.name);
+    // 5️⃣ Handle start logic
+    if (status === "in-progress") {
+      updatedFields.start_time = start_time
+        ? new Date(start_time)
+        : new Date();
+
+      await createAndSendProductionStartNotification(
+        production,
+        laneRecord?.name
+      );
     }
 
-    let sample_image = null;
+    // 6️⃣ Preserve old image key for cleanup
+    const oldImageKey = production.sample_image?.key || null;
+    let newSampleImage = null;
+
+    // 7️⃣ Upload new sample image if provided
     if (req.file) {
-      try {
-        const uploaded = await uploadToS3(req.file);
-        if (!uploaded?.url || !uploaded?.key) {
-          return res
-            .status(500)
-            .json({ error: "Failed to upload sample image." });
-        }
-        sample_image = {
-          url: uploaded.url,
-          key: uploaded.key,
-        };
-      } catch (err) {
-        console.error("S3 upload failed:", err);
-        return res.status(500).json({ error: "Image upload failed." });
+      const uploaded = await uploadToS3(req.file, "production");
+
+      if (!uploaded?.url || !uploaded?.key) {
+        return res.status(500).json({
+          error: "Failed to upload sample image",
+        });
       }
+
+      newSampleImage = {
+        url: uploaded.url,
+        key: uploaded.key,
+      };
+
+      updatedFields.sample_image = newSampleImage;
     }
 
-    if (sample_quantity) {
-      const newQty = Number(rawData.quantity) - Number(sample_quantity);
+    // 8️⃣ Adjust quantity if sample is used
+    if (sample_quantity && Number(sample_quantity) > 0) {
+      const newQty =
+        Number(production.quantity) - Number(sample_quantity);
+
       updatedFields.quantity = Math.max(newQty, 0);
     }
 
-    await rawMaterialOrderClient.update(
-      {
-        sample_quantity: Number(sample_quantity),
-        sample_image,
-        rating: Number(rating),
-      },
-      { where: { id: rawData?.raw_material_order_id } }
-    );
+    // 9️⃣ Update RawMaterialOrder safely
+    if (production.raw_material_order_id) {
+      await rawMaterialOrderClient.update(
+        {
+          sample_quantity: Number(sample_quantity || 0),
+          sample_image: newSampleImage ?? production.sample_image,
+          rating: rating !== undefined ? Number(rating) : production.rating,
+        },
+        {
+          where: { id: production.raw_material_order_id },
+        }
+      );
+    }
 
+    // 🔟 Update Production
     const [updatedCount, updatedRows] = await productionClient.update(
       updatedFields,
       {
@@ -395,19 +415,35 @@ router.patch("/start/:id", upload.single("sample_image"), async (req, res) => {
       }
     );
 
-    if (updatedCount === 0) {
-      return res
-        .status(404)
-        .json({ error: "Failed to update production entry." });
+    if (!updatedCount) {
+      return res.status(404).json({
+        error: "Failed to update production",
+      });
     }
 
-    return res.status(200).json(updatedRows[0]?.dataValues);
+    // 1️⃣1️⃣ Cleanup old S3 image AFTER success
+    if (newSampleImage && oldImageKey) {
+      try {
+        await deleteFromS3(oldImageKey);
+      } catch (cleanupErr) {
+        console.warn(
+          "Failed to cleanup old image:",
+          cleanupErr.message
+        );
+      }
+    }
+
+    return res.status(200).json(updatedRows[0].dataValues);
   } catch (error) {
-    console.error("Error during production update:", error);
-    return res
-      .status(500)
-      .json({ error: "Internal server error. Please try again later." });
-  }
+  console.error("🔥 START ROUTE CRASH 🔥");
+  console.error(error);
+  console.error(error?.stack);
+  console.error("🔥 END ROUTE CRASH 🔥");
+
+  return res.status(error?.status || 500).json({
+    error: error?.error || error?.message || "Server error",
+  });
+}
 });
 
 router.patch("/complete/:id", async (req, res) => {

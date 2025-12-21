@@ -156,12 +156,12 @@ const styles = StyleSheet.create({
         flexDirection: "column",
         gap: 12,
     },
-    twoColumnRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        gap: 4,
-    },
+twoColumnRow: {
+  flexDirection: 'row',
+  alignItems: 'flex-start',
+  gap: 8,
+  flexWrap: 'wrap',
+},
     separator: {
         width: 1,
         backgroundColor: getColor("green", 100),
@@ -205,23 +205,24 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     detailRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 1,
     },
     detailsBorder: {
-        borderBottomWidth: 1,
-        borderColor: getColor("green", 100),
+    borderBottomWidth: 1,
+    borderColor: getColor("green", 100),
     },
     detailTextWrapper: {
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        flex: 1,
-        gap: 2,
-    },
+    flexDirection: 'column',
+            alignItems: 'flex-start',
+            flex: 1,
+            gap: 2,
+        },
     detailValue: {
-        flexWrap: 'wrap',
-        flexShrink: 1,
+    flexShrink: 1,
+    flexWrap: "wrap",
     },
 
 });

@@ -1,7 +1,6 @@
 const router = require("express").Router();
 const { Op } = require("sequelize");
 const { format } = require("date-fns");
-const { v4: uuidv4 } = require("uuid");
 const {
   RawMaterialOrder: RawMaterialOrderClient,
   RawMaterial: RawMaterialClient,
@@ -9,49 +8,11 @@ const {
   Production: ProductionClient,
 } = require("../models");
 
-const multer = require("multer");
-const { PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
-const s3 = require("../utils/s3Client");
 const {dispatchAndSendNotification} = require("../utils/dispatchAndSendNotification");
-const notificationTypes = require("../types/notification-types");
-const { sendRawMaterialStatus, sendRawMaterialCreatedNotification } = require("../utils/notification");
 require("dotenv").config();
 
-const upload = multer();
-
-const uploadToS3 = async (file) => {
-  const id = uuidv4();
-  const fileKey = `raw-materials/${id}-${file.originalname}`;
-  const bucketName = process.env.AWS_BUCKET_NAME;
-
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: bucketName,
-      Key: fileKey,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    })
-  );
-
-  const url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
-
-  return { url, key: fileKey };
-};
-
-const deleteFromS3 = async (key) => {
-  if (!key) return;
-
-  try {
-    await s3.send(
-      new DeleteObjectCommand({
-        Bucket: process.env.AWS_BUCKET_NAME,
-        Key: key,
-      })
-    );
-  } catch (error) {
-    console.error("Failed to delete file from S3:", error.message || error);
-  }
-};
+const { uploadToS3, deleteFromS3 } = require("../services/s3Service");  
+const upload = require("../middlewares/upload");
 
 router.get("/all", async (req, res) => {
   try {
@@ -100,7 +61,10 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
 
     let sample_image = null;
     if (req.file) {
-      const uploaded = await uploadToS3(req.file);
+      const uploaded = await uploadToS3({
+        file: req.file,
+        folder: "raw-materials/sample-image",
+      });
       sample_image = {
         url: uploaded.url,
         key: uploaded.key,
@@ -172,12 +136,14 @@ router.patch("/:id", upload.single("sample_image"), async (req, res) => {
 
     // ✅ Update image ONLY if a new file is uploaded
     if (req.file) {
-      const uploaded = await uploadToS3(req.file);
+  if (rawMaterial.sample_image?.key) {
+    await deleteFromS3(rawMaterial.sample_image.key);
+  }
 
-      // (Recommended) delete old image from S3
-      if (rawMaterial.sample_image?.key) {
-        await deleteFromS3(rawMaterial.sample_image.key);
-      }
+      const uploaded = await uploadToS3({
+        file: req.file,
+        folder: "raw-materials/sample-image",
+      });
 
       updatedFields.sample_image = {
         url: uploaded.url,
@@ -450,7 +416,15 @@ router.patch("/order/:id", upload.single("challan"), async (req, res) => {
     if (driver_name) truckDetails.driver_name = driver_name;
 
     if (req.file) {
-      const uploaded = await uploadToS3(req.file);
+      const oldKey = rawData?.truck_details?.challan?.key;
+        if (oldKey) {
+          await deleteFromS3(oldKey);
+        }
+      const uploaded = await uploadToS3({
+        file: req.file,
+        folder: "raw-materials/challan",
+      });
+
       if (!uploaded?.url || !uploaded?.key) {
         return res
           .status(500)

@@ -1,31 +1,9 @@
 const router = require("express").Router();
 const { TruckDetails: truckDetailClient } = require("../models");
-const { v4: uuidv4 } = require('uuid');
-const multer = require('multer');
-const { PutObjectCommand } = require('@aws-sdk/client-s3');
-const s3 = require('../utils/s3Client');
-const {dispatchAndSendNotification} = require("../utils/dispatchAndSendNotification");
-const notificationTypes = require("../types/notification-types");
+const { uploadToS3, deleteFromS3 } = require("../services/s3Service");  
+const upload = require("../middlewares/upload");
+
 require('dotenv').config()
-
-const upload = multer();
-
-const uploadToS3 = async (file) => {
-    const id = uuidv4();
-    const fileKey = `dispatchOrder/truck-images/${id}-${file.originalname}`;
-    const bucketName = process.env.AWS_BUCKET_NAME;
-
-    await s3.send(new PutObjectCommand({
-        Bucket: bucketName,
-        Key: fileKey,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-    }));
-
-    const url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
-
-    return { url, key: fileKey };
-};
 
 // GET all truck details
 router.get("/", async (req, res) => {
@@ -59,7 +37,7 @@ router.post("/", upload.single('challan'), async (req, res) => {
 
         let sampleImage = null;
         if (req.file) {
-            const uploaded = await uploadToS3(req.file);
+            const uploaded = await uploadToS3(req.file, "dispatchOrder/truck-images");
             if (!uploaded?.url || !uploaded?.key) {
                 return res.status(500).json({ error: "Failed to upload sample image." });
             }

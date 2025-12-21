@@ -7,30 +7,8 @@ const {
   ChamberStock: ChamberStockClient,
   sequelize,
 } = require("../models");
-const multer = require("multer");
-const { v4: uuidv4 } = require("uuid");
-const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const s3 = require("../utils/s3Client");
-const upload = multer();
-
-const uploadToS3 = async (file) => {
-  const id = uuidv4();
-  const fileKey = `packages/${id}-${file.originalname}`;
-  const bucketName = process.env.AWS_BUCKET_NAME;
-
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: bucketName,
-      Key: fileKey,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    })
-  );
-
-  const url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
-
-  return { url, key: fileKey };
-};
+const { uploadToS3, deleteFromS3 } = require("../services/s3Service");  
+const upload = require("../middlewares/upload");
 
 // GET all packages
 router.get("/", async (req, res) => {
@@ -97,175 +75,95 @@ router.post(
     { name: "package_image", maxCount: 1 },
   ]),
   async (req, res) => {
+    let uploadedImage = null;
+    let uploadedPackageImage = null;
+
     try {
       let { product_name, raw_materials, types, chamber_name } = req.body;
 
-      try {
-        if (typeof raw_materials === "string") {
-          raw_materials = JSON.parse(raw_materials);
-        }
-        if (typeof types === "string") {
-          types = JSON.parse(types);
-        }
-      } catch (err) {
-        return res.status(400).json({
-          error: "Invalid JSON format for raw_materials or types",
-        });
+      // -------- Parse JSON ----------
+      if (typeof raw_materials === "string") raw_materials = JSON.parse(raw_materials);
+      if (typeof types === "string") types = JSON.parse(types);
+
+      if (!product_name || !chamber_name) {
+        return res.status(400).json({ error: "product_name and chamber_name are required" });
       }
 
-      if (!product_name || typeof product_name !== "string") {
-        return res
-          .status(400)
-          .json({ error: "product_name is required and must be a string." });
-      }
-      if (!chamber_name || typeof chamber_name !== "string") {
-        return res
-          .status(400)
-          .json({ error: "chamber_name is required and must be a string." });
-      }
-      if (!Array.isArray(raw_materials) || raw_materials.length === 0) {
-        return res
-          .status(400)
-          .json({
-            error: "raw_materials must be a non-empty array of strings.",
-          });
-      }
-      if (!Array.isArray(types) || types.length === 0) {
-        return res
-          .status(400)
-          .json({ error: "types must be a non-empty array." });
+      if (!Array.isArray(raw_materials) || !raw_materials.length) {
+        return res.status(400).json({ error: "raw_materials must be array" });
       }
 
-      types = types.map((item) => {
-        if (typeof item === "string") {
-          return { size: item.trim(), quantity: "0", unit: null };
-        }
-        return {
-          size:
-            typeof item.size === "string"
-              ? item.size.trim()
-              : String(item.size ?? ""),
-          quantity:
-            typeof item.quantity === "string"
-              ? item.quantity.trim()
-              : String(item.quantity ?? "0"),
-          unit:
-            item.unit === null
-              ? null
-              : typeof item.unit === "string"
-              ? item.unit.trim()
-              : item.unit,
-        };
-      });
-
-      for (const item of types) {
-        if (typeof item.size !== "string" || item.size.length === 0) {
-          return res
-            .status(400)
-            .json({ error: "Each type must have a non-empty 'size' string." });
-        }
-        if (typeof item.quantity !== "string") {
-          return res
-            .status(400)
-            .json({ error: "Each type must have 'quantity' as a string." });
-        }
-        if (
-          !(
-            item.unit === null ||
-            (typeof item.unit === "string" &&
-              ["kg", "gm", "null"].includes(item.unit))
-          )
-        ) {
-          return res
-            .status(400)
-            .json({
-              error:
-                "Unit must be 'kg', 'gm', 'null' as a string, or actual null.",
-            });
-        }
+      if (!Array.isArray(types) || !types.length) {
+        return res.status(400).json({ error: "types must be array" });
       }
 
       product_name = product_name.trim();
-      raw_materials = raw_materials.map((v) =>
-        typeof v === "string" ? v.trim() : v
-      );
       chamber_name = chamber_name.trim();
 
-      if (!sequelize) {
-        return res
-          .status(500)
-          .json({ error: "Database transaction unavailable." });
+      // -------- Upload files FIRST ----------
+      if (req.files?.image?.[0]) {
+        uploadedImage = await uploadToS3(req.files.image[0], "packages");
       }
 
-      const result = await sequelize.transaction(async (t) => {
-        let image = null;
-        let package_image = null;
-        if (req.files?.image?.[0]) {
-          const uploaded = await uploadToS3(req.files.image[0]);
-          image = {
-            url: uploaded.url,
-            key: uploaded.key,
-          };
-        }
+      if (req.files?.package_image?.[0]) {
+        uploadedPackageImage = await uploadToS3(req.files.package_image[0], "packages");
+      }
 
-        if (req.files?.package_image?.[0]) {
-          const uploadedProduct = await uploadToS3(req.files.package_image[0]);
-          package_image = {
-            url: uploadedProduct.url,
-            key: uploadedProduct.key,
-          };
-        }
+      // -------- DB TRANSACTION ----------
+      const result = await sequelize.transaction(async (t) => {
         const pkg = await Packages.create(
           {
             product_name,
             raw_materials,
             types,
             chamber_name,
-            image,
-            package_image,
+            image: uploadedImage && {
+              url: uploadedImage.url,
+              key: uploadedImage.key,
+            },
+            package_image: uploadedPackageImage && {
+              url: uploadedPackageImage.url,
+              key: uploadedPackageImage.key,
+            },
           },
           { transaction: t }
         );
 
         const chamber = await ChambersClient.findOne({
           where: { chamber_name },
-          raw: true,
           transaction: t,
         });
 
         if (!chamber) {
-          const err = new Error("Chamber not found.");
+          const err = new Error("Chamber not found");
           err.status = 400;
           throw err;
         }
 
         const firstType = types[0];
         const item_name = `${product_name}:${firstType.size}`;
-        const unit = firstType.unit;
         const quantityNum = parseFloat(firstType.quantity) || 0;
 
         const existingItem = await DryWarehouseClient.findOne({
           where: { item_name },
-          raw: true,
           transaction: t,
         });
 
         if (!existingItem) {
-          const DryWarehouseCreatePayload = {
-            item_name,
-            warehoused_date: new Date(),
-            description: `${product_name} Packaging with Raw materials ${raw_materials.join(
-              ","
-            )}`,
-            chamber_id: chamber.id,
-            quantity_unit: quantityNum,
-            unit,
-            sample_image: image,
-          };
-
-          await DryWarehouseClient.create(DryWarehouseCreatePayload, {
-            transaction: t,
-          });
+          await DryWarehouseClient.create(
+            {
+              item_name,
+              warehoused_date: new Date(),
+              description: `${product_name} Packaging`,
+              chamber_id: chamber.id,
+              quantity_unit: quantityNum,
+              unit: firstType.unit,
+              sample_image: uploadedImage
+                ? { url: uploadedImage.url, key: uploadedImage.key }
+                : null,
+            },
+            { transaction: t }
+          );
         }
 
         return pkg;
@@ -273,11 +171,14 @@ router.post(
 
       return res.status(201).json(result);
     } catch (error) {
+      // -------- CLEANUP S3 ON FAILURE ----------
+      if (uploadedImage?.key) await deleteFromS3(uploadedImage.key);
+      if (uploadedPackageImage?.key) await deleteFromS3(uploadedPackageImage.key);
+
       console.error("Error creating package:", error);
-      if (error?.status === 400) {
-        return res.status(400).json({ error: error.message || "Bad request." });
-      }
-      return res.status(500).json({ error: "Internal server error." });
+      return res.status(error.status || 500).json({
+        error: error.message || "Internal server error",
+      });
     }
   }
 );
@@ -493,6 +394,12 @@ router.delete("/delete/:id", async (req, res) => {
     const { id } = req.params;
     const pkg = await Packages.findByPk(id);
     if (!pkg) return res.status(404).json({ error: "Package not found." });
+    if (pkg.image) {
+      await deleteFromS3(pkg.image.key);
+    }
+    if (pkg.package_image) {
+      await deleteFromS3(pkg.package_image.key);
+    }
 
     await pkg.destroy();
     return res.status(200).json({ message: "Package deleted successfully." });

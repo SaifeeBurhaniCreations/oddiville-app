@@ -7,31 +7,10 @@ const {
   Packages: packagesClient,
   sequelize,
 } = require("../models");
-const multer = require("multer");
-const { v4: uuidv4 } = require("uuid");
-const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const s3 = require("../utils/s3Client");
 require("dotenv").config();
-const upload = multer();
-
-const uploadToS3 = async (file) => {
-  const id = uuidv4();
-  const fileKey = `chamber-stock/packed-item/${id}-${file.originalname}`;
-  const bucketName = process.env.AWS_BUCKET_NAME;
-
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: bucketName,
-      Key: fileKey,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    })
-  );
-
-  const url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
-
-  return { url, key: fileKey };
-};
+const { uploadToS3, deleteFromS3 } = require("../services/s3Service");  
+const upload = require("../middlewares/upload");
+// chamber-stock/packed-item
 
 const parsedPackages = async ({ packages, product_name, transaction }) => {
   if (!Array.isArray(packages)) return [];

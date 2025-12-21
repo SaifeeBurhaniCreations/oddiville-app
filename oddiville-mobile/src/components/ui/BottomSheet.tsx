@@ -6,6 +6,8 @@ import {
   ScrollView,
   Pressable,
   ViewStyle,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import Modal from "react-native-modal";
 
@@ -46,6 +48,9 @@ import { RESET_FORM_ENUM } from "@/src/constants/resetFormEnum";
 import { ChamberQty } from "@/src/redux/slices/bottomsheet/chamber-ratings.slice";
 
 import { optionListEnumKeys } from "@/src/types";
+import { Dimensions } from "react-native";
+
+const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 function filterOptions<T extends optionListEnumKeys>(
   options: T,
@@ -221,24 +226,30 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
       ],
     };
 
-    selectedChambers.forEach((chamberName) => {
-      validationRules[chamberName] = [
-        {
-          type: "custom",
-          validate: (value: any) => value,
-          // value &&
-          // typeof value === "object" &&
-          // "quantity" in value &&
-          // value.quantity !== 0 &&
-          // value.quantity !== null &&
-          // value.quantity !== undefined &&
-          // value.rating !== 0 &&
-          // value.rating !== null &&
-          // value.rating !== undefined,
-          message: `Selected chamber must have some quantity!`,
-        },
-      ];
-    });
+validationRules["__chamberQtyRatingCheck"] = [
+  {
+    type: "custom",
+    validate: (_: any, allValues: StoreProductFormFields) => {
+      if (!selectedChambers || selectedChambers.length === 0) return false;
+
+      return selectedChambers.every((chamberName) => {
+        const chamber = allValues[chamberName] as
+          | { quantity: number; rating: number }
+          | undefined;
+
+        if (!chamber) return false;
+
+        return (
+          Number(chamber.quantity) > 0 &&
+          Number(chamber.rating) > 0
+        );
+      });
+    },
+    message:
+      "All selected chambers must have both quantity and rating",
+  },
+];
+
 
     validationRules["discard_quantity"] = [
       {
@@ -665,10 +676,13 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
             style={styles.bottomsheetHandle}
           ></Pressable>
         </View>
-        <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.verticalContainer}
-          showsVerticalScrollIndicator={false}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <ScrollView
+            style={styles.scrollContainer}
+            contentContainerStyle={styles.verticalContainer}
+            showsVerticalScrollIndicator={false}
           bounces={false}
         >
           {config.sections?.map((section: SectionConfig, secidx: number) =>
@@ -680,6 +694,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
             </View>
           )}
         </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -696,15 +711,16 @@ const styles = StyleSheet.create({
     backgroundColor: getColor("light", 200),
     padding: 16,
     borderRadius: 16,
-    maxHeight: "95%",
+    maxHeight: Math.min(SCREEN_HEIGHT * 0.85, 700),
   },
-  scrollContainer: {
-    flexGrow: 0,
-  },
-  verticalContainer: {
-    flexDirection: "column",
-    gap: 16,
-  },
+scrollContainer: {
+  flexGrow: 1,
+},
+verticalContainer: {
+  flexGrow: 1,
+  paddingBottom: 24,
+  gap: 16,
+},
   HStack: {
     flexDirection: "row",
   },

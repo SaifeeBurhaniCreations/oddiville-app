@@ -63,29 +63,20 @@ export function useUpdateChamberstock() {
 
   return useMutation({
     mutationFn: async ({ id, data }) => {
-
-      const response = await updateChamberStock({ id, data });
-      return response.chamberStock;
+      const res = await updateChamberStock({ id, data });
+      return res.chamberStock;
     },
-    onSuccess: (updatedChamberstock, variables) => {
-      
-      if (!updatedChamberstock?.id) return;
 
-      queryClient.setQueryData(["chamberstock"], (oldData = []) => {
-        const index = oldData.findIndex(
-          (item) => item.id === updatedChamberstock.id
-        );
+    onSuccess: (updated) => {
+      if (!updated?.id) return;
 
-        if (index !== -1) {
-          const newData = [...oldData];
-          newData[index] = updatedChamberstock;
-          return newData;
-        } else {
-          return [...oldData, updatedChamberstock];
-        }
-      });
+      queryClient.setQueryData(["chamberstock"], (old = []) =>
+        Array.isArray(old)
+          ? old.map((it) => (it.id === updated.id ? updated : it))
+          : old
+      );
 
-      queryClient.setQueryData(["chamberstock", variables.id], updatedChamberstock);
+      queryClient.setQueryData(["chamberstock", updated.id], updated);
     },
   });
 }

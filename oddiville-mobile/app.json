@@ -19,7 +19,7 @@
       "router": {
         "origin": false
       },
-      "API_URL": "https://oddiapi.sbcws.com",
+      "API_URL": "https://f74120e55799.ngrok-free.app",
       "eas": {
         "projectId": "ed40e76d-b0ed-40cc-af22-1cf28030d635"
       }
@@ -29,7 +29,9 @@
         "foregroundImage": "./src/assets/images/icon-main.png",
         "backgroundColor": "#3D874C"
       },
-      "package": "com.oddiville.mobile"
+      "abiFilters": ["armeabi-v7a", "arm64-v8a"],
+      "package": "com.oddiville.mobile",
+      "minSdkVersion": 21
     },
     "web": {
       "bundler": "metro",

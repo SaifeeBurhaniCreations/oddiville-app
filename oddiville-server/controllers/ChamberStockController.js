@@ -145,24 +145,16 @@ router.get("/:id", async (req, res) => {
 router.patch("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const incoming = Array.isArray(req.body)
-      ? req.body
-      : Array.isArray(req.body?.data)
-      ? req.body.data
-      : null;
+      const { product_name, chamber } = req.body;
 
-    if (!incoming) {
-      return res
-        .status(400)
-        .json({ error: "Request body must be an array of chamber objects or { data: [...] }" });
-    }
+      if (!Array.isArray(chamber) || chamber.length === 0) {
+        return res.status(400).json({
+          error: "Request body must include { chamber: [...] }",
+        });
+      }
 
-    if (!Array.isArray(incoming) || incoming.length === 0) {
-      return res.status(400).json({ error: "data must be a non-empty array" });
-    }
-
-    for (let i = 0; i < incoming.length; i++) {
-      const it = incoming[i];
+    for (let i = 0; i < chamber.length; i++) {
+      const it = chamber[i];
       if (!it || typeof it !== "object") {
         return res.status(400).json({ error: `data[${i}] must be an object` });
       }
@@ -187,6 +179,15 @@ router.patch("/:id", async (req, res) => {
         return { status: 404, body: { error: "ChamberStock not found" } };
       }
 
+            if (
+        typeof product_name === "string" &&
+        product_name.trim() !== "" &&
+        product_name !== chamberStock.product_name
+      ) {
+        chamberStock.product_name = product_name.trim();
+      }
+
+
       const storedChambers = Array.isArray(chamberStock.chamber)
         ? [...chamberStock.chamber]
         : [];
@@ -199,8 +200,8 @@ router.patch("/:id", async (req, res) => {
 
       const normalized = [];
 
-      for (let i = 0; i < incoming.length; i++) {
-        const it = incoming[i];
+      for (let i = 0; i < chamber.length; i++) {
+        const it = chamber[i];
         const idStr = String(it.id);
         if (!existingIds.has(idStr)) {
           return {
@@ -231,10 +232,9 @@ router.patch("/:id", async (req, res) => {
           rating: ratingStr,
         });
       }
-
-      chamberStock.chamber = normalized;
-
-      await chamberStock.save({ transaction: t });
+    chamberStock.chamber = normalized;
+    
+    await chamberStock.save({ transaction: t });
 
       return {
         status: 200,

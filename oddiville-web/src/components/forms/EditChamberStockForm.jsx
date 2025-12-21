@@ -3,6 +3,20 @@ import { useChambers, useChamberstock } from "../../hooks/chamberStock";
 import { useArrayTransformer } from "../../sbc/utils/arrayTransformer/useArrayTransformer";
 import { useMemo } from "react";
 
+const resolveChamberName = (c, lookup) => {
+  const cid = c.id ?? c.chamberId ?? c._id;
+  const found = cid ? lookup.get(String(cid)) : undefined;
+
+  return (
+    found?.name ??
+    found?.chamber_name ??
+    found?.displayName ??
+    c.chamber_name ??
+    c.name ??
+    String(cid ?? "")
+  );
+};
+
 const ChamberStockForm = ({ id, form, isLoading, handleSubmit, handleExit }) => {
   const { values, errors, setField, isValid } = form;
   const { isLoading: isChamberStockLoading, data: chamberStock } =
@@ -28,33 +42,21 @@ const chamberStockSafe = Array.isArray(chamberStock) ? chamberStock : [];
       map: (service) => {
         if (!Array.isArray(service.chamber)) return service;
         const s = { ...service };
-        s.chamber = s.chamber.map((c) => {
-          const cid = c.id ?? c.chamberId ?? c._id;
-          const found =
-            cid !== undefined ? chamberLookup.get(String(cid)) : undefined;
-          const newName =
-            (found &&
-              (found.name ?? found.chamber_name ?? found.displayName)) ??
-            c.chamber_name ??
-            c.name ??
-            String(cid ?? "");
-          return { ...c, chamber_name: newName };
-        });
-        return s;
+        s.chamber = s.chamber.map((c) => ({
+        ...c,
+        chamber_name:
+          c.chamber_name && c.chamber_name.trim() !== ""
+            ? c.chamber_name
+            : resolveChamberName(c, chamberLookup),
+
+      }));
+       return s;
       },
     },
-    [chambers]
+    [chamberLookup]
   );
 
   if (isChamberStockLoading || isChamberLoading) return <div>Loading…</div>;
-
-  const newName =
-  (found &&
-    (found.name ?? found.chamber_name ?? found.displayName)) ??
-  c.chamber_name ??
-  c.name ??
-  String(cid ?? "");
-
   
   return (
     <form onSubmit={handleSubmit}>

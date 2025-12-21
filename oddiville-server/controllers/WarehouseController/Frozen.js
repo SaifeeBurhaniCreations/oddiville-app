@@ -1,29 +1,8 @@
 const router = require("express").Router();
 const { FrozenWarehouse, Production } = require("../../models");
-const multer = require("multer");
-const { v4: uuidv4 } = require("uuid");
-const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const s3 = require("../../utils/s3Client");
+const { uploadToS3, deleteFromS3 } = require("../../services/s3Service");  
+const upload = require("../../middlewares/upload");
 const redisClient = require("../../devops/redis")
-
-const upload = multer();
-
-const uploadToS3 = async (file) => {
-  const id = uuidv4();
-  const fileKey = `warehouses/frozen/${id}-${file.originalname}`;
-  const bucketName = process.env.AWS_BUCKET_NAME;
-
-  await s3.send(new PutObjectCommand({
-    Bucket: bucketName,
-    Key: fileKey,
-    Body: file.buffer,
-    ContentType: file.mimetype,
-  }));
-
-  const url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
-
-  return { url, key: fileKey };
-};
 
 // CREATE
 router.post("/", upload.single("sample_image"), async (req, res) => {
@@ -36,7 +15,7 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
 
     let sample_image = null;
     if (req.file) {
-      const uploaded = await uploadToS3(req.file);
+      const uploaded = await uploadToS3(req.file, "warehouses/frozen");
       sample_image = {
         url: uploaded.url,
         key: uploaded.key,
@@ -185,14 +164,17 @@ router.delete("/:id", async (req, res) => {
     const item = await FrozenWarehouse.findByPk(req.params.id);
     if (!item) return res.status(404).json({ error: "Item not found." });
 
+    if (item.sample_image?.key) {
+      await deleteFromS3(item.sample_image.key);
+    }
+
     await redisClient.del(`frozen:product:${item.id}`);
     await redisClient.del(`frozen:chamber:${item.chamber}`);
 
     await item.destroy();
-
-    res.status(200).json({ message: "Deleted successfully", data: item });
-  } catch (error) {
-    console.error("Delete Frozen Error:", error.message);
+    res.json({ message: "Deleted successfully", data: item });
+  } catch (err) {
+    console.error("Delete Frozen Error:", err);
     res.status(500).json({ error: "Internal server error." });
   }
 });

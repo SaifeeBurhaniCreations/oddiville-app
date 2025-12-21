@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
 import TrashIcon from "../icons/common/TrashIcon";
 import FileIcon from "../icons/common/FileIcon";
+  import { useWindowDimensions } from "react-native";
 
 type UploadStrategy = "upload" | "browse" | "both";
 
@@ -39,19 +40,24 @@ const SimpleFileUpload = ({
   children = "Upload receipt",
   uploadedChildren = "Uploaded receipt",
   title = "Upload file",
-  description = "Supported: .png & .jpg & .jpeg",
+  description = "Supported: .png & .jpg",
 }: Props) => {
+
+const { width } = useWindowDimensions();
+const IS_NARROW_SCREEN = width < 360;
   const [fileUri, setFileUri] = fileState;
   const [isPicking, setIsPicking] = useState(false);
   const [touched, setTouched] = useState(false);
 
   const errorOpacity = useRef(new Animated.Value(0)).current;
 
-  const strategy: UploadStrategy = useMemo(() => {
-    if (both) return "both";
-    if (onlyPhoto) return "upload";
-    return "browse";
-  }, [both, onlyPhoto]);
+const strategy: UploadStrategy = useMemo(() => {
+  if (IS_NARROW_SCREEN) return "upload";
+
+  if (both) return "both";
+  if (onlyPhoto) return "upload";
+  return "browse";
+}, [both, onlyPhoto]);
 
   useEffect(() => {
     Animated.timing(errorOpacity, {
@@ -141,7 +147,13 @@ const SimpleFileUpload = ({
     switch (strategy) {
       case "both":
         return (
-          <View style={{ flexDirection: "row", gap: 12 }}>
+          <View
+            style={{
+              flexDirection: IS_NARROW_SCREEN ? "column" : "row",
+              gap: 12,
+              width: "100%",
+            }}
+          >
             <Button
               variant="outline"
               size="sm"
@@ -167,6 +179,7 @@ const SimpleFileUpload = ({
             size="sm"
             disabled={disabled || isPicking}
             onPress={handleTakePhoto}
+            style={IS_NARROW_SCREEN ? { width: "100%" } : undefined}
           >
             Upload
           </Button>
@@ -192,22 +205,23 @@ const SimpleFileUpload = ({
         <H4>{children}</H4>
 
         <Pressable
-          style={[
-            styles.card,
-            {
-              borderColor:
-                error && touched ? getColor("red") : getColor("green"),
-            },
-          ]}
-          disabled={disabled}
-        >
-          <View>
-            <B3>{title}</B3>
-            <C1 color={getColor("green", 400)}>{description}</C1>
-          </View>
+  style={[
+    styles.card,
+    IS_NARROW_SCREEN && styles.cardNarrow,
+  ]}
+  disabled={disabled}
+>
+  {/* LEFT */}
+  <View style={styles.textBlock}>
+    <B3>{title}</B3>
+    <C1 color={getColor("green", 400)}>{description}</C1>
+  </View>
 
-          {renderActions()}
-        </Pressable>
+  {/* RIGHT */}
+  <View style={styles.actionsBlock}>
+    {renderActions()}
+  </View>
+</Pressable>
 
         {error && touched && (
           <Animated.View style={{ opacity: errorOpacity }}>
@@ -253,18 +267,31 @@ const SimpleFileUpload = ({
 
 export default SimpleFileUpload;
 
-// ---------- Styles ----------
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: getColor("light"),
-    flexDirection: "row",
-    justifyContent: "space-between",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    alignItems: "center",
-  },
+  backgroundColor: getColor("light"),
+  flexDirection: "row",
+  alignItems: "center",
+  borderRadius: 12,
+  padding: 12,
+  borderWidth: 1,
+  borderStyle: "dashed",
+},
+
+cardNarrow: {
+  flexWrap: "wrap",
+},
+
+textBlock: {
+  flex: 1,
+  paddingRight: 12,   
+},
+
+actionsBlock: {
+  flexShrink: 0,      
+  maxWidth: "45%",   
+  alignItems: "flex-end",
+},
   cardItemLeft: {
     flexDirection: "row",
     gap: 8,

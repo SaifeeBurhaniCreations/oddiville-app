@@ -127,6 +127,8 @@ export interface ItemCardProps {
 
 export interface ItemsFlatListProps {
   items: ItemCardProps[],
+  refreshing?: boolean,
+  onRefresh?: () => void,
   isProduction?: boolean,
   isProductionCompleted?: boolean,
   onActionPress?: () => void,

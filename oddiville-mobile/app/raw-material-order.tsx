@@ -1,6 +1,6 @@
 import PageHeader from '@/src/components/ui/PageHeader';
 import { getColor } from '@/src/constants/colors';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, View, Dimensions } from 'react-native';
 import BackButton from '@/src/components/ui/Buttons/BackButton';
 import Select from '@/src/components/ui/Select';
 import Input from '@/src/components/ui/Inputs/Input';
@@ -17,7 +17,7 @@ import { getLimitedMaterialNames, getLimitedVendorNames } from '@/src/utils/arra
 import DetailsToast from '@/src/components/ui/DetailsToast'
 import { useFormValidator } from '@/src/sbc/form';
 import FormField from '@/src/sbc/form/FormField';
-import { RootStackParamList, VendorInputState } from '@/src/types';
+import { VendorInputState } from '@/src/types';
 import { clearRawMaterials, setSource } from '@/src/redux/slices/bottomsheet/raw-material.slice';
 import { addRawMaterialOrder } from '@/src/services/rawmaterial.service';
 import { clearVendors } from '@/src/redux/slices/bottomsheet/vendor.slice';
@@ -26,6 +26,8 @@ import { Platform } from 'react-native';
 import { useAuth } from '@/src/context/AuthContext';
 import { resolveAccess } from '@/src/utils/policiesUtils';
 import { PURCHASE_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
+
+const screenHeight = Dimensions.get('window').height;
 
 type RawMaterialOrderForm = {
     quantity: number | null;
@@ -203,9 +205,15 @@ const RawMaterialOrderScreen = () => {
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={styles.keyboardAvoidingView}
-                    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 110}
                 >
-                    <ScrollView>
+                    <ScrollView
+                                keyboardShouldPersistTaps="handled"
+                                 contentContainerStyle={{
+    paddingBottom: Math.max(24, Math.min(56, screenHeight * 0.2)),
+  }}
+                                showsVerticalScrollIndicator={false}
+                            >
                         <View style={styles.headerBodyWrapper}>
                             <BackButton label='Order raw material' backRoute={backRoute} style={styles.paddingH16} />
 

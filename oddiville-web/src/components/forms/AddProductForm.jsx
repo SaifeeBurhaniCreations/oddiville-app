@@ -16,11 +16,7 @@ const AddProductForm = ({
     fetchBanners,
     onFileChange,
     editMode,
-    setBanners,
-    setBannerFile,
-    setFetchedBanners,
-    resetProductForm,
-    setEditIndex,
+resetToAddMode
   } = bannersProps;
 
 
@@ -29,6 +25,7 @@ const AddProductForm = ({
     errors: productErrors,
     setField: setProductField,
   } = productForm;
+  
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -38,19 +35,10 @@ const AddProductForm = ({
   const svg = `<svg stroke='white' fill='none' stroke-width='3' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M5 13l4 4L19 7'/></svg>`;
   const encoded = encodeURIComponent(svg);
 
-    const switchToAddMode = () => {
-    resetProductForm();
-    setEditIndex(null);
-    setBanners(null);
-    setBannerFile(null);
-    setFetchedBanners(null);
-    setDeleteBanners(null);
-  };
-
   return (
     <div className="card">
       <div className="card-header">
-        <h6>{editMode || id ? "Edit Product" : "Add New Product"}</h6>
+<h6>{editMode ? "Edit Product" : "Add New Product"}</h6>
       </div>
 
       <div className="card-body">
@@ -178,25 +166,25 @@ const AddProductForm = ({
             );
           })
         )}
-    <div className="d-flex gap-2">
-      <button
-        type="button"
-        className={`btn mt-3 ${editMode ? "btn-warning" : "btn-success"}`}
-        onClick={addProductToList}
-      >
-        {editMode ? "Update Product" : "Add Product"}
-      </button>
+<div className="d-flex gap-2">
+  <button
+    type="button"
+    className={`btn mt-3 ${editMode ? "btn-warning" : "btn-success"}`}
+    onClick={addProductToList}
+  >
+    {editMode ? "Update Product" : "Add Product"}
+  </button>
 
-      {editMode && (
-        <button
-          type="button"
-          className="btn mt-3 btn-secondary"
-          onClick={switchToAddMode}
-        >
-          Add New Product
-        </button>
-      )}
-    </div>
+  {editMode && (
+    <button
+      type="button"
+      className="btn mt-3 btn-secondary"
+      onClick={resetToAddMode}
+    >
+      Add New Product
+    </button>
+  )}
+</div>
 
       </div>
     </div>

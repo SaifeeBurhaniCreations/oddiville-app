@@ -4,18 +4,17 @@ import { HStack } from "../layout/HStack";
 import { BottomBarProps } from "@/src/types";
 import { getColor } from "@/src/constants/colors";
 import { VStack } from "../layout/VStack";
-import { B4 } from "../typography/Typography";
+import { B4, B5 } from "../typography/Typography";
 import { Dimensions, StyleSheet, View } from "react-native";
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 const {width: screenWidth } = Dimensions.get("screen");
 
-const BottomBar: React.FC<BottomTabBarProps> = ({ navigation, state, variant }) => {
-    const [activeTab, setActiveTab] = useState<string | null>(null);
+const BottomBar: React.FC<BottomTabBarProps> = ({ navigation, state }) => {
     const [pressedTab, setPressedTab] = useState<string | null>(null);
 
     function renderBottombarItems(items: BottomBarProps) {
-        return items.map((item, index) => {
+        return items.map((item) => {
 
         const isActive = state.routes[state.index]?.name === item.component;
 
@@ -27,7 +26,6 @@ const BottomBar: React.FC<BottomTabBarProps> = ({ navigation, state, variant }) 
                     style={[styles.tabWrapper, isPressed && styles.pressedTab]}
                     onTouchStart={() => setPressedTab(item.name)}
                     onTouchEnd={() => {
-                        setActiveTab(null)
                         navigation.navigate(item.component); 
                         setPressedTab(null);
                     }}
@@ -43,7 +41,11 @@ const BottomBar: React.FC<BottomTabBarProps> = ({ navigation, state, variant }) 
                             </HStack>
                         )}
 
-                        <B4 color={getColor("green", isActive ? 500 : 700,)}>{item.name}</B4>
+                        {screenWidth <= 360 ? (
+                            <B5 color={getColor("green", isActive ? 500 : 700,)}>{item.name}</B5>
+                        ) : (
+                            <B4 color={getColor("green", isActive ? 500 : 700,)}>{item.name}</B4>
+                        )}
                     </VStack>
                 </View>
             );

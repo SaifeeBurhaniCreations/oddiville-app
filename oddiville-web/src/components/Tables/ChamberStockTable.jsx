@@ -119,16 +119,18 @@ const EditForm = ({ service, onCancel, onSave, saving }) => {
 
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    setValues({
-      product_name: service.product_name || "",
-      category: service.category || "",
-      chamber: Array.isArray(service.chamber)
-        ? service.chamber.map((c) => ({ ...c }))
-        : [],
-    });
-    setErrors({});
-  }, [service]);
+useEffect(() => {
+  setValues({
+    product_name: service.product_name || "",
+    category: service.category || "",
+    chamber: Array.isArray(service.chamber)
+      ? service.chamber.map((c) => ({
+          ...c,
+          __originalName: c.chamber_name ?? "",
+        }))
+      : [],
+  });
+}, [service]);
 
   const setChamberField = (index, field, value) => {
     setValues((prev) => {
@@ -185,6 +187,7 @@ const EditForm = ({ service, onCancel, onSave, saving }) => {
     if (!validate()) return;
 
     const payload = {
+      product_name: values.product_name,
       chamber: values.chamber.map((c) => ({
         ...c,
         quantity: String(c.quantity),
@@ -204,8 +207,17 @@ const EditForm = ({ service, onCancel, onSave, saving }) => {
     >
       <div className="mb-3">
         <label className="form-label">Product</label>
-        <input className="form-control" value={values.product_name} readOnly />
-      </div>
+        <input
+          className="form-control"
+          value={values.product_name}
+    onChange={(e) =>
+      setValues((prev) => ({
+        ...prev,
+        product_name: e.target.value,
+      }))
+    }
+  />
+</div>
 
       <div className="mb-3">
         <label className="form-label">Category</label>
@@ -393,8 +405,14 @@ const ChamberStockTable = ({ chamberStock = [], isLoading = false }) => {
       rating: c.rating ? String(c.rating) : "",
     }));
 
-    updateChamberstock.mutate(
-      { id: serviceId, data: normalizedPayload },
+        updateChamberstock.mutate(
+          {
+            id: serviceId,
+            data: {
+              product_name: payload.product_name,
+              chamber: normalizedPayload,
+            },
+          },
       {
         onSuccess: (result) => {
           navigate("/chamberstock/edit");

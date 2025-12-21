@@ -1,30 +1,7 @@
 const router = require("express").Router();
 const { Lanes } = require("../models");
-const multer = require("multer");
-const { v4: uuidv4 } = require("uuid");
-const { PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
-const s3 = require("../utils/s3Client");
-
-const upload = multer();
-
-const uploadToS3 = async (file) => {
-  const id = uuidv4();
-  const fileKey = `lanes/${id}-${file.originalname}`;
-  const bucketName = process.env.AWS_BUCKET_NAME;
-
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: bucketName,
-      Key: fileKey,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    })
-  );
-
-  const url = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileKey}`;
-
-  return { url, key: fileKey };
-};
+const { uploadToS3, deleteFromS3 } = require("../services/s3Service");  
+const upload = require("../middlewares/upload");
 
 // CREATE
 router.post("/", upload.single("sample_image"), async (req, res) => {
@@ -44,7 +21,7 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
 
     let sample_image = null;
     if (req.file) {
-      const uploaded = await uploadToS3(req.file);
+      const uploaded = await uploadToS3(req.file, "lanes");
       sample_image = {
         url: uploaded.url,
         key: uploaded.key,
@@ -123,7 +100,7 @@ router.put("/:id", upload.single("sample_image"), async (req, res) => {
     try {
       if (req.file) {
         console.info(`[PUT /lanes/${id}] req.file present: name=${req.file.originalname}, size=${req.file.size}`);
-        newUploaded = await uploadToS3(req.file);
+        newUploaded = await uploadToS3(req.file, "lanes");
 
         if (!newUploaded || !newUploaded.url || !newUploaded.key) {
           console.warn(`[PUT /lanes/${id}] uploadToS3 returned unexpected value:`, newUploaded);
@@ -149,12 +126,7 @@ router.put("/:id", upload.single("sample_image"), async (req, res) => {
       if (count === 0) {
         if (newUploaded) {
           try {
-            await s3.send(
-              new DeleteObjectCommand({
-                Bucket: process.env.AWS_BUCKET_NAME,
-                Key: newUploaded.key,
-              })
-            );
+            deleteFromS3(newUploaded.key);
           } catch (cleanupErr) {
             console.warn(`[PUT /lanes/${id}] cleanup failed for newly uploaded object:`, cleanupErr);
           }
@@ -166,12 +138,7 @@ router.put("/:id", upload.single("sample_image"), async (req, res) => {
 
       if (oldKey && ((newUploaded && newUploaded.key) || updatePayload.sample_image === null)) {
         try {
-          await s3.send(
-            new DeleteObjectCommand({
-              Bucket: process.env.AWS_BUCKET_NAME,
-              Key: oldKey,
-            })
-          );
+            deleteFromS3(oldKey);
         } catch (delErr) {
           console.warn(`[PUT /lanes/${id}] failed to delete old S3 object key=${oldKey}`, delErr);
         }
@@ -181,12 +148,7 @@ router.put("/:id", upload.single("sample_image"), async (req, res) => {
     } catch (innerErr) {
       if (newUploaded) {
         try {
-          await s3.send(
-            new DeleteObjectCommand({
-              Bucket: process.env.AWS_BUCKET_NAME,
-              Key: newUploaded.key,
-            })
-          );
+          deleteFromS3(newUploaded.key);
         } catch (cleanupErr) {
         }
       }
