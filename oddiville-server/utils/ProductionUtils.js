@@ -5,17 +5,19 @@ const {
   Chambers: chamberClient,
   RawMaterialOrder: rawMaterialOrderClient,
 } = require("../models");
-const {dispatchAndSendNotification} = require("./dispatchAndSendNotification");
+const {
+  dispatchAndSendNotification,
+} = require("./dispatchAndSendNotification");
 require("dotenv").config();
-const { uploadToS3 } = require("../services/s3Service");  
-
+const { uploadToS3 } = require("../services/s3Service");
+const { throwHttpError } = require("../utils/normalizeError");
 function parseExistingImages(rawImages) {
   if (!rawImages) return [];
   if (Array.isArray(rawImages)) return rawImages;
   try {
     return JSON.parse(rawImages);
   } catch {
-    throw { status: 400, error: "Invalid existing_sample_images format" };
+    throwHttpError("Invalid existing_sample_images format", 400);
   }
 }
 
@@ -25,16 +27,16 @@ async function uploadNewImages(files) {
 
 async function fetchProductionOrFail(id) {
   const prod = await productionClient.findOne({ where: { id } });
-  if (!prod) throw { status: 404, error: "Production not found" };
+  if (!prod) throwHttpError("Production not found", 404);
   return prod;
 }
 
 async function validateLaneAssignment(laneId, productionId) {
   const laneRecord = await lanesClient.findOne({ where: { id: laneId } });
-  if (!laneRecord) throw { status: 404, error: "Lane not found" };
+  if (!laneRecord) throwHttpError("Lane not found", 404);
 
   if (laneRecord.production_id && laneRecord.production_id !== productionId) {
-    throw { status: 400, error: "Lane already assigned to another production" };
+    throwHttpError("Lane already assigned to another production", 400);
   }
 
   return laneRecord;
@@ -73,7 +75,7 @@ async function updateProductionRecord(id, updatedFields) {
 
 async function createAndSendProductionStartNotification(productionData, lane) {
   const { id, product_name, quantity, unit } = productionData;
-const description = [`${quantity}${unit ?? ""}`.trim(), lane].filter(Boolean);
+  const description = [`${quantity}${unit ?? ""}`.trim(), lane].filter(Boolean);
   dispatchAndSendNotification({
     type: "production-start",
     description,
@@ -102,40 +104,38 @@ async function createAndSendProductionCompleteNotification(
 }
 
 async function validateAndFetchProduction(id, opts = {}) {
-  const production = await productionClient.findByPk(id, { transaction: opts.tx });
-  if (!production) throw { status: 404, message: "Production not found" };
+  const production = await productionClient.findByPk(id, {
+    transaction: opts.tx,
+  });
+  if (!production) throwHttpError("Production not found", 404);
   if (production.status === "completed")
-    throw { status: 400, message: "Production already completed" };
+    throwHttpError("Production already completed", 400);
   return production;
 }
 
 async function validateAndFetchChambers(chambers, opts = {}) {
   if (!Array.isArray(chambers) || chambers.length === 0) {
-    throw {
-      status: 400,
-      message: "Chambers array is required and must not be empty",
-    };
+    throwHttpError("Chambers array is required and must not be empty", 400);
   }
 
   const ids = chambers.map((c) => c.id);
   const validChambers = await chamberClient.findAll({
     where: { id: ids },
-    transaction: opts.tx,   
-    lock: opts.tx ? opts.tx.LOCK.UPDATE : undefined, 
+    transaction: opts.tx,
+    lock: opts.tx ? opts.tx.LOCK.UPDATE : undefined,
   });
 
   if (validChambers.length !== chambers.length) {
-    throw { status: 404, message: "One or more chambers not found" };
+    throwHttpError("One or more chambers not found", 404);
   }
 
   return validChambers;
 }
 
-
 async function validateAndFetchRawMaterial(id) {
   const rawMaterial = await rawMaterialOrderClient.findByPk(id);
-  if (!rawMaterial) throw { status: 404, message: "Raw Material not found" };
-  return rawMaterial; 
+  if (!rawMaterial) throwHttpError("Raw Material not found", 404);
+  return rawMaterial;
 }
 
 async function updateProductionCompletion(
@@ -148,31 +148,36 @@ async function updateProductionCompletion(
   opts = {}
 ) {
   const qty = Number(production.quantity) || 0;
-  const parseSize = Number(packaging_size)
+  const parseSize = Number(packaging_size);
   const rec = Number(recovery) || 0;
   const wastage = Number(wastage_quantity) || 0;
 
-  
   production.wastage_quantity =
-    wastage === 0
-      ? String(qty - rec)
-      : String(wastage);
+    wastage === 0 ? String(qty - rec) : String(wastage);
   production.end_time = endTime || new Date();
   production.status = "completed";
   production.recovery = recovery;
   production.packaging = {
     type: packaging_type,
     size: packaging_size,
-    count: parseSize > 0 ? Math.floor(rec / parseSize) : 0
+    count: parseSize > 0 ? Math.floor(rec / parseSize) : 0,
   };
   const saved = await production.save({ transaction: opts.tx });
-  return saved; 
+  return saved;
 }
 
-async function updateChamberStocks(production, chambers, chamberInstances, opts = {}) {
+async function updateChamberStocks(
+  production,
+  chambers,
+  chamberInstances,
+  opts = {}
+) {
   const { product_name, unit, quantity, raw_material_order_id } = production;
 
-  const rawMaterialOrder = await validateAndFetchRawMaterial(raw_material_order_id, opts);
+  const rawMaterialOrder = await validateAndFetchRawMaterial(
+    raw_material_order_id,
+    opts
+  );
 
   let stock = await chamberStockClient.findOne({
     where: { product_name, category: "material" },
@@ -197,7 +202,9 @@ async function updateChamberStocks(production, chambers, chamberInstances, opts 
     } else if (typeof rawImg === "string") {
       imageVal = rawImg;
     } else if (Array.isArray(rawImg)) {
-      const first = rawImg.find((x) => x && (typeof x === "string" || typeof x.url === "string"));
+      const first = rawImg.find(
+        (x) => x && (typeof x === "string" || typeof x.url === "string")
+      );
       if (first) {
         imageVal = typeof first === "string" ? first : first.url;
       } else {
@@ -206,7 +213,10 @@ async function updateChamberStocks(production, chambers, chamberInstances, opts 
     } else if (typeof rawImg === "object" && rawImg.url) {
       imageVal = rawImg.url;
     } else {
-      console.warn("updateChamberStocks: unsupported rawMaterialOrder.sample_image shape:", rawImg);
+      console.warn(
+        "updateChamberStocks: unsupported rawMaterialOrder.sample_image shape:",
+        rawImg
+      );
       imageVal = null;
     }
   } catch (e) {
@@ -239,7 +249,8 @@ async function updateChamberStocks(production, chambers, chamberInstances, opts 
 
     for (const c of chambers) {
       const index = chambersList.findIndex(
-        (item) => String(item.id) === String(c.id) && item.rating === String(c.rating)
+        (item) =>
+          String(item.id) === String(c.id) && item.rating === String(c.rating)
       );
 
       if (index >= 0) {
@@ -274,7 +285,10 @@ async function updateChamberStocks(production, chambers, chamberInstances, opts 
 
 async function updateRawMaterialStoreDate(production, opts = {}) {
   if (production.raw_material_order_id) {
-    const order = await rawMaterialOrderClient.findByPk(production.raw_material_order_id, { transaction: opts.tx });
+    const order = await rawMaterialOrderClient.findByPk(
+      production.raw_material_order_id,
+      { transaction: opts.tx }
+    );
     if (order) {
       order.store_date = production.end_time || new Date();
       await order.save({ transaction: opts.tx });
@@ -284,14 +298,15 @@ async function updateRawMaterialStoreDate(production, opts = {}) {
 
 async function clearLaneAssignment(production, opts = {}) {
   if (production.lane) {
-    const lane = await lanesClient.findByPk(production.lane, { transaction: opts.tx });
+    const lane = await lanesClient.findByPk(production.lane, {
+      transaction: opts.tx,
+    });
     if (lane) {
       lane.production_id = null;
       await lane.save({ transaction: opts.tx });
     }
   }
 }
-
 
 module.exports = {
   parseExistingImages,

@@ -1730,7 +1730,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: "center",
     justifyContent: "center",
-  },
-});
-
-export default PackageScreen;
+  }, }); export default PackageScreen;

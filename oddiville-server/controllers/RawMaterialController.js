@@ -95,7 +95,7 @@ router.delete("/:id", async (req, res) => {
     if (!rawMaterial) {
       return res.status(404).json({ error: "Raw Material not found" });
     }
-
+ 
     // Delete image from S3 if exists
     if (rawMaterial.sample_image?.key) {
       await deleteFromS3(rawMaterial.sample_image.key);
