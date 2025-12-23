@@ -9,6 +9,7 @@ const {
 } = require("../models");
 require("dotenv").config();
 
+
 const parsedPackages = async ({ packages, product_name, transaction }) => {
   const result = [];
 
@@ -69,6 +70,42 @@ const upsertPackages = (existing, incoming) => {
   }
   return list;
 };
+
+const tareWeightByType = {
+  pouch: [
+    { max: 100, tare: 0.4 },
+    { max: 250, tare: 0.6 },
+    { max: 500, tare: 0.9 },
+    { max: 1000, tare: 1.5 },
+    { max: 2000, tare: 2.5 },
+    { max: 5000, tare: 4 },
+    { max: 10000, tare: 7 },
+    { max: 25000, tare: 15 },
+    { max: 30000, tare: 18 },
+    { max: 50000, tare: 25 },
+  ],
+  bag: [
+    { max: 1000, tare: 1 },
+    { max: 5000, tare: 2 },
+    { max: 25000, tare: 5 },
+  ],
+  box: [
+    { max: 5000, tare: 3 },
+    { max: 25000, tare: 8 },
+    { max: Infinity, tare: 15 },
+  ],
+};
+
+function getTareWeight({ type, size, unit }) {
+  const sizeInGram =
+    unit.toLowerCase() === "kg" ? Number(size) * 1000 : Number(size);
+
+  const ranges = tareWeightByType[type];
+  if (!ranges) return 1;
+
+  const found = ranges.find((r) => sizeInGram <= r.max);
+  return found ? found.tare : 1;
+}
 
 router.get("/", async (req, res) => {
   try {
@@ -132,22 +169,28 @@ router.post("/", async (req, res) => {
       transaction: t,
     });
 
+    /* 🔹 OPTIMIZATION: build once */
+    const packageUnitMap = {};
+    for (const p of packageList) {
+      packageUnitMap[String(p.size)] = p.unit || "gm";
+    }
+
     const incomingPackaging = packages.map((p) =>
       buildPackedPackaging(p, normalizedType)
     );
 
     const chamberIds = chambers.map((c) => String(c.id));
-    const chambersFromDB = await Chambers.findAll({
+    const chambersFromDB = await chambersClient.findAll({
       where: { id: { [Op.in]: chamberIds } },
       transaction: t,
     });
 
-    const dryChambers = new Set(
+    const dryChamberIds = new Set(
       chambersFromDB.filter((c) => c.tag === "dry").map((c) => String(c.id))
     );
 
     const incomingChambers = chambers
-      .filter((c) => !dryChambers.has(String(c.id)))
+      .filter((c) => !dryChamberIds.has(String(c.id)))
       .map((c) => ({
         id: String(c.id),
         quantity: String(c.quantity),
@@ -161,13 +204,14 @@ router.post("/", async (req, res) => {
 
     /* -------- FIND OR CREATE PACKED STOCK (BY RATING) -------- */
 
-    let stock = await ChamberStock.findOne({
+    let stock = await chamberStockClient.findOne({
       where: { product_name, category: "packed", rating: String(rating) },
       transaction: t,
+      lock: t.LOCK.UPDATE,
     });
 
     if (!stock) {
-      stock = await ChamberStock.create(
+      stock = await chamberStockClient.create(
         {
           product_name,
           category: "packed",
@@ -181,7 +225,6 @@ router.post("/", async (req, res) => {
         { transaction: t }
       );
     } else {
-      /* ---- CHAMBER UPSERT (id + rating) ---- */
       const mergedChambers = [...(stock.chamber || [])];
 
       for (const inc of incomingChambers) {
@@ -207,9 +250,10 @@ router.post("/", async (req, res) => {
     /* -------- RAW MATERIAL DEDUCTION -------- */
 
     for (const raw of rawProducts) {
-      const rawStock = await ChamberStock.findOne({
+      const rawStock = await chamberStockClient.findOne({
         where: { product_name: raw.product_name, category: "material" },
         transaction: t,
+        lock: t.LOCK.UPDATE,
       });
 
       if (!rawStock) continue;
@@ -227,7 +271,7 @@ router.post("/", async (req, res) => {
       await rawStock.update({ chamber: updated }, { transaction: t });
     }
 
-    /* -------- DRY WAREHOUSE DEDUCTION -------- */
+    /* DRY WAREHOUSE DEDUCTION */
 
     const usageBySize = {};
     for (const p of packageList) {
@@ -237,31 +281,64 @@ router.post("/", async (req, res) => {
 
     for (const size in usageBySize) {
       const dry = await DryWarehouse.findOne({
-        where: { item_name: `${product_name}:${size}` },
+        where: {
+          item_name: `${product_name}:${size}`,
+          unit: packageUnitMap[String(size)] || "gm",
+        },
         transaction: t,
+        lock: t.LOCK.UPDATE,
       });
 
-      if (!dry) throw new Error(`Dry item missing: ${size}`);
+      if (!dry) {
+        throw new Error(`Dry item missing for size ${size}`);
+      }
 
-      dry.quantity_unit = String(
-        Math.max(0, Number(dry.quantity_unit) - usageBySize[size] / 1000)
-      );
+      const tare = getTareWeight({
+        type: normalizedType,
+        size,
+        unit: packageUnitMap[String(size)] || "gm",
+      });
 
+      const usedKg = (usageBySize[size] * tare) / 1000;
+
+      const availableKg = Number(dry.quantity_unit);
+      if (availableKg < usedKg) {
+        throw new Error(`Insufficient dry stock for ${product_name}:${size}`);
+      }
+
+      dry.quantity_unit = String(Number(dry.quantity_unit) - usedKg);
       await dry.save({ transaction: t });
     }
 
-    /* -------- PACKAGES TYPES DEDUCTION -------- */
+    /* PACKAGES TYPES DEDUCTION */
 
-    const pkgRow = await Packages.findOne({
+    const pkgRow = await packagesClient.findOne({
       where: { product_name },
       transaction: t,
+      lock: t.LOCK.UPDATE,
     });
 
     if (pkgRow?.types) {
-      const updated = pkgRow.types.map((t) => {
-        const used = usageBySize[String(t.size)] || 0;
-        const remaining = Math.max(0, Number(t.quantity) * 1000 - used) / 1000;
-        return { ...t, quantity: String(remaining) };
+      const updated = pkgRow.types.map((tp) => {
+        const usedPackets = usageBySize[String(tp.size)] || 0;
+
+        const tare = getTareWeight({
+          type: normalizedType,
+          size: tp.size,
+          unit: tp.unit || "gm",
+        });
+
+        const usedGram = usedPackets * tare;
+        const availableGram = Number(tp.quantity) * 1000;
+
+        if (usedGram > availableGram) {
+          throw new Error(`Insufficient package stock for size ${tp.size}`);
+        }
+
+        return {
+          ...tp,
+          quantity: String((availableGram - usedGram) / 1000),
+        };
       });
 
       await pkgRow.update({ types: updated }, { transaction: t });

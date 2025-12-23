@@ -25,7 +25,10 @@ module.exports = (sequelize, Sequelize) => {
       category: Sequelize.ENUM("actionable", "informative", "today"),
       read: { type: Sequelize.BOOLEAN, defaultValue: false },
       extraData: { type: Sequelize.JSON, allowNull: true },
-      color: Sequelize.STRING,
+      color: {
+        type: Sequelize.ENUM("red", "yellow", "green"),
+        allowNull: true,
+      },
     },
     { timestamps: true }
   );
