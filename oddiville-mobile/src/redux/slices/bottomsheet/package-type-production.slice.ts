@@ -2,12 +2,12 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const PackageTypeProductionSlice = createSlice({
   name: "package type production",
-  initialState: { selectedPackageType: "bag" },
+  initialState: { selectedPackageType: "pouch" },
   reducers: {
     selectPackageType: (state, action) => {
       state.selectedPackageType = action.payload;
     },
-    clearPackageType: () => ({ selectedPackageType: "bag" }),
+    clearPackageType: () => ({ selectedPackageType: "pouch" }),
   },
 });
 

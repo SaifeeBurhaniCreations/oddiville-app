@@ -571,7 +571,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
             placeholder_second: "Choose type",
             label_second: "Type",
             alignment: "half",
-            value: packageTypeProduction ?? "bag",
+            value: packageTypeProduction ?? "pouch",
             key: "select-package-type",
             formField_1: "product_name",
             source: "add-product-package",
@@ -703,8 +703,9 @@ const styles = StyleSheet.create({
   sheetContainer: {
     backgroundColor: getColor("light", 200),
     padding: 16,
+    paddingBottom: 32,
     borderRadius: 16,
-    maxHeight: Math.min(SCREEN_HEIGHT * 0.85, 700),
+    maxHeight: Math.min(SCREEN_HEIGHT * 0.95, 700),
   },
 scrollContainer: {
   flexGrow: 1,

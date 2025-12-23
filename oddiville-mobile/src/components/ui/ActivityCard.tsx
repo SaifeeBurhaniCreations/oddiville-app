@@ -113,8 +113,6 @@ const ActivityCard = ({ activity, color, bgSvg: BgSvg, onPress }: ActivityCardPr
     const willButtonDisabled =
       metaData && metaData.disableButton && metaData.disableButton === true;
 
-      console.log("statusColor", statusColor);
-      
     return (
       <Pressable style={styles.container} onPress={handleCardPress}>
         <BgSvg style={styles.cardBackgroundImage} />

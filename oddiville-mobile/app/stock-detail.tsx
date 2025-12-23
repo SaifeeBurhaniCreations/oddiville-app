@@ -5,12 +5,26 @@ import { getColor } from "@/src/constants/colors";
 import { useParams } from "@/src/hooks/useParams";
 import PageHeader from "@/src/components/ui/PageHeader";
 import BackButton from "@/src/components/ui/Buttons/BackButton";
-import { useChamberStockByName } from "@/src/hooks/useChamberStock";
+import { ChamberStock, useChamberStockByName } from "@/src/hooks/useChamberStock";
 import ChamberCard from "@/src/components/ui/ChamberCard";
 import { getEmptyStateData, mapPackageIcon } from "@/src/utils/common";
 import EmptyState from "@/src/components/ui/EmptyState";
 import PaperRollIcon from "@/src/components/icons/packaging/PaperRollIcon";
 import BoxIcon from "@/src/components/icons/common/BoxIcon";
+import { B4 } from "@/src/components/typography/Typography";
+import StarIcon from "@/src/components/icons/page/StarIcon";
+
+const getPackedLeadingIcon = (item: {
+  size: { value: number; unit: string };
+  count: number;
+}) => {
+  return mapPackageIcon({
+    size: item.size.value,
+    unit: item.size.unit as "kg" | "gm" | "qn",
+    quantity: item.count.toString(),
+    rawSize: `${item.size.value} ${item.size.unit}`,
+  });
+};
 
 const StockDetail = () => {
     const { product_name } = useParams("stock-detail", "product_name")
@@ -19,31 +33,95 @@ const StockDetail = () => {
     
 const { chamberStock, refetch, isFetching } = useChamberStockByName([product_name ?? ""]);
 
-      console.log("chamberStock", JSON.stringify(chamberStock, null, 2));
+      // console.log("chamberStock", JSON.stringify(chamberStock, null, 2));
     const stock = chamberStock?.[0];
+// const stock =  {
+//         "id": "a8604231-ad46-47bf-83f2-74e4046fa532",
+//         "product_name": "Frozen Peas",
+//         "image": "https://c1e1fba659f7.ngrok-free.app/chamber-stock/packed-item/packaging.png",
+//         "category": "packed",
+//         "unit": "kg",
+//         "packaging": [
+//             {
+//                 "size": {
+//                     "value": 500,
+//                     "unit": "gm"
+//                 },
+//                 "type": "pouch",
+//                 "count": 600
+//             },
+//             {
+//                 "size": {
+//                     "value": 1,
+//                     "unit": "kg"
+//                 },
+//                 "type": "pouch",
+//                 "count": 300
+//             }
+//         ],
+//         "chamber": [
+//             {
+//                 "id": "8cd93b32-b694-4c5d-b541-0034152010bc",
+//                 "quantity": "600",
+//                 "rating": "5"
+//             }
+//         ],
+//         "packages": [
+//             {
+//                 "size": "500",
+//                 "unit": "gm",
+//                 "rawSize": "500 gm",
+//                 "quantity": "600",
+//                 "dry_item_id": "73611ea9-4fd3-43bd-a851-607704c537a2"
+//             },
+//             {
+//                 "size": "1",
+//                 "unit": "kg",
+//                 "rawSize": "1 kg",
+//                 "quantity": "600",
+//                 "dry_item_id": "2381d1af-4fd3-43bd-a851-607704c537a2"
+//             }
+//         ],
+//         "createdAt": "2025-12-23T13:33:13.554Z",
+//         "updatedAt": "2025-12-23T13:33:13.554Z"
+//     } as ChamberStock
 
     const emptyStateData = getEmptyStateData("no-stock-detail");
 
     if (!stock) return <EmptyState stateData={emptyStateData} />;
     
-const LeadingIcon =
+  const materialByRating =
+  stock?.category === "material" &&
+  !Array.isArray(stock.packaging)
+    ? stock.chamber.reduce((acc, ch) => {
+        const rating = ch.rating;
+        const qty = Number(ch.quantity);
+
+        if (!acc[rating]) acc[rating] = 0;
+        acc[rating] += qty;
+
+        return acc;
+      }, {} as Record<string, number>)
+    : {};
+
+    const materialPackaging =
   stock.category === "material" && !Array.isArray(stock.packaging)
+    ? stock.packaging
+    : null;
+
+const LeadingIcon =
+  materialPackaging
     ? mapPackageIcon({
-        size: stock.packaging.size.value,
-        unit: stock.packaging.size.unit as "kg" | "gm" | "qn",
-        quantity: stock.packaging.count.toString(),
-        rawSize: stock.packaging.size.value.toString(),
+        size: materialPackaging.size.value,
+        unit: materialPackaging.size.unit as "kg" | "gm" | "qn",
+        quantity: materialPackaging.count.toString(),
+        rawSize: materialPackaging.size.value.toString(),
       })
     : BoxIcon;
-// const LeadingIcon =
-//   stock.category === "material" && !Array.isArray(stock.packaging)
-//     ? mapPackageIcon({
-//         size: stock.packaging.size.value,
-//         unit: stock.packaging.size.unit as "kg" | "gm" | "qn",
-//         quantity: stock.packaging.count.toString(),
-//         rawSize: stock.packaging.size.value.toString(),
-//       })
-//     : BoxIcon; 
+
+       const packedMaterialPackaging = stock?.category === "packed" && Array.isArray(stock.packaging)
+    ? stock.packaging
+    : [];
 
   return (
      <View style={styles.rootContainer}>
@@ -64,35 +142,60 @@ const LeadingIcon =
           />
         </View>
         <ScrollView refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} />}>
-            {stock.category === "material" && !Array.isArray(stock.packaging) && (
-                <ChamberCard id={`${stock.id}-${stock.packaging.size.value}`} name={`${stock.packaging.size.value.toString()} ${stock.packaging.size.unit}`}  category={"material"} description={`${stock.packaging.count.toString()} | ${stock.packaging.type}`} plainDescription onPressOverride={() => {}} leadingIcon={LeadingIcon} />
-            )}
+        {materialPackaging &&
+  Object.entries(materialByRating).map(([rating, quantity]) => {
+    const bagSize = materialPackaging.size.value; // 30
+    const bagUnit = materialPackaging.size.unit;  // kg
+    const bagCount = quantity / bagSize;
+
+    return (
+      <View key={`rating-${rating}`} style={{ gap: 8, marginBottom: 16 }}>
+      <View style={{ gap: 4 }}>
+
+        <View style={{ gap: 4, flexDirection: "row", alignItems: "center" }}>
+          <StarIcon color={getColor("green", 700)} size={16}/>
+        <B4 style={{ fontWeight: "700" }}>
+          Rating: {rating}
+        </B4>
+        </View>
+
+        <ChamberCard
+          id={`${stock.id}-${rating}`}
+          name={`${Math.floor(bagCount)} ${materialPackaging.type}`}
+          category="material"
+          description={`${bagSize} ${bagUnit}`}
+          plainDescription
+          onPressOverride={() => {}}
+          leadingIcon={LeadingIcon}
+        />
+      </View>
+      </View>
+    );
+  })}
         </ScrollView>
 
-        {/* PACKED */}
-        {stock.category === "packed" && Array.isArray(stock.packaging) && (
-            <FlatList
-          data={stock.packaging}
-          keyExtractor={(item, index) =>
-            item?.size?.value ? item.size.value.toString() : `${item.size.value}-${index}`
-          }
-          renderItem={({ item }) => <ChamberCard id={`${stock.id}-${item.size.value}`} name={`${item.size.value.toString()} ${item.size.unit}`}  category={"packed"} rating={item.count.toString()} onPressOverride={() => {}} leadingIcon={LeadingIcon} />}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.cardContainerV2}
-          refreshControl={
-            <RefreshControl
-              refreshing={isFetching}
-              onRefresh={refetch}
-              colors={[getColor("green")]}
-            />
-          }
-          ListEmptyComponent={
-            <View style={{ alignItems: "center" }}>
-              <EmptyState stateData={emptyStateData} />
-            </View>
-          }
-        /> 
-        )}
+{/* PACKED */}
+{stock.category === "packed" && Array.isArray(stock.packaging) && (
+  <View style={{ gap: 12 }}>
+    {packedMaterialPackaging.map((item, index) => {
+      const leadingIcon = getPackedLeadingIcon(item);
+
+      return (
+        <ChamberCard
+          key={`${stock.id}-${item.size.value}-${index}`}
+          id={`${stock.id}-${item.size.value}`}
+          name={`${item.size.value} ${item.size.unit}`}
+          category="packed"
+          description={`${item.count} | ${item.type}`}
+          plainDescription
+          onPressOverride={() => {}}
+          leadingIcon={leadingIcon}
+        />
+      );
+    })}
+  </View>
+)}
+
         {!stock.packaging && <EmptyState stateData={emptyStateData} />}
 
       </View>

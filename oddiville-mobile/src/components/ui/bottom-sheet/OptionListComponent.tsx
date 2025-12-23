@@ -141,7 +141,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
             placeholder_second: "Choose type",
             label_second: "Type",
             alignment: "half",
-            value: item ?? "bag",
+            value: item ?? "pouch",
             key: "select-package-type",
             formField_1: "product_name",
             source: "add-product-package",

@@ -230,8 +230,8 @@ const SupervisorRawMaterialDetailsScreen = () => {
 
   const finalQuantityKg = useMemo(() => {
     const productWeight = netWeightKg;
-    const bagsCount = parseWeight(values.bags || "0"); // bags as number, 1 bag = 1 kg
-    const bagsWeight = bagsCount; // 1 bag = 1 kg
+    const bagsCount = parseWeight(values.bags || "0"); // pouch as number, 1 pouch = 1 kg
+    const bagsWeight = bagsCount; // 1 pouch = 1 kg
     const final = productWeight - bagsWeight;
     return final > 0 ? final : 0;
   }, [netWeightKg, values.bags]);

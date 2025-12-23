@@ -477,7 +477,7 @@ const useValidateAndOpenBottomSheet = () => {
             placeholder_second: "Choose type",
             label_second: "Type",
             alignment: "half",
-            value: packageTypeProduction ?? "bag",
+            value: packageTypeProduction ?? "pouch",
             key: "select-package-type",
             formField_1: "product_name",
             source: "add-product-package",
@@ -847,6 +847,7 @@ const useValidateAndOpenBottomSheet = () => {
         data: {
           isCheckEnable: false,
           options: [
+            "pouch",
             "bag",
             "box",
           ],

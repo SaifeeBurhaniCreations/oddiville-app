@@ -81,7 +81,6 @@ router.post(
     try {
       let { product_name, raw_materials, types, chamber_name } = req.body;
 
-      // -------- Parse JSON ----------
       if (typeof raw_materials === "string")
         raw_materials = JSON.parse(raw_materials);
       if (typeof types === "string") types = JSON.parse(types);
@@ -174,7 +173,6 @@ router.post(
 
       return res.status(201).json(result);
     } catch (error) {
-      // -------- CLEANUP S3 ON FAILURE ----------
       if (uploadedImage?.key) await deleteFromS3(uploadedImage.key);
       if (uploadedPackageImage?.key)
         await deleteFromS3(uploadedPackageImage.key);
@@ -329,8 +327,6 @@ router.patch("/update/:id", async (req, res) => {
       dryItem.quantity_unit = newQty.toString();
       await dryItem.save();
 
-      console.log("DryWarehouse after save:", dryItem.toJSON());
-
       const [stock] = await ChamberStockClient.findOrCreate({
         where: {
           product_name: finalProductName,
@@ -384,7 +380,6 @@ router.patch("/update/:id", async (req, res) => {
     const updatedPkg = await pkg.reload();
     const plainPkg = updatedPkg.get({ plain: true });
 
-    console.log("plainPkg", plainPkg);
     return res.status(200).json(plainPkg);
   } catch (error) {
     console.error("Error updating package:", error.message);
@@ -396,7 +391,7 @@ router.patch("/:id/add-type", async (req, res) => {
   try {
     const { id } = req.params;
     const { product_name, size, unit, quantity } = req.body;
-      const io = req.app.get("io");
+    const io = req.app.get("io");
 
     if (!product_name || !size || quantity == null) {
       return res.status(400).json({ error: "Missing required fields" });

@@ -7,6 +7,7 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 
 // 2. Third-party dependencies
@@ -185,6 +186,7 @@ const calculateTotalPackedQuantity = (
 };
 
 const PackageScreen = () => {
+  const { height: screenHeight } = useWindowDimensions()
   const [searchText, setSearchText] = useState("");
   const {
     data: packageData,
@@ -1049,6 +1051,7 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                                   title: "Packaging missing",
                                   description: `${item} packaging data not found`,
                                 }}
+                                 style={{marginTop: -(screenHeight/ 7)}}
                                 compact
                               />
                             );
@@ -1077,13 +1080,16 @@ const chambersByRM: ChambersByRM = useMemo(() => {
 
                               {/* <View style={styles.separator} /> */}
                               {visibleChambers.length === 0 ? (
-                                  <EmptyState
+                                 <View style={{marginBottom: 16, alignItems: "center"}}>
+                                   <EmptyState
                                     stateData={{
                                       title: "No stock found",
                                       description: `${item} is not available in any chamber`,
                                     }}
+                                 style={{marginTop: -(screenHeight/ 16)}}
                                     compact
                                   />
+                                 </View>
                                 ) : (
                                   visibleChambers.map((chamber) => {
                                     const chamberName =

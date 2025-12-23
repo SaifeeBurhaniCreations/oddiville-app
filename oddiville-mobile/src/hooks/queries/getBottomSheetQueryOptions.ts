@@ -27,7 +27,6 @@ export const getBottomSheetQueryOptions = <T extends BottomSheetSchemaKey>(
 
       if ('sections' in schema) {
         schema.sections = schema.sections.map((section: any) => {
-          console.log("section", section);
                     
           if (isHeaderSection(section)) {
             if (!section.data?.value) return section;

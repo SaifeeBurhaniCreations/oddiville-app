@@ -430,7 +430,7 @@ router.patch("/complete/:id", async (req, res) => {
     end_time,
     chambers = [],
     wastage_quantity = 0,
-    packaging_type = "bag",
+    packaging_type = "pouch",
     packaging_size = 0,
   } = req.body;
 
