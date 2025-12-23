@@ -410,8 +410,6 @@ const styles = StyleSheet.create({
   },
   selectProduct: {
     paddingBottom: 24,
-    borderBottomWidth: 1,
-    borderColor: getColor("green", 100),
     paddingHorizontal: 16,
   },
   overlay: {

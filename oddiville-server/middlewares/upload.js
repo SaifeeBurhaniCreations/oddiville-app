@@ -2,9 +2,11 @@ const multer = require("multer");
 
 const upload = multer({
   storage: multer.memoryStorage(),
+
   limits: {
     fileSize: 10 * 1024 * 1024, // 10 MB
   },
+
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
       "image/png",
@@ -14,15 +16,14 @@ const upload = multer({
     ];
 
     if (!allowedTypes.includes(file.mimetype)) {
-      cb(
-        new multer.MulterError(
-          "LIMIT_UNEXPECTED_FILE",
-          "Only PNG, JPG images or PDF files are allowed"
-        )
+      const err = new Error(
+        "Only PNG, JPG images or PDF files are allowed"
       );
-    } else {
-      cb(null, true);
+      err.statusCode = 400; // 👈 IMPORTANT
+      return cb(err);
     }
+
+    cb(null, true);
   },
 });
 

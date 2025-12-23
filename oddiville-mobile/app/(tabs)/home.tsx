@@ -51,6 +51,7 @@ const informativeNotificationsDataFormatter = (
     createdAt: getCreatedAt(val),
     extra_details: getDescription(val),
     identifier: val.identifier,
+    color: val.color,
   }));
 
 const actionableNotificationsDataFormatter = (
@@ -65,6 +66,7 @@ const actionableNotificationsDataFormatter = (
     createdAt: getCreatedAt(val),
     extra_details: getDescription(val),
     identifier: val.identifier,
+    color: val.color,
     buttons: actionableButtons[val.type as BottomSheetSchemaKey]
       ? [
           actionableButtons[
@@ -87,6 +89,7 @@ const todaysNotificationsDataFormatter = (
     createdAt: getCreatedAt(val),
     extra_details: getDescription(val),
     identifier: val.identifier,
+    color: val.color,
   }));
 
 const HomeScreen = () => {

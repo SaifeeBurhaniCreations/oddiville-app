@@ -48,6 +48,7 @@ import { Chamber, useFrozenChambers } from "@/src/hooks/useChambers";
 import { useAuth } from '@/src/context/AuthContext';
 import { resolveAccess } from '@/src/utils/policiesUtils';
 import { PRODUCTION_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
+import { RefreshControl } from "react-native-gesture-handler";
 
 type DuringProduction = {
   lane: string;
@@ -74,8 +75,6 @@ function toUrlArray(sample: any): string[] {
 
   return [];
 }
-
-const getChamberName = (chambers: Chamber[]) => chambers?.filter(ch => ch.tag !== "dry").map(ch => ch.chamber_name)
 
 const ProductionCompleteScreen = () => {
   const selectedChambers = useSelector(
@@ -113,7 +112,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const { goTo } = useAppNavigation();
 
-  const { data: lanesRaw = [] } = useLanes();
+  const { data: lanesRaw = [], refetch: lanesRefetch, isFetching: lanesLoading } = useLanes();
   const formattedLanes = lanesRaw.map((lane: any) => ({
     ...lane,
     value: lane.id,
@@ -384,7 +383,7 @@ const canComplete =
     <View style={styles.pageContainer}>
       <PageHeader page={"Production"} />
       <View style={styles.wrapper}>
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={lanesLoading} onRefresh={lanesRefetch} />}>
           <View style={[styles.VStack, styles.gap16]}>
             <BackButton label="Production Complete" backRoute={backRoute} />
 

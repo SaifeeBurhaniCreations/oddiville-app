@@ -34,7 +34,7 @@ const Select = ({
   const displayValue = value ?? options[0];
 
   const SelectedElement = (
-    <View style={selectStyle}>
+    <View style={[selectStyle]}>
       <TouchableOpacity
         activeOpacity={disabled ? 1 : 0.7}
         style={[

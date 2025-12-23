@@ -54,23 +54,38 @@ export const labelMap: Record<string, string> = {
   notNeeded: 'Not needed',
 };
 
-export const getImageSource = ({ image, bg = true, options }: { image?: string | number; bg?: boolean, options?: { isProductionItem?: boolean, isChamberItem?: boolean }}) => {
-  const isValidUrl = typeof image === 'string' && image.startsWith("http");
+export const getImageSource = ({
+  image,
+  options,
+}: {
+  image?: string | number;
+  options?: {
+    isProductionItem?: boolean;
+    isChamberItem?: boolean;
+  };
+}) => {
+  const isValidUrl = typeof image === "string" && image.startsWith("http");
 
   if (isValidUrl) {
-    return { image, isRawMaterial: bg ? true : false };
+    return {
+      image,
+      isProductionDefault: false,
+    };
   }
 
-  if (options?.isChamberItem) {
-    return { image: productionDefaultImg, isRawMaterial: false };
+  if (options?.isProductionItem || options?.isChamberItem) {
+    return {
+      image: productionDefaultImg,
+      isProductionDefault: true,
+    };
   }
 
-  if (options?.isProductionItem) {
-    return { image: productionDefaultImg, isRawMaterial: false };
-  }
+  return {
+    image: chamberDefaultImg,
+    isProductionDefault: false,
+  };
+};
 
-  return { image: chamberDefaultImg, isRawMaterial: false };
-}
 
 export function chunkCards<T>(arr: T[], size: number): T[][] {
   return Array.from({ length: Math.ceil(arr?.length / size) }, (_, i) =>

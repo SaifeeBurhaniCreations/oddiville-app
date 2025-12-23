@@ -27,20 +27,22 @@ export const getBottomSheetQueryOptions = <T extends BottomSheetSchemaKey>(
 
       if ('sections' in schema) {
         schema.sections = schema.sections.map((section: any) => {
+          console.log("section", section);
+                    
           if (isHeaderSection(section)) {
-            const createdAt =
-              section?.data?.value
-                ? new Date(section?.data?.value)
-                : null;
+            if (!section.data?.value) return section;
+
+            const createdAt = new Date(section.data.value);
 
             return {
               ...section,
               data: {
                 ...section.data,
-                value: createdAt ? customTimeAgo(createdAt) : "",
+                value: customTimeAgo(createdAt),
               },
             };
           }
+
           return section;
         });
       }

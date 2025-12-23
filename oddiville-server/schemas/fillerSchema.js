@@ -173,7 +173,6 @@ const getFillerSchema = ({
   CalendarEvent = {},
   authenticatedUser = {},
 }) => {
-console.log("ProductionById", ProductionById?.packaging);
   
   const listSections = ["Recent", "Countries"];
 

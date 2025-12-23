@@ -14,6 +14,9 @@ import FormField from "@/src/sbc/form/FormField";
 import noProductImage from "@/src/assets/images/fallback/raw-material-fallback.png";
 import { OrderStorageForm } from "@/app/create-orders";
 import { PackedItem } from "@/src/hooks/packedItem";
+import FiveStarIcon from "../icons/page/Rating/FiveStarIcon";
+import Select from "./Select";
+import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
 
 type ControlledFormProps<T> = {
   values: T;
@@ -40,6 +43,7 @@ const AddProductsForSell = ({
   controlledForm: ControlledFormProps<OrderStorageForm>;
   [key: string]: any;
 }) => {
+  const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const { values, setField, errors } = controlledForm;
 
   const productIndex = values.products?.findIndex(
@@ -87,64 +91,91 @@ const AddProductsForSell = ({
 
         {isOpen && (
           <View style={styles.cardBody}>
+            <View style={styles.inputsColumn}>
             {/* Chambers */}
             <View style={styles.Vstack}>
-              <H3>Enter quantity</H3>
+              <H3>Enter Bags</H3>
               <B4 color={getColor("green", 400)}>
-                Select a chamber that shows a quantity — that's where this
-                product is available.
+                Select packet size and rating, then enter packets per loose bag and loose bag count.
               </B4>
-
-              {currentProduct.chambers?.filter(ch => !ch.id.toLowerCase().includes("dry")).map((chamber, index) => (
-                <View
-                  key={index}
-                  style={[styles.chamberCard, styles.borderBottom]}
-                >
-                  <View style={styles.Hstack}>
-                    <View style={styles.iconWrapper}>
-                      <ChamberIcon color={getColor("green")} size={32} />
-                    </View>
-                    <View style={styles.Vstack}>
-                      <B1>{String(chamber.name).slice(0, 12)}...</B1>
-                      <B4>{chamber.stored_quantity}kg</B4>
-                    </View>
-                  </View>
-                  <View style={{ flex: 0.7 }}>
-                    <FormField
-                      name={`products.${productIndex}.chambers.${index}.quantity`}
-                      form={{ values, setField, errors }}
-                    >
-                      {({ value, onChange, error }) => (
-                        <Input
-                          placeholder="Quantity"
-                          addonText="KG"
-                          value={
-                            value === 0 || value === null || value === undefined
-                              ? ""
-                              : String(value)
-                          }
-                          onChangeText={(text: string) => {
-                            const numeric = text.replace(/[^0-9.]/g, "");
-                            const enteredValue =
-                              numeric === "" ? 0 : parseFloat(numeric);
-                            const maxQuantity = Number(chamber.stored_quantity);
-                            if (enteredValue > maxQuantity) {
-                              setToast?.(true);
-                              return;
-                            }
-                            onChange(text);
-                          }}
-                          mask="addon"
-                          post
-                          keyboardType="decimal-pad"
-                          error={error}
-                        />
-                      )}
-                    </FormField>
-                  </View>
-                </View>
-              ))}
             </View>
+        </View>
+           <View style={styles.selelctRow}>
+              <Select
+              value="Excellent"
+              showOptions={false}
+              preIcon={FiveStarIcon}
+              selectStyle={{ flex: 1 }}
+              onPress={() => {}}
+            />
+
+            <Select
+              value="500 gm"
+              showOptions={false}
+              selectStyle={{ flex: 1 }}
+              onPress={() => {
+                validateAndSetData("no-id", "choose-package")
+              }}
+            />
+          
+          </View>
+              <Input value="" placeholder="Packets per loose bag" addonText="Packets" mask="addon" post onChangeText={(text: string) => {}} />
+
+              {currentProduct.chambers
+                ?.filter((ch) => !ch.id.toLowerCase().includes("dry"))
+                .map((chamber, index) => (
+                  <View
+                    key={index}
+                    style={[styles.chamberCard, styles.borderBottom, index === 0 ? styles.borderTop : null]}
+                  >
+                    <View style={styles.Hstack}>
+                      <View style={styles.iconWrapper}>
+                        <ChamberIcon color={getColor("green")} size={32} />
+                      </View>
+                      <View style={styles.Vstack}>
+                        <B1>{String(chamber.name).slice(0, 12)}...</B1>
+                        <B4>{chamber.stored_quantity}kg</B4>
+                      </View>
+                    </View>
+                    <View style={{ flex: 0.7 }}>
+                      <FormField
+                        name={`products.${productIndex}.chambers.${index}.quantity`}
+                        form={{ values, setField, errors }}
+                      >
+                        {({ value, onChange, error }) => (
+                          <Input
+                            placeholder="Qty."
+                            addonText="Bags"
+                            value={
+                              value === 0 ||
+                              value === null ||
+                              value === undefined
+                                ? ""
+                                : String(value)
+                            }
+                            onChangeText={(text: string) => {
+                              const numeric = text.replace(/[^0-9.]/g, "");
+                              const enteredValue =
+                                numeric === "" ? 0 : parseFloat(numeric);
+                              const maxQuantity = Number(
+                                chamber.stored_quantity
+                              );
+                              if (enteredValue > maxQuantity) {
+                                setToast?.(true);
+                                return;
+                              }
+                              onChange(text);
+                            }}
+                            mask="addon"
+                            post
+                            keyboardType="decimal-pad"
+                            error={error}
+                          />
+                        )}
+                      </FormField>
+                    </View>
+                  </View>
+                ))}
           </View>
         )}
       </View>
@@ -194,6 +225,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: getColor("green", 100),
     paddingBottom: 16,
+  },
+  borderTop: {
+    borderTopWidth: 1,
+    borderColor: getColor("green", 100),
+    paddingTop: 16,
   },
   Vstack: {
     flexDirection: "column",
@@ -245,7 +281,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     flexDirection: "row",
     flex: 1,
-    paddingTop: 16,
   },
 
   alignCenter: {
@@ -253,5 +288,15 @@ const styles = StyleSheet.create({
   },
   justifyCenter: {
     justifyContent: "center",
+  },
+  selelctRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  inputsColumn: {
+    flexDirection: "column",
+    gap: 24,
   },
 });

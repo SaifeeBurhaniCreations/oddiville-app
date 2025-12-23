@@ -17,7 +17,7 @@ import EmptyState from '@/src/components/ui/EmptyState';
 // 4. Project hooks
 import useValidateAndOpenBottomSheet from '@/src/hooks/useValidateAndOpenBottomSheet';
 import { useParams } from '@/src/hooks/useParams';
-import { usePackageById } from '@/src/hooks/Packages';
+import { usePackageById, usePackageSocketSync } from '@/src/hooks/Packages';
 
 // 5. Project constants/utilities
 import { getColor } from '@/src/constants/colors';
@@ -45,6 +45,7 @@ import { PACKAGE_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/sr
 const EMPTY_BAG_WEIGHT_G = 1;
 
 const PackagingDetailsScreen = () => {
+    usePackageSocketSync();
   const { role, policies } = useAuth();
 
   const safeRole = role ?? "guest";
@@ -138,8 +139,6 @@ const PackagingDetailsScreen = () => {
   const emptyStateData = getEmptyStateData("packaging-details");
 
   const backRoute = resolveBackRoute(access, PACKAGE_BACK_ROUTES, resolveDefaultRoute(access));
-  
-  console.log("uiPackages", JSON.stringify(uiPackages, null, 2));
   
   return (
     <View style={styles.pageContainer}>

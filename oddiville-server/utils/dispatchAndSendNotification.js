@@ -12,6 +12,7 @@ function normalizeForClient(payload) {
     created_at: payload.details?.createdAt ?? payload.timestamp ?? new Date(),
     read: !!payload.details?.read,
     type: payload.details?.type ?? payload.type,
+    color: payload.color ?? payload.details?.color ?? null,
     details: {
       ...payload.details,
       createdAt: payload.details?.createdAt ?? payload.timestamp ?? new Date(),
@@ -40,21 +41,30 @@ function sendNotificationByType(type, payload) {
   io.emit(channel, payload);
 }
 
-function resolveTypeAndCategory(input) {
-  if (Array.isArray(input)) {
-    const [t, cat] = input;
-    const type = (t || "").trim();
-    if (!type) throw new Error("Invalid notification type");
-    if (["informative", "actionable", "today"].includes(cat)) {
-      return { type, category: cat };
-    }
-    return { type, category: getNotificationCategory(type) };
+function resolveTypeAndCategory(typeKey) {
+  const entry = NOTIFICATION_CATEGORIES[typeKey];
+
+  if (!Array.isArray(entry)) {
+    throw new Error(`Invalid notification config for type: ${typeKey}`);
   }
-  if (typeof input === "string" && input.trim()) {
-    const type = input.trim();
-    return { type, category: getNotificationCategory(type) };
+
+  if (entry.length !== 2 && entry.length !== 3) {
+    throw new Error(
+      `Notification config must be [type, category] or [type, category, color]: ${typeKey}`
+    );
   }
-  throw new Error("Type must be string or [type, category]");
+
+  const [type, category, color] = entry;
+
+  if (!type || !category) {
+    throw new Error(`Invalid notification entry: ${typeKey}`);
+  }
+
+  return {
+    type,
+    category,
+    color: entry.length === 3 ? color : null,
+  };
 }
 
 // ---------- dispatcher ----------
@@ -76,7 +86,8 @@ async function dispatchAndSendNotification({
 }) {
   try {
     
-    const { type: notificationType, category } = resolveTypeAndCategory(type);
+    const { type: notificationType, category, color } = resolveTypeAndCategory(type);
+console.log("clr", color);
 
     const sanitizedId = String(id ?? "").trim();
     const sanitizedTitle = (title || "").trim();
@@ -106,6 +117,7 @@ async function dispatchAndSendNotification({
       itemId: sanitizedId,
       identifier: notificationType,
       extraData: extraData ?? null,
+      color,
     });
 
     const newBasePayload = {
@@ -119,6 +131,7 @@ async function dispatchAndSendNotification({
       description: notification.description,
       category: notification.category,
       read: notification.read,
+      color,
     }
 
     if (category === "actionable") {

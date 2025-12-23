@@ -7,15 +7,15 @@ import CrossIcon from '@/src/components/icons/page/CrossIcon';
 import { HeaderComponentProps } from "@/src/types";
 import { getIcon } from '@/src/utils/iconUtils';
 
-const HeaderComponent: React.FC<HeaderComponentProps> = ({ data, color, onClose }) => {
+const HeaderComponent: React.FC<HeaderComponentProps> = ({ data, color = "green",onClose }) => {
 
-    const { label, value, title, description, headerDetails } = data;
+    const { label, value, title, description, headerDetails, color: statusColor = "red" } = data;
 
     return (
         <View style={[styles.cardHeader, label && styles.border]}>
             {label && (
                 <View style={styles.row}>
-                    <B5 color={getColor(color === 'red' ? 'blue' : 'red', 700)} style={{ textTransform: "uppercase" }}>
+                    <B5 color={getColor(statusColor, 700)} style={{ textTransform: "uppercase" }}>
                         {label}
                     </B5>
                     <View style={[styles.rowGap8, { alignItems: 'center' }]}>

@@ -7,7 +7,7 @@ const {
   ChamberStock: ChamberStockClient,
   sequelize,
 } = require("../models");
-const { uploadToS3, deleteFromS3 } = require("../services/s3Service");  
+const { uploadToS3, deleteFromS3 } = require("../services/s3Service");
 const upload = require("../middlewares/upload");
 
 // GET all packages
@@ -82,11 +82,14 @@ router.post(
       let { product_name, raw_materials, types, chamber_name } = req.body;
 
       // -------- Parse JSON ----------
-      if (typeof raw_materials === "string") raw_materials = JSON.parse(raw_materials);
+      if (typeof raw_materials === "string")
+        raw_materials = JSON.parse(raw_materials);
       if (typeof types === "string") types = JSON.parse(types);
 
       if (!product_name || !chamber_name) {
-        return res.status(400).json({ error: "product_name and chamber_name are required" });
+        return res
+          .status(400)
+          .json({ error: "product_name and chamber_name are required" });
       }
 
       if (!Array.isArray(raw_materials) || !raw_materials.length) {
@@ -102,11 +105,11 @@ router.post(
 
       // -------- Upload files FIRST ----------
       if (req.files?.image?.[0]) {
-        uploadedImage = await uploadToS3(req.files.image[0], "packages");
+        uploadedImage = await uploadToS3({file: req.files.image[0], folder: "packages"});
       }
 
       if (req.files?.package_image?.[0]) {
-        uploadedPackageImage = await uploadToS3(req.files.package_image[0], "packages");
+        uploadedPackageImage = await uploadToS3({file: req.files.package_image[0], folder: "packages"});
       }
 
       // -------- DB TRANSACTION ----------
@@ -173,7 +176,8 @@ router.post(
     } catch (error) {
       // -------- CLEANUP S3 ON FAILURE ----------
       if (uploadedImage?.key) await deleteFromS3(uploadedImage.key);
-      if (uploadedPackageImage?.key) await deleteFromS3(uploadedPackageImage.key);
+      if (uploadedPackageImage?.key)
+        await deleteFromS3(uploadedPackageImage.key);
 
       console.error("Error creating package:", error);
       return res.status(error.status || 500).json({
@@ -385,6 +389,160 @@ router.patch("/update/:id", async (req, res) => {
   } catch (error) {
     console.error("Error updating package:", error.message);
     return res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+router.patch("/:id/add-type", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { product_name, size, unit, quantity } = req.body;
+      const io = req.app.get("io");
+
+    if (!product_name || !size || quantity == null) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const pkg = await Packages.findByPk(id);
+    if (!pkg) return res.status(404).json({ error: "Package not found" });
+
+    const numericQty = parseFloat(quantity);
+    if (isNaN(numericQty)) {
+      return res.status(400).json({ error: "Invalid quantity" });
+    }
+
+    const normalizedUnit = unit === "null" ? null : unit;
+
+    // PACKAGES LOGIC
+    const types = Array.isArray(pkg.types) ? [...pkg.types] : [];
+
+    const exists = types.find(
+      (t) =>
+        String(t.size) === String(size) &&
+        (t.unit ?? null) === normalizedUnit
+    );
+
+    if (exists) {
+      return res.status(409).json({
+        error: "Type already exists. Use increase-quantity route."
+      });
+    }
+
+    types.push({
+      size: String(size),
+      unit: normalizedUnit,
+      quantity: numericQty.toString(),
+    });
+
+    pkg.types = [...types];
+    pkg.changed("types", true);
+    await pkg.save();
+
+    io.emit("package:updated", { id: pkg.id });
+
+    // DRY WAREHOUSE
+    const chamber = await ChambersClient.findOne({
+      where: { chamber_name: pkg.chamber_name }
+    });
+
+    if (!chamber) {
+      return res.status(400).json({ error: "Chamber not found" });
+    }
+
+    const itemName = `${product_name}:${size}`;
+
+    const [dryItem] = await DryWarehouseClient.findOrCreate({
+      where: { item_name: itemName },
+      defaults: {
+        item_name: itemName,
+        warehoused_date: new Date(),
+        description: `${product_name} ${size}${normalizedUnit ?? ""}`,
+        chamber_id: chamber.id,
+        quantity_unit: "0",
+        unit: normalizedUnit || "gm"
+      }
+    });
+
+    const currentQty = parseFloat(dryItem.quantity_unit || "0");
+    dryItem.quantity_unit = (currentQty + numericQty).toString();
+    await dryItem.save();
+
+    return res.json({ success: true, pkg, dryItem });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.patch("/:id/increase-quantity", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { size, unit, quantity } = req.body;
+      const io = req.app.get("io");
+    if (!size || quantity == null) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const pkg = await Packages.findByPk(id);
+    if (!pkg) return res.status(404).json({ error: "Package not found" });
+
+    const numericQty = parseFloat(quantity);
+    if (isNaN(numericQty)) {
+      return res.status(400).json({ error: "Invalid quantity" });
+    }
+
+    // PACKAGES LOGIC
+    const types = Array.isArray(pkg.types) ? [...pkg.types] : [];
+
+    const typeIndex = types.findIndex(
+      (t) => t.size === size && t.unit === unit
+    );
+
+    if (typeIndex === -1) {
+      return res.status(404).json({
+        error: "Type not found. Use add-type route."
+      });
+    }
+    
+    const prevQty = parseFloat(types[typeIndex].quantity || "0");
+    types[typeIndex].quantity = (prevQty + numericQty).toString();
+    console.log("types[typeIndex].quantity", types[typeIndex].quantity);
+
+    pkg.types = [...types];
+    pkg.changed("types", true);
+    await pkg.save();
+
+    io.emit("package:updated", { id: pkg.id });
+
+    // DRY WAREHOUSE
+    const chamber = await ChambersClient.findOne({
+      where: { chamber_name: pkg.chamber_name }
+    });
+
+    const itemName = `${pkg.product_name}:${size}`;
+
+    const [dryItem] = await DryWarehouseClient.findOrCreate({
+      where: { item_name: itemName },
+      defaults: {
+        item_name: itemName,
+        warehoused_date: new Date(),
+        chamber_id: chamber.id,
+        quantity_unit: "0",
+        unit: unit || "gm"
+      }
+    });
+
+    const currentQty = parseFloat(dryItem.quantity_unit || "0");
+    dryItem.quantity_unit = (currentQty + numericQty).toString();
+    await dryItem.save();
+
+    // package-id:send
+
+    return res.json({ success: true, pkg, dryItem });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

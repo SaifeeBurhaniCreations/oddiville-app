@@ -18,16 +18,43 @@ import { pluck } from "../sbc/utils/pluck/pluck";
 import { rejectEmptyOrNull } from "../utils/authUtils";
 import useSocket from "./useSocketFromContext";
 
+export interface PackagingSize {
+  value: number;
+  unit: string;
+}
+
+export interface Packaging {
+  size: PackagingSize;
+  type: string;
+  count: number;
+}
+
+export interface PackageItem {
+  size: string;
+  unit?: string;
+  rawSize?: string;
+  dry_item_id?: string | null;
+  quantity: string;
+}
 export interface ChamberStock {
   id: string;
   product_name: string;
-  category: string;
+  image?: string | null;
+  category: "material" | "other" | "packed";
   unit: string;
+
+  packaging:
+    | Packaging            
+    | Packaging[];        
+
+  packages?: PackageItem[] | null;
+
   chamber: Array<{
     id: string;
     quantity: string;
     rating: string;
   }>;
+
   createdAt: string;
   updatedAt: string;
 }
@@ -96,8 +123,8 @@ export function useChamberStockById(id: string | null) {
 }
 
 export function useChamberStockByName(names: string[]) {
-    const { data: chamberStock } = useChamberStock();
-    return chamberStock?.filter((item) => names.includes(item.product_name));
+    const { data: chamberStock, refetch, isFetching } = useChamberStock();
+    return { chamberStock: chamberStock?.filter((item) => names.includes(item.product_name)), refetch, isFetching };
 }
 
 export function useChamberStock() {

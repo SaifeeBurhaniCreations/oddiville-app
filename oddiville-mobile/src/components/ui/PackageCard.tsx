@@ -7,10 +7,17 @@ import CustomImage from './CustomImage';
 import { H6 } from '../typography/Typography';
 import { useAppNavigation } from '@/src/hooks/useAppNavigation';
 
+const OVERLAY_HEIGHT = 110;
+
 const PackageCard = ({ name, img, style, href, bundle, id, ...props }: PackageCardProps) => {
   const { goTo } = useAppNavigation();
+
+  const handlePress = () => {
+  if (!href) return;
+  goTo(href, { id, name });
+};
   return (
-    <Pressable onPress={()=>goTo(href, {id, name})} style={[styles.packageCard, style]}>
+    <Pressable onPress={handlePress} style={[styles.packageCard, style]}>
       
       {/* Main product image */}
       <View style={styles.mainImage} {...props}>
@@ -27,7 +34,7 @@ const PackageCard = ({ name, img, style, href, bundle, id, ...props }: PackageCa
           {name}
         </H6>
       </View>
-      <Overlay width="150" height="95" style={styles.overlayStyle} />
+      <Overlay width="150" height="95" style={[styles.overlayStyle, { bottom: -OVERLAY_HEIGHT / 3 }]} />
     </Pressable>
   );
 };
@@ -73,7 +80,7 @@ const styles = StyleSheet.create({
   },
   overlayStyle: {
     position: 'absolute',
-    bottom: -45,
+     bottom: -25,
     left: '50%',
     transform: [{ translateX: -75 }],
     zIndex: -1,

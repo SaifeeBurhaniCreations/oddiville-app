@@ -125,6 +125,8 @@ export type RootStackParamList = {
 
   "chambers": undefined;
 
+  "stock-detail": { product_name: string };
+
   "raw-material-receive": { rmId: string };
   "raw-material-overview": { rmId: string };
   "raw-material-order": undefined;

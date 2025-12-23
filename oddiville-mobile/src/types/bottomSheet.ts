@@ -97,6 +97,7 @@ export type SectionConfig =
         title?: string;
         icon?: string;
         description?: string;
+        color?: "red" | "green" | "blue" | "yellow";
         headerDetails?: {
           label: string;
           value: string;
@@ -473,14 +474,15 @@ export interface HeaderComponentProps {
     title?: string;
     icon?: string;
     description?: string;
+    color?: "red" | "green" | "blue" | "yellow";
     headerDetails: {
       label: string;
       value: string;
       icon: DataAccordianEnum;
     }[];
   };
-  color: "red" | "green" | "blue" | "yellow";
   onClose?: () => void;
+    color?: "red" | "green" | "blue" | "yellow";
 }
 
 export interface FullWidthImageComponentProps {

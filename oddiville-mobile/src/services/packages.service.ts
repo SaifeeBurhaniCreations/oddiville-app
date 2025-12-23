@@ -21,5 +21,6 @@ export const createPackage = (formData: FormData) =>
       "Content-Type": "multipart/form-data",
     },
   });
-export const updatePackage = ({ data, id }: { data: any, id: string }) => api.patch(`/package/update/${id}`, data)
+export const addPackageType = ({ data, id }: { data: any, id: string }) => api.patch(`/package/${id}/add-type`, data);
 
+export const updatePackageQuantity = ({ data, id }: { data: any, id: string }) => api.patch(`/package/${id}/increase-quantity`, data)

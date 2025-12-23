@@ -7,7 +7,7 @@ import {
   AddProductPackageForm,
 } from "../components/ui/bottom-sheet/InputWithSelectComponent";
 import { useGlobalFormValidator } from "../sbc/form/globalFormInstance";
-import { useCreatePackage, useUpdatePackage } from "./Packages";
+import { useCreatePackage, useAddPackageType, useIncreasePackageQuantity } from "./Packages";
 import { useUpdateOrder } from "./dispatchOrder";
 import { AddPackageQuantityForm } from "../components/ui/bottom-sheet/InputComponent";
 import { setIsChamberSelected } from "../redux/slices/chamber.slice";
@@ -53,7 +53,8 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { goTo } = useAppNavigation();
   const createPackage = useCreatePackage();
-  const updatePackage = useUpdatePackage();
+  const addPackageType = useAddPackageType();
+  const increasePackageQuantity = useIncreasePackageQuantity();
   const updateOrder = useUpdateOrder();
   const completeProduction = useCompleteProduction();
   const { data: chambers } = useChamber();
@@ -265,52 +266,36 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
 },
 
     "add-package": async () => {
-      
-      if (!meta?.id) {
-        console.warn("No ID for this action");
-        return;
-      }
-      try {
-        const [id, product_name] = meta.id.split(":");
-        
-          const count = Number(packageSizeForm.values.quantity);
+          if (!meta?.id) return;
 
-          const emptyBagWeightGram = Number(
-            packageSizeForm.values.empty_bag_weight_g || "1"
-          );
+          try {
+            const [id, product_name] = meta.id.split(":");
 
-          const finalQtyKg = (count * emptyBagWeightGram) / 1000;
+            const count = Number(packageSizeForm.values.quantity);
+            const emptyBagWeightGram = Number(
+              packageSizeForm.values.empty_bag_weight_g || "1"
+            );
 
-          const packageSizePayload = {
-            ...packageSizeForm.values,
-            quantity: String(finalQtyKg),
-          };
+            const finalQtyKg = (count * emptyBagWeightGram) / 1000;
 
-          const result_package_form =
-            packageSizeForm?.validateForm(packageSizePayload);
+            const result = packageSizeForm.validateForm({
+              ...packageSizeForm.values,
+              quantity: String(finalQtyKg),
+            });
 
-          if (result_package_form.success) {
+            if (!result.success) return;
+
             dispatch(setIsLoadingPackageSize(true));
 
-            let unit: string | null;
-            let rest: any;
+            const unit =
+              result.data.unit === "null" ? null : result.data.unit as "kg" | "gm";
 
-            if (
-              result_package_form?.data &&
-              result_package_form?.data.unit !== "null"
-            ) {
-              ({ unit, ...rest } = result_package_form.data);
-            } else {
-              unit = null;
-              rest = result_package_form?.data || {};
-            }
-
-            updatePackage.mutate(
+            addPackageType.mutate(
               {
                 id,
                 data: {
-                  ...rest,
                   product_name,
+                  size: result.data.size,
                   unit,
                   quantity: String(finalQtyKg),
                 },
@@ -318,83 +303,62 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
               {
                 onSuccess: () => {
                   dispatch(setIsLoadingPackageSize(false));
+                  packageSizeForm.resetForm();
                 },
-                onError: (error) => {
-                  console.log("error in onSuccess update [add-package]", error);
+                onError: () => {
                   dispatch(setIsLoadingPackageSize(false));
                 },
               }
             );
-          } else {
-            console.log("validation failed");
+          } catch (err) {
+            console.error("add-package error", err);
+            dispatch(setIsLoadingPackageSize(false));
           }
-        } catch (error: any) {
-          console.log("error in add-product-size", error.message);
-        }
-    },
+        },
 
-    "add-package-quantity": async () => {
-      try {
-        dispatch(setIsLoadingPackage(true));
+      "add-package-quantity": async () => {
+        try {
+          dispatch(setIsLoadingPackage(true));
 
-        const { weight, id } = packages;
-        if (!id) {
-          console.warn("No ID for this action");
-          return;
-        }
+          const { weight, id } = packages;
+          if (!id) return;
 
-        const { number, unit } = splitValueAndUnit(weight);
+          const { number, unit } = splitValueAndUnit(weight);
 
-        const count = Number(packageQuantityForm.values.quantity);
+          const count = Number(packageQuantityForm.values.quantity);
+          const emptyBagWeightGram = Number(
+            packageQuantityForm.values.empty_bag_weight_g || "1"
+          );
 
-        const emptyBagWeightGram = Number(
-          packageQuantityForm.values.empty_bag_weight_g || "1"
-        );
+          const finalQtyKg = (count * emptyBagWeightGram) / 1000;
 
-        const finalQtyKg = (count * emptyBagWeightGram) / 1000;
-
-        const packageQuantityPayload = {
-          quantity: String(finalQtyKg),
-        };
-
-        const result =
-          packageQuantityForm?.validateForm(packageQuantityPayload);
-
-        if (result.success) {
-          await new Promise((resolve, reject) => {
-            updatePackage.mutate(
-              {
-                id,
-                data: {
-                  product_name: "",
-                  quantity: String(finalQtyKg), size: String(number),
-                  unit: unit as "kg" | "gm" | null,
-                },
-              },
-              {
-                onSuccess: (result) => {
-                  packageSizeForm?.resetForm();
-                  resolve(result);
-                },
-                onError: (error) => {
-                  console.log(
-                    "error in onSuccess update [add-package-quantity]"
-                  );
-                  reject(error);
-                },
-              }
-            );
+          const result = packageQuantityForm.validateForm({
+            quantity: String(finalQtyKg),
           });
-        } else {
-          console.log("validation failed");
+
+          if (!result.success) return;
+
+          increasePackageQuantity.mutate(
+            {
+              id,
+              data: {
+                size: String(number),
+                unit: unit as "kg" | "gm" | null,
+                quantity: String(finalQtyKg),
+              },
+            },
+            {
+              onSuccess: () => {
+                packageQuantityForm.resetForm();
+              },
+            }
+          );
+        } catch (err) {
+          console.error("add-package-quantity error", err);
+        } finally {
+          dispatch(setIsLoadingPackage(false));
         }
-      } catch (error: any) {
-        console.log("error in add-package-count", error.message);
-      } finally {
-        packageQuantityForm.resetForm();
-        dispatch(setIsLoadingPackage(false));
-      }
-    },
+      },
 
     "choose-chamber": () => {
       if (!meta?.id) {
@@ -445,9 +409,9 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
         });
         const result_store_quantity_form =
           storeQuantityForm?.validateForm(updatedValues);
-
+        
         if (result_store_quantity_form.success) {
-          // dispatch(setProductionLoading(true));
+          dispatch(setProductionLoading(true));
 
           const formData = formatStoreProduct(result_store_quantity_form?.data);
 
@@ -463,6 +427,8 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
               id: meta.id,
               data: newFormData,
             });
+            console.log("compelte produciton");
+            
             dispatch(clearChambers());
             dispatch(setProductionLoading(false));
             dispatch(resetProductStore());

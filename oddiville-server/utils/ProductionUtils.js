@@ -11,6 +11,7 @@ const {
 require("dotenv").config();
 const { uploadToS3 } = require("../services/s3Service");
 const { throwHttpError } = require("../utils/normalizeError");
+
 function parseExistingImages(rawImages) {
   if (!rawImages) return [];
   if (Array.isArray(rawImages)) return rawImages;
@@ -20,9 +21,47 @@ function parseExistingImages(rawImages) {
     throwHttpError("Invalid existing_sample_images format", 400);
   }
 }
+const normalizeRating = (r) => {
+  if (r === null || r === undefined) return null;
+  const s = String(r).trim();
+  return s === "" ? null : s;
+};
+
+
+function buildChamberStockPackagingFromProduction(production) {
+  return {
+    size: {
+      value: Number(production.packaging.size),
+      unit: production.unit || "kg",
+    },
+    type: production.packaging.type,
+    count: Number(production.packaging.count),
+  };
+}
+
+function mergeChamberStockPackaging(existing, incoming) {
+  if (!existing) return incoming;
+
+  if (
+    existing.size.value === incoming.size.value &&
+    existing.size.unit === incoming.size.unit &&
+    existing.type === incoming.type
+  ) {
+    return {
+      ...existing,
+      count: Number(existing.count) + Number(incoming.count),
+    };
+  }
+
+  // if size/type differ, overwrite is NOT allowed from production
+  // production always represents same loose batch size
+  return existing;
+}
 
 async function uploadNewImages(files) {
-  return Promise.all(files.map((file) => uploadToS3(file, "production"))); // expected to return { url, key }
+  return Promise.all(
+    files.map((file) => uploadToS3({file, folder: "production"}))
+  );
 }
 
 async function fetchProductionOrFail(id) {
@@ -172,18 +211,12 @@ async function updateChamberStocks(
   chamberInstances,
   opts = {}
 ) {
-  const { product_name, unit, quantity, raw_material_order_id } = production;
+  const { product_name, unit, raw_material_order_id } = production;
 
   const rawMaterialOrder = await validateAndFetchRawMaterial(
     raw_material_order_id,
     opts
   );
-
-  let stock = await chamberStockClient.findOne({
-    where: { product_name, category: "material" },
-    transaction: opts.tx,
-    lock: opts.tx ? opts.tx.LOCK.UPDATE : undefined,
-  });
 
   const newChamberData = chambers.map((c) => ({
     id: c.id,
@@ -196,33 +229,27 @@ async function updateChamberStocks(
   let imageVal = null;
   try {
     const rawImg = rawMaterialOrder?.sample_image ?? null;
-
-    if (!rawImg) {
-      imageVal = null;
-    } else if (typeof rawImg === "string") {
-      imageVal = rawImg;
-    } else if (Array.isArray(rawImg)) {
+    if (typeof rawImg === "string") imageVal = rawImg;
+    else if (Array.isArray(rawImg)) {
       const first = rawImg.find(
         (x) => x && (typeof x === "string" || typeof x.url === "string")
       );
-      if (first) {
-        imageVal = typeof first === "string" ? first : first.url;
-      } else {
-        imageVal = null;
-      }
-    } else if (typeof rawImg === "object" && rawImg.url) {
+      imageVal = first ? (typeof first === "string" ? first : first.url) : null;
+    } else if (rawImg?.url) {
       imageVal = rawImg.url;
-    } else {
-      console.warn(
-        "updateChamberStocks: unsupported rawMaterialOrder.sample_image shape:",
-        rawImg
-      );
-      imageVal = null;
     }
-  } catch (e) {
-    console.warn("updateChamberStocks: error normalizing image:", e);
+  } catch {
     imageVal = null;
   }
+
+  const incomingPackaging =
+    buildChamberStockPackagingFromProduction(production);
+
+  let stock = await chamberStockClient.findOne({
+    where: { product_name, category: "material" },
+    transaction: opts.tx,
+    lock: opts.tx ? opts.tx.LOCK.UPDATE : undefined,
+  });
 
   if (!stock) {
     stock = await chamberStockClient.create(
@@ -230,54 +257,64 @@ async function updateChamberStocks(
         product_name,
         category: "material",
         unit,
+        packaging: incomingPackaging,
         chamber: newChamberData,
+        image: imageVal,
       },
       { transaction: opts.tx }
     );
-
-    for (const { id } of chambers) {
-      const chamber = chamberMap.get(String(id));
-      if (chamber) {
-        const items = new Set(chamber.items || []);
-        items.add(stock.id);
-        chamber.items = Array.from(items);
-        await chamber.save({ transaction: opts.tx });
-      }
-    }
-  } else {
+  }
+  else {
     let chambersList = stock.chamber || [];
 
     for (const c of chambers) {
       const index = chambersList.findIndex(
-        (item) =>
-          String(item.id) === String(c.id) && item.rating === String(c.rating)
-      );
+  (item) => String(item.id) === String(c.id)
+);
 
-      if (index >= 0) {
-        chambersList[index].quantity = String(
-          Number(chambersList[index].quantity) + Number(c.quantity)
-        );
-      } else {
-        chambersList.push({
-          id: c.id,
-          quantity: String(c.quantity),
-          rating: String(c.rating),
-        });
-      }
+const incomingRating = normalizeRating(c.rating);
 
-      const chamber = chamberMap.get(String(c.id));
-      if (chamber) {
-        const items = new Set(chamber.items || []);
-        items.add(stock.id);
-        chamber.items = Array.from(items);
-        await chamber.save({ transaction: opts.tx });
-      }
+if (index >= 0) {
+  chambersList[index].quantity = String(
+    Number(chambersList[index].quantity) + Number(c.quantity)
+  );
+
+  if (incomingRating !== null) {
+    chambersList[index].rating = incomingRating;
+  }
+} else {
+  chambersList.push({
+    id: c.id,
+    quantity: String(c.quantity),
+    rating: incomingRating ?? "5",
+  });
+}
     }
 
+    const updatedPackaging = mergeChamberStockPackaging(
+      stock.packaging,
+      incomingPackaging
+    );
+
     await chamberStockClient.update(
-      { chamber: chambersList, image: imageVal },
+      {
+        chamber: chambersList,
+        packaging: updatedPackaging,
+        image: imageVal,
+      },
       { where: { id: stock.id }, transaction: opts.tx }
     );
+  }
+
+  // 🔗 link stock to chambers
+  for (const { id } of chambers) {
+    const chamber = chamberMap.get(String(id));
+    if (chamber) {
+      const items = new Set(chamber.items || []);
+      items.add(stock.id);
+      chamber.items = Array.from(items);
+      await chamber.save({ transaction: opts.tx });
+    }
   }
 
   return stock;

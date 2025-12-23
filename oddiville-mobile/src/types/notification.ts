@@ -11,6 +11,7 @@ export type AdminNotification = {
     description: string[],
     category: "informative" | "actionable" | "today",
     read: boolean,
+    color: "red" | "yellow" | "green" | null,
     extraData: any | undefined,
     buttons?: ActionButtonConfig[],
 }

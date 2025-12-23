@@ -76,8 +76,8 @@ const ChamberScreen = () => {
             stockItem.chamber?.some((c) => c.id === chamberId)
         );
 
-        const filledFromStocks = (relatedStocks ?? []).reduce(
-          (sum: number, stockItem: StockDataItem) => {
+        const filledFromStocks = (relatedStocks ?? []).reduce((sum: number, stockItem: ChamberStock) => {
+
             const chamberSum = (stockItem.chamber ?? [])
               .filter((c: ChamberEntry) => c.id === chamberId)
               .reduce(

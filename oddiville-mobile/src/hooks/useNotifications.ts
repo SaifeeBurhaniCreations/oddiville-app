@@ -20,6 +20,7 @@ export type NotificationDetails = {
   category: string;
   read: boolean;
   extraData: any;
+   color: "red" | "yellow" | "green" | null;
 };
 
 export type Notification = {

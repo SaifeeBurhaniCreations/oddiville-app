@@ -1,93 +1,91 @@
-  const router = require("express").Router();
-  const {
-    ChamberStock: stockClient,
-    Chambers: chamberClient,
-    SampleImages: sampleImageClient,
-    History: historyClient,
-    OthersItem: otherItemClient,
-    ThirdPartyClient: thirdPartyClient,
-  } = require("../models");
-  const sequelize = require("../config/database");
+const router = require("express").Router();
+const {
+  ChamberStock: stockClient,
+  Chambers: chamberClient,
+  SampleImages: sampleImageClient,
+  History: historyClient,
+  OthersItem: otherItemClient,
+  ThirdPartyClient: thirdPartyClient,
+} = require("../models");
+const sequelize = require("../config/database");
 
-  require("dotenv").config();
+require("dotenv").config();
 
-const { uploadToS3, deleteFromS3 } = require("../services/s3Service");  
+const { uploadToS3, deleteFromS3 } = require("../services/s3Service");
 const upload = require("../middlewares/upload");
 const { extractKeyFromUrl } = require("../utils/fileUtils");
 
-  router.get("/", async (req, res) => {
-    try {
-      const clients = await thirdPartyClient.findAll();
-      res.json(clients);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
+router.get("/", async (req, res) => {
+  try {
+    const clients = await thirdPartyClient.findAll();
+    res.json(clients);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-  router.get("/products", async (req, res) => {
-    try {
-      const products = await otherItemClient.findAll();
-      res.status(200).json(products);
-    } catch (err) {
-      res
-        .status(500)
-        .json({ error: "Failed to fetch products", details: err.message });
-    }
-  });
+router.get("/products", async (req, res) => {
+  try {
+    const products = await otherItemClient.findAll();
+    res.status(200).json(products);
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: "Failed to fetch products", details: err.message });
+  }
+});
 
-  router.get("/history/:id", async (req, res) => {
-    const { id } = req.params;
+router.get("/history/:id", async (req, res) => {
+  const { id } = req.params;
 
-    try {
-      const products = await historyClient.findAll({ where: { product_id: id } });
+  try {
+    const products = await historyClient.findAll({ where: { product_id: id } });
 
-      res.status(200).json(products);
-    } catch (err) {
-      res
-        .status(500)
-        .json({ error: "Failed to fetch products", details: err.message });
-    }
-  });
+    res.status(200).json(products);
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: "Failed to fetch products", details: err.message });
+  }
+});
 
-  // GET by ID
-  router.get("/item/:id", async (req, res) => {
-    try {
-      const item = await otherItemClient.findOne({
-        where: { product_id: req.params.id },
-      });
-      if (!item) return res.status(404).json({ error: "Item not found" });
-      res.json(item);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
+// GET by ID
+router.get("/item/:id", async (req, res) => {
+  try {
+    const item = await otherItemClient.findOne({
+      where: { product_id: req.params.id },
+    });
+    if (!item) return res.status(404).json({ error: "Item not found" });
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-  router.get("/:id", async (req, res) => {
-    try {
-      const client = await thirdPartyClient.findByPk(req.params.id);
-      if (!client) return res.status(404).json({ error: "Not found" });
-      res.json(client);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
+router.get("/:id", async (req, res) => {
+  try {
+    const client = await thirdPartyClient.findByPk(req.params.id);
+    if (!client) return res.status(404).json({ error: "Not found" });
+    res.json(client);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-  // GET by name
-  router.get("/name/:name", async (req, res) => {
-    try {
-      const client = await thirdPartyClient.findOne({
-        where: { name: req.params.name },
-      });
-      if (!client) return res.status(404).json({ error: "Not found" });
-      res.json(client);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
+// GET by name
+router.get("/name/:name", async (req, res) => {
+  try {
+    const client = await thirdPartyClient.findOne({
+      where: { name: req.params.name },
+    });
+    if (!client) return res.status(404).json({ error: "Not found" });
+    res.json(client);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-router.post("/",
-    upload.any({ limits: { files: 10 } }),
-    async (req, res) => {
+router.post("/", upload.any({ limits: { files: 10 } }), async (req, res) => {
   const { name, company, address, phone } = req.body;
 
   const stored_date = new Date();
@@ -111,14 +109,12 @@ router.post("/",
     const productImageMap = {};
 
     for (const file of req.files || []) {
-      const match = file.fieldname.match(
-        /^products\[(\d+)\]\[sample_image\]$/
-      );
+      const match = file.fieldname.match(/^products\[(\d+)\]\[sample_image\]$/);
 
       if (!match) continue;
 
       const index = Number(match[1]);
-      const uploaded = await uploadToS3(file, "third-party-products");
+      const uploaded = await uploadToS3({file, folder: "third-party-products"});
 
       productImageMap[index] = uploaded.url;
     }
@@ -146,7 +142,8 @@ router.post("/",
         const sampleImage = productImageMap[i] ?? null;
 
         if (!product_name) throw new Error("product_name missing");
-        if (isNaN(productRent)) throw new Error(`Invalid rent: ${product_name}`);
+        if (isNaN(productRent))
+          throw new Error(`Invalid rent: ${product_name}`);
         if (!selectedChambers.length)
           throw new Error(`No chambers for product: ${product_name}`);
 
@@ -269,10 +266,10 @@ router.post("/",
   }
 });
 
-  router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
+router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
   const { id: stockIdParam, othersItemId } = req.params;
   let { chambers = [], add_quantity = 0, sub_quantity = 0 } = req.body;
-  
+
   try {
     // Parse chambers array from request body
     // Expected format: chambers = [{ id: 'uuid', add_quantity: 500, sub_quantity: 0 }, ...]
@@ -280,41 +277,45 @@ router.post("/",
 
     await sequelize.transaction(async (t) => {
       // Lock stock row
-      const stockRow = await stockClient.findByPk(stockIdParam, { 
-        transaction: t, 
-        lock: t.LOCK.UPDATE 
+      const stockRow = await stockClient.findByPk(stockIdParam, {
+        transaction: t,
+        lock: t.LOCK.UPDATE,
       });
       if (!stockRow) {
-        throw Object.assign(new Error("Chamber stock not found"), { status: 404 });
+        throw Object.assign(new Error("Chamber stock not found"), {
+          status: 404,
+        });
       }
 
       // Lock item row
-      const item = await otherItemClient.findByPk(othersItemId, { 
-        transaction: t, 
-        lock: t.LOCK.UPDATE 
+      const item = await otherItemClient.findByPk(othersItemId, {
+        transaction: t,
+        lock: t.LOCK.UPDATE,
       });
       if (!item) {
         throw Object.assign(new Error("OthersItem not found"), { status: 404 });
       }
 
       // Get current chambers from stock
-      const currentChambers = Array.isArray(stockRow.chamber) ? stockRow.chamber : [];
+      const currentChambers = Array.isArray(stockRow.chamber)
+        ? stockRow.chamber
+        : [];
 
       // Extract chamber IDs from request
-      const chamberIdsFromRequest = chambers.map(c => c.id).filter(Boolean);
-      
+      const chamberIdsFromRequest = chambers.map((c) => c.id).filter(Boolean);
+
       if (chamberIdsFromRequest.length === 0) {
         throw Object.assign(
-          new Error("At least one chamber must be specified"), 
+          new Error("At least one chamber must be specified"),
           { status: 400 }
         );
       }
 
       // Lock chamber instances
-      const lockedChamberInstances = await chamberClient.findAll({ 
-        where: { id: chamberIdsFromRequest }, 
-        transaction: t, 
-        lock: t.LOCK.UPDATE 
+      const lockedChamberInstances = await chamberClient.findAll({
+        where: { id: chamberIdsFromRequest },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
       });
 
       const chamberMap = new Map(
@@ -323,18 +324,18 @@ router.post("/",
 
       // Validate capacity for additions
       const insufficient = [];
-      
+
       for (const requestChamber of chambers) {
         const chamberId = requestChamber.id;
         const addQty = Number(requestChamber.add_quantity || 0);
-        
+
         if (addQty <= 0) continue;
 
         const chamberInstance = chamberMap.get(String(chamberId));
         if (!chamberInstance) {
-          insufficient.push({ 
-            id: chamberId, 
-            reason: "chamber_not_found" 
+          insufficient.push({
+            id: chamberId,
+            reason: "chamber_not_found",
           });
           continue;
         }
@@ -358,7 +359,9 @@ router.post("/",
       }
 
       if (insufficient.length > 0) {
-        const err = new Error("Insufficient chamber capacity for requested quantities");
+        const err = new Error(
+          "Insufficient chamber capacity for requested quantities"
+        );
         err.details = insufficient;
         throw err;
       }
@@ -366,8 +369,8 @@ router.post("/",
       // Update chamber quantities in stock
       const updatedChambers = currentChambers.map((stockChamber) => {
         // Find matching chamber from request
-        const requestChamber = chambers.find(c => c.id === stockChamber.id);
-        
+        const requestChamber = chambers.find((c) => c.id === stockChamber.id);
+
         if (!requestChamber) return stockChamber;
 
         let quantity = Number(stockChamber.quantity ?? 0);
@@ -378,25 +381,25 @@ router.post("/",
         quantity -= subQty;
         quantity = Math.max(0, quantity);
 
-        return { 
-          ...stockChamber, 
-          quantity: quantity.toString() 
+        return {
+          ...stockChamber,
+          quantity: quantity.toString(),
         };
       });
 
       // Update stock with new chamber quantities
       await stockClient.update(
-        { chamber: updatedChambers }, 
+        { chamber: updatedChambers },
         { where: { id: stockRow.id }, transaction: t }
       );
 
       // Calculate total add/sub quantities across all chambers
       const totalAddQuantity = chambers.reduce(
-        (sum, c) => sum + Number(c.add_quantity || 0), 
+        (sum, c) => sum + Number(c.add_quantity || 0),
         0
       );
       const totalSubQuantity = chambers.reduce(
-        (sum, c) => sum + Number(c.sub_quantity || 0), 
+        (sum, c) => sum + Number(c.sub_quantity || 0),
         0
       );
 
@@ -407,7 +410,7 @@ router.post("/",
       stored_quantity = Math.max(0, stored_quantity);
 
       await otherItemClient.update(
-        { stored_quantity }, 
+        { stored_quantity },
         { where: { id: othersItemId }, transaction: t }
       );
 
@@ -417,8 +420,6 @@ router.post("/",
         const subQty = Number(requestChamber.sub_quantity || 0);
         console.log("requestChamber", requestChamber);
         console.log("item.id", item.id);
-        
-        
 
         // Only create history if there's actual activity
         if (addQty > 0 || subQty > 0) {
@@ -437,25 +438,29 @@ router.post("/",
     });
 
     // Fetch and return updated stock
-    const updatedStock = await stockClient.findByPk(stockIdParam, { raw: true });
+    const updatedStock = await stockClient.findByPk(stockIdParam, {
+      raw: true,
+    });
     return res.status(200).json({
       success: true,
-      data: updatedStock
+      data: updatedStock,
     });
-
   } catch (error) {
-    console.error("Error during update chamberStock by id:", error?.message || error);
-    
+    console.error(
+      "Error during update chamberStock by id:",
+      error?.message || error
+    );
+
     if (error && error.details) {
-      return res.status(400).json({ 
-        error: error.message, 
-        details: error.details 
+      return res.status(400).json({
+        error: error.message,
+        details: error.details,
       });
     }
-    
+
     const status = error && error.status ? error.status : 500;
-    return res.status(status).json({ 
-      error: error.message || "Internal server error, please try again later." 
+    return res.status(status).json({
+      error: error.message || "Internal server error, please try again later.",
     });
   }
 });
@@ -522,7 +527,7 @@ router.patch(
             if (oldKey) await deleteFromS3(oldKey);
           }
 
-          const uploaded = await uploadToS3(file, "third-party-products");
+          const uploaded = await uploadToS3({file, folder: "third-party-products"});
 
           await existingItem.update(
             { sample_image: uploaded.url },
@@ -594,68 +599,64 @@ router.patch(
 //   }
 // );
 
-router.patch(
-  "/:id/image",
-  upload.single("sample_image"),
-  async (req, res) => {
-    const t = await sequelize.transaction();
+router.patch("/:id/image", upload.single("sample_image"), async (req, res) => {
+  const t = await sequelize.transaction();
 
-    try {
-      if (!req.file) {
-        await t.rollback();
-        return res.status(400).json({ error: "Image file required" });
-      }
-
-      const client = await thirdPartyClient.findByPk(req.params.id, {
-        transaction: t,
-        lock: t.LOCK.UPDATE,
-      });
-
-      if (!client) {
-        await t.rollback();
-        return res.status(404).json({ error: "Client not found" });
-      }
-
-      const existingItem = await otherItemClient.findOne({
-        where: { client_id: client.id },
-        transaction: t,
-        lock: t.LOCK.UPDATE,
-      });
-
-      if (!existingItem) {
-        await t.rollback();
-        return res.status(404).json({ error: "Item not found" });
-      }
-
-      const oldImageUrl = existingItem.sample_image;
-
-      const uploaded = await uploadToS3(req.file, "third-party-products");
-
-      await existingItem.update(
-        { sample_image: uploaded.url },
-        { transaction: t }
-      );
-
-      await t.commit();
-
-      if (oldImageUrl) {
-        const oldKey = extractKeyFromUrl(oldImageUrl);
-        if (oldKey) {
-          await deleteFromS3(oldKey);
-        }
-      }
-
-      return res.status(200).json({
-        message: "Image updated successfully",
-        image: uploaded.url,
-      });
-    } catch (err) {
+  try {
+    if (!req.file) {
       await t.rollback();
-      console.error("IMAGE PATCH error:", err);
-      return res.status(500).json({ error: "Failed to update image" });
+      return res.status(400).json({ error: "Image file required" });
     }
+
+    const client = await thirdPartyClient.findByPk(req.params.id, {
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
+
+    if (!client) {
+      await t.rollback();
+      return res.status(404).json({ error: "Client not found" });
+    }
+
+    const existingItem = await otherItemClient.findOne({
+      where: { client_id: client.id },
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
+
+    if (!existingItem) {
+      await t.rollback();
+      return res.status(404).json({ error: "Item not found" });
+    }
+
+    const oldImageUrl = existingItem.sample_image;
+
+    const uploaded = await uploadToS3({file: req.file, folder: "third-party-products"});
+
+    await existingItem.update(
+      { sample_image: uploaded.url },
+      { transaction: t }
+    );
+
+    await t.commit();
+
+    if (oldImageUrl) {
+      const oldKey = extractKeyFromUrl(oldImageUrl);
+      if (oldKey) {
+        await deleteFromS3(oldKey);
+      }
+    }
+
+    return res.status(200).json({
+      message: "Image updated successfully",
+      image: uploaded.url,
+    });
+  } catch (err) {
+    await t.rollback();
+    console.error("IMAGE PATCH error:", err);
+    return res.status(500).json({ error: "Failed to update image" });
   }
-);
+});
 
 router.delete("/:id", async (req, res) => {
   const clientId = req.params.id;
@@ -672,22 +673,21 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ error: "Client not found" });
     }
 
-      // 1) Load all others items for this client
-      const items = await otherItemClient.findAll({
-        where: { client_id: client.id },
-        transaction: t,
-        lock: t.LOCK.UPDATE,
-      });
+    // 1) Load all others items for this client
+    const items = await otherItemClient.findAll({
+      where: { client_id: client.id },
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
 
-      for (const item of items) {
-        if (item.sample_image) {
-          const key = extractKeyFromUrl(item.sample_image);
-          if (key) {
-            await deleteFromS3(key);
-          }
+    for (const item of items) {
+      if (item.sample_image) {
+        const key = extractKeyFromUrl(item.sample_image);
+        if (key) {
+          await deleteFromS3(key);
         }
       }
-
+    }
 
     const itemIds = items.map((it) => it.id);
     const productIds = items.map((it) => it.product_id);

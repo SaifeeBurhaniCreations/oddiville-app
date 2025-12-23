@@ -1,6 +1,7 @@
 const multer = require("multer");
 
 module.exports = (err, req, res, next) => {
+  // Multer internal errors
   if (err instanceof multer.MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
       return res.status(413).json({
@@ -9,12 +10,18 @@ module.exports = (err, req, res, next) => {
       });
     }
 
-    if (err.code === "LIMIT_UNEXPECTED_FILE") {
-      return res.status(400).json({
-        error: "Invalid file type",
-        message: "Only PNG, JPG images or PDF files are allowed.",
-      });
-    }
+    return res.status(400).json({
+      error: "Upload error",
+      message: err.message,
+    });
+  }
+
+  // Custom fileFilter errors
+  if (err.statusCode === 400) {
+    return res.status(400).json({
+      error: "Invalid file",
+      message: err.message,
+    });
   }
 
   next(err);

@@ -48,6 +48,7 @@ const ActivityCard = ({ activity, color, bgSvg: BgSvg, onPress }: ActivityCardPr
       extraData,
       metaData,
       category,
+      color: statusColor = "red"
     } = activity;
     
     useEffect(() => {
@@ -112,6 +113,8 @@ const ActivityCard = ({ activity, color, bgSvg: BgSvg, onPress }: ActivityCardPr
     const willButtonDisabled =
       metaData && metaData.disableButton && metaData.disableButton === true;
 
+      console.log("statusColor", statusColor);
+      
     return (
       <Pressable style={styles.container} onPress={handleCardPress}>
         <BgSvg style={styles.cardBackgroundImage} />
@@ -120,7 +123,7 @@ const ActivityCard = ({ activity, color, bgSvg: BgSvg, onPress }: ActivityCardPr
             <View style={styles.cardHeader}>
               {type && (
                 <B5
-                  color={getColor(typeColor, 700)}
+                  color={getColor(statusColor ?? "red", 700)}
                   style={{ textTransform: "uppercase" }}
                 >
                   {type}

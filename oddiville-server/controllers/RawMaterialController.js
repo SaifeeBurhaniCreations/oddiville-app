@@ -8,10 +8,12 @@ const {
   Production: ProductionClient,
 } = require("../models");
 
-const {dispatchAndSendNotification} = require("../utils/dispatchAndSendNotification");
+const {
+  dispatchAndSendNotification,
+} = require("../utils/dispatchAndSendNotification");
 require("dotenv").config();
 
-const { uploadToS3, deleteFromS3 } = require("../services/s3Service");  
+const { uploadToS3, deleteFromS3 } = require("../services/s3Service");
 const upload = require("../middlewares/upload");
 
 router.get("/all", async (req, res) => {
@@ -95,7 +97,7 @@ router.delete("/:id", async (req, res) => {
     if (!rawMaterial) {
       return res.status(404).json({ error: "Raw Material not found" });
     }
- 
+
     // Delete image from S3 if exists
     if (rawMaterial.sample_image?.key) {
       await deleteFromS3(rawMaterial.sample_image.key);
@@ -136,9 +138,9 @@ router.patch("/:id", upload.single("sample_image"), async (req, res) => {
 
     // ✅ Update image ONLY if a new file is uploaded
     if (req.file) {
-  if (rawMaterial.sample_image?.key) {
-    await deleteFromS3(rawMaterial.sample_image.key);
-  }
+      if (rawMaterial.sample_image?.key) {
+        await deleteFromS3(rawMaterial.sample_image.key);
+      }
 
       const uploaded = await uploadToS3({
         file: req.file,
@@ -166,7 +168,7 @@ router.patch("/:id", upload.single("sample_image"), async (req, res) => {
 });
 
 router.post("/order", async (req, res) => {
-const io = req.app.get("io");
+  const io = req.app.get("io");
 
   try {
     const {
@@ -207,7 +209,7 @@ const io = req.app.get("io");
           .json({ error: "est_arrival_date must be a valid date." });
       }
     }
-    
+
     const newOrders = await Promise.all(
       vendorQuantities?.map(async (vend) => {
         const createdOrder = await RawMaterialOrderClient.create({
@@ -405,7 +407,7 @@ router.patch("/order/:id", upload.single("challan"), async (req, res) => {
       ...otherFields,
       updatedAt: new Date(),
       quantity_received: receivedQty,
-      price: Number((unitPrice * receivedQty).toFixed(2))
+      price: Number((unitPrice * receivedQty).toFixed(2)),
     };
 
     const truckDetails = {};
@@ -417,9 +419,9 @@ router.patch("/order/:id", upload.single("challan"), async (req, res) => {
 
     if (req.file) {
       const oldKey = rawData?.truck_details?.challan?.key;
-        if (oldKey) {
-          await deleteFromS3(oldKey);
-        }
+      if (oldKey) {
+        await deleteFromS3(oldKey);
+      }
       const uploaded = await uploadToS3({
         file: req.file,
         folder: "raw-materials/challan",

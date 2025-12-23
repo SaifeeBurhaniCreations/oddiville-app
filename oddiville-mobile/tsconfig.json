@@ -39,5 +39,5 @@
 "../resource/componnets/TitleWithLinkComponent.tsx"
 ,
 "../resource/useOtherProductHistory.ts"
-]
+, "../resource/ChamberCard.tsx"]
 }

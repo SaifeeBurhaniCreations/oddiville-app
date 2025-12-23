@@ -1,10 +1,12 @@
 const router = require("express").Router();
-const { DryWarehouse: DryWarehousesClient, Chambers: chamberClient } = require("../../models");
-const { uploadToS3, deleteFromS3 } = require("../../services/s3Service");  
+const {
+  DryWarehouse: DryWarehousesClient,
+  Chambers: chamberClient,
+} = require("../../models");
+const { uploadToS3, deleteFromS3 } = require("../../services/s3Service");
 const upload = require("../../middlewares/upload");
 
 const { Op } = require("sequelize");
-
 
 // CREATE
 router.post("/", upload.single("sample_image"), async (req, res) => {
@@ -14,7 +16,7 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
       warehoused_date,
       description,
       quantity_unit,
-      chamber_id
+      chamber_id,
     } = req.body;
 
     if (!item_name || !warehoused_date || !chamber_id) {
@@ -22,21 +24,21 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
     }
 
     const chamber = await chamberClient.findOne({
-      where: { chamber_name: chamber_id }
+      where: { chamber_name: chamber_id },
     });
 
     if (!chamber) {
       return res.status(404).json({
-        error: `Chamber '${chamber_id}' not found`
+        error: `Chamber '${chamber_id}' not found`,
       });
     }
 
     let sample_image = null;
     if (req.file) {
-      const uploaded = await uploadToS3(req.file, "warehouses/dry");
+      const uploaded = await uploadToS3({file: req.file, folder: "warehouses/dry"});
       sample_image = {
         url: uploaded.url,
-        key: uploaded.key
+        key: uploaded.key,
       };
     }
 
@@ -46,7 +48,7 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
       description,
       quantity_unit,
       sample_image,
-      chamber_id: chamber.id 
+      chamber_id: chamber.id,
     });
 
     const currentItems = chamber.items || [];
@@ -54,7 +56,7 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
     chamber.items = currentItems;
     await chamber.save();
 
-    res.status(201).json({...newItem, chamber_name: chamber.chamber_name});
+    res.status(201).json({ ...newItem, chamber_name: chamber.chamber_name });
   } catch (error) {
     console.error("Create Dry Error:", error.message);
     res.status(500).json({ error: "Internal server error." });
@@ -66,17 +68,14 @@ router.get("/", async (req, res) => {
   try {
     const items = await DryWarehousesClient.findAll({
       include: [
-        { model: chamberClient,
-          as: "chamber",
-          attributes: ["chamber_name"]
-        }
-      ]
+        { model: chamberClient, as: "chamber", attributes: ["chamber_name"] },
+      ],
     });
 
-    const result = items.map(item => ({
+    const result = items.map((item) => ({
       ...item.toJSON(),
       chamber_name: item.chamber?.chamber_name,
-      chamber_id: undefined
+      chamber_id: undefined,
     }));
 
     res.status(200).json(result);
@@ -107,7 +106,8 @@ router.get("/summary", async (req, res) => {
       return res.status(200).json({ summaries: [], totalChambers: 0 });
     }
 
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
     const uuids = rawIds.filter((s) => uuidRegex.test(s));
     const names = rawIds.filter((s) => !uuidRegex.test(s));
@@ -174,7 +174,10 @@ router.get("/summary", async (req, res) => {
       };
     });
 
-    const grandTotal = summaries.reduce((acc, s) => acc + (s.totalQuantity || 0), 0);
+    const grandTotal = summaries.reduce(
+      (acc, s) => acc + (s.totalQuantity || 0),
+      0
+    );
 
     return res.status(200).json({
       summaries,
@@ -224,9 +227,13 @@ router.put("/:id", async (req, res) => {
     if (newChamberId !== undefined && newChamberId !== oldChamberId) {
       // Remove item from the old chamber if it existed
       if (oldChamberId) {
-        const oldChamber = await chamberClient.findOne({ where: { chamber_name: oldChamberId } });
+        const oldChamber = await chamberClient.findOne({
+          where: { chamber_name: oldChamberId },
+        });
         if (oldChamber) {
-          oldChamber.items = (oldChamber.items || []).filter(itemId => itemId !== existingItem.id);
+          oldChamber.items = (oldChamber.items || []).filter(
+            (itemId) => itemId !== existingItem.id
+          );
           await oldChamber.save();
         } else {
           console.warn(`Old Chamber with ID ${oldChamberId} not found.`);
@@ -235,7 +242,9 @@ router.put("/:id", async (req, res) => {
 
       // Add item to the new chamber if newChamberId is provided
       if (newChamberId) {
-        const newChamber = await chamberClient.findOne({ where: { chamber_name: newChamberId } });
+        const newChamber = await chamberClient.findOne({
+          where: { chamber_name: newChamberId },
+        });
         if (newChamber) {
           const currentItems = newChamber.items || [];
           if (!currentItems.includes(updatedItem.id)) {
@@ -249,8 +258,9 @@ router.put("/:id", async (req, res) => {
       }
     }
 
-
-    res.status(200).json({ message: "Updated successfully", data: updatedItem });
+    res
+      .status(200)
+      .json({ message: "Updated successfully", data: updatedItem });
   } catch (error) {
     console.error("Update Dry Error:", error.message);
     res.status(500).json({ error: "Internal server error." });
@@ -272,9 +282,7 @@ router.delete("/:id", async (req, res) => {
         where: { chamber_name: item.chamber_id },
       });
       if (chamber) {
-        chamber.items = (chamber.items || []).filter(
-          (id) => id !== item.id
-        );
+        chamber.items = (chamber.items || []).filter((id) => id !== item.id);
         await chamber.save();
       }
     }

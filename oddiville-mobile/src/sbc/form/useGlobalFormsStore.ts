@@ -284,11 +284,11 @@ export const useGlobalFormsStore = create<GlobalFormsStore>((set, get) => ({
         return form?.errors as ErrorMap<T> | undefined;
     },
 
-    isValid: (formId: string) => {
-        const form = get().forms[formId];
-        if (!form) throw new Error(`Form ${formId} not initialized`);
-        return Object.values(form.errors).every((err) => !err);
-    }
+   isValid: (formId: string) => {
+  const form = get().forms[formId];
+  if (!form) return false; 
+  return Object.values(form.errors).every((err) => !err);
+}
 }));
 
 export const isFormInitialized = (formId: string) => {

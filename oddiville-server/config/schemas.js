@@ -2,7 +2,7 @@ const ORDER_READY = {
     sections: [
         {
             type: 'header',
-            data: { label: 'Order ready', title: "", value: "", icon: 'calendar', description: "" },
+            data: { label: 'Order ready', title: "", value: "", icon: 'calendar', description: "", color: "red" },
         },
         {
             type: 'data',
@@ -87,7 +87,7 @@ const ORDER_SHIPPED = {
     sections: [
         {
             type: 'header',
-            data: { label: 'Order shipped', title: "", value: "", icon: 'calendar' },
+            data: { label: 'Order shipped', title: "", value: "", icon: 'calendar', color: "yellow" },
         },
         {
             type: 'product-details',
@@ -189,7 +189,7 @@ const ORDER_REACHED = {
     sections: [
         {
             type: 'header',
-            data: { label: 'Order reached', title: '', value: '', icon: 'calendar', description: "" },
+            data: { label: 'Order reached', title: '', value: '', icon: 'calendar', description: "", color: "green" },
         },
         {
             type: 'product-details',
@@ -388,7 +388,7 @@ const RAW_MATERIAL_REACHED = {
     sections: [
         {
             type: 'header',
-            data: { label: 'Raw material reached', title: "", value: "", icon: 'calendar' },
+            data: { label: 'Raw material reached', title: "", value: "", icon: 'calendar', color: "green" },
         },
         {
             type: 'data-group',
@@ -426,7 +426,7 @@ const RAW_MATERIAL_ORDERED = {
     sections: [
         {
             type: 'header',
-            data: { label: 'Raw material ordered', title: "", value: "", icon: 'calendar' },
+            data: { label: 'Raw material ordered', title: "", value: "", icon: 'calendar', color: "red" },
         },
         {
             type: 'data-group',
@@ -502,7 +502,76 @@ const PRODUCTION_COMPLETED = {
     sections: [
         {
             type: 'header',
-            data: { label: 'Product Completed', title: "", value: "", icon: 'calendar' },
+            data: { label: 'Product Completed', title: "", value: "", icon: 'calendar', color: "green" },
+        },
+        {
+            type: 'data',
+            data: [
+                {
+                    title: "Production detail",
+                    details: [
+                        {
+                            row_1: [
+                                {
+                                    label: "",
+                                    value: "",
+                                    icon: "user",
+                                },
+                            ]
+                        },
+                        {
+                            row_2: [
+                                {
+                                    label: "",
+                                    value: "",
+                                    icon: "color-swatch",
+                                },
+                                {
+                                    label: "",
+                                    value: "",
+                                    icon: "trash",
+                                }
+                            ]
+                        },
+                        {
+                            row_3: [
+                                {
+                                    label: "",
+                                    value: "",
+                                    icon: "lane",
+                                },
+                                {
+                                    label: "",
+                                    value: "",
+                                    icon: "box",
+                                },
+                            ]
+                        },
+                        {
+                            row_4: [
+                               {
+                                    label: "",
+                                    value: "",
+                                    icon: "calendar-year",
+                                }
+                            ]
+                        },
+                    ],
+                },
+            ],
+        },
+        {
+            type: 'image-gallery',
+            data: [],
+        },
+    ],
+};
+
+const PACKING_SUMMARY = {
+    sections: [
+        {
+            type: 'header',
+            data: { label: 'Packing Summary', title: "", value: "", icon: 'calendar', color: "green" },
         },
         {
             type: 'data',
@@ -571,7 +640,7 @@ const LANE_OCCUPIED = {
     sections: [
         {
             type: 'header',
-            data: { label: 'Lane occupied', title: "", value: "", icon: 'calendar' },
+            data: { label: 'Lane occupied', title: "", value: "", icon: 'calendar', color: "yellow" },
         },
         {
             type: 'data',
@@ -622,7 +691,7 @@ const WORKER_ARRIVED_SINGLE = {
     sections: [
         {
             type: 'header',
-            data: { label: 'Worker arrived', title: "", value: "", icon: 'calendar' },
+            data: { label: 'Worker arrived', title: "", value: "", icon: 'calendar', color: "green" },
         },
         {
             type: 'data',
@@ -684,7 +753,7 @@ const WORKER_ARRIVED_MULTIPLE = {
         {
             type: 'header',
             data: {
-                label: 'Worker arrived', title: "", value: "", icon: 'calendar', headerDetails: [
+                label: 'Worker arrived', title: "", value: "", icon: 'calendar', color: "green", headerDetails: [
                     {
                         label: '',
                         value: '',
@@ -802,7 +871,7 @@ const COUNTRY = {
     sections: [
         {
             type: 'header',
-            data: { label: '', title: "Country", value: "", icon: 'calendar' },
+            data: { label: '', title: "Country", value: "", icon: 'calendar', color: "green" },
         },
         {
             type: 'search',
@@ -820,7 +889,7 @@ const STATES = {
     sections: [
         {
             type: 'header',
-            data: { label: '', title: "State", value: "", icon: 'calendar' },
+            data: { label: '', title: "State", value: "", icon: 'calendar', color: "green" },
         },
         {
             type: 'search',
@@ -842,7 +911,7 @@ const CITIES = {
     sections: [
         {
             type: 'header',
-            data: { label: '', title: "City", value: "", icon: 'calendar' }
+            data: { label: '', title: "City", value: "", icon: 'calendar', color: "green" }
         },
         {
             type: 'search',
@@ -864,7 +933,7 @@ const PRODUCTION_STARTED = {
     sections: [
         {
             type: 'header',
-            data: { label: 'Production Start', title: "", value: "", icon: 'calendar' },
+            data: { label: 'Production Start', title: "", value: "", icon: 'calendar', color: "red" },
         },
         {
             type: 'image-full-width',
@@ -898,6 +967,7 @@ const CALENDAR_EVENT_SCHEDULED = {
         title: "",
         value: "",
         icon: "calendar",
+        color: "red",
       },
     },
     {
@@ -924,6 +994,7 @@ const SCHEDULED_DATE_EVENT = {
         title: "",
         value: "",
         icon: "calendar",
+        color: "green",
       },
     },
     {
@@ -971,4 +1042,5 @@ module.exports = {
   PRODUCTION_COMPLETED,
   CALENDAR_EVENT_SCHEDULED,
   SCHEDULED_DATE_EVENT,
+  PACKING_SUMMARY,
 };

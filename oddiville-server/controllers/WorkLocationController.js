@@ -1,68 +1,75 @@
 const router = require("express").Router();
 const { WorkLocation } = require("../models");
-const { uploadToS3, deleteFromS3 } = require("../services/s3Service");  
+const { uploadToS3, deleteFromS3 } = require("../services/s3Service");
 const upload = require("../middlewares/upload");
 
 // CREATE
 router.post("/", upload.single("sample_image"), async (req, res) => {
-    try {
-        const { location_name, description } = req.body;
+  try {
+    const { location_name, description } = req.body;
 
-        if (!location_name) {
-            return res.status(400).json({ error: "Missing required field: location_name." });
-        }
-
-        // Validate: Check if a work location with the same name already exists
-        const existingLocation = await WorkLocation.findOne({ where: { location_name: location_name.trim() } });
-        if (existingLocation) {
-            return res.status(409).json({ error: "Work location with this name already exists." });
-        }
-
-        let sample_image = null;
-        if (req.file) {
-            const uploaded = await uploadToS3(req.file, "work-location");
-            sample_image = {
-                url: uploaded.url,
-                key: uploaded.key,
-            };
-        }
-
-        const newWorkLocation = await WorkLocation.create({
-            location_name: location_name.trim(),
-            description,
-            sample_image,
-        });
-
-        res.status(201).json(newWorkLocation);
-    } catch (error) {
-        console.error("Create Work Location Error:", error.message);
-        res.status(500).json({ error: "Internal server error." });
+    if (!location_name) {
+      return res
+        .status(400)
+        .json({ error: "Missing required field: location_name." });
     }
+
+    // Validate: Check if a work location with the same name already exists
+    const existingLocation = await WorkLocation.findOne({
+      where: { location_name: location_name.trim() },
+    });
+    if (existingLocation) {
+      return res
+        .status(409)
+        .json({ error: "Work location with this name already exists." });
+    }
+
+    let sample_image = null;
+    if (req.file) {
+      const uploaded = await uploadToS3({file: req.file, folder: "work-location"});
+      sample_image = {
+        url: uploaded.url,
+        key: uploaded.key,
+      };
+    }
+
+    const newWorkLocation = await WorkLocation.create({
+      location_name: location_name.trim(),
+      description,
+      sample_image,
+    });
+
+    res.status(201).json(newWorkLocation);
+  } catch (error) {
+    console.error("Create Work Location Error:", error.message);
+    res.status(500).json({ error: "Internal server error." });
+  }
 });
 
 // READ ALL
 router.get("/", async (req, res) => {
-    try {
-        const workLocations = await WorkLocation.findAll();
+  try {
+    const workLocations = await WorkLocation.findAll();
 
-        res.status(200).json(workLocations);
-    } catch (error) {
-        console.error("Get All Work Locations Error:", error.message);
-        res.status(500).json({ error: "Internal server error." });
-    }
+    res.status(200).json(workLocations);
+  } catch (error) {
+    console.error("Get All Work Locations Error:", error.message);
+    res.status(500).json({ error: "Internal server error." });
+  }
 });
 
 // READ BY ID
 router.get("/:id", async (req, res) => {
-    try {
-        const workLocation = await WorkLocation.findByPk(req.params.id);
-        if (!workLocation) return res.status(404).json({ error: "Work location not found." });
+  try {
+    const workLocation = await WorkLocation.findByPk(req.params.id);
+    if (!workLocation)
+      return res.status(404).json({ error: "Work location not found." });
 
-        res.status(200).json(workLocation);
-    } catch (error) {
-        console.error("Get Work Location By ID Error:", error.message);
-        res.status(500).json({ error: "Internal server error." });
-    }
+    res.status(200).json(workLocation);
+  } catch (error) {
+    console.error("Get Work Location By ID Error:", error.message);
+    res.status(500).json({ error: "Internal server error." });
+  }
 });
 
 // UPDATE
@@ -76,35 +83,48 @@ router.put("/:id", upload.single("sample_image"), async (req, res) => {
         where: { location_name: location_name.trim() },
       });
       if (existingLocation && String(existingLocation.id) !== String(id)) {
-        return res
-          .status(409)
-          .json({ error: "Another work location with this name already exists." });
+        return res.status(409).json({
+          error: "Another work location with this name already exists.",
+        });
       }
     }
 
     const existing = await WorkLocation.findByPk(id);
-    if (!existing) return res.status(404).json({ error: "Work location not found." });
+    if (!existing)
+      return res.status(404).json({ error: "Work location not found." });
 
     const oldKey = existing.sample_image?.key || null;
     let newUploaded = null;
 
     const updatePayload = {
-      location_name: typeof location_name === "string" ? location_name.trim() : existing.location_name,
+      location_name:
+        typeof location_name === "string"
+          ? location_name.trim()
+          : existing.location_name,
       description:
-        typeof req.body.description === "string" ? req.body.description : existing.description,
+        typeof req.body.description === "string"
+          ? req.body.description
+          : existing.description,
     };
 
     try {
       if (req.file) {
-        console.info(`[PUT /work-location/${id}] req.file present: name=${req.file.originalname}, size=${req.file.size}`);
-        newUploaded = await uploadToS3(req.file, "work-location");
+        console.info(
+          `[PUT /work-location/${id}] req.file present: name=${req.file.originalname}, size=${req.file.size}`
+        );
+        newUploaded = await uploadToS3({file: req.file, folder: "work-location"});
 
         if (!newUploaded || !newUploaded.url || !newUploaded.key) {
-          console.warn(`[PUT /work-location/${id}] uploadToS3 returned unexpected value:`, newUploaded);
+          console.warn(
+            `[PUT /work-location/${id}] await uploadToS3 returned unexpected value:`,
+            newUploaded
+          );
           throw new Error("S3 upload returned invalid response");
         }
 
-        console.info(`[PUT /work-location/${id}] uploaded to s3: key=${newUploaded.key}`);
+        console.info(
+          `[PUT /work-location/${id}] uploaded to s3: key=${newUploaded.key}`
+        );
         updatePayload.sample_image = {
           url: newUploaded.url,
           key: newUploaded.key,
@@ -114,31 +134,48 @@ router.put("/:id", upload.single("sample_image"), async (req, res) => {
       } else {
       }
 
-      const [count, [updatedWorkLocation]] = await WorkLocation.update(updatePayload, {
-        where: { id },
-        returning: true,
-      });
+      const [count, [updatedWorkLocation]] = await WorkLocation.update(
+        updatePayload,
+        {
+          where: { id },
+          returning: true,
+        }
+      );
 
       if (count === 0) {
         if (newUploaded) {
           try {
             await deleteFromS3(newUploaded.key);
-            console.info(`[PUT /work-location/${id}] cleaned up newly uploaded key=${newUploaded.key} after DB failure`);
+            console.info(
+              `[PUT /work-location/${id}] cleaned up newly uploaded key=${newUploaded.key} after DB failure`
+            );
           } catch (cleanupErr) {
-            console.warn(`[PUT /work-location/${id}] cleanup failed for newly uploaded object:`, cleanupErr);
+            console.warn(
+              `[PUT /work-location/${id}] cleanup failed for newly uploaded object:`,
+              cleanupErr
+            );
           }
         }
-        return res
-          .status(404)
-          .json({ error: "Work location not found or not updated (DB update failed)." });
+        return res.status(404).json({
+          error: "Work location not found or not updated (DB update failed).",
+        });
       }
 
-      if (oldKey && ((newUploaded && newUploaded.key) || updatePayload.sample_image === null)) {
+      if (
+        oldKey &&
+        ((newUploaded && newUploaded.key) ||
+          updatePayload.sample_image === null)
+      ) {
         try {
           await deleteFromS3(oldKey);
-          console.info(`[PUT /work-location/${id}] deleted old S3 object key=${oldKey}`);
+          console.info(
+            `[PUT /work-location/${id}] deleted old S3 object key=${oldKey}`
+          );
         } catch (delErr) {
-          console.warn(`[PUT /work-location/${id}] failed to delete old S3 object key=${oldKey}`, delErr);
+          console.warn(
+            `[PUT /work-location/${id}] failed to delete old S3 object key=${oldKey}`,
+            delErr
+          );
         }
       }
 
@@ -147,9 +184,14 @@ router.put("/:id", upload.single("sample_image"), async (req, res) => {
       if (newUploaded) {
         try {
           await deleteFromS3(newUploaded.key);
-          console.info(`[PUT /work-location/${id}] cleaned up new upload due to inner error (key=${newUploaded.key})`);
+          console.info(
+            `[PUT /work-location/${id}] cleaned up new upload due to inner error (key=${newUploaded.key})`
+          );
         } catch (cleanupErr) {
-          console.warn(`[PUT /work-location/${id}] cleanup of new upload failed after inner error:`, cleanupErr);
+          console.warn(
+            `[PUT /work-location/${id}] cleanup of new upload failed after inner error:`,
+            cleanupErr
+          );
         }
       }
       throw innerErr;

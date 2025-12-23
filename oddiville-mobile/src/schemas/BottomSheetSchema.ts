@@ -32,6 +32,12 @@ const HeaderSection = z.object({
     title: z.string().optional(),
     description: z.string().optional(),
     headerdetails: z.array(detailItem).default([]),
+    color: z.enum([
+      'green',
+      'red',
+      'blue',
+      'yellow',
+    ]),
     icon: z.enum([
       'calendar',
       'calendarCheck',
@@ -678,6 +684,10 @@ export const PackageTypeBottomSheetConfigSchema = z.object({
   buttons: z.array(ButtonSchema).optional()
 });
 
+export const PackingSummaryBottomSheetConfigSchema = z.object({
+  sections: z.array(z.discriminatedUnion('type', [HeaderSection, DataSection, ImageGallerySection])),
+});
+
 // ------------------- Type Inference ------------------- //
 
 export type OrderReadyBottomSheetConfig = z.infer<typeof OrderReadyBottomSheetConfigSchema>;
@@ -720,6 +730,7 @@ export type UserActionBottomSheetConfig = z.infer<typeof UserActionBottomSheetCo
 export type StorageRMRatingConfig = z.infer<typeof StorageRMRatingConfigSchema>;
 export type PoliciesBottomSheetConfig = z.infer<typeof PoliciesBottomSheetConfigSchema>;
 export type PackageTypeBottomSheetConfig = z.infer<typeof PackageTypeBottomSheetConfigSchema>;
+export type PackingSummaryBottomSheetConfig = z.infer<typeof PackingSummaryBottomSheetConfigSchema>;
 // ------------------- Central Schema Registry ------------------- //
 
 export const bottomSheetSchemas = {
@@ -765,6 +776,7 @@ export const bottomSheetSchemas = {
   "storage-rm-rating": StorageRMRatingConfigSchema,
   "select-policies": PoliciesBottomSheetConfigSchema,
   "select-package-type": PackageTypeBottomSheetConfigSchema,
+  "packing-summary": PackingSummaryBottomSheetConfigSchema,
 } as const;
 
 export type BottomSheetSchemaKey = keyof typeof bottomSheetSchemas;

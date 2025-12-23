@@ -204,6 +204,7 @@ export interface ActivityProps {
   metaData?: any;
   params?: any;
   category?: "informative" | "actionable" | "today";
+  color?: "red" | "yellow" | "green" | null;
 }
 
 export interface SearchActivityProps {
@@ -417,14 +418,16 @@ export interface RawMaterialProps {
   name: string;
   image?: string | number;
   description?: string;
-  detailByRating: RawMaterialDetailByRatingProps[];
-  rating: string;
+  detailByRating?: RawMaterialDetailByRatingProps[];
+  rating?: string;
   color?: "red" | "blue" | "green" | "yellow";
   category: "other" | "material" | "packed";
   quantity?: string;
   href?: keyof RootStackParamList;
   disabled?: boolean;
-  chambers: { id: string; quantity: string; rating: string }[];
+  chambers?: { id: string; quantity: string; rating: string }[];
+  plainDescription?: boolean;
+  leadingIcon?: ComponentType<IconProps> | null;
 }
 
 export interface SwitchProps {

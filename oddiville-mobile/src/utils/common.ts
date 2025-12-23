@@ -185,6 +185,8 @@ export function getEmptyStateData(listKey: string) {
             return { title: "No search Found", description: "No search result Found!" };
         case "truck_details":
             return { title: "No trucks Found", description: "No trucks available!" };
+        case "stock-detail":
+            return { title: "No Stock Found", description: "No Stock available!" };
 
         default:
             return { title: "No active batches", description: "No active batches right now. Enjoy the calm!" };

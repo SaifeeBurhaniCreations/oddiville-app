@@ -21,6 +21,7 @@ const {
   ORDER_REACHED,
   CALENDAR_EVENT_SCHEDULED,
   SCHEDULED_DATE_EVENT,
+  PACKING_SUMMARY,
 } = require("../config/schemas");
 
 const schemaMap = {
@@ -47,6 +48,7 @@ const schemaMap = {
   "production-completed": PRODUCTION_COMPLETED,
   "calendar-event-scheduled": CALENDAR_EVENT_SCHEDULED,
   "scheduled-date-event": SCHEDULED_DATE_EVENT,
+  "packing-summary": PACKING_SUMMARY,
 };
 
 module.exports = {schemaMap};

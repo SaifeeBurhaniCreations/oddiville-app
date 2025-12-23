@@ -1,6 +1,7 @@
 // 1. React and React Native core
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 
 // 2. Third-party dependencies
 import { useDispatch, useSelector } from "react-redux";
@@ -112,7 +113,7 @@ const CreateOrder = () => {
     const access = resolveAccess(safeRole, safePolicies);
 
   const dispatch = useDispatch();
-  const [step, setStep] = useState<number>(1);
+  const [step, setStep] = useState<number>(2);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastType, setToastType] = useState<"success" | "error" | "info">(
     "info"
@@ -247,6 +248,12 @@ const CreateOrder = () => {
       debounce: 300,
     }
   );
+
+useFocusEffect(
+  React.useCallback(() => {
+    dispatch(clearProduct());
+  }, [])
+);
 
   useEffect(() => {
     if (!selectedProduct || !filteredPackedItemsData?.length) return;

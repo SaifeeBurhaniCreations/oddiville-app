@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { fetchPackageById, fetchPackageByName, fetchPackages, createPackage, updatePackage } from '../services/packages.service';
+import { fetchPackageById, fetchPackageByName, fetchPackages, createPackage, addPackageType, updatePackageQuantity } from '../services/packages.service';
 import { socket } from '../lib/notificationSocket';
 import { rejectEmptyOrNull } from '../utils/authUtils';
 
@@ -49,6 +49,29 @@ function useDebounce(value: string, delay: number) {
     return debounced;
 }
 
+export function usePackageSocketSync() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const listener = ({ id }: { id?: string }) => {
+      console.log("📦 socket received package update", id);
+      
+      queryClient.invalidateQueries({ queryKey: ["packages"] });
+
+      if (id) {
+        queryClient.invalidateQueries({ queryKey: ["package", id] });
+      }
+    };
+
+    socket.on("package:updated", listener);
+
+    return () => {
+      socket.off("package:updated", listener);
+    };
+  }, [queryClient]);
+}
+
+
 export function usePackages(searchText: string) {
     const queryClient = useQueryClient();
     const debouncedText = useDebounce(searchText, 300);
@@ -64,28 +87,28 @@ export function usePackages(searchText: string) {
         refetchOnMount: false,
     });
 
-    useEffect(() => {
-        const listener = (updatedPackage: Package) => {
-            if (!updatedPackage?.id) return;
+    // useEffect(() => {
+    //     const listener = (updatedPackage: Package) => {
+    //         if (!updatedPackage?.id) return;
 
-            queryClient.setQueryData(['packages'], (oldData: Package[] = []) => {
-                const index = oldData.findIndex(pkg => pkg.id === updatedPackage.id);
-                if (index !== -1) {
-                    const newData = [...oldData];
-                    newData[index] = updatedPackage;
-                    return newData;
-                }
-                return [...oldData, updatedPackage];
-            });
+    //         queryClient.setQueryData(['packages'], (oldData: Package[] = []) => {
+    //             const index = oldData.findIndex(pkg => pkg.id === updatedPackage.id);
+    //             if (index !== -1) {
+    //                 const newData = [...oldData];
+    //                 newData[index] = updatedPackage;
+    //                 return newData;
+    //             }
+    //             return [...oldData, updatedPackage];
+    //         });
 
-            queryClient.setQueryData(['package', updatedPackage.id], updatedPackage);
-        };
+    //         queryClient.setQueryData(['package', updatedPackage.id], updatedPackage);
+    //     };
 
-        socket.on('package:receive', listener);
-        return () => {
-            socket.off('package:receive', listener);
-        };
-    }, [queryClient]);
+    //     socket.on('package:receive', listener);
+    //     return () => {
+    //         socket.off('package:receive', listener);
+    //     };
+    // }, [queryClient]);
 
     const cached = query.data || [];
     const filtered =
@@ -111,40 +134,20 @@ export function usePackages(searchText: string) {
 export function usePackageById(id: string | null) {
     const queryClient = useQueryClient();
 
-    const query = useQuery({
-        queryKey: ['package', id],
-        queryFn: rejectEmptyOrNull(async () => {
-            if (!id) return null;
-
-            const cachedPackages = queryClient.getQueryData<Package[]>(['packages']);
-            if (cachedPackages) {
-                const cachedPackage = cachedPackages.find(p => p.id === id);
-                if (cachedPackage) return cachedPackage;
-            }
-
-            const response = await fetchPackageById(id);
-            return response?.data ?? null;
-        }),
-        enabled: !!id,
-        staleTime: 1000 * 60 * 60,
-        refetchOnWindowFocus: false,
-        refetchOnMount: false,
-    });
-
-    useEffect(() => {
-        if (!id) return;
-        const listener = (data: Package) => {
-            if (data?.id === id) {
-                queryClient.setQueryData(['package', id], data);
-            }
-        };
-        socket.on('package-id:receive', listener);
-        return () => {
-            socket.off('package-id:receive', listener);
-        };
-    }, [queryClient, id]);
-
-    return query;
+  return useQuery({
+    queryKey: ['package', id],
+    queryFn: async () => {
+      if (!id) return null;
+      const response = await fetchPackageById(id);
+      return response?.data ?? null;
+    },
+    enabled: !!id,
+    initialData: () => {
+      const packages = queryClient.getQueryData<Package[]>(['packages']);
+      return packages?.find(p => p.id === id);
+    },
+    staleTime: 0, 
+  });
 }
 
 export function usePackageByName(name: string | null) {
@@ -213,48 +216,111 @@ export function useCreatePackage() {
   });
 }
 
-export function useUpdatePackage() {
-    const queryClient = useQueryClient();
+// export function useUpdatePackage() {
+//     const queryClient = useQueryClient();
 
-    return useMutation({
-        mutationFn: async ({ id, data }: { id: string; data: UpdatePackageDTO }) => {
-            const response = await updatePackage({ id, data });
-            return response.data;
-        },
-        onSuccess: (updatedPackage) => {
-            if (!updatedPackage?.id) return;
+//     return useMutation({
+//         mutationFn: async ({ id, data }: { id: string; data: UpdatePackageDTO }) => {
+//             const response = await updatePackage({ id, data });
+//             return response.data;
+//         },
+//         onSuccess: (updatedPackage) => {
+//             if (!updatedPackage?.id) return;
 
-            socket.emit('package-id:send', updatedPackage);
+//             socket.emit('package-id:send', updatedPackage);
 
-            queryClient.setQueryData(['packages'], (oldPackages: Package[] = []) => {
-                const index = oldPackages.findIndex(pkg => pkg.id === updatedPackage.id);
-                if (index !== -1) {
-                    const newPackages = [...oldPackages];
-                    newPackages[index] = updatedPackage;
-                    return newPackages;
-                }
-                return oldPackages;
-            });
+//             queryClient.setQueryData(['packages'], (oldPackages: Package[] = []) => {
+//                 const index = oldPackages.findIndex(pkg => pkg.id === updatedPackage.id);
+//                 if (index !== -1) {
+//                     const newPackages = [...oldPackages];
+//                     newPackages[index] = updatedPackage;
+//                     return newPackages;
+//                 }
+//                 return oldPackages;
+//             });
 
-            queryClient.setQueryData(['package', updatedPackage.id], updatedPackage);
-        },
-    });
+//             queryClient.setQueryData(['package', updatedPackage.id], updatedPackage);
+//         },
+//     });
+// }
+
+export function useAddPackageType() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        product_name: string;
+        size: string;
+        unit: "kg" | "gm" | null;
+        quantity: string;
+      };
+    }) => {
+      const response = await addPackageType({ id, data });
+      return response.data as Package;
+    },
+
+    // onSuccess: (updatedPackage) => {
+    //   if (!updatedPackage?.id) return;
+
+    //   socket.emit("package-id:send", updatedPackage);
+
+    //   queryClient.setQueryData(
+    //     ["packages"],
+    //     (old: Package[] = []) =>
+    //       old.map((pkg) =>
+    //         pkg.id === updatedPackage.id ? updatedPackage : pkg
+    //       )
+    //   );
+
+    //   queryClient.setQueryData(
+    //     ["package", updatedPackage.id],
+    //     updatedPackage
+    //   );
+    // },
+  });
 }
 
-// export function useUpdatePackage() {
-//   return useMutation({
-//     mutationFn: async ({ id, data }: { id: string; data: UpdatePackageDTO }) => {
-//       const response = await updatePackage({ id, data });
-//       return response.data as Package;
-//     },
-//     onSuccess(_updatedPackage) {
-//       // test mode: no cache update, no socket emit
-//     },
-//     onError(_error) {
-//       // optional: console.log(_error);
-//     },
-//     onSettled() {
-//       // nothing
-//     },
-//   });
-// }
+export function useIncreasePackageQuantity() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        size: string;
+        unit: "kg" | "gm" | null;
+        quantity: string;
+      };
+    }) => {
+      const response = await updatePackageQuantity({ id, data });
+      return response.data as Package;
+    },
+
+    // onSuccess: (updatedPackage) => {
+    //   if (!updatedPackage?.id) return;
+
+    //   socket.emit("package-id:send", updatedPackage);
+
+    //   queryClient.setQueryData(
+    //     ["packages"],
+    //     (old: Package[] = []) =>
+    //       old.map((pkg) =>
+    //         pkg.id === updatedPackage.id ? updatedPackage : pkg
+    //       )
+    //   );
+
+    //   queryClient.setQueryData(
+    //     ["package", updatedPackage.id],
+    //     updatedPackage
+    //   );
+    // },
+  });
+}

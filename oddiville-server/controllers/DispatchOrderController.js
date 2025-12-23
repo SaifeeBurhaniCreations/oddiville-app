@@ -16,7 +16,7 @@ const {
 const notificationTypes = require("../types/notification-types");
 require("dotenv").config();
 
-const { uploadToS3, deleteFromS3 } = require("../services/s3Service");  
+const { uploadToS3, deleteFromS3 } = require("../services/s3Service");
 const upload = require("../middlewares/upload");
 
 const allocateChamberQuantities = async (parsedProducts) => {
@@ -522,7 +522,7 @@ router.patch("/status/:id", async (req, res) => {
 });
 
 router.patch("/update/:id", upload.any(), async (req, res) => {
-  const t = await sequelize.transaction();   
+  const t = await sequelize.transaction();
 
   try {
     const { id } = req.params;
@@ -569,8 +569,8 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
     if (req.files && req.files.length > 0) {
       const uploadPromises = req.files.map(async (file) => {
         try {
-          const uploaded = await uploadToS3(file, "dispatchOrder/challan");
-          uploadedKeys.push(uploaded.key)
+          const uploaded = await uploadToS3({file, folder: "dispatchOrder/challan"});
+          uploadedKeys.push(uploaded.key);
           return uploaded.url;
         } catch (uploadError) {
           for (const key of uploadedKeys) {
@@ -677,10 +677,7 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
 
     if (truck) {
       if (truck.isMyTruck && truck.active) {
-        await truck.update(
-          { active: false },
-          { transaction: t }
-        );
+        await truck.update({ active: false }, { transaction: t });
       } else {
         await truck.destroy({ transaction: t });
       }

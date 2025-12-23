@@ -764,6 +764,50 @@ function fillProductionCompletedSchema(schema, filler) {
     return updatedSchema;
 }
 
+function fillPackingSummarySchema(schema, filler) {
+    const updatedSchema = JSON.parse(JSON.stringify(schema));
+
+    for (const section of updatedSchema.sections) {
+        // 🟦 HEADER
+        if (section.type === "header" && typeof section.data === "object") {
+            section.data.title = filler?.title || "Untitled";
+            section.data.value = filler?.createdAt || "";
+        }
+
+        // 🟦 DATA (Vendor detail rows)
+        if (section.type === "data" && Array.isArray(section.data)) {
+            for (const dataGroup of section.data) {
+                const fillerDetails = filler['data']['Production detail'];
+
+                if (!Array.isArray(fillerDetails)) continue;
+
+                if (Array.isArray(dataGroup.details)) {
+                    dataGroup.details.forEach((rowObj, i) => {
+                        const fillerRow = fillerDetails[i];
+                        for (const rowKey in rowObj) {
+                            const rowItems = rowObj[rowKey];
+                            const fillerItems = fillerRow?.[rowKey];
+                            if (Array.isArray(rowItems) && Array.isArray(fillerItems)) {
+                                rowItems.forEach((item, idx) => {
+                                    item.label = fillerItems[idx]?.label || "";
+                                    item.value = fillerItems[idx]?.value || "";
+                                    item.icon = fillerItems[idx]?.icon || item.icon || "";
+                                });
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        if (section.type === 'image-gallery') {
+            section.data = filler['image-gallery']
+        }
+    }
+
+    return updatedSchema;
+}
+
 function fillCalendarEventSchema(schema, filler) {
   const updatedSchema = JSON.parse(JSON.stringify(schema));
 
@@ -852,4 +896,5 @@ module.exports = {
   fillOrderReachedSchema,
   fillCalendarEventSchema,
   fillScheduledDateEventSchema,
+  fillPackingSummarySchema,
 };

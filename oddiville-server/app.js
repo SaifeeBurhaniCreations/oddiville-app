@@ -6,6 +6,7 @@ const dotenv = require("dotenv");
 const { Server } = require("socket.io");
 const redis = require('./devops/redis');
 const routes = require("./config/routes");
+const uploadErrorHandler = require("./middlewares/multerErrorHandler");
 
 const {
   Notifications,
@@ -30,8 +31,6 @@ const {
   sequelize
 } = require("./models");
 const { setIO } = require("./config/socket");
-const multerErrorHandler = require("./middlewares/multerErrorHandler");
-
 require("./models/Admin");
 
 dotenv.config();
@@ -62,8 +61,17 @@ app.use("/flags", express.static(path.join(__dirname, "assets/flags")));
 app.use("/challan", express.static(path.join(__dirname, "assets/challan")));
 
 app.use(routes);
-app.use(multerErrorHandler);
+app.use(uploadErrorHandler);
 
+app.use((err, req, res, next) => {
+  console.error("UNHANDLED ERROR:", err);
+  res.status(500).json({ error: "Internal server error" });
+});
+
+app.use((err, req, res, next) => {
+  console.error("UNHANDLED ERROR:", err);
+  res.status(500).json({ error: "Internal server error" });
+});
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -91,14 +99,15 @@ const PORT = process.env.PORT || 8022;
     console.log("✅ Connected to Aiven PostgreSQL");
 
     if (process.env.SHOULD_SYNC === "true") {
-      await Admin.sync({ force: true });
+      // await Admin.sync({ force: true });
       // await sequelize.sync({ alter: true });
       // await sequelize.authenticate();
+      // await Chambers.sync({ force: true });
       // await Lanes.sync({ force: true });
-      // await ChamberStock.sync({ force: true });
+      // await ChamberStock.sync({ alter: true });
       // await TruckDetails.sync({ force: true });
-      // await Notifications.sync({ force: true });
-      // await Production.sync({ alter: true });
+      await Notifications.sync({ alter: true });
+      // await Production.sync({ force: true });
       // await RawMaterialOrder.sync({ force: true });
       // await History.sync({ force: true });
       // await OthersItem.sync({ force: true });
@@ -106,7 +115,6 @@ const PORT = process.env.PORT || 8022;
       // await Vendors.sync({ force: true });
       // await Packages.sync({ force: true });
       // await DryWarehouse.sync({ force: true });
-      // await Chambers.sync({ force: true });
       // await DispatchOrder.sync({ alter: true });
       // await Calendar.sync({ force: true });
       // await Contractor.sync({ force: true });

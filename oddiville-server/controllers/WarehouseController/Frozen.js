@@ -1,21 +1,35 @@
 const router = require("express").Router();
 const { FrozenWarehouse, Production } = require("../../models");
-const { uploadToS3, deleteFromS3 } = require("../../services/s3Service");  
+const { uploadToS3, deleteFromS3 } = require("../../services/s3Service");
 const upload = require("../../middlewares/upload");
-const redisClient = require("../../devops/redis")
+const redisClient = require("../../devops/redis");
 
 // CREATE
 router.post("/", upload.single("sample_image"), async (req, res) => {
   try {
-    const { production_id, product_name, quantity_kg, warehoused_date, rating, chamber } = req.body;
+    const {
+      production_id,
+      product_name,
+      quantity_kg,
+      warehoused_date,
+      rating,
+      chamber,
+    } = req.body;
 
-    if (!production_id || !product_name || !quantity_kg || !warehoused_date || !rating || !chamber) {
+    if (
+      !production_id ||
+      !product_name ||
+      !quantity_kg ||
+      !warehoused_date ||
+      !rating ||
+      !chamber
+    ) {
       return res.status(400).json({ error: "Missing required fields." });
     }
 
     let sample_image = null;
     if (req.file) {
-      const uploaded = await uploadToS3(req.file, "warehouses/frozen");
+      const uploaded = await uploadToS3({file: req.file, folder: "warehouses/frozen"});
       sample_image = {
         url: uploaded.url,
         key: uploaded.key,
@@ -33,8 +47,11 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
     });
 
     await redisClient.del(`frozen:chamber:${chamber}`);
-    await redisClient.set(`frozen:product:${newItem.id}`, JSON.stringify(newItem));
-    
+    await redisClient.set(
+      `frozen:product:${newItem.id}`,
+      JSON.stringify(newItem)
+    );
+
     res.status(201).json(newItem);
   } catch (error) {
     console.error("Create Frozen Error:", error.message);
@@ -59,7 +76,7 @@ router.get("/", async (req, res) => {
         });
 
         data = JSON.stringify(freshData);
-        await redisClient.set(cacheKey, data); 
+        await redisClient.set(cacheKey, data);
       }
 
       results.push(...JSON.parse(data));
@@ -90,7 +107,7 @@ router.get("/:id", async (req, res) => {
 
     if (!item) return res.status(404).json({ error: "Item not found." });
 
-    await redisClient.set(cacheKey, JSON.stringify(item)); 
+    await redisClient.set(cacheKey, JSON.stringify(item));
 
     res.status(200).json(item);
   } catch (error) {
@@ -133,7 +150,8 @@ router.put("/:id", async (req, res) => {
     const { id } = req.params;
 
     const existingItem = await FrozenWarehouse.findByPk(id);
-    if (!existingItem) return res.status(404).json({ error: "Item not found." });
+    if (!existingItem)
+      return res.status(404).json({ error: "Item not found." });
 
     const [count, [updatedItem]] = await FrozenWarehouse.update(req.body, {
       where: { id },
@@ -151,7 +169,9 @@ router.put("/:id", async (req, res) => {
       await redisClient.del(`frozen:chamber:${existingItem.chamber}`);
     }
 
-    res.status(200).json({ message: "Updated successfully", data: updatedItem });
+    res
+      .status(200)
+      .json({ message: "Updated successfully", data: updatedItem });
   } catch (error) {
     console.error("Update Frozen Error:", error.message);
     res.status(500).json({ error: "Internal server error." });

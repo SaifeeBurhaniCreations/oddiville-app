@@ -121,7 +121,8 @@ interface PackedChamber {
 type RMChamberQuantityMap = {
   [rmName: string]: {
     [chamberId: string]: {
-      quantity: number;
+       count: number;   
+      quantity: number; 
       rating: number;
     };
   };
@@ -172,38 +173,6 @@ const validatePackageQuantity = (
   return totalPackageQuantity >= totalOrderQuantity;
 };
 
-const validateProductChambers = (products: Product[]): boolean => {
-  if (!Array.isArray(products) || products?.length === 0) return false;
-
-  return products.every((product: Product) => {
-    if (
-      !product.name ||
-      !Array.isArray(product.chambers) ||
-      product.chambers?.length === 0
-    ) {
-      return false;
-    }
-
-    const hasValidQuantity = product.chambers.some((chamber: Chamber) => {
-      const quantity = Number(chamber.quantity);
-      const storedQuantity = Number(chamber.stored_quantity);
-
-      if (
-        !chamber.id ||
-        !chamber.name ||
-        isNaN(quantity) ||
-        isNaN(storedQuantity)
-      ) {
-        return false;
-      }
-
-      return quantity > 0 && quantity <= storedQuantity;
-    });
-
-    return hasValidQuantity;
-  });
-};
-
 const calculateTotalPackedQuantity = (
   packedChambers?: PackedChamber[]
 ): number => {
@@ -225,15 +194,13 @@ const PackageScreen = () => {
     isFetching: packageFetching,
   } = usePackages(searchText);
 
-  // const storageRMRating = useSelector(
-  //   (state: RootState) => state.StorageRMRating.storageRmRating
-  // );
   const {
     productPackages,
     isLoading: productPackagesLoading,
     refetch: productPackageRefetch,
     isFetching: productPackageFetching,
   } = useProductPackage();
+
   const { mutate: createPacked, isPending, error } = useCreatePackedItem();
 
   const { data: DryChambersRaw } = useDryChambers();
@@ -269,7 +236,7 @@ const PackageScreen = () => {
   const choosedChambers = useSelector(
     (state: RootState) => state.rawMaterial.selectedChambers
   );
-  const chamberStock = useChamberStockByName(selectedRawMaterials);
+  const {chamberStock} = useChamberStockByName(selectedRawMaterials);
   const chamberRatingMap = useMemo(() => {
     const map = new Map<string, number>();
 
@@ -394,7 +361,6 @@ const getPacketWeightInGrams = (pkg: PackageItem): number => {
 
   return 1;
 };
-
 
 const getMaxPackagesFor = (pkg: PackageItem) => {
   const storedKg = Number(pkg.stored_quantity) || 0;
@@ -636,12 +602,11 @@ const totalRawMaterialUsed = useMemo(() => {
   const rmMap = values.rmChamberQuantities || {};
 
   return Object.values(rmMap).reduce((rmSum, chamberMap) => {
-    return (
-     Object.values(chamberMap || {}).reduce(
+    return rmSum +
+      Object.values(chamberMap || {}).reduce(
         (sum, v) => sum + (Number(v?.quantity) || 0),
         0
-      )
-    );
+      );
   }, 0);
 }, [values.rmChamberQuantities]);
 
@@ -918,22 +883,41 @@ const handlePackageQuantityChange = useCallback(
 
   type ChambersByRM = Map<string, StockChamber[]>;
 
-  const chambersByRM: ChambersByRM = useMemo(() => {
-    const map = new Map<string, StockChamber[]>();
+const chambersByRM: ChambersByRM = useMemo(() => {
+  const map = new Map<string, Map<string, StockChamber>>();
 
-    chamberStock?.forEach((stock: any) => {
-      const rmName = stock.product_name;
-      if (!rmName) return;
+  chamberStock?.forEach((stock) => {
+    const rmName = stock.product_name;
+    if (!rmName) return;
 
-      if (!map.has(rmName)) {
-        map.set(rmName, []);
+    if (!map.has(rmName)) {
+      map.set(rmName, new Map());
+    }
+
+    const chamberMap = map.get(rmName)!;
+
+    stock.chamber?.forEach((ch) => {
+      const id = String(ch.id);
+
+      if (!chamberMap.has(id)) {
+        chamberMap.set(id, {
+          id,
+          name: chamberNameMap.get(id) ?? "Unknown Chamber", 
+          quantity: Number(ch.quantity) || 0,
+          stored_quantity: Number(ch.quantity) || 0,
+          rating: Number(ch.rating) || 0,
+        });
       }
-
-      map.get(rmName)!.push(...(stock.chamber || []));
     });
+  });
 
-    return map;
-  }, [chamberStock]);
+  const finalMap = new Map<string, StockChamber[]>();
+  map.forEach((value, key) => {
+    finalMap.set(key, Array.from(value.values()));
+  });
+
+  return finalMap;
+}, [chamberStock, chamberNameMap]);
 
   const selectedLabel = selectedProduct || "Select products";
 
@@ -1007,7 +991,7 @@ const handlePackageQuantityChange = useCallback(
                 <View style={styles.storageColumn}>
                   <Select
                     value={selectedLabel}
-                    style={{ paddingHorizontal: 16 }}
+                    style={{ paddingHorizontal: 8 }}
                     showOptions={false}
                     onPress={handleToggleProductBottomSheet}
                   >
@@ -1017,6 +1001,15 @@ const handlePackageQuantityChange = useCallback(
                   <View style={[styles.rawMaterialColumn, styles.borderBottom]}>
                     {product_items?.length > 0 &&
                       selectedRawMaterials.map((item: string) => {
+                        const rmPackaging = chamberStock?.find(
+                          (s) => s.product_name === item
+                        )?.packaging;
+
+                        const rmPackagingObj =
+                            rmPackaging && !Array.isArray(rmPackaging)
+                            ? rmPackaging
+                            : null;
+
                         const ratingForThisRM = ratingByRM[item] ?? {
                           rating: 5,
                           message: "Excellent",
@@ -1049,6 +1042,17 @@ const handlePackageQuantityChange = useCallback(
 
                         const RatingIcon =
                           RatingIconMap[selectedRating] ?? FiveStarIcon;
+                          if (!rmPackagingObj) {
+                            return (
+                              <EmptyState
+                                stateData={{
+                                  title: "Packaging missing",
+                                  description: `${item} packaging data not found`,
+                                }}
+                                compact
+                              />
+                            );
+                          }
 
                         return (
                           <ItemsRepeater
@@ -1072,7 +1076,85 @@ const handlePackageQuantityChange = useCallback(
                               />
 
                               {/* <View style={styles.separator} /> */}
-                              {itemsToRender?.length > 0 &&
+                              {visibleChambers.length === 0 ? (
+                                  <EmptyState
+                                    stateData={{
+                                      title: "No stock found",
+                                      description: `${item} is not available in any chamber`,
+                                    }}
+                                    compact
+                                  />
+                                ) : (
+                                  visibleChambers.map((chamber) => {
+                                    const chamberName =
+                                      chamberNameMap.get(String(chamber.id)) ?? "Unknown Chamber";
+
+                                    const currentQty =
+                                      values.rmChamberQuantities?.[item]?.[String(chamber.id)]?.quantity ?? "";
+
+                                    return (
+                                      <View
+                                        key={`${item}-${chamber.id}`} 
+                                        style={[styles.chamberCard, styles.borderBottom]}
+                                      >
+                                        <View style={styles.Hstack}>
+                                          <View style={styles.iconWrapper}>
+                                            <ChamberIcon color={getColor("green")} size={32} />
+                                          </View>
+
+                                          <View style={styles.Vstack}>
+                                            <B1>{String(chamberName).slice(0, 12)}...</B1>
+                                         <B4>
+                                    {chamber.quantity} qty.  | {rmPackagingObj.size.value} {rmPackagingObj.size.unit} bag
+                                  </B4>
+
+                                          </View>
+                                        </View>
+
+                                        <View style={{ flex: 0.7 }}>
+                                          <Input
+                                            placeholder=""
+                                            addonText="bags"
+                                            mask="addon"
+                                            post
+                                            keyboardType="numeric"
+                                            value={
+                                              values.rmChamberQuantities?.[item]?.[chamber.id]?.count
+                                                ? String(values.rmChamberQuantities[item][chamber.id].count)
+                                                : ""
+                                            }
+                                            onChangeText={(text: string) => {
+                                              if (!rmPackagingObj) return;
+
+                                              const bagCount = Number(text.replace(/[^0-9]/g, ""));
+                                              if (isNaN(bagCount)) return;
+                                              const kgPerBag = convertToKg(
+                                                rmPackagingObj.size.value,
+                                                rmPackagingObj.size.unit
+                                              );
+
+                                              const usedKg = bagCount * kgPerBag;
+
+                                              if (usedKg > Number(chamber.stored_quantity)) {
+                                                handleToggleToast();
+                                                return;
+                                              }
+
+                                              setField(`rmChamberQuantities.${item}.${chamber.id}`, {
+                                                count: bagCount,
+                                                quantity: usedKg,
+                                                rating: selectedRating,
+                                              });
+                                            }}
+                                          />
+
+                                        </View>
+                                      </View>
+                                    );
+                                  })
+                                )}
+
+                              {/* {itemsToRender?.length > 0 &&
                                 itemsToRender.map((value, index) => {
                                   const productIndex =
                                     values.products?.findIndex(
@@ -1118,7 +1200,7 @@ const handlePackageQuantityChange = useCallback(
                                             key={`${item}-${idx}`}
                                             style={[
                                               styles.chamberCard,
-                                              styles.borderBottom,
+                                              // styles.borderBottom,
                                             ]}
                                           >
                                             <View
@@ -1210,7 +1292,7 @@ const handlePackageQuantityChange = useCallback(
                                       })}
                                     </View>
                                   );
-                                })}
+                                })} */}
                             </View>
                           </ItemsRepeater>
                         );
@@ -1730,4 +1812,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: "center",
     justifyContent: "center",
-  }, }); export default PackageScreen;
+  }, }); 
+  export default PackageScreen;

@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12, // Instead of unsupported `gap`
+    gap: 12,
   },
   separator: {
     borderBottomWidth: 1,

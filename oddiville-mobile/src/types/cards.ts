@@ -1,12 +1,19 @@
 import { ComponentType, Dispatch, ReactNode, SetStateAction } from "react";
-import { ViewStyle } from 'react-native'
-import { ActivityProps, DetailsProps, OrderProps, PackagingDetailParam, SearchActivityProps, workAssignedMultiple } from "./ui";
+import { ViewStyle } from "react-native";
+import {
+  ActivityProps,
+  DetailsProps,
+  OrderProps,
+  PackagingDetailParam,
+  SearchActivityProps,
+  workAssignedMultiple,
+} from "./ui";
 import { IconProps } from "./icon";
 import { BottomSheetSchemaKey } from "../schemas/BottomSheetSchema";
 import { RootStackParamList } from "./navigation";
 import { z } from "zod";
-import { TableColumn } from "@/src/components/ui/Table"
-import { ContractorLocationRow } from "@/src/components/ui/Contractor/AddMultipleContractor"
+import { TableColumn } from "@/src/components/ui/Table";
+import { ContractorLocationRow } from "@/src/components/ui/Contractor/AddMultipleContractor";
 
 export const validButtons = [
   "Send alert to manager",
@@ -59,52 +66,50 @@ export interface SearchActivityCardProps {
 }
 
 export interface OrderReceiverDetailsCardProps {
-  title: string,
-  name: string,
-  address: string,
-    badge?: {
-    text: string,
-    icon: ReactNode
+  title: string;
+  name: string;
+  address: string;
+  badge?: {
+    text: string;
+    icon: ReactNode;
   };
   detail: {
-    name: string,
-    value: string,
-    icon: ReactNode,
-  },
+    name: string;
+    value: string;
+    icon: ReactNode;
+  };
   otherDetails: {
-    name: string,
-    value: string,
-    icon: ReactNode,
-  }[],
+    name: string;
+    value: string;
+    icon: ReactNode;
+  }[];
   helperDetails: {
-    name: string,
-    value: string,
-    icon: ReactNode,
-  }[],
+    name: string;
+    value: string;
+    icon: ReactNode;
+  }[];
 }
 
-
-
-export type RatingValue = 1 | 2 | 3 | 4 | 5
+export type RatingValue = 1 | 2 | 3 | 4 | 5;
 
 export interface RatingCardProps {
-  children?: React.ReactNode
-  active?: RatingValue | null
-  onChange?: (rating: RatingValue) => void
-  style?: ViewStyle
+  children?: React.ReactNode;
+  active?: RatingValue | null;
+  onChange?: (rating: RatingValue) => void;
+  style?: ViewStyle;
 }
 
 export interface RatingCardEntitiyProps {
-  rating: RatingValue
-  active?: boolean
-  onPress?: () => void
+  rating: RatingValue;
+  active?: boolean;
+  onPress?: () => void;
 }
 export interface ProductionCardProps {
-  productName: string,
-  laneName: string,
-  description: string,
-  badgeText: string,
-  image: string,
+  productName: string;
+  laneName: string;
+  description: string;
+  badgeText: string;
+  image: string;
 }
 
 export interface ItemCardProps {
@@ -124,28 +129,27 @@ export interface ItemCardProps {
   style?: ViewStyle;
 }
 
-
 export interface ItemsFlatListProps {
-  items: ItemCardProps[],
-  refreshing?: boolean,
-  onRefresh?: () => void,
-  isProduction?: boolean,
-  isProductionCompleted?: boolean,
-  onActionPress?: () => void,
+  items: ItemCardProps[];
+  refreshing?: boolean;
+  onRefresh?: () => void;
+  isProduction?: boolean;
+  isProductionCompleted?: boolean;
+  onActionPress?: () => void;
 }
-  export interface SupervisorOrderCardProps {
-    order: OrderProps,
-    style?: any,
-    color?: "red" | "green" | "blue" | "yellow";
-    bgSvg?: ComponentType<any>;
-    isEdit?: boolean;
-  }
-  export interface TruckCardProps {
-    truck: OrderProps,
-    color?: "red" | "green" | "blue" | "yellow";
-    bgSvg?: ComponentType<any>;
-    isEdit?: boolean;
-  }
+export interface SupervisorOrderCardProps {
+  order: OrderProps;
+  style?: any;
+  color?: "red" | "green" | "blue" | "yellow";
+  bgSvg?: ComponentType<any>;
+  isEdit?: boolean;
+}
+export interface TruckCardProps {
+  truck: OrderProps;
+  color?: "red" | "green" | "blue" | "yellow";
+  bgSvg?: ComponentType<any>;
+  isEdit?: boolean;
+}
 
 export interface RawMaterialStockCardProps {
   id: number;
@@ -196,30 +200,30 @@ export interface PackagingSizeCardProps {
 }
 
 export interface multipleContractorProps {
-  contractorName: string, 
-    locations: { location: string, count: string }[],
+  contractorName: string;
+  locations: { location: string; count: string }[];
 }
 
 export interface ContractorWorkLocationCardProps {
-  columns: TableColumn<ContractorLocationRow>[]
-  workAssigned: workAssignedMultiple
-  contractorIndex: number
-  isFirst: boolean
-  isOpen: boolean
-  setIsAddDisabled: (val: boolean) => void
-  setWorkAssigned: React.Dispatch<React.SetStateAction<workAssignedMultiple[]>>
-  setworkerCount: (val: number) => void
-  onPress: () => void
+  columns: TableColumn<ContractorLocationRow>[];
+  workAssigned: workAssignedMultiple;
+  contractorIndex: number;
+  isFirst: boolean;
+  isOpen: boolean;
+  setIsAddDisabled: (val: boolean) => void;
+  setWorkAssigned: React.Dispatch<React.SetStateAction<workAssignedMultiple[]>>;
+  setworkerCount: (val: number) => void;
+  onPress: () => void;
   handleRadioChange: (
     contractorIndex: number,
     locationIndex: number,
     field: "enterCount" | "notNeeded"
-  ) => void
+  ) => void;
   handleInputChange: (
     contractorIndex: number,
     locationIndex: number,
     field: "male" | "female",
     value: string
-  ) => void
-  onLabourRemove?: (index: number) => void
+  ) => void;
+  onLabourRemove?: (index: number) => void;
 }

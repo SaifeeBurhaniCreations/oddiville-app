@@ -225,31 +225,24 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
         },
       ],
     };
-
-validationRules["__chamberQtyRatingCheck"] = [
-  {
-    type: "custom",
-    validate: (_: any, allValues: StoreProductFormFields) => {
-      if (!selectedChambers || selectedChambers.length === 0) return false;
-
-      return selectedChambers.every((chamberName) => {
-        const chamber = allValues[chamberName] as
-          | { quantity: number; rating: number }
-          | undefined;
-
-        if (!chamber) return false;
-
-        return (
-          Number(chamber.quantity) > 0 &&
-          Number(chamber.rating) > 0
-        );
-      });
-    },
-    message:
-      "All selected chambers must have both quantity and rating",
-  },
-];
-
+    selectedChambers.forEach((chamberName) => {
+      validationRules[chamberName] = [
+        {
+          type: "custom",
+          validate: (value: any) => value,
+          // value &&
+          // typeof value === "object" &&
+          // "quantity" in value &&
+          // value.quantity !== 0 &&
+          // value.quantity !== null &&
+          // value.quantity !== undefined &&
+          // value.rating !== 0 &&
+          // value.rating !== null &&
+          // value.rating !== undefined,
+          message: `Selected chamber must have some quantity!`,
+        },
+      ];
+    });
 
     validationRules["discard_quantity"] = [
       {
@@ -718,7 +711,6 @@ scrollContainer: {
 },
 verticalContainer: {
   flexGrow: 1,
-  paddingBottom: 24,
   gap: 16,
 },
   HStack: {

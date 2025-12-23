@@ -210,13 +210,12 @@ const ChamberDetailed = ({
 
       const disabled = totalQuantity <= 0;
 
-      // Always produce some rating text
       let ratingDisplay = "";
       if (minRating && maxRating) {
         ratingDisplay =
           minRating === maxRating
-            ? minRating // single value
-            : `${minRating} - ${maxRating}`; // range
+            ? minRating
+            : `${minRating} - ${maxRating}`; 
       } else if (item.category === "other") {
         ratingDisplay = ratingStrings.join(", ") || "other";
       } else {
@@ -234,24 +233,23 @@ const ChamberDetailed = ({
         : item.category === "other"
         ? require("@/src/assets/images/fallback/others-stock-fallback.png")
         : require("@/src/assets/images/fallback/chamber-stock-fallback.png");
-
+  
       return {
         name: item.product_name,
         description: `${totalQuantity} ${item.unit}`,
         rating: ratingDisplay, // always set
         disabled,
-        href: item.category === "other" ? "other-products-detail" : "",
+        href: item.category === "other" ? "other-products-detail" : item.category === "material" ? "stock-detail" : "",
         quantity: detailByRating[0]?.quantity ?? "",
         detailByRating,
         category: item.category,
         chambers: item.category === "other" ? item.chamber : null,
-        id: item.category === "other" ? item.id : null,
+        id: item.category === "other" ? item.id : item.category === "material" ? item.id : null,
         image,
       };
     })
     .filter(Boolean) as RawMaterialProps[];
 }, [flatStockData, chamberData, rawMaterial]);
-
 
   const filters = useMemo(
     () => flattenFilters(nestedFilters) as Record<FilterEnum, string[]>,
@@ -287,29 +285,6 @@ const ChamberDetailed = ({
           onPress={handleChamberSearch}
         />
 
-        {/* <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.cardContainerV2}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[getColor("green")]}
-            />
-          }
-        >
-          {filteredItems?.length === 0 ? (
-            <View style={{ alignItems: "center" }}>
-              <EmptyState stateData={emptyStateData} />
-            </View>
-          ) : (
-            filteredItems?.map((chamberStock, index) => (
-              <React.Fragment key={index}>
-                <ChamberCard key={index} {...chamberStock} />
-              </React.Fragment>
-            ))
-          )}
-        </ScrollView> */}
         <FlatList
           data={filteredItems}
           keyExtractor={(item, index) =>
