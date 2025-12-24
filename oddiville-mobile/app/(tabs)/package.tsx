@@ -89,6 +89,8 @@ import {
   useChamberStock,
   useChamberStockByName,
 } from "@/src/hooks/useChamberStock";
+import RefreshableContent from "@/src/components/ui/RefreshableContent";
+import ItemsFlatList from "@/src/components/ui/ItemsFlatList";
 
 interface Chamber {
   id: string | number;
@@ -1069,8 +1071,7 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                                 value={ratingForThisRM.message}
                                 showOptions={false}
                                 preIcon={RatingIcon ?? FiveStarIcon}
-                                style={{ flex: 0.5 }}
-                                onPress={() =>
+                                style={{ flex: 0.5 }} onPress={() =>
                                   validateAndSetData(
                                     `${item}:${ratingForThisRM.rating}`,
                                     "storage-rm-rating"
@@ -1539,13 +1540,15 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                   item.id?.toString() ?? index.toString()
                 }
                 renderItem={({ item }) => (
-                  <PackageCard
+                 <View style={{marginBottom: 20 }}>
+                   <PackageCard
                     name={item.name}
                     id={item.id}
                     href={item.href}
                     bundle={item.bundle}
                     img={item.img}
                   />
+                 </View>
                 )}
                 numColumns={2}
                 columnWrapperStyle={{
@@ -1567,24 +1570,7 @@ const chambersByRM: ChambersByRM = useMemo(() => {
               />
             </View>
             <View style={styles.flexGrow}>
-              <View
-                style={[
-                  styles.HStack,
-                  styles.justifyBetween,
-                  styles.alignCenter,
-                  { paddingTop: 16, paddingHorizontal: 16 },
-                ]}
-              >
-                <H3>Package</H3>
-                <Button
-                  variant="outline"
-                  size="md"
-                  onPress={handleOpenAddNewPackage}
-                >
-                  Add package
-                </Button>
-              </View>
-              <View style={styles.searchinputWrapper}>
+                 <View style={styles.searchinputWrapper}>
                 <SearchInput
                   border
                   value={searchText}
@@ -1595,40 +1581,30 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                   placeholder={"Search by product name"}
                 />
               </View>
-              <FlatList
-                style={{ flex: 1, paddingHorizontal: 16 }}
-                data={formattedData}
-                keyExtractor={(item, index) =>
-                  item.id?.toString() ?? index.toString()
-                }
-                renderItem={({ item }) => (
-                  <PackageCard
-                    name={item.name}
-                    id={item.id}
-                    href={item.href}
-                    bundle={item.bundle}
-                    img={item.img}
-                  />
-                )}
-                numColumns={2}
-                columnWrapperStyle={{
-                  justifyContent: "space-between",
-                  gap: 8,
-                }}
-                contentContainerStyle={{ paddingBottom: 120 }}
-                refreshControl={
-                  <RefreshControl
-                    refreshing={packageFetching}
-                    onRefresh={packageRefetch}
-                  />
-                }
-                ListEmptyComponent={
-                  <View style={{ alignItems: "center", marginTop: 80 }}>
-                    <EmptyState stateData={emptyStateData} />
-                  </View>
-                }
-              />
-            </View>
+                      {/* <RefreshableContent
+                        isEmpty={inCompleted.length === 0}
+                        refreshing={isFetching}
+                        onRefresh={refetch}
+                        emptyComponent={
+                            <View style={styles.emptyStateWrapper}>
+                          <EmptyState
+                          style={{marginTop: -(screenHeight/ 7)}}
+                            image={noPackageImage}
+                            stateData={{
+                              title: "No packages",
+                              description: "Packages will appear here.",
+                            }}
+                          />
+                          </View>
+                        }
+                        listComponent={
+                          <ItemsFlatList
+                            isProductionCompleted
+                            items={[]}
+                          />
+                        }
+                      /> */}
+                    </View>
           </Tabs>
         </View>
         <DetailsToast
@@ -1666,6 +1642,7 @@ const styles = StyleSheet.create({
     borderTopStartRadius: 16,
     borderTopEndRadius: 16,
     paddingVertical: 16,
+    paddingBottom: 32,
   },
   flexGrow: {
     flex: 1,
@@ -1818,5 +1795,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: "center",
     justifyContent: "center",
-  }, }); 
+  }, 
+  emptyStateWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
+}); 
   export default PackageScreen;

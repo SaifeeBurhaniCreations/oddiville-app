@@ -270,7 +270,8 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
 
           try {
             const [id, product_name] = meta.id.split(":");
-
+              console.log("meta.id",meta.id);
+              
             const count = Number(packageSizeForm.values.quantity);
             const emptyBagWeightGram = Number(
               packageSizeForm.values.empty_bag_weight_g || "1"

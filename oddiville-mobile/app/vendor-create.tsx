@@ -367,7 +367,7 @@ const onSubmit = async (userId: string | null) => {
         style={styles.keyboardAvoidingView}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
-        <ScrollView>
+        <ScrollView >
           <View style={styles.wrapper}>
             <View
               style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}
@@ -534,6 +534,7 @@ const onSubmit = async (userId: string | null) => {
               variant={userId ? "outline" : "fill"}
               onPress={() => onSubmit(userId ?? null)}
               disabled={!isValid || isSubmitting}
+              style={{ marginBottom: 16 }}
             >
               {userId
                 ? !isSubmitting

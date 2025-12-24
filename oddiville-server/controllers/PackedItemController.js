@@ -234,7 +234,7 @@ router.post("/", async (req, res) => {
       const dry = await DryWarehouse.findOne({
         where: {
           item_name: buildPackageKey(product_name, p.size),
-          unit: p.unit,
+          unit: "kg",
         },
         transaction: t,
         lock: t.LOCK.UPDATE,
@@ -267,14 +267,24 @@ router.post("/", async (req, res) => {
         );
         if (!used) return tp;
 
-        const haveQty = Number(tp.quantity) * 1000  
-        if (haveQty < used.quantity) {
+        const available = Number(tp.quantity);
+        const required = Number(used.quantity);
+       console.log({
+          product: product_name,
+          size: p.size,
+          packetCount: p.quantity,
+          tare,
+          availableKg: dry?.quantity_unit,
+        });
+
+ 
+        if (available < required) {
           throw new Error(`Insufficient package count for ${tp.size}`);
         }
 
         return {
           ...tp,
-          quantity: String(Number(tp.quantity) - used.quantity),
+            quantity: String(available - required),
         };
       });
 
