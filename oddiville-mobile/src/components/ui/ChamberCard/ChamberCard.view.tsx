@@ -48,7 +48,7 @@ const ChamberCardView = ({
     options: { isChamberItem: true },
   });
 
-  const imageBgColor = imageResult.isProductionDefault
+  const imageBgColor = !imageResult.isCustomImage
     ? "#f3e7cf"
     : getColor("green", 300);
 

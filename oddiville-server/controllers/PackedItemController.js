@@ -25,13 +25,14 @@ const mergeBy = (list, predicate, onFound, onNew) => {
 };
 
 const normalizeUnit = (u) => (u || "gm").toLowerCase();
-
+const packetsToKg = ({ count, tare }) => (count * tare) / 1000;
 /* ------------------------------------------------------------------ */
 /* POST /packed                                                       */
 /* ------------------------------------------------------------------ */
 
 router.post("/", async (req, res) => {
   const t = await sequelize.transaction();
+const DEBUG_ROLLBACK = false;
 
   try {
     const {
@@ -65,7 +66,7 @@ router.post("/", async (req, res) => {
       const dryItem = await DryWarehouse.findOne({
         where: {
           item_name: buildPackageKey(product_name, size),
-          unit,
+          unit: "kg",
         },
         transaction: t,
         lock: t.LOCK.UPDATE,
@@ -234,13 +235,15 @@ router.post("/", async (req, res) => {
       const dry = await DryWarehouse.findOne({
         where: {
           item_name: buildPackageKey(product_name, p.size),
-          unit: p.unit,
+          unit: "kg",
         },
         transaction: t,
         lock: t.LOCK.UPDATE,
       });
 
-      if (!dry || Number(dry.quantity_unit) < usedKg) {
+      const insufficient = !dry || Number(dry.quantity_unit) < usedKg;
+
+      if (insufficient) {
         throw new Error(
           `Insufficient empty packaging for ${product_name}:${p.size}`
         );
@@ -260,26 +263,55 @@ router.post("/", async (req, res) => {
       lock: t.LOCK.UPDATE,
     });
 
+    // console.log("BEFORE pkgRow.types:", JSON.stringify(pkgRow?.types, null, 2));
+
     if (pkgRow?.types) {
-      pkgRow.types = pkgRow.types.map((tp) => {
-        const used = preparedPackages.find(
-          (p) => String(p.size) === String(tp.size)
-        );
-        if (!used) return tp;
+       pkgRow.types = pkgRow.types.map((tp) => {
+    const used = preparedPackages.find(
+      (p) => String(p.size) === String(tp.size)
+    );
+    if (!used) return tp;
 
-        const haveQty = Number(tp.quantity) * 1000  
-        if (haveQty < used.quantity) {
-          throw new Error(`Insufficient package count for ${tp.size}`);
-        }
+    const tare = getTareWeight({
+      type: normalizedType,
+      size: tp.size,
+      unit: tp.unit,
+    });
 
-        return {
-          ...tp,
-          quantity: String(Number(tp.quantity) - used.quantity),
-        };
-      });
+    const usedKg = packetsToKg({
+      count: used.quantity,
+      tare,
+    });
+
+    const availableKg = Number(tp.quantity);
+
+    if (availableKg < usedKg) {
+      throw new Error(
+        `Insufficient package stock for ${tp.size}${tp.unit}`
+      );
+    }
+
+    const remainingKg = Math.max(0, availableKg - usedKg);
+
+    return {
+      ...tp,
+      quantity: remainingKg.toFixed(3), 
+    };
+  });
+
+      // console.log("AFTER pkgRow.types:", JSON.stringify(pkgRow.types, null, 2));
 
       await pkgRow.save({ transaction: t });
     }
+          
+      if (DEBUG_ROLLBACK) {
+        console.warn("⚠️ DEBUG MODE: rolling back transaction intentionally");
+        await t.rollback();
+        return res.status(409).json({
+          debug: true,
+          message: "Debug rollback – no data persisted",
+        });
+      }
 
     await t.commit();
     return res.status(201).json(stock);

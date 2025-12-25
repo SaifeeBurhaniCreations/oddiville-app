@@ -11,6 +11,8 @@ import {
   togglePackageSize,
 } from "@/src/redux/slices/bottomsheet/package-size.slice";
 import { PackageSizeChooseComponentProps } from "@/src/types";
+import { setSource } from "@/src/redux/slices/unit-select.slice";
+import { dispatchPackageSize, toggleDispatchPackageSize } from "@/src/redux/slices/bottomsheet/dispatch-package-size.slice";
 type Unit = "gm" | "kg";
 
 function normalizeUnit(raw: string | null | undefined): Unit | null {
@@ -23,7 +25,7 @@ function normalizeUnit(raw: string | null | undefined): Unit | null {
 
 function parsePackageString(
   pkgStr: string | null | undefined
-): { size: number; unit: Unit | string; rawSize: string } | null {
+): { size: number; unit: Unit | null; rawSize: string } | null {
   if (!pkgStr) return null;
 
   const s = String(pkgStr).trim();
@@ -42,21 +44,25 @@ function parsePackageString(
 
   const isUnitAlready =
     String(size).includes("kg") || String(size).includes("gm");
-  return { size, unit: isUnitAlready ? "" : normalized, rawSize: pkgStr };
+return { size, unit: normalized, rawSize: pkgStr };
 }
 
 const PackageSizeChooseComponent = ({
   data,
 }: PackageSizeChooseComponentProps) => {
-  const selected = useSelector(
-    (state: RootState) => state.packageSize.selectedSizes
-  );
+const selected = useSelector((state: RootState) =>
+  data.source === "dispatch"
+    ? state.dispatchPackageSize.selectedSizes
+    : state.packageSize.selectedSizes
+);
+
   const dispatch = useDispatch();
 
   return (
     <View style={styles.container}>
-      {data
+      {data?.list
         ?.map((item, index) => {
+          
           const parsed = parsePackageString(item?.name);
           if (!parsed) {
             console.log(
@@ -64,12 +70,18 @@ const PackageSizeChooseComponent = ({
             );
             return null;
           }
-          const packageData: packageSize = {
+          const packageData = data.source === "dispatch" ? {
             ...item,
             size: parsed.size,
             rawSize: parsed.rawSize,
             unit: parsed.unit,
-          };
+            count: Number(item.count),
+          } as dispatchPackageSize : {
+            ...item,
+            size: parsed.size,
+            rawSize: parsed.rawSize,
+            unit: parsed.unit,
+          } as packageSize;
 
           const isSelected = selected.some(
             (s) => s.rawSize === packageData.rawSize
@@ -78,8 +90,32 @@ const PackageSizeChooseComponent = ({
           return (
             <Pressable
               key={item.name}
-              onPress={() => dispatch(togglePackageSize(packageData))}
-              style={[styles.row, index < data?.length - 1 && styles.separator]}
+onPress={() => {
+  if (data.source === "dispatch") {
+    const dispatchPkg: dispatchPackageSize = {
+      ...item,
+      size: parsed.size,
+      rawSize: parsed.rawSize,
+      unit: parsed.unit,
+      count: Number(item.count),
+    };
+
+    dispatch(toggleDispatchPackageSize(dispatchPkg));
+    dispatch(setSource("dispatch"));
+    return;
+  }
+
+  const pkg: packageSize = {
+    ...item,
+    size: parsed.size,
+    rawSize: parsed.rawSize,
+    unit: parsed.unit,
+  };
+
+  dispatch(togglePackageSize(pkg));
+  dispatch(setSource("package"));
+}}
+              style={[styles.row, index < data?.list?.length - 1 && styles.separator]}
             >
               <Checkbox checked={isSelected} />
               <View style={styles.icon}>{getIcon(item.icon)}</View>
@@ -98,6 +134,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: "column",
+    gap: 12,
   },
   row: {
     flexDirection: "row",

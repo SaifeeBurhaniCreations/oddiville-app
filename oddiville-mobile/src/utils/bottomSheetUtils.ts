@@ -1,5 +1,5 @@
 import { FilterEnum, BottomSheetSchemaKey } from "../schemas/BottomSheetSchema";
-import { ButtonConfig } from "../types";
+import { ButtonConfig, SectionConfig } from "../types";
 
 type SectionType = "title-with-checkbox" | "optionList";
 interface CheckboxData { text: string; isChecked: boolean; }
@@ -140,4 +140,15 @@ export const runFilter = ({
     } : { sections: [buildSection(key, options, mode)] };
     
     validateAndSetData(key, "filter", { ...currentFilter, mode, ...extraMeta });
+}
+
+type PackageSizeChooseSection = Extract<
+  SectionConfig,
+  { type: "package-size-choose-list" }
+>;
+
+export function isPackageSizeChooseSection(
+  section: SectionConfig
+): section is PackageSizeChooseSection {
+  return section.type === "package-size-choose-list";
 }

@@ -1,27 +1,28 @@
 import { DataAccordianEnum } from '@/src/types';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-export type packageSize = {
+export type dispatchPackageSize = {
     name: string;
     icon: DataAccordianEnum;
     isChecked: boolean;
     size: number;
     rawSize: string;
-  unit: "gm" | "kg" | "qn" | null;
+    count: number;
+    unit: "kg" | "gm" | "qn" | null;
 };
 
 
-interface PackageSizeState { selectedSizes: packageSize[] };
+interface DispatchPackageSizeState { selectedSizes: dispatchPackageSize[] };
 
-const initialState: PackageSizeState = {
+const initialState: DispatchPackageSizeState = {
     selectedSizes: [],
 };
 
-const packageSizeSlice = createSlice({
-    name: 'packageSize',
+const dispatchPackageSizeSlice = createSlice({
+    name: 'dispatchPackageSize',
     initialState,
     reducers: {
-   togglePackageSize(state, action: PayloadAction<packageSize>) {
+   toggleDispatchPackageSize(state, action: PayloadAction<dispatchPackageSize>) {
   const index = state.selectedSizes.findIndex(
     (s) => s.rawSize === action.payload.rawSize
   );
@@ -36,19 +37,19 @@ const packageSizeSlice = createSlice({
     state.selectedSizes = [...state.selectedSizes, action.payload];
   }
 },
-        setPackageSizes(state, action: PayloadAction<packageSize[]>) {
+        setDispatchPackageSizes(state, action: PayloadAction<dispatchPackageSize[]>) {
             state.selectedSizes = action.payload;
         },
-        resetPackageSizes(state) {
+        resetDispatchPackageSizes(state) {
             state.selectedSizes = [];
         },
     },
 });
 
 export const {
-    togglePackageSize,
-    setPackageSizes,
-    resetPackageSizes,
-} = packageSizeSlice.actions;
+    toggleDispatchPackageSize,
+    setDispatchPackageSizes,
+    resetDispatchPackageSizes,
+} = dispatchPackageSizeSlice.actions;
 
-export default packageSizeSlice.reducer;
+export default dispatchPackageSizeSlice.reducer;

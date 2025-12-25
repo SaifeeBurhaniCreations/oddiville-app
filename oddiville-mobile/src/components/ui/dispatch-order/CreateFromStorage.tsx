@@ -44,6 +44,7 @@ import { usePackedItems } from "@/src/hooks/packedItem";
 import AddProductsForSell from "../AddProductsForSell";
 import { useAuth } from "@/src/context/AuthContext";
 import { resolveAccess } from "@/src/utils/policiesUtils";
+import { removeProduct } from "@/src/redux/slices/multiple-product.slice";
 
 const convertToKg = (size: number, unit: string) => {
   const lowerUnit = unit.toLowerCase();
@@ -76,19 +77,21 @@ const CreateFromStorage = ({
     cities: selectedCity,
   } = useSelector((state: RootState) => state.location);
 
-  const { product: selectedProduct } =
-    useSelector((state: RootState) => state.product);
+  const selectedProducts = useSelector(
+    (state: RootState) => state.multipleProduct.selectedProducts
+  );
 
-  const { data: packedItemsData ,isFetching: packedItemsLoading } = usePackedItems();
+  const { data: packedItemsData, isFetching: packedItemsLoading } =
+    usePackedItems();
 
-const filteredPackedItemsData = useMemo(() => {
-  return packedItemsData?.map(item => ({
-    ...item,
-    chamber: item.chamber.filter(
-      chamber => !chamber.id.toLowerCase().includes("dry")
-    )
-  }));
-}, [packedItemsData]);
+  const filteredPackedItemsData = useMemo(() => {
+    return packedItemsData?.map((item) => ({
+      ...item,
+      chamber: item.chamber.filter(
+        (chamber) => !chamber.id.toLowerCase().includes("dry")
+      ),
+    }));
+  }, [packedItemsData]);
 
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const [openTab, setOpenTab] = useState<number>(0);
@@ -113,38 +116,49 @@ const filteredPackedItemsData = useMemo(() => {
       "Entered quantity exceeds available quantity in chamber!"
     );
   };
-    // console.log("filteredPackedItemsData", JSON.stringify(filteredPackedItemsData));
+  // console.log("filteredPackedItemsData", JSON.stringify(filteredPackedItemsData));
 
   async function handleToggleProductBottomSheet() {
-    const ADD_PRODUCT = {
-        sections: [
-            {
-                type: 'title-with-details-cross',
-                data: {
-                    title: "Add Products"
-                },
-            },
-            {
-                type: 'search',
-                data: { searchTerm: '', placeholder: "Search Product", searchType: "add-product" },
-            },
-            {
-                type: 'optionList',
-                data: {
-                    isCheckEnable: false,
-                    route: "product",
-                    options: filteredPackedItemsData && filteredPackedItemsData?.length > 0 ? filteredPackedItemsData?.map((item) => item.product_name) : []
-                }
-            },
-        ]
+    const ADD_PRODUCTS = {
+      sections: [
+        {
+          type: "title-with-details-cross",
+          data: {
+            title: "Add Products",
+          },
+        },
+        {
+          type: "search",
+          data: {
+            searchTerm: "",
+            placeholder: "Search Product",
+            searchType: "add-product",
+          },
+        },
+        {
+          type: "multiple-product-card",
+          data: filteredPackedItemsData &&
+              filteredPackedItemsData.map((item) => {
+                return {
+                  product_name: item.product_name,
+                  id: item.id,
+                  image: item.image,
+                  description: "",
+                  isChecked: false,
+                  packages: item.packages,
+                  chambers: item.chamber,
+                };
+              }),
+        },
+      ],
     };
 
     setIsLoading(true);
     dispatch(setSource("choose"));
-    await validateAndSetData("Abc1", "add-product", ADD_PRODUCT);
+    await validateAndSetData("Abc1", "multiple-product-card", ADD_PRODUCTS);
     setIsLoading(false);
   }
-  
+
   async function handleToggleCountryBottomSheet() {
     setIsLoading(true);
     dispatch(clearState());
@@ -171,29 +185,30 @@ const filteredPackedItemsData = useMemo(() => {
     setIsLoading(false);
   }
 
-const itemsToRender = useMemo(() => {
-  if (!filteredPackedItemsData || filteredPackedItemsData.length === 0) return [];
+  const itemsToRender = useMemo(() => {
+    if (!filteredPackedItemsData || filteredPackedItemsData.length === 0)
+      return [];
 
-  const selectedNames = new Set(
-    (values.products || []).map((p) => p.name)
-  );
+    const selectedNames = new Set((values.products || []).map((p) => p.name));
 
-  return filteredPackedItemsData.filter((p) =>
-    selectedNames.has(p.product_name)
-  );
-}, [filteredPackedItemsData, values.products]);
+    return filteredPackedItemsData.filter((p) =>
+      selectedNames.has(p.product_name)
+    );
+  }, [filteredPackedItemsData, values.products]);
 
-const handleRemoveProduct = (productName: string) => {
-  const nextProducts =
-    (values.products || []).filter((p) => p.name !== productName);
+  const handleRemoveProduct = (productName: string) => {
+    const nextProducts = (values.products || []).filter(
+      (p) => p.name !== productName
+    );
 
-  setField("products", nextProducts);
-};
+    setField("products", nextProducts);
+  };
   const { role, policies } = useAuth();
   const safeRole = role ?? "guest";
   const safePolicies = policies ?? [];
   const access = resolveAccess(safeRole, safePolicies);
-  const canSeeAmount = access.isFullAccess; 
+  const canSeeAmount = access.isFullAccess;
+  console.log("selectedProducts", selectedProducts);
 
   const renderComponent = () => {
     if (handleGetStep === 1) {
@@ -238,7 +253,6 @@ const handleRemoveProduct = (productName: string) => {
                   </Select>
                 )}
               </FormField>
-
             </View>
             <View style={[styles.Hstack]}>
               <FormField name="state" form={{ values, setField, errors }}>
@@ -288,7 +302,7 @@ const handleRemoveProduct = (productName: string) => {
                 </Input>
               )}
             </FormField>
-            
+
             <FormField
               name="est_delivered_date"
               form={{ values, setField, errors }}
@@ -314,7 +328,7 @@ const handleRemoveProduct = (productName: string) => {
           <View style={[styles.Vstack]}>
             <View style={[styles.Vstack, styles.selectProduct]}>
               <Select
-                value={selectedProduct || "Select products"}
+                value={selectedProducts[0]?.product_name || "Select products"}
                 style={{ flex: 0.5 }}
                 showOptions={false}
                 onPress={handleToggleProductBottomSheet}
@@ -322,8 +336,19 @@ const handleRemoveProduct = (productName: string) => {
                 Products
               </Select>
             </View>
-            
-           {itemsToRender?.length > 0 ? (
+
+            {/* {selectedProducts.map((product, index) => (
+  <AddProductsForSell
+    key={product.id}
+    product={product}
+    isOpen={openTab === Number(product.id)}
+    onPress={() => setOpenTab(Number(product.id))}
+    onRemove={() => dispatch(removeProduct(product.id))}
+    controlledForm={{ values, setField, errors }}
+  />
+))} */}
+
+            {/* {itemsToRender?.length > 0 ? (
               itemsToRender.map((value, index) => (
                 <AddProductsForSell
                   key={value.id ?? index}
@@ -349,7 +374,7 @@ const handleRemoveProduct = (productName: string) => {
                   image={noProductImage}
                 />
               </View>
-            )}
+            )} */}
           </View>
         </View>
       );

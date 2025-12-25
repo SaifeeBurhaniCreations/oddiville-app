@@ -89,6 +89,9 @@ import {
   useChamberStock,
   useChamberStockByName,
 } from "@/src/hooks/useChamberStock";
+import { clearDispatchRatings } from "@/src/redux/slices/bottomsheet/dispatch-rating.slice";
+import { clearRatings } from "@/src/redux/slices/bottomsheet/storage.slice";
+import { convertToKg, getMaxPackagesFor } from "@/src/utils/weightutils";
 
 interface Chamber {
   id: string | number;
@@ -140,12 +143,6 @@ export type StorageForm = {
   rmChamberQuantities: RMChamberQuantityMap;
 };
 
-const convertToKg = (size: number, unit: string) => {
-  const lowerUnit = unit?.toLowerCase();
-  if (lowerUnit === "kg") return size;
-  if (lowerUnit === "gm") return size / 1000;
-  return 0;
-};
 
 const validatePackageQuantity = (
   packages: PackageItem[],
@@ -348,33 +345,6 @@ const PackageScreen = () => {
     setToastVisible(true);
   };
 
-const getPacketWeightInGrams = (pkg: PackageItem): number => {
-  const unit = pkg.unit?.toLowerCase();
-  const size = Number(pkg.size);
-
-  if (unit === "gm") {
-    return 1;
-  }
-
-  if (unit === "kg") {
-    if (size > 1) return 1.5;
-    return 1;               
-  }
-
-  return 1;
-};
-
-const getMaxPackagesFor = (pkg: PackageItem) => {
-  const storedKg = Number(pkg.stored_quantity) || 0;
-  const storedGrams = storedKg * 1000;
-
-  const packetWeight = getPacketWeightInGrams(pkg);
-
-  if (packetWeight <= 0) return null;
-
-  return Math.floor(storedGrams / packetWeight);
-};
-
   const handleToggleToast = () => {
     showToast(
       "error",
@@ -574,19 +544,6 @@ const getMaxPackagesFor = (pkg: PackageItem) => {
     setIsLoading(false);
   }
 
-  const itemsToRender = useMemo(() => {
-    if (!product_items || product_items?.length === 0) return [];
-
-    if (product_items?.length === 1) {
-      return [product_items[0]];
-    } else {
-      const count = selectedRawMaterials?.length || 0;
-      return product_items.slice(0, count);
-    }
-  }, [product_items, selectedRawMaterials]);
-
-  // --- PACKAGE LOGIC (TOP LEVEL) ---
-
   const totalPackageQuantityKg = useMemo(() => {
     return (values.packages || []).reduce((sum, pkg) => {
       return (
@@ -700,7 +657,8 @@ const handlePackageQuantityChange = useCallback(
         },
         {
           type: "package-size-choose-list",
-          data: productPackages?.map((pack) => {
+          data: {
+            list: productPackages?.map((pack) => {
             const unit = pack?.unit?.toLowerCase();
             let grams = Number(pack.size);
 
@@ -730,6 +688,8 @@ const handlePackageQuantityChange = useCallback(
               isChecked: false,
             };
           }),
+          source: "package",
+        },
         },
       ],
       buttons: [
@@ -783,7 +743,6 @@ const handlePackageQuantityChange = useCallback(
       if (!result.success) return;
 
       const formData = result.data as StorageForm;
-      // console.log("formData", JSON.stringify(formData, null, 2));
 
       const rmChamberEntries = Object.entries(values.rmChamberQuantities || {});
 
@@ -822,6 +781,8 @@ const handlePackageQuantityChange = useCallback(
       dispatch(setRawMaterials([]));
       dispatch(resetPackageSizes());
       dispatch(clearChambers());
+      dispatch(clearRatings());
+      dispatch(clearDispatchRatings());
 
       showToast("success", "Packed item created!");
     } catch (error) {
@@ -870,10 +831,6 @@ const handlePackageQuantityChange = useCallback(
 
     setIsLoading(false);
   };
-
-  // console.log("selectedRawMaterials", selectedRawMaterials);
-  // console.log("storeRawMaterials", storeRawMaterials);
-  // console.log("chamberStock", chamberStock);
 
   type StockChamber = {
     id: string | number;
@@ -970,7 +927,7 @@ const chambersByRM: ChambersByRM = useMemo(() => {
             <View style={{ flex: 1 }}>
               <ScrollView
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ flexGrow: 1 }}
+                contentContainerStyle={{ flexGrow: 1, paddingBottom: 4 }}
                 refreshControl={
                   <RefreshControl
                     refreshing={
@@ -1095,9 +1052,6 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                                     const chamberName =
                                       chamberNameMap.get(String(chamber.id)) ?? "Unknown Chamber";
 
-                                    const currentQty =
-                                      values.rmChamberQuantities?.[item]?.[String(chamber.id)]?.quantity ?? "";
-
                                     return (
                                       <View
                                         key={`${item}-${chamber.id}`} 
@@ -1159,146 +1113,6 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                                     );
                                   })
                                 )}
-
-                              {/* {itemsToRender?.length > 0 &&
-                                itemsToRender.map((value, index) => {
-                                  const productIndex =
-                                    values.products?.findIndex(
-                                      (p) => p.name === value?.name
-                                    );
-                                  const currentProduct = values.products?.[
-                                    productIndex
-                                  ] || { packages: [], chambers: [] };
-                                  const rmChambers = chambersByRM.get(item);
-
-                                  if (!rmChambers) {
-                                    return (
-                                      <View
-                                        style={styles.inlineEmptyState}
-                                        key={index}
-                                      >
-                                        <EmptyState
-                                          stateData={{
-                                            title: "No stock found",
-                                            description: `${item} is not available in any chamber`,
-                                          }}
-                                          compact
-                                        />
-                                      </View>
-                                    );
-                                  }
-
-                                  return (
-                                    <View style={styles.Vstack} key={index}>
-                                      {visibleChambers.map((chamber, idx) => {
-                                        const chamberName =
-                                          chamberNameMap.get(
-                                            String(chamber.id)
-                                          ) ?? "Unknown Chamber";
-
-                                        const currentQty =
-                                              values.rmChamberQuantities?.[item]?.[
-                                            String(chamber.id)
-                                          ]?.quantity ?? "";
-
-                                        return (
-                                          <View
-                                            key={`${item}-${idx}`}
-                                            style={[
-                                              styles.chamberCard,
-                                              // styles.borderBottom,
-                                            ]}
-                                          >
-                                            <View
-                                              key={`${index}-${idx}`}
-                                              style={[
-                                                styles.chamberCard,
-                                                styles.borderBottom,
-                                              ]}
-                                            >
-                                              <View style={styles.Hstack}>
-                                                <View
-                                                  style={styles.iconWrapper}
-                                                >
-                                                  <ChamberIcon
-                                                    color={getColor("green")}
-                                                    size={32}
-                                                  />
-                                                </View>
-                                                <View style={styles.Vstack}>
-                                                  <B1>
-                                                    {String(
-                                                      chamberName ??
-                                                        "Unknown Chamber"
-                                                    ).slice(0, 12)}
-                                                    ...
-                                                  </B1>
-                                                  <B4>
-                                                    {chamber.quantity}
-                                                    kg
-                                                  </B4>
-                                                </View>
-                                              </View>
-                                              <View style={{ flex: 0.7 }}>
-                                                <FormField
-                                                  name={`products.${productIndex}.chambers.${idx}.quantity`}
-                                                  form={{
-                                                    values,
-                                                    setField,
-                                                    errors,
-                                                  }}
-                                                >
-                                                  {({
-                                                    value,
-                                                    onChange,
-                                                    error,
-                                                  }) => (
-                                                    <Input
-                                                      placeholder="Qty."
-                                                      addonText="KG"
-                                                     value={currentQty === 0 ? "" : String(currentQty)}
-                                                      keyboardType="decimal-pad"
-                                                      onChangeText={(
-                                                        text: string
-                                                      ) => {
-                                                        const numeric = Number(
-                                                          text.replace(
-                                                            /[^0-9.]/g,
-                                                            ""
-                                                          )
-                                                        );
-                                                        const max = Number(
-                                                          chamber.stored_quantity
-                                                        );
-
-                                                        if (numeric > max) {
-                                                          handleToggleToast();
-                                                          return;
-                                                        }
-
-                                                       setField(
-                                                          `rmChamberQuantities.${item}.${chamber.id}`,
-                                                          {
-                                                            quantity: numeric,
-                                                            rating: selectedRating,
-                                                          }
-                                                        );
-
-                                                      }}
-                                                      mask="addon"
-                                                      post
-                                                      error={error}
-                                                    />
-                                                  )}
-                                                </FormField>
-                                              </View>
-                                            </View>
-                                          </View>
-                                        );
-                                      })}
-                                    </View>
-                                  );
-                                })} */}
                             </View>
                           </ItemsRepeater>
                         );
@@ -1497,7 +1311,7 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                   {/* --- END PACKAGE UI --- */}
                 </View>
               </ScrollView>
-              <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
+              <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
                 <Button onPress={onSubmit} disabled={isPending} variant="fill">
                   {isPending ? "Packing product..." : "Pack product"}
                 </Button>
@@ -1639,10 +1453,11 @@ const chambersByRM: ChambersByRM = useMemo(() => {
         />
         <BottomSheet color="green" />
         {(isLoading ||
-          packageLoading ||
-          !fromCache ||
-          isProductLoading ||
-          productPackagesLoading) && (
+          productPackageFetching ||
+          productsFetching ||
+          frozenChambersFetching ||
+          isSummaryFetching ||
+          rmLoading) && (
           <View style={styles.overlay}>
             <View style={styles.loaderContainer}>
               <Loader />

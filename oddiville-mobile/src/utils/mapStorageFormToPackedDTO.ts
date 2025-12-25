@@ -10,7 +10,7 @@ export type CreatePackedItemDTO = {
 
   rawProducts: {
     product_name: string;
-    chambers: { id: string; quantity: number; rating: number }[];
+    chambers: { id: string; quantity: number; }[];
   }[];
 
   packages: {

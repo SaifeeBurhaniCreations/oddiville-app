@@ -2,9 +2,9 @@ import { ProductCardProps, RawMaterialProps } from "@/src/types";
 import { Pressable, StyleSheet, View } from "react-native";
 import { C1, H4 } from "@/src/components/typography/Typography";
 import { getColor } from "@/src/constants/colors";
-import CustomImage from "../../CustomImage";
+import CustomImage from "@/src/components/ui/CustomImage";
 import { getImageSource } from "@/src/utils/arrayUtils";
-import Checkbox from "../../Checkbox";
+import Checkbox from "@/src/components/ui/Checkbox";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/src/redux/store";
 import {
@@ -70,11 +70,12 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ data }) => {
   return (
     <View style={styles.listContainer}>
       {data?.map((item, index) => {
-        const { image, isRawMaterial } = getImageSource({
-          image: item.image,
-          bg: source === "chamber" || source === "product-chamber" ? false : true
-        });
-
+         const { image, isCustomImage } = getImageSource({
+  image: item.image,
+  options: {
+    isChamberItem: source === "chamber" || source === "product-chamber",
+  },
+});
         return (
           <Pressable
             style={styles.card}
@@ -85,7 +86,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ data }) => {
               <View
                 style={[
                   styles.imageWrapper,
-                  isRawMaterial && styles.productImage,
+                  isCustomImage && styles.productImage,
                 ]}
               >
                 <CustomImage
@@ -136,8 +137,8 @@ const styles = StyleSheet.create({
   },
   productImage: {
     backgroundColor: getColor("green", 300),
-    borderRadius: 32,
-    padding: 4,
+    borderRadius: 8,
+    padding: 2,
   },
 
   titleWithImageSection: {

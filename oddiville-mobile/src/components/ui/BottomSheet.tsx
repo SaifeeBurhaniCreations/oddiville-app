@@ -49,6 +49,7 @@ import { ChamberQty } from "@/src/redux/slices/bottomsheet/chamber-ratings.slice
 
 import { optionListEnumKeys } from "@/src/types";
 import { Dimensions } from "react-native";
+import { isPackageSizeChooseSection } from "@/src/utils/bottomSheetUtils";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 
@@ -411,20 +412,22 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
         };
       }
 
-      if (meta?.type === "choose-package" && section.type === "package-size-choose-list") {
-        const rawList = section.data;
+if (meta?.type === "choose-package" && section.type === "package-size-choose-list") {
+  const rawList = section.data.list;
 
-        let filtered = rawList;
-        if (PackageSizeSearched && PackageSizeSearched.trim().length > 0) {
-          const s = PackageSizeSearched.toLowerCase();
-          filtered = rawList.filter(
-            (item) =>
-              item.name?.toLowerCase().includes(s) 
-          );
-        }
-        
-        data = filtered;
-      }
+  let filtered = rawList;
+  if (PackageSizeSearched?.trim()) {
+    const s = PackageSizeSearched.toLowerCase();
+    filtered = rawList.filter((item) =>
+      item.name.toLowerCase().includes(s)
+    );
+  }
+
+  data = {
+    ...section.data,
+    list: filtered,
+  };
+}
 
       return Component ? (
         <React.Fragment key={`${section.type}-${idx}`}>

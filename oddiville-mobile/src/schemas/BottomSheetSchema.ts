@@ -340,13 +340,49 @@ const manageActionSection = z.object({
 // Section: Icon title Heading
 const PackagingSizeSection = z.object({
   type: z.literal('package-size-choose-list'),
+  data: z.object({
+    list: z.array(
+      z.object({
+        name: z.string(),
+        count: z.number(),
+        icon: z.enum(['paper-roll', 'bag', 'big-bag']),
+        isChecked: z.boolean(),
+      })
+    ),
+    source: z.enum(["package", "dispatch"]),
+  })
+});
+
+
+export const ChamberSchema = z.object({
+  id: z.string(),
+  quantity: z.string(),        
+  rating: z.number(),
+});
+export const PackageItemSchema = z.object({
+  rawSize: z.string(),
+  size: z.number(),
+  unit: z.enum(["kg", "gm", "qn"]).nullable(),
+  count: z.number(),
+  icon: z.string().optional(),
+});
+
+const MultipleProductSection = z.object({
+  type: z.literal('multiple-product-card'),
   data: z.array(
     z.object({
-      name: z.string(),
-      icon: z.enum(['paper-roll', 'bag', 'big-bag']),
+      id: z.string(),
+      product_name: z.string(),
+      description: z.string().optional(),
+      image: z.string().optional(),
       isChecked: z.boolean(),
+      packages: z.array(PackageItemSchema),
+      chambers: z.record(
+        z.string(),        // chamberId
+        ChamberSchema
+      ),
     })
-  )
+  ),
 });
 
 // Section: image preview
@@ -688,6 +724,10 @@ export const PackingSummaryBottomSheetConfigSchema = z.object({
   sections: z.array(z.discriminatedUnion('type', [HeaderSection, DataSection, ImageGallerySection])),
 });
 
+export const MultipleProductBottomSheetConfigSchema = z.object({
+  sections: z.array(z.discriminatedUnion('type', [TitleWithDetailsCrossSection, SearchSection, MultipleProductSection])),
+});
+
 // ------------------- Type Inference ------------------- //
 
 export type OrderReadyBottomSheetConfig = z.infer<typeof OrderReadyBottomSheetConfigSchema>;
@@ -731,6 +771,7 @@ export type StorageRMRatingConfig = z.infer<typeof StorageRMRatingConfigSchema>;
 export type PoliciesBottomSheetConfig = z.infer<typeof PoliciesBottomSheetConfigSchema>;
 export type PackageTypeBottomSheetConfig = z.infer<typeof PackageTypeBottomSheetConfigSchema>;
 export type PackingSummaryBottomSheetConfig = z.infer<typeof PackingSummaryBottomSheetConfigSchema>;
+export type MultipleProductBottomSheetConfig = z.infer<typeof MultipleProductBottomSheetConfigSchema>;
 // ------------------- Central Schema Registry ------------------- //
 
 export const bottomSheetSchemas = {
@@ -777,6 +818,7 @@ export const bottomSheetSchemas = {
   "select-policies": PoliciesBottomSheetConfigSchema,
   "select-package-type": PackageTypeBottomSheetConfigSchema,
   "packing-summary": PackingSummaryBottomSheetConfigSchema,
+  "multiple-product-card": MultipleProductBottomSheetConfigSchema,
 } as const;
 
 export type BottomSheetSchemaKey = keyof typeof bottomSheetSchemas;

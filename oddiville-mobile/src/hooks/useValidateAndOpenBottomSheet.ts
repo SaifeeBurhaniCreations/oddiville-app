@@ -684,7 +684,8 @@ const useValidateAndOpenBottomSheet = () => {
       },
       {
         type: 'package-size-choose-list',
-        data: [
+        data: {
+          list: [
           { name: '10gm', icon: "paper-roll", isChecked: false, },
           { name: '50gm', icon: "paper-roll", isChecked: false, },
           { name: '100gm', icon: "paper-roll", isChecked: false, },
@@ -697,7 +698,9 @@ const useValidateAndOpenBottomSheet = () => {
           { name: '5kg', icon: "big-bag", isChecked: false, },
           { name: '10kg', icon: "big-bag", isChecked: false, },
           { name: '30kg', icon: "big-bag", isChecked: false, },
-        ]
+        ],
+        source: "package"
+        }
       },
     ],
     buttons: [

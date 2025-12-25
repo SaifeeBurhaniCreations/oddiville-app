@@ -397,22 +397,6 @@ useFocusEffect(
               />
             </View>
           </View>
-          {/* <Tabs
-                    color="green"
-                    variant="ghost"
-                    renderTabHeader={({ activeTab, setActiveTab }) => (
-                        <RadioGroup
-                            style={{paddingHorizontal: 16, paddingVertical: 16}}
-                            options={options}
-                            selected={activeTab}
-                            onSelect={(selected) =>
-                            setActiveTab(options.findIndex((opt) => opt.text === selected))
-                            }
-                        />
-                        )
-                    }
-                >
-                </Tabs> */}
           <CreateFromStorage
             handleGetStep={step}
             controlledForm={{ values, setField, errors }}

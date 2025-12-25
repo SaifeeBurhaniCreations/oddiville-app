@@ -41,6 +41,7 @@ import BagIcon from '@/src/components/icons/packaging/BagIcon';
 import { useAuth } from '@/src/context/AuthContext';
 import { resolveAccess } from '@/src/utils/policiesUtils';
 import { PACKAGE_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
+import { getTareWeight, parseWeightBoth } from '@/src/utils/weightutils';
 
 const EMPTY_BAG_WEIGHT_G = 1;
 
@@ -61,21 +62,26 @@ const PackagingDetailsScreen = () => {
     return formatPackageParams({ types: packageData?.types });
   }, [packageData]);
 
-  const uiPackages = useMemo(() => {
-    if (!packages) return [];
+const uiPackages = useMemo(() => {
+  if (!packages) return [];
 
-    return packages.map((pkg) => {
-      const qtyKg = Number(pkg.quantity) || 0;
+  return packages.map((pkg) => {
+    const qtyKg = Number(pkg.quantity) || 0;
 
-      const packetCount = Math.round(qtyKg * (1000 / EMPTY_BAG_WEIGHT_G));
+    const { value: sizeValue, unit: sizeUnit } = parseWeightBoth(pkg.weight);
 
-      return {
-        ...pkg,
-        quantityKg: pkg.quantity,
-        displayQuantity: String(packetCount),
-      };
-    });
-  }, [packages]);
+    const tare = getTareWeight("pouch", sizeValue, sizeUnit);
+
+    const packetCount =
+      tare > 0 ? Math.floor((qtyKg * 1000) / tare) : 0;
+
+    return {
+      ...pkg,
+      quantityKg: qtyKg,
+      displayQuantity: String(packetCount),
+    };
+  });
+}, [packages]);
 
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch();
@@ -85,12 +91,14 @@ const PackagingDetailsScreen = () => {
     const match = packages?.find(pkg => pkg.weight === id);
     if (!match) return;
 
-    const { icon, ...selectedPackage } = match;
+    const { value, unit } = parseWeightBoth(match.weight);
+    const tare = getTareWeight("pouch", value, unit);
 
-    const qtyKg = Number(selectedPackage.quantity) || 0;
-    const packetCount = Math.round(qtyKg * (1000 / EMPTY_BAG_WEIGHT_G));
+    const qtyKg = Number(match.quantity) || 0;
+    const packetCount =
+      tare > 0 ? Math.floor((qtyKg * 1000) / tare) : 0;
 
-    dispatch(setPackageSize({ ...selectedPackage, id: packageId }));
+  dispatch(setPackageSize({ ...match, id: packageId }));
 
     const fillPackage = {
       sections: [
@@ -98,7 +106,7 @@ const PackagingDetailsScreen = () => {
           type: 'title-with-details-cross',
           data: {
             title: 'Add package count',
-            description: `${selectedPackage.weight} • ${packetCount} packets`,
+            description: `${match.weight} • ${packetCount} packets`,
             details: { icon: "pencil" }
           },
         },

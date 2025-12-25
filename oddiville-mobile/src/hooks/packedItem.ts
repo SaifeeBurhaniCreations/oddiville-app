@@ -5,7 +5,7 @@ import {
   mapStorageFormToPackedDTO,
 } from "@/src/utils/mapStorageFormToPackedDTO";
 import { StorageForm } from "@/app/(tabs)/package";
-import { ChamberStockPage } from "./useChamberStock";
+import { ChamberStockPage, PackageItem } from "./useChamberStock";
 import { useMemo } from "react";
 
 const CHAMBER_STOCK_KEY = ["chamber-stock"];
@@ -18,6 +18,7 @@ export type PackedItem = {
   image: string | null;
   category: string;
   chamber: { id: string; quantity: string;}[];
+  packages?: PackageItem[];
   __optimistic?: boolean;
 };
 

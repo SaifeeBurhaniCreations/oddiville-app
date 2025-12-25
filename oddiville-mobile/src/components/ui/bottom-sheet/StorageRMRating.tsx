@@ -15,6 +15,7 @@ import StarIcon from "../../icons/page/StarIcon";
 import { closeBottomSheet } from "@/src/redux/slices/bottomsheet.slice";
 import { RootState } from "@/src/redux/store";
 import { setRatingForRM } from "@/src/redux/slices/bottomsheet/storage.slice";
+import { setDispatchRatingForRM } from "@/src/redux/slices/bottomsheet/dispatch-rating.slice";
 
 const StorageRMRatingComponent = ({
   data,
@@ -30,10 +31,10 @@ const rating = Number(ratingStr);
 
 const ratingToMessageMap: Record<number, string> = {
   5: "Excellent",
-  4: "Very Good",
-  3: "Good",
-  2: "Average",
-  1: "Poor",
+  4: "Good",
+  3: "Average",
+  2: "Poor",
+  1: "Very Poor",
 };
 
   return (
@@ -53,16 +54,24 @@ const ratingToMessageMap: Record<number, string> = {
             style={[styles.card]}
             onPress={() => {
                 const selectedRating = Number(item.rating);
+                
                dispatch(
                 setRatingForRM({
                   rawMaterial,
                   rating: {
                     rating: selectedRating,
-                    message: ratingToMessageMap[rating],
+                    message: ratingToMessageMap[selectedRating],
                   },
                 })
               );
-
+                dispatch(setDispatchRatingForRM({
+                  product_name: rawMaterial,
+                  rating: {
+                    rating: selectedRating,
+                    message: ratingToMessageMap[selectedRating],
+                  },
+                })
+              );
               dispatch(closeBottomSheet());
             }}
             key={item.rating}

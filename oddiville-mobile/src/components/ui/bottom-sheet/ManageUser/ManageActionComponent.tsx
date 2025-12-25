@@ -1,5 +1,6 @@
   import { H4 } from '@/src/components/typography/Typography'
   import { getColor } from '@/src/constants/colors'
+import { usePackageById } from '@/src/hooks/Packages';
   import useValidateAndOpenBottomSheet from '@/src/hooks/useValidateAndOpenBottomSheet';
 import { ChamberQty, setRating } from '@/src/redux/slices/bottomsheet/chamber-ratings.slice';
 import { selectUnit } from '@/src/redux/slices/unit-select.slice';
@@ -31,7 +32,8 @@ import { selectUnit } from '@/src/redux/slices/unit-select.slice';
     const id = useSelector((state: RootState) => state.idStore.id);
     const currentProductId = useSelector((state: RootState) => state.currentProduct.currentProductId);
     const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
-
+    const { data: pkgData } = usePackageById(currentProductId ?? null)
+    const {product_name} = pkgData || {}
     const dispatch = useDispatch();
 
     const supervisorProduction = {
@@ -119,7 +121,7 @@ import { selectUnit } from '@/src/redux/slices/unit-select.slice';
                 } else if(source === "supervisor-production") {
                   validateAndSetData(id!, "supervisor-production", supervisorProduction)
                 } else {
-                  validateAndSetData(currentProductId, "add-package")
+                  validateAndSetData(`${currentProductId}:${product_name}`, "add-package")
                 }
 
               // const handler = actionHandlers[action.actionKey as ActionKey];

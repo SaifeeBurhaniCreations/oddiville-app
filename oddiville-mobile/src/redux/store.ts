@@ -13,6 +13,7 @@ import LocationReducer from './slices/bottomsheet/location.slice';
 import menuSheetReducer from "./slices/menusheet.slice";
 import PackageSizePackagingReducer from './slices/package-size.slice';
 import PackageSizeReducer from './slices/bottomsheet/package-size.slice';
+import DispatchPackageSizeReducer from './slices/bottomsheet/dispatch-package-size.slice';
 import ProductReducer from './slices/product.slice';
 import CurrentProductReducer from './slices/current-product.slice';
 import RatingReducer from './slices/rating.slice';
@@ -34,8 +35,10 @@ import productSearchReducer from "./slices/bottomsheet/product-search.slice";
 import packageSizeSearchReducer from "./slices/bottomsheet/package-size-search.slice";
 import deleteUserPopupReducer from "./slices/delete-popup-slice";
 import storageReducer from "./slices/bottomsheet/storage.slice";
+import dispatchRatingReducer from "./slices/bottomsheet/dispatch-rating.slice";
 import policiesReducer from "./slices/bottomsheet/policies.slice";
 import packageTypeProductionReducer from "./slices/bottomsheet/package-type-production.slice";
+import multipleProductReducer from "./slices/multiple-product.slice";
 
 export const store = configureStore({
   reducer: {
@@ -52,8 +55,10 @@ export const store = configureStore({
     location: LocationReducer,
     menu: menuSheetReducer,
     packageSize: PackageSizeReducer,
+    dispatchPackageSize: DispatchPackageSizeReducer,
     packageSizePackaging: PackageSizePackagingReducer,
     product: ProductReducer,
+    multipleProduct: multipleProductReducer,
     currentProduct: CurrentProductReducer,
     rating: RatingReducer,
     rawMaterial: RawMaterialReducer,
@@ -73,6 +78,7 @@ export const store = configureStore({
     packageSizeSearch: packageSizeSearchReducer,
     deletePopup: deleteUserPopupReducer,
     StorageRMRating: storageReducer,
+    DispatchRating: dispatchRatingReducer,
     policies: policiesReducer,
     packageTypeProduction: packageTypeProductionReducer,
   },

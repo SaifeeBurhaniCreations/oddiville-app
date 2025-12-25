@@ -10,10 +10,11 @@ import {
 } from "react-native";
 import { useMemoizedStyle } from "@/src/hooks/useMemoizedStyle";
 import Loader from "./Loader";
+import defaultFallbackImg from "@/src/assets/images/fallback//raw-material-fallback.png";
 
 export type CustomImageProps = {
-  src?: string | ImageSourcePropType | null;
-  width?: number | string; 
+  src?: ImageSourcePropType | string | null;
+  width?: number | string;
   height?: number | string;
   style?: StyleProp<ImageStyle>;
   borderRadius?: number;
@@ -29,7 +30,7 @@ const CustomImage: React.FC<CustomImageProps> = ({
   style = {},
   borderRadius,
   resizeMode = "cover",
-  fallback = { uri: "https://via.placeholder.com/150" },
+  fallback = defaultFallbackImg,
   loadingIndicator = true,
 }) => {
   const [imageError, setImageError] = useState(false);
@@ -47,14 +48,9 @@ const CustomImage: React.FC<CustomImageProps> = ({
 
   const baseImageStyle: ImageStyle = {
     borderRadius: borderRadius ?? 16,
+    width: width as any,
+    height: height as any,
   };
-
-  if (width !== undefined) {
-    baseImageStyle.width = width as any;
-  }
-  if (height !== undefined) {
-    baseImageStyle.height = height as any;
-  }
 
   const imageStyle = useMemoizedStyle(
     [baseImageStyle, style],
@@ -83,6 +79,8 @@ const CustomImage: React.FC<CustomImageProps> = ({
   );
 };
 
+export default CustomImage;
+
 const styles = StyleSheet.create({
   container: {
     justifyContent: "center",
@@ -94,5 +92,3 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
 });
-
-export default CustomImage;

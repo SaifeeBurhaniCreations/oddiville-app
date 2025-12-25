@@ -339,7 +339,8 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   addonMask: {
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
     backgroundColor: getColor("green", 100),
     borderTopRightRadius: 12,
     borderBottomRightRadius: 12,

@@ -159,7 +159,7 @@ router.post(
               description: `${product_name} Packaging`,
               chamber_id: chamber.id,
               quantity_unit: quantityNum,
-              unit: firstType.unit,
+              unit: "kg",
               sample_image: uploadedImage
                 ? { url: uploadedImage.url, key: uploadedImage.key }
                 : null,
@@ -185,212 +185,11 @@ router.post(
   }
 );
 
-router.patch("/update/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { product_name, size, unit, quantity } = req.body;
-
-    const pkg = await Packages.findByPk(id);
-    if (!pkg) {
-      return res.status(404).json({ error: "Package not found." });
-    }
-
-    const updates = {};
-
-    const finalProductName =
-      typeof product_name === "string" && product_name.trim().length > 0
-        ? product_name.trim()
-        : pkg.product_name;
-
-    if (product_name !== undefined) {
-      if (typeof product_name !== "string") {
-        return res
-          .status(400)
-          .json({ error: "product_name must be a string." });
-      }
-      updates.product_name = finalProductName;
-    }
-
-    if (size !== undefined && unit !== undefined && quantity !== undefined) {
-      if (typeof size !== "string") {
-        return res.status(400).json({ error: "'size' must be a string." });
-      }
-      if (typeof quantity !== "string" && typeof quantity !== "number") {
-        return res
-          .status(400)
-          .json({ error: "'quantity' must be a string or number." });
-      }
-      if (
-        !(
-          unit === null ||
-          (typeof unit === "string" &&
-            ["kg", "gm", "null"].includes(unit.trim()))
-        )
-      ) {
-        return res.status(400).json({
-          error: "Unit must be 'kg', 'gm', 'null' (as string), or actual null.",
-        });
-      }
-
-      const normalizedSize = size.trim();
-      const normalizedUnit = unit === null ? null : unit.trim();
-      const numericQuantity =
-        typeof quantity === "string" ? parseFloat(quantity) : quantity;
-
-      if (isNaN(numericQuantity)) {
-        return res
-          .status(400)
-          .json({ error: "quantity must be a valid number." });
-      }
-
-      let existingTypes = Array.isArray(pkg.types) ? [...pkg.types] : [];
-      if (!Array.isArray(pkg.types) && pkg.types) {
-        existingTypes = [pkg.types];
-      }
-
-      const typeIndex = existingTypes.findIndex((t) => {
-        const tSize =
-          typeof t.size === "string" ? t.size.trim() : String(t.size);
-        const tUnit =
-          t.unit === null
-            ? null
-            : typeof t.unit === "string"
-            ? t.unit.trim()
-            : t.unit;
-        return tSize === normalizedSize && tUnit === normalizedUnit;
-      });
-
-      if (typeIndex !== -1) {
-        const existingQty = parseFloat(
-          existingTypes[typeIndex].quantity || "0"
-        );
-        existingTypes[typeIndex].quantity = (
-          existingQty + numericQuantity
-        ).toString();
-      } else {
-        existingTypes.push({
-          size: normalizedSize,
-          unit: normalizedUnit,
-          quantity: numericQuantity.toString(),
-        });
-      }
-
-      updates.types = existingTypes.map((item) => ({
-        size: typeof item.size === "string" ? item.size.trim() : item.size,
-        quantity:
-          typeof item.quantity === "string"
-            ? item.quantity.trim()
-            : item.quantity,
-        unit:
-          item.unit === null
-            ? null
-            : typeof item.unit === "string"
-            ? item.unit.trim()
-            : item.unit,
-      }));
-
-      const chamberName = pkg.chamber_name;
-
-      const chamber = await ChambersClient.findOne({
-        where: { chamber_name: chamberName },
-      });
-
-      if (!chamber) {
-        return res.status(400).json({
-          error: `Chamber not found for chamber_name: ${chamberName}`,
-        });
-      }
-
-      const itemName = `${finalProductName}:${normalizedSize}`;
-
-      const [dryItem, created] = await DryWarehouseClient.findOrCreate({
-        where: { item_name: itemName },
-        defaults: {
-          item_name: itemName,
-          warehoused_date: new Date(),
-          description: `${finalProductName} Packaging with size ${normalizedSize}${
-            normalizedUnit ?? ""
-          }`,
-          sample_image: null,
-          chamber_id: chamber.id,
-          quantity_unit: "0",
-          unit: normalizedUnit || "gm",
-        },
-      });
-
-      if (!dryItem.chamber_id && chamber.id) {
-        dryItem.chamber_id = chamber.id;
-      }
-
-      const currentQty = parseFloat(dryItem.quantity_unit || "0");
-      const newQty = currentQty + numericQuantity;
-      dryItem.quantity_unit = newQty.toString();
-      await dryItem.save();
-
-      const [stock] = await ChamberStockClient.findOrCreate({
-        where: {
-          product_name: finalProductName,
-          unit: normalizedUnit || "gm",
-        },
-        defaults: {
-          product_name: finalProductName,
-          image: null,
-          category: "packed",
-          unit: normalizedUnit || "gm",
-          chamber: [
-            {
-              id: chamberName,
-              quantity: numericQuantity.toString(),
-              rating: "0",
-            },
-          ],
-        },
-      });
-
-      const chamberArray = Array.isArray(stock.chamber)
-        ? [...stock.chamber]
-        : [];
-      const chIndex = chamberArray.findIndex((c) => c.id === chamberName);
-
-      if (chIndex !== -1) {
-        const prevQty = parseFloat(chamberArray[chIndex].quantity || "0");
-        chamberArray[chIndex].quantity = (prevQty + numericQuantity).toString();
-      } else {
-        chamberArray.push({
-          id: chamberName,
-          quantity: numericQuantity.toString(),
-          rating: "0",
-        });
-      }
-
-      stock.chamber = chamberArray;
-      await stock.save();
-
-      console.log("ChamberStock after save:", stock.toJSON());
-    }
-
-    const [affectedRows] = await Packages.update(updates, { where: { id } });
-
-    if (affectedRows === 0) {
-      return res
-        .status(404)
-        .json({ error: "Package not found or no changes made." });
-    }
-
-    const updatedPkg = await pkg.reload();
-    const plainPkg = updatedPkg.get({ plain: true });
-
-    return res.status(200).json(plainPkg);
-  } catch (error) {
-    console.error("Error updating package:", error.message);
-    return res.status(500).json({ error: "Internal server error." });
-  }
-});
-
 router.patch("/:id/add-type", async (req, res) => {
   try {
     const { id } = req.params;
     const { product_name, size, unit, quantity } = req.body;
+    
     const io = req.app.get("io");
 
     if (!product_name || !size || quantity == null) {
@@ -453,7 +252,7 @@ router.patch("/:id/add-type", async (req, res) => {
         description: `${product_name} ${size}${normalizedUnit ?? ""}`,
         chamber_id: chamber.id,
         quantity_unit: "0",
-        unit: normalizedUnit || "gm"
+        unit: "kg"
       }
     });
 
@@ -523,7 +322,7 @@ router.patch("/:id/increase-quantity", async (req, res) => {
         warehoused_date: new Date(),
         chamber_id: chamber.id,
         quantity_unit: "0",
-        unit: unit || "gm"
+        unit: "kg"
       }
     });
 

@@ -44,7 +44,7 @@ import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomS
 
 const formatOrder = {
     orderDetails: (order: DispatchOrder): OrderProps => {
-        const timeTaken = formatTimeDifference(order.dispatch_date, order.delivered_date!);
+        const timeTaken = formatTimeDifference(typeof order.dispatch_date === 'string' ? new Date(order.dispatch_date) : order.dispatch_date, typeof order.delivered_date === 'string' ? new Date(order.delivered_date) : order.delivered_date);
         return {
             title: order.customer_name,
             address: order.address,

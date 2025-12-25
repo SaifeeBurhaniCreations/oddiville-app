@@ -8,6 +8,7 @@ import FarmhouseBg from '@/src/components/icons/card-bg/Farmhouse-bg';
 import { BottomSheetSchemaKey } from '../schemas/BottomSheetSchema';
 import chamberDefaultImg from "@/src/assets/images/warehouse/chamber-default.png"
 import productionDefaultImg from "@/src/assets/images/fallback/colourful/product.png"
+import packedDefaultImg from "@/src/assets/images/fallback/raw-material-fallback.png"
 
 export function chunkArray<T,>(array: T[], size: number): T[][] {
   const result = [];
@@ -53,7 +54,6 @@ export const labelMap: Record<string, string> = {
   enterCount: 'Count',
   notNeeded: 'Not needed',
 };
-
 export const getImageSource = ({
   image,
   options,
@@ -62,27 +62,38 @@ export const getImageSource = ({
   options?: {
     isProductionItem?: boolean;
     isChamberItem?: boolean;
+    isPackedItem?: boolean;
   };
 }) => {
-  const isValidUrl = typeof image === "string" && image.startsWith("http");
+  const isValidUrl =
+    typeof image === "string" &&
+    image.trim().length > 0 &&
+    image.startsWith("http");
 
   if (isValidUrl) {
     return {
       image,
-      isProductionDefault: false,
+      isCustomImage: true,
+    };
+  }
+
+  if (options?.isPackedItem) {
+    return {
+      image: packedDefaultImg,
+      isCustomImage: false,
     };
   }
 
   if (options?.isProductionItem || options?.isChamberItem) {
     return {
       image: productionDefaultImg,
-      isProductionDefault: true,
+      isCustomImage: false,
     };
   }
 
   return {
     image: chamberDefaultImg,
-    isProductionDefault: false,
+    isCustomImage: false,
   };
 };
 

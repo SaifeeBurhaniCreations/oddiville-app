@@ -24,7 +24,7 @@ import DataComponent from "@/src/components/ui/bottom-sheet/DataComponent";
 import DescriptionComponent from "@/src/components/ui/bottom-sheet/DescriptionComponent";
 import DataGroupComponent from "@/src/components/ui/bottom-sheet/DataGroupComponent";
 import TableComponent from "@/src/components/ui/bottom-sheet/TableComponent";
-import { Chamber, PackageItem, TableColumn, TableRow } from "./ui";
+import { Chamber, TableColumn, TableRow } from "./ui";
 import ProductListComponent from "@/src/components/ui/bottom-sheet/ProductListComponent";
 import ProductDetailsComponent from "@/src/components/ui/bottom-sheet/ProductDetailsComponent";
 import TruckFullDetailsComponent from "../components/ui/bottom-sheet/TruckFullDetailsComponent";
@@ -40,6 +40,8 @@ import type { sourceEnum as rmSourceEnum } from "@/src/redux/slices/bottomsheet/
 import StorageRMRatingComponent from "../components/ui/bottom-sheet/StorageRMRating";
 import PoliciesCardComponent from "../components/ui/bottom-sheet/PoliciesComponent";
 import FileUploadComponent from "../components/ui/bottom-sheet/FileUploadComponent";
+import ChooseProductCardComponent from "../components/ui/bottom-sheet/ChooseProductCardComponent";
+import { PackageItem } from "../hooks/useChamberStock";
 
 export type BottomSheetActionKey =
   | "add-raw-material"
@@ -284,10 +286,14 @@ export type SectionConfig =
   | {
       type: "package-size-choose-list";
       data: {
+        list: {
         name: string;
+        count: number;
         icon: DataAccordianEnum;
         isChecked: boolean;
       }[];
+      source: "package" | "dispatch";
+      }
     }
   | {
       type: "title-with-details-cross";
@@ -459,6 +465,9 @@ export type SectionConfig =
         key: string;
         uploadedTitle?: string;
       };
+    } | {
+      type: "multiple-product-card";
+      data: multipleProductCardDataProps[];
     };
 
 export interface BottomSheetConfig {
@@ -676,10 +685,14 @@ export interface SearchProps {
 
 export interface PackageSizeChooseComponentProps {
   data: {
-    name: any;
+    list: {
+    name: string;
+    count: number;
     icon: DataAccordianEnum;
     isChecked: boolean;
   }[];
+  source: "package" | "dispatch"
+  }
   color: "red" | "green" | "blue" | "yellow";
 }
 
@@ -900,6 +913,32 @@ export interface FullWidthSliderComponentProps {
   data: string[];
 }
 
+export interface MultiplePackageSizeComponentProps {
+  data: {
+    name: string;
+    icon?: string;
+    isChecked: boolean;
+  }[];
+}
+export type ChamberProduct = { 
+   id: string;
+   quantity: string;
+    rating: number
+   }
+export interface multipleProductCardDataProps {
+    id: string;
+    product_name: string;
+    description?: string;
+    image?: string;
+    isChecked: boolean;
+    // added extra
+    packages: PackageItem[];
+    chambers: ChamberProduct[];
+  }
+export interface multipleProductCardProps {
+  data: multipleProductCardDataProps[];
+}
+
 export type ConditonIdentifier = "hideUntilChamberSelected";
 
 // ------------------- Button Schema ------------------- //
@@ -941,6 +980,7 @@ export const sectionComponents: Record<
   "select-group": SelectGroupComponent,
   "input-with-select": InputWithSelectComponent,
   productCard: ProductCardComponent,
+  "multiple-product-card": ChooseProductCardComponent,
   select: SelectComponent,
   "full-width-slider": FullWidthSliderComponent,
   "vendor-card": VendorCardComponent,

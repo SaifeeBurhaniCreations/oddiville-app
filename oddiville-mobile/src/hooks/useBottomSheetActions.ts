@@ -34,6 +34,7 @@ import { clearAllFilters } from "../redux/slices/bottomsheet/filters.slice";
 import { clearPolicies, setSelectionDone } from "../redux/slices/bottomsheet/policies.slice";
 import { useImageStore } from "../stores/useImageStore";
 import { setIsChoosingChambers } from "../redux/slices/bottomsheet/product-package-chamber.slice";
+import { getTareWeight } from "../utils/weightutils";
 
 export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const source = useSelector(
@@ -182,14 +183,20 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
 "add-product-package": async () => {
   try {
     const quantityNumber = Number(productPackageForm.values.quantity);
-    const emptyBagWeightGram = Number(productPackageForm.values.empty_bag_weight_g || "1");
-    const finalQtyKg = (quantityNumber * emptyBagWeightGram) / 1000;
+    const pkgSize = Number(productPackageForm.values.size)
+    const pkgUnit = productPackageForm.values.unit
+    // const emptyBagWeightGram = Number(productPackageForm.values.empty_bag_weight_g || "1");
+    // const finalQtyKg = (quantityNumber * emptyBagWeightGram) / 1000;
+      const tare = getTareWeight("pouch", pkgSize, pkgUnit);
+      const quantityKg = (quantityNumber * tare) / 1000;
 
     const productPackagePayload = {
       ...productPackageForm.values,
-      quantity: String(finalQtyKg),
+      quantity: String(quantityKg.toFixed(3)),
     };
 
+    console.log("productPackagePayload", productPackagePayload);
+    
     const result = productPackageForm.validateForm(productPackagePayload);
 
     if (!result.success) {
@@ -272,15 +279,15 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
             const [id, product_name] = meta.id.split(":");
 
             const count = Number(packageSizeForm.values.quantity);
-            const emptyBagWeightGram = Number(
-              packageSizeForm.values.empty_bag_weight_g || "1"
-            );
+            const pkgSize = Number(packageSizeForm.values.size)
+            const pkgUnit = packageSizeForm.values.unit
 
-            const finalQtyKg = (count * emptyBagWeightGram) / 1000;
+              const tare = getTareWeight("pouch", pkgSize, pkgUnit);
+              const quantityKg = (count * tare) / 1000;
 
             const result = packageSizeForm.validateForm({
               ...packageSizeForm.values,
-              quantity: String(finalQtyKg),
+              quantity: String(quantityKg.toFixed(3)),
             });
 
             if (!result.success) return;
@@ -297,7 +304,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
                   product_name,
                   size: result.data.size,
                   unit,
-                  quantity: String(finalQtyKg),
+                  quantity: String(quantityKg.toFixed(3)),
                 },
               },
               {
@@ -326,14 +333,11 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
           const { number, unit } = splitValueAndUnit(weight);
 
           const count = Number(packageQuantityForm.values.quantity);
-          const emptyBagWeightGram = Number(
-            packageQuantityForm.values.empty_bag_weight_g || "1"
-          );
-
-          const finalQtyKg = (count * emptyBagWeightGram) / 1000;
+              const tare = getTareWeight("pouch", number, unit as "kg" | "gm");
+              const quantityKg = (count * tare) / 1000;
 
           const result = packageQuantityForm.validateForm({
-            quantity: String(finalQtyKg),
+            quantity: String(quantityKg.toFixed(3)),
           });
 
           if (!result.success) return;
@@ -344,7 +348,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
               data: {
                 size: String(number),
                 unit: unit as "kg" | "gm" | null,
-                quantity: String(finalQtyKg),
+                quantity: String(quantityKg.toFixed(3)),
               },
             },
             {
