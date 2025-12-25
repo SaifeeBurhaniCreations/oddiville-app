@@ -191,7 +191,6 @@ router.patch("/:id/add-type", async (req, res) => {
     const { product_name, size, unit, quantity } = req.body;
     
     const io = req.app.get("io");
-
     if (!product_name || !size || quantity == null) {
       return res.status(400).json({ error: "Missing required fields" });
     }

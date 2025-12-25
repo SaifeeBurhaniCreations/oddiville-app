@@ -236,6 +236,7 @@ const DEBUG_ROLLBACK = false;
         where: {
           item_name: buildPackageKey(product_name, p.size),
           unit: "kg",
+          unit: "kg",
         },
         transaction: t,
         lock: t.LOCK.UPDATE,
