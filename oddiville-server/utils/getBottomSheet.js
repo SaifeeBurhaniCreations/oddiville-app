@@ -101,7 +101,7 @@ function getBottomSheet({
     return fillProductionCompletedSchema(schemaMap[type], fillerSchema[type]);
   } else if (type === "calendar-event-scheduled") {
     return fillCalendarEventSchema(schemaMap[type], fillerSchema[type]);
-  }else if (type === "scheduled-date-event") {
+  }else if (type === "calendar-event-reminder") {
     return fillScheduledDateEventSchema(schemaMap[type], fillerSchema[type]);
   } else {
     return [{ error: "Invalid type" }];

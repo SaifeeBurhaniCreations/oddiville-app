@@ -19,8 +19,7 @@ import {
 import { z } from "zod";
 import { TextInput } from "react-native";
 import { DispatchOrderData } from "../hooks/dispatchOrder";
-import { PackageItem } from "../hooks/useChamberStock";
-
+import { PackageItem as DispatchPackageItem } from "@/src/hooks/useChamberStock"
 export interface TagProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   color?: "red" | "green" | "blue" | "yellow";
@@ -633,14 +632,13 @@ export interface Chamber {
   unit: "kg" | "gm" | "qn" | null;
 }
 
-export interface PackedItem {
+export interface PackageItem {
   quantity?: string;
   size: string | number;
   rawSize: string;
   unit: "kg" | "gm" | "qn" | null;
   chamber: Chamber[];
-  packages: PackageItem[];
-  
+  packages: DispatchPackageItem[];
   stored_quantity?: number | string | null;
   rawUnit?: string | null;
 }

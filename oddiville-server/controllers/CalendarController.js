@@ -1,14 +1,10 @@
 const router = require("express").Router();
-
+const { subHours } = require("date-fns");
 const { format } = require("date-fns");
 const { Calendar: calendarClient } = require("../models");
-const notificationTypes = require("../types/notification-types");
 const {
   dispatchAndSendNotification,
 } = require("../utils/dispatchAndSendNotification");
-const {
-  sendCalendarEventCreatedNotification,
-} = require("../utils/notification");
 
 router.post("/", async (req, res) => {
   const body = req.body;
@@ -40,6 +36,23 @@ router.post("/", async (req, res) => {
     title,
     id: calenderEvent.id,
   });
+
+   const eventDateTime = new Date(
+    `${calenderEvent.scheduled_date} ${calenderEvent.start_time}`
+  );
+
+  // 1 hour before
+  const reminderTime = subHours(eventDateTime, 1);
+
+  const delay = reminderTime.getTime() - Date.now();
+
+  if (delay > 0) {
+    await notificationQueue.add(
+      { calendarEvent: calenderEvent },
+      { delay }
+    );
+  }
+
 
   res.status(201).json(calenderEvent);
 });

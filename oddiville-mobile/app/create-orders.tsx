@@ -55,6 +55,16 @@ interface Product {
     // added extra
     packages: PackageItem[];
     chambers: ChamberProduct[];
+    usedBagsByProduct: {
+  [productId: string]: {
+    [packageKey: string]: {
+      totalPackets: number;
+      byChamber: {
+        [chamberId: string]: number
+      }
+    };
+  };
+};
   }
 
 export type OrderStorageForm = {

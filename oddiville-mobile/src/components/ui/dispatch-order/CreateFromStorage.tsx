@@ -354,7 +354,6 @@ const handleRemoveProduct = (productId: string) => {
 
             {values.products?.length > 0 ?
             values.products?.map((value, index) => {
-              console.log("openTab === value.product_name", openTab === value.product_name);
               
               return (
                 <AddProductsForSell

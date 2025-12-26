@@ -16,5 +16,6 @@ module.exports = {
   "production-start": ["production-start", "informative", "red"],
   "product-alert": ["product-alert", "actionable"],
   "calendar-event-scheduled": ["calendar-event-scheduled", "today", "red"],
+  "calendar-event-reminder": ["calendar-event-reminder", "today", "green"],
 };
   

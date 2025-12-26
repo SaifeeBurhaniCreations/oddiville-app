@@ -87,7 +87,6 @@ async function dispatchAndSendNotification({
   try {
     
     const { type: notificationType, category, color } = resolveTypeAndCategory(type);
-console.log("clr", color);
 
     const sanitizedId = String(id ?? "").trim();
     const sanitizedTitle = (title || "").trim();

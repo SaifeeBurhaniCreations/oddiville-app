@@ -24,7 +24,7 @@ import DataComponent from "@/src/components/ui/bottom-sheet/DataComponent";
 import DescriptionComponent from "@/src/components/ui/bottom-sheet/DescriptionComponent";
 import DataGroupComponent from "@/src/components/ui/bottom-sheet/DataGroupComponent";
 import TableComponent from "@/src/components/ui/bottom-sheet/TableComponent";
-import { Chamber, TableColumn, TableRow } from "./ui";
+import { Chamber, DispatchPackedItem, TableColumn, TableRow } from "./ui";
 import ProductListComponent from "@/src/components/ui/bottom-sheet/ProductListComponent";
 import ProductDetailsComponent from "@/src/components/ui/bottom-sheet/ProductDetailsComponent";
 import TruckFullDetailsComponent from "../components/ui/bottom-sheet/TruckFullDetailsComponent";
@@ -936,7 +936,7 @@ export interface multipleProductCardDataProps {
     image: string;
     isChecked: boolean;
     // added extra
-    packages: PackageItem[];
+    packages: DispatchPackedItem[];
     chambers: ChamberProduct[];
   }
 export interface multipleProductCardProps {

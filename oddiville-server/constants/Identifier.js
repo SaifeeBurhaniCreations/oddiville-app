@@ -16,6 +16,6 @@ module.exports = [
     "production-start",
     "production-completed",
     "calendar-event-scheduled",
-    "scheduled-date-event",
+    "calendar-event-reminder",
 ];
   

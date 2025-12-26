@@ -47,7 +47,7 @@ const schemaMap = {
   "production-start": PRODUCTION_STARTED,
   "production-completed": PRODUCTION_COMPLETED,
   "calendar-event-scheduled": CALENDAR_EVENT_SCHEDULED,
-  "scheduled-date-event": SCHEDULED_DATE_EVENT,
+  "calendar-event-reminder": SCHEDULED_DATE_EVENT,
   "packing-summary": PACKING_SUMMARY,
 };
 

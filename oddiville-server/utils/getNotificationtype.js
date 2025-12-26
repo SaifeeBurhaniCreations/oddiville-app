@@ -16,5 +16,5 @@ module.exports = {
   "production-start": "PRODUCTION START",
   "production-completed": "PRODUCTION COMPLETED",
   "calendar-event-scheduled": "CALENDAR EVENT SCHEDULED",
-  "scheduled-date-event": "DATE EVENT SCHEDULED",
+  "calendar-event-reminder": "SCHEDULED EVENT",
 };

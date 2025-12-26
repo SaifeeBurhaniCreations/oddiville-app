@@ -68,6 +68,7 @@ const normalizeUnitToKg = (size: number, unit: string | null) => {
   return 0;
 };
 
+
 const AddProductsForSell = ({
   product,
   isFirst,
