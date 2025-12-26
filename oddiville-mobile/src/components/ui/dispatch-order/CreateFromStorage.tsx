@@ -1,5 +1,5 @@
 // 1. React and React Native core
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 // 2. Third-party dependencies
@@ -94,7 +94,7 @@ const CreateFromStorage = ({
   }, [packedItemsData]);
 
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
-  const [openTab, setOpenTab] = useState<number>(0);
+  const [openTab, setOpenTab] = useState<string | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastType, setToastType] = useState<"success" | "error" | "info">(
     "info"
@@ -109,6 +109,12 @@ const CreateFromStorage = ({
     setToastMessage(message);
     setToastVisible(true);
   };
+useEffect(() => {
+  if (values.products?.length && openTab === null) {
+    const last = values.products[values.products.length - 1];
+    setOpenTab(last.id);
+  }
+}, [values.products]);
 
   const handleToggleToast = () => {
     showToast(
@@ -118,7 +124,17 @@ const CreateFromStorage = ({
   };
   // console.log("filteredPackedItemsData", JSON.stringify(filteredPackedItemsData));
 
-  async function handleToggleProductBottomSheet() {
+ async function handleToggleProductBottomSheet() {
+    const updatedPackedItemsData = filteredPackedItemsData?.map((item) => ({
+      ...item,
+      packages: item.packages?.map((pkg) => ({
+        ...pkg,
+        quantity: String(pkg.quantity),
+        size: Number(pkg.size),
+        chambers: item.chamber,
+      })),
+    }));
+    
     const ADD_PRODUCTS = {
       sections: [
         {
@@ -137,11 +153,11 @@ const CreateFromStorage = ({
         },
         {
           type: "multiple-product-card",
-          data: filteredPackedItemsData &&
-              filteredPackedItemsData.map((item) => {
+          data: updatedPackedItemsData?.map((item) => {
                 return {
                   product_name: item.product_name,
                   id: item.id,
+                  rating: 5,
                   image: item.image,
                   description: "",
                   isChecked: false,
@@ -151,10 +167,13 @@ const CreateFromStorage = ({
               }),
         },
       ],
+      buttons: [
+        { text: 'Cancel', variant: 'outline', color: 'green', alignment: "half", disabled: false, actionKey: 'cancel' },
+        { text: 'Add', variant: 'fill', color: 'green', alignment: "half", disabled: false, actionKey: 'add-dispatch-product' },
+    ],
     };
 
     setIsLoading(true);
-    dispatch(setSource("choose"));
     await validateAndSetData("Abc1", "multiple-product-card", ADD_PRODUCTS);
     setIsLoading(false);
   }
@@ -185,30 +204,15 @@ const CreateFromStorage = ({
     setIsLoading(false);
   }
 
-  const itemsToRender = useMemo(() => {
-    if (!filteredPackedItemsData || filteredPackedItemsData.length === 0)
-      return [];
+const handleRemoveProduct = (productId: string) => {
+  dispatch(removeProduct(productId));
+};
 
-    const selectedNames = new Set((values.products || []).map((p) => p.name));
-
-    return filteredPackedItemsData.filter((p) =>
-      selectedNames.has(p.product_name)
-    );
-  }, [filteredPackedItemsData, values.products]);
-
-  const handleRemoveProduct = (productName: string) => {
-    const nextProducts = (values.products || []).filter(
-      (p) => p.name !== productName
-    );
-
-    setField("products", nextProducts);
-  };
   const { role, policies } = useAuth();
   const safeRole = role ?? "guest";
   const safePolicies = policies ?? [];
   const access = resolveAccess(safeRole, safePolicies);
   const canSeeAmount = access.isFullAccess;
-  console.log("selectedProducts", selectedProducts);
 
   const renderComponent = () => {
     if (handleGetStep === 1) {
@@ -348,20 +352,24 @@ const CreateFromStorage = ({
   />
 ))} */}
 
-            {/* {itemsToRender?.length > 0 ? (
-              itemsToRender.map((value, index) => (
+            {values.products?.length > 0 ?
+            values.products?.map((value, index) => {
+              console.log("openTab === value.product_name", openTab === value.product_name);
+              
+              return (
                 <AddProductsForSell
                   key={value.id ?? index}
-                  isOpen={openTab === index}
+                  isOpen={openTab === value.id}
+                  onPress={() => setOpenTab(value.id)}
                   isFirst={index === 0}
-                  onPress={() => setOpenTab(index)}
                   setToast={handleToggleToast}
                   product={value}
                   controlledForm={{ values, setField, errors }}
-                  onRemove={() => handleRemoveProduct(value.product_name)} 
+                  onRemove={() => handleRemoveProduct(value.id)} 
                 />
-              ))
-            ) : (
+              )
+            })
+             : (
               <View
                 style={[
                   styles.Vstack,
@@ -374,7 +382,8 @@ const CreateFromStorage = ({
                   image={noProductImage}
                 />
               </View>
-            )} */}
+            )
+            }
           </View>
         </View>
       );

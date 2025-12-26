@@ -185,8 +185,6 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
     const quantityNumber = Number(productPackageForm.values.quantity);
     const pkgSize = Number(productPackageForm.values.size)
     const pkgUnit = productPackageForm.values.unit
-    // const emptyBagWeightGram = Number(productPackageForm.values.empty_bag_weight_g || "1");
-    // const finalQtyKg = (quantityNumber * emptyBagWeightGram) / 1000;
       const tare = getTareWeight("pouch", pkgSize, pkgUnit);
       const quantityKg = (quantityNumber * tare) / 1000;
 
@@ -195,8 +193,6 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
       quantity: String(quantityKg.toFixed(3)),
     };
 
-    console.log("productPackagePayload", productPackagePayload);
-    
     const result = productPackageForm.validateForm(productPackagePayload);
 
     if (!result.success) {

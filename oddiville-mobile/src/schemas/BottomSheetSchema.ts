@@ -350,6 +350,7 @@ const PackagingSizeSection = z.object({
       })
     ),
     source: z.enum(["package", "dispatch"]),
+    productId: z.string().optional(),
   })
 });
 
@@ -357,13 +358,13 @@ const PackagingSizeSection = z.object({
 export const ChamberSchema = z.object({
   id: z.string(),
   quantity: z.string(),        
-  rating: z.number(),
+  rating: z.string(),
 });
 export const PackageItemSchema = z.object({
   rawSize: z.string(),
   size: z.number(),
   unit: z.enum(["kg", "gm", "qn"]).nullable(),
-  count: z.number(),
+  quantity: z.string(),
   icon: z.string().optional(),
 });
 
@@ -373,14 +374,12 @@ const MultipleProductSection = z.object({
     z.object({
       id: z.string(),
       product_name: z.string(),
+      rating: z.number(),
       description: z.string().optional(),
       image: z.string().optional(),
       isChecked: z.boolean(),
       packages: z.array(PackageItemSchema),
-      chambers: z.record(
-        z.string(),        // chamberId
-        ChamberSchema
-      ),
+      chambers: z.array(ChamberSchema),
     })
   ),
 });
@@ -726,6 +725,7 @@ export const PackingSummaryBottomSheetConfigSchema = z.object({
 
 export const MultipleProductBottomSheetConfigSchema = z.object({
   sections: z.array(z.discriminatedUnion('type', [TitleWithDetailsCrossSection, SearchSection, MultipleProductSection])),
+  buttons: z.array(ButtonSchema).optional()
 });
 
 // ------------------- Type Inference ------------------- //

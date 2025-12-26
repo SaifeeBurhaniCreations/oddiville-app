@@ -21,7 +21,6 @@ const ChooseProductCardComponent: React.FC<multipleProductCardProps> = ({
   data,
 }) => {
   const dispatch = useDispatch();
-console.log("redux data", JSON.stringify(data));
 
   const selectedProducts = useSelector(
     (state: RootState) => state.multipleProduct.selectedProducts
@@ -31,14 +30,6 @@ console.log("redux data", JSON.stringify(data));
     selectedProducts.some((p) => p.id === productId);
 
   const handleToggle = (item: multipleProductCardDataProps) => {
-    const chambersRecord = item.chambers.reduce<Record<string, ChamberProduct>>(
-      (acc, chamber) => {
-        acc[chamber.id] = chamber;
-        return acc;
-      },
-      {}
-    );
-
     if (isSelected(item.id)) {
       dispatch(removeProduct(item.id));
     } else {
@@ -46,9 +37,10 @@ console.log("redux data", JSON.stringify(data));
         selectProduct({
           id: item.id,
           product_name: item.product_name ?? "",
-          rating: 5,
+          image: item.image ?? "",
+          rating: Number(item.rating),
           packages: item.packages,
-          chambers: chambersRecord,
+          chambers: item.chambers,
         })
       );
     }

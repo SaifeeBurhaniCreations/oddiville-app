@@ -1,55 +1,76 @@
 import { DataAccordianEnum } from '@/src/types';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-export type dispatchPackageSize = {
-    name: string;
-    icon: DataAccordianEnum;
-    isChecked: boolean;
-    size: number;
-    rawSize: string;
-    count: number;
-    unit: "kg" | "gm" | "qn" | null;
+export type DispatchPackageSize = {
+    key: string;
+  name: string;
+  icon: DataAccordianEnum;
+  isChecked: boolean;
+  size: number;
+  rawSize: string;
+  count: number;
+  unit: "kg" | "gm" | "qn" | null;
 };
 
-
-interface DispatchPackageSizeState { selectedSizes: dispatchPackageSize[] };
+type DispatchPackageSizeState = {
+  selectedSizesByProduct: Record<string, DispatchPackageSize[]>;
+};
 
 const initialState: DispatchPackageSizeState = {
-    selectedSizes: [],
+  selectedSizesByProduct: {},
 };
 
 const dispatchPackageSizeSlice = createSlice({
-    name: 'dispatchPackageSize',
-    initialState,
-    reducers: {
-   toggleDispatchPackageSize(state, action: PayloadAction<dispatchPackageSize>) {
-  const index = state.selectedSizes.findIndex(
-    (s) => s.rawSize === action.payload.rawSize
-  );
+  name: "dispatchPackageSize",
+  initialState,
+  reducers: {
+    toggleDispatchPackageSize(
+      state,
+      action: PayloadAction<{
+        productId: string;
+        pkg: DispatchPackageSize;
+      }>
+    ) {
+      const { productId, pkg } = action.payload;
 
-  if (index >= 0) {
-    // remove it
-    state.selectedSizes = state.selectedSizes.filter(
-      (s) => s.rawSize !== action.payload.rawSize
-    );
-  } else {
-    // add it
-    state.selectedSizes = [...state.selectedSizes, action.payload];
-  }
-},
-        setDispatchPackageSizes(state, action: PayloadAction<dispatchPackageSize[]>) {
-            state.selectedSizes = action.payload;
-        },
-        resetDispatchPackageSizes(state) {
-            state.selectedSizes = [];
-        },
+      const current = state.selectedSizesByProduct[productId] ?? [];
+
+       const exists = current.find(s => s.key === pkg.key);
+
+      state.selectedSizesByProduct[productId] = exists
+        ? current.filter(s => s.key !== pkg.key)
+        : [...current, pkg];
     },
+
+    setDispatchPackageSizes(
+      state,
+      action: PayloadAction<{
+        productId: string;
+        packages: DispatchPackageSize[];
+      }>
+    ) {
+      state.selectedSizesByProduct[action.payload.productId] =
+        action.payload.packages;
+    },
+
+    resetDispatchPackageSizesForProduct(
+      state,
+      action: PayloadAction<string>
+    ) {
+      delete state.selectedSizesByProduct[action.payload];
+    },
+
+    resetAllDispatchPackageSizes(state) {
+      state.selectedSizesByProduct = {};
+    },
+  },
 });
 
 export const {
-    toggleDispatchPackageSize,
-    setDispatchPackageSizes,
-    resetDispatchPackageSizes,
+  toggleDispatchPackageSize,
+  setDispatchPackageSizes,
+  resetDispatchPackageSizesForProduct,
+  resetAllDispatchPackageSizes,
 } = dispatchPackageSizeSlice.actions;
 
 export default dispatchPackageSizeSlice.reducer;

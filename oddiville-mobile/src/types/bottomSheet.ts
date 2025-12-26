@@ -60,7 +60,8 @@ export type BottomSheetActionKey =
   | "order-reached"
   | "choose-chamber"
   | "select-policies"
-  | "cancel-policies";
+  | "cancel-policies"
+  | "add-dispatch-product"
 
 // ButtonConfig interface
 export interface ButtonConfig {
@@ -293,6 +294,7 @@ export type SectionConfig =
         isChecked: boolean;
       }[];
       source: "package" | "dispatch";
+       productId?: string;
       }
     }
   | {
@@ -691,7 +693,8 @@ export interface PackageSizeChooseComponentProps {
     icon: DataAccordianEnum;
     isChecked: boolean;
   }[];
-  source: "package" | "dispatch"
+  source: "package" | "dispatch";
+   productId?: string;
   }
   color: "red" | "green" | "blue" | "yellow";
 }
@@ -927,9 +930,10 @@ export type ChamberProduct = {
    }
 export interface multipleProductCardDataProps {
     id: string;
+    rating: string
     product_name: string;
     description?: string;
-    image?: string;
+    image: string;
     isChecked: boolean;
     // added extra
     packages: PackageItem[];

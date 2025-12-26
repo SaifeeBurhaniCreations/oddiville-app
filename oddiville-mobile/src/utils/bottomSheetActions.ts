@@ -14,8 +14,8 @@ export const getBottomSheetActions = (type: BottomSheetSchemaKey): BottomSheetAc
             return ['add-package-quantity'];
         case 'upcoming-order':
             return ['ship-order', 'edit-order', 'cancel-order'];
-        // case 'filter':
-        //     return ['apply-filter'];
+        case 'multiple-product-card':
+            return ['cancel','add-dispatch-product'];
         case 'verify-material':
             return ['verify-material'];
         case 'supervisor-production':

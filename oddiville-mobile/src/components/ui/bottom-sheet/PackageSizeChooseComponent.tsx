@@ -12,7 +12,10 @@ import {
 } from "@/src/redux/slices/bottomsheet/package-size.slice";
 import { PackageSizeChooseComponentProps } from "@/src/types";
 import { setSource } from "@/src/redux/slices/unit-select.slice";
-import { dispatchPackageSize, toggleDispatchPackageSize } from "@/src/redux/slices/bottomsheet/dispatch-package-size.slice";
+import {
+  DispatchPackageSize,
+  toggleDispatchPackageSize,
+} from "@/src/redux/slices/bottomsheet/dispatch-package-size.slice";
 type Unit = "gm" | "kg";
 
 function normalizeUnit(raw: string | null | undefined): Unit | null {
@@ -44,17 +47,22 @@ function parsePackageString(
 
   const isUnitAlready =
     String(size).includes("kg") || String(size).includes("gm");
-return { size, unit: normalized, rawSize: pkgStr };
+  return { size, unit: normalized, rawSize: pkgStr };
 }
 
 const PackageSizeChooseComponent = ({
   data,
 }: PackageSizeChooseComponentProps) => {
-const selected = useSelector((state: RootState) =>
-  data.source === "dispatch"
-    ? state.dispatchPackageSize.selectedSizes
-    : state.packageSize.selectedSizes
-);
+  const selected = useSelector((state: RootState) => {
+    if (data.source === "dispatch") {
+      if (!data.productId) return [];
+      return (
+        state.dispatchPackageSize.selectedSizesByProduct[data.productId] ?? []
+      );
+    }
+
+    return state.packageSize.selectedSizes;
+  });
 
   const dispatch = useDispatch();
 
@@ -62,7 +70,6 @@ const selected = useSelector((state: RootState) =>
     <View style={styles.container}>
       {data?.list
         ?.map((item, index) => {
-          
           const parsed = parsePackageString(item?.name);
           if (!parsed) {
             console.log(
@@ -70,52 +77,84 @@ const selected = useSelector((state: RootState) =>
             );
             return null;
           }
-          const packageData = data.source === "dispatch" ? {
-            ...item,
-            size: parsed.size,
-            rawSize: parsed.rawSize,
-            unit: parsed.unit,
-            count: Number(item.count),
-          } as dispatchPackageSize : {
-            ...item,
-            size: parsed.size,
-            rawSize: parsed.rawSize,
-            unit: parsed.unit,
-          } as packageSize;
+          const key = `${parsed.size}-${parsed.unit}`;
 
-          const isSelected = selected.some(
-            (s) => s.rawSize === packageData.rawSize
-          );
+          const packageData =
+            data.source === "dispatch"
+              ? ({
+                  ...item,
+                  key,
+                  size: parsed.size,
+                  rawSize: parsed.rawSize,
+                  unit: parsed.unit,
+                  count: Number(item.count),
+                } as DispatchPackageSize)
+              : ({
+                  ...item,
+                  size: parsed.size,
+                  rawSize: parsed.rawSize,
+                  unit: parsed.unit,
+                } as packageSize);
+
+          const isSelected =
+            data.source === "dispatch"
+              ? (selected as DispatchPackageSize[]).some(
+                  (s) => s.key === (packageData as DispatchPackageSize).key
+                )
+              : (selected as packageSize[]).some(
+                  (s) => s.rawSize === (packageData as packageSize).rawSize
+                );
+          console.log("isSelected", isSelected);
 
           return (
             <Pressable
               key={item.name}
-onPress={() => {
-  if (data.source === "dispatch") {
-    const dispatchPkg: dispatchPackageSize = {
-      ...item,
-      size: parsed.size,
-      rawSize: parsed.rawSize,
-      unit: parsed.unit,
-      count: Number(item.count),
-    };
+              onPress={() => {
+                if (data.source === "dispatch") {
+                  const key = `${parsed.size}-${parsed.unit}`;
 
-    dispatch(toggleDispatchPackageSize(dispatchPkg));
-    dispatch(setSource("dispatch"));
-    return;
-  }
+                  const dispatchPkg: DispatchPackageSize = {
+                    key,
+                    name: item.name,
+                    icon: item.icon,
+                    size: parsed.size,
+                    rawSize: parsed.rawSize,
+                    unit: parsed.unit,
+                    count: Number(item.count),
+                    isChecked: item.isChecked,
+                  };
 
-  const pkg: packageSize = {
-    ...item,
-    size: parsed.size,
-    rawSize: parsed.rawSize,
-    unit: parsed.unit,
-  };
+                  if (!data.productId) {
+                    console.warn(
+                      "Missing productId for dispatch package selection"
+                    );
+                    return;
+                  }
 
-  dispatch(togglePackageSize(pkg));
-  dispatch(setSource("package"));
-}}
-              style={[styles.row, index < data?.list?.length - 1 && styles.separator]}
+                  dispatch(
+                    toggleDispatchPackageSize({
+                      productId: data.productId,
+                      pkg: dispatchPkg,
+                    })
+                  );
+                  dispatch(setSource("dispatch"));
+                  return;
+                }
+
+                const pkg: packageSize = {
+                  ...item,
+                  size: parsed.size,
+                  rawSize: parsed.rawSize,
+                  unit: parsed.unit,
+                };
+
+                dispatch(togglePackageSize(pkg));
+                dispatch(setSource("package"));
+              }}
+              style={[
+                styles.row,
+                index < data?.list?.length - 1 && styles.separator,
+              ]}
             >
               <Checkbox checked={isSelected} />
               <View style={styles.icon}>{getIcon(item.icon)}</View>

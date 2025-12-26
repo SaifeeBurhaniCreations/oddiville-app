@@ -28,13 +28,14 @@ import { getColor } from "@/src/constants/colors";
 
 // 6. Types
 import { RootState } from "@/src/redux/store";
-import { CountryProps } from "@/src/types";
+import { ChamberProduct, CountryProps } from "@/src/types";
 import { clearLocations } from "@/src/redux/slices/bottomsheet/location.slice";
 import { clearRawMaterials } from "@/src/redux/slices/bottomsheet/raw-material.slice";
 import { clearProduct } from "@/src/redux/slices/product.slice";
 import { useAuth } from '@/src/context/AuthContext';
 import { resolveAccess } from '@/src/utils/policiesUtils';
 import { SALES_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
+import { PackageItem } from "@/src/hooks/useChamberStock";
 
 // 7. Schemas
 // No items of this type
@@ -44,23 +45,17 @@ import { SALES_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/
 
 // Redux slice actions
 
-interface Chamber {
-  id: string;
-  name: string;
-  stored_quantity: number;
-  quantity: number;
-}
-
 interface Product {
-  name: string;
-  chambers: Chamber[];
-}
-
-type RMChamberQuantityMap = {
-  [rmName: string]: {
-    [chamberId: string]: number;
-  };
-};
+    id: string;
+    rating: number
+    product_name: string;
+    description?: string;
+    image: string;
+    isChecked: boolean;
+    // added extra
+    packages: PackageItem[];
+    chambers: ChamberProduct[];
+  }
 
 export type OrderStorageForm = {
   customer_name: string;
@@ -70,39 +65,6 @@ export type OrderStorageForm = {
   state: string | { name: string; isoCode: string };
   city: string | { name: string; isoCode: string };
   products: Product[];
-  rmChamberQuantities: RMChamberQuantityMap;
-};
-
-const validateProductChambers = (products: Product[]): boolean => {
-  if (!Array.isArray(products) || products?.length === 0) return false;
-
-  return products.every((product: Product) => {
-    if (
-      !product.name ||
-      !Array.isArray(product.chambers) ||
-      product.chambers?.length === 0
-    ) {
-      return false;
-    }
-
-    const hasValidQuantity = product.chambers.some((chamber: Chamber) => {
-      const quantity = Number(chamber.quantity);
-      const storedQuantity = Number(chamber.stored_quantity);
-
-      if (
-        !chamber.id ||
-        !chamber.name ||
-        isNaN(quantity) ||
-        isNaN(storedQuantity)
-      ) {
-        return false;
-      }
-
-      return quantity > 0 && quantity <= storedQuantity;
-    });
-
-    return hasValidQuantity;
-  });
 };
 
 const CreateOrder = () => {
@@ -125,9 +87,11 @@ const CreateOrder = () => {
     states: selectedState,
     cities: selectedCity,
   } = useSelector((state: RootState) => state.location);
-  const { product: selectedProduct } = useSelector(
-    (state: RootState) => state.product
+
+  const selectedProducts = useSelector(
+    (state: RootState) => state.multipleProduct.selectedProducts
   );
+
   const dispatchOrder = useDispatchOrder();
   const { data: packedItemsData, isFetching: packedItemsLoading } =
     usePackedItems();
@@ -172,19 +136,7 @@ const CreateOrder = () => {
           message: "Customer name must be at least 2 characters!",
         },
       ],
-      products: [
-        {
-          type: "custom" as const,
-          validate: (products: Product[]) => {
-            if (!Array.isArray(products) || products?.length === 0) {
-              return false;
-            }
-            return validateProductChambers(products);
-          },
-          message:
-            "Each product must have a valid name and at least one chamber with quantity > 0 (not exceeding stored quantity).",
-        },
-      ],
+      products: [],
       est_delivered_date: [
         {
           type: "custom" as const,
@@ -255,44 +207,30 @@ useFocusEffect(
   }, [])
 );
 
-  useEffect(() => {
-    if (!selectedProduct || !filteredPackedItemsData?.length) return;
+useEffect(() => {
+  if (!Array.isArray(values.products)) return;
 
-    const packed = filteredPackedItemsData.find(
-      (p) => p.product_name === selectedProduct
-    );
-    if (!packed) return;
+  const selectedIds = new Set(
+    (selectedProducts ?? []).map(p => p.id)
+  );
 
-    const currentProducts = Array.isArray(values.products)
-      ? values.products
-      : [];
+  const syncedProducts = values.products.filter(p =>
+    selectedIds.has(p.id)
+  );
 
-    const alreadyExists = currentProducts.some(
-      (p) => p.name === packed.product_name
-    );
-    if (alreadyExists) return;
+  const existingIds = new Set(syncedProducts.map(p => p.id));
 
-    const mappedChambers =
-      (packed.chamber || []).map((c) => {
-        const chamberInfo = chambersData?.find(
-          (ch) => String(ch.id) === String(c.id)
-        );
+  const newProducts = (selectedProducts ?? []).filter(
+    sp => !existingIds.has(sp.id)
+  );
 
-        return {
-          id: c.id,
-          name: chamberInfo?.chamber_name ?? String(c.id),
-          stored_quantity: c.quantity,
-          quantity: "",
-        };
-      }) ?? [];
-
-    const newProduct = {
-      name: packed.product_name,
-      chambers: mappedChambers,
-    };
-
-    setField("products", [...currentProducts, newProduct]);
-  }, [selectedProduct, filteredPackedItemsData, values.products, chambersData]);
+  if (
+    syncedProducts.length !== values.products.length ||
+    newProducts.length > 0
+  ) {
+    setField("products", [...syncedProducts, ...newProducts]);
+  }
+}, [selectedProducts]);
 
   const showToast = (type: "success" | "error" | "info", message: string) => {
     setToastType(type);
@@ -317,11 +255,6 @@ useFocusEffect(
       setField("city", selectedCity);
     }
   }, [selectedCity]);
-
-  // useEffect(() => {
-  //   if (!selectedProduct || !selectedProduct?.length) return;
-  //   setField("product_name", selectedProduct);
-  // }, [selectedProduct]);
 
   const onSubmit = () => {
     const updatedValues = {

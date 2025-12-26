@@ -1,21 +1,15 @@
 
 import { PackageItem } from "@/src/hooks/useChamberStock";
+import { ChamberProduct } from "@/src/types";
 import { createSlice } from "@reduxjs/toolkit";
-
-type Chamber = { 
-   id: string;
-   quantity: string;
-    rating: number
-   }
 
 export type MultipleProductType = {
   id: string;
   product_name: string;
+  image: string;
   rating: number;
   packages: PackageItem[]; 
-  chambers: {
-    [chamberId: string]: Chamber;
-  };
+  chambers: ChamberProduct[];
 }
 
 const ProductSlice = createSlice({
@@ -31,9 +25,9 @@ const ProductSlice = createSlice({
   if (!state.selectedProducts.find(p => p.id === product.id)) {
     state.selectedProducts.push({
       ...product,
-      rating: 5,
-      packages: [],
-      chambers: {},
+      rating: Number(product.rating),
+      packages: product.packages,
+      chambers: product.chambers,
     });
   }
 },
