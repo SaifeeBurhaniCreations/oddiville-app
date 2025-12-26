@@ -32,6 +32,10 @@ import { mapPackageIcon } from "@/src/utils/common";
 import DetailsToast from "./DetailsToast";
 import Select from "./Select";
 import { useChamber, useChamberById } from "@/src/hooks/useChambers";
+import {
+  setPacketsPerBag,
+  setUsedBags,
+} from "@/src/redux/slices/used-dispatch.slice";
 
 type ControlledFormProps<T> = {
   values: T;
@@ -68,7 +72,6 @@ const normalizeUnitToKg = (size: number, unit: string | null) => {
   return 0;
 };
 
-
 const AddProductsForSell = ({
   product,
   isFirst,
@@ -97,6 +100,7 @@ const AddProductsForSell = ({
   const [toastMessage, setToastMessage] = useState("");
   const [packetsByProduct, setPacketsByProduct] =
     useState<PacketsPerLooseBagState>({});
+  const usedStock = useSelector((s: RootState) => s.usedDispatchPkg);
 
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const { values, setField, errors } = controlledForm;
@@ -129,15 +133,15 @@ const AddProductsForSell = ({
     };
   });
 
-const shouldShowEmptyState =
-  packagesWithChambers.every(pkg => pkg.chambers.length === 0);
+  const shouldShowEmptyState = packagesWithChambers.every(
+    (pkg) => pkg.chambers.length === 0
+  );
 
   const showToast = (type: "success" | "error" | "info", message: string) => {
     setToastType(type);
     setToastMessage(message);
     setToastVisible(true);
   };
-
 
   const RatingIconMap: Record<number, React.FC<IconRatingProps>> = {
     5: FiveStarIcon,
@@ -245,6 +249,8 @@ const shouldShowEmptyState =
     },
     [product.id]
   );
+
+  // console.log("packagesWithChambers", JSON.stringify(packagesWithChambers));
 
   return (
     <ScrollView key={product?.product_name}>
@@ -379,9 +385,17 @@ const shouldShowEmptyState =
                                 addonText="Packets"
                                 post
                                 value={String(
-                                  packetsByProduct?.[product.id]?.[pkgKey] ?? ""
+                                  usedStock[product.id]?.[pkgKey]
+                                    ?.packetsPerBag ?? ""
                                 )}
                                 onChangeText={(text: string) => {
+                                  dispatch(
+                                    setPacketsPerBag({
+                                      productId: product.id,
+                                      packageKey: pkgKey,
+                                      packetsPerBag: Number(text) || 0,
+                                    })
+                                  );
                                   handlePackageQuantityChange(pkgKey, text);
                                   onChange(text);
                                 }}
@@ -412,12 +426,21 @@ const shouldShowEmptyState =
                           );
                           const pkgKey = getPackageKey(pkg);
                           const packetsPerBag =
-                            packetsByProduct?.[product.id]?.[pkgKey];
+                            usedStock[product.id]?.[pkgKey]?.packetsPerBag ?? 0;
+                          const usedBags =
+                            usedStock[product.id]?.[pkgKey]?.usedBagsByChamber[
+                              chamber.id
+                            ] ?? 0;
 
                           const packetsCount =
                             packetsPerBag && packetsPerBag > 0
                               ? Math.floor(pkg.count / packetsPerBag)
                               : 0;
+
+                          const remainingBags = Math.max(
+                            packetsCount - usedBags,
+                            0
+                          );
 
                           return (
                             <View
@@ -450,7 +473,7 @@ const shouldShowEmptyState =
                                   >
                                     <B4>{chamber.quantity} kg</B4>
                                     <B4>|</B4>
-                                    <B4>{packetsCount} bags</B4>
+                                    <B4>{remainingBags} bags</B4>
                                   </View>
                                 </View>
                               </View>
@@ -466,8 +489,17 @@ const shouldShowEmptyState =
                                     mask="addon"
                                     keyboardType="numeric"
                                     post
-                                    value={value ? String(value) : ""}
-                                    onChangeText={onChange}
+                                    value={String(usedBags)}
+                                    onChangeText={(text: string) => {
+                                      dispatch(
+                                        setUsedBags({
+                                          productId: product.id,
+                                          packageKey: pkgKey,
+                                          chamberId: chamber.id,
+                                          bags: Number(text) || 0,
+                                        })
+                                      );
+                                    }}
                                   />
                                 )}
                               </FormField>

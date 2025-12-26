@@ -85,6 +85,8 @@ const CreateFromStorage = ({
     usePackedItems();
 
   const filteredPackedItemsData = useMemo(() => {
+    console.log("packedItemsData", JSON.stringify(packedItemsData));
+
     return packedItemsData?.map((item) => ({
       ...item,
       chamber: item.chamber.filter(

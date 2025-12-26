@@ -36,6 +36,7 @@ import { useAuth } from '@/src/context/AuthContext';
 import { resolveAccess } from '@/src/utils/policiesUtils';
 import { SALES_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
 import { PackageItem } from "@/src/hooks/useChamberStock";
+import { DispatchUsedStockState } from "@/src/redux/slices/used-dispatch.slice";
 
 // 7. Schemas
 // No items of this type
@@ -55,17 +56,17 @@ interface Product {
     // added extra
     packages: PackageItem[];
     chambers: ChamberProduct[];
-    usedBagsByProduct: {
-  [productId: string]: {
-    [packageKey: string]: {
-      totalPackets: number;
-      byChamber: {
-        [chamberId: string]: number
-      }
-    };
-  };
-};
-  }
+//     usedBagsByProduct: {
+//   [productId: string]: {
+//     [packageKey: string]: {
+//       totalPackets: number;
+//       byChamber: {
+//         [chamberId: string]: number
+//       }
+//     };
+//   };
+// };
+}
 
 export type OrderStorageForm = {
   customer_name: string;
@@ -75,7 +76,46 @@ export type OrderStorageForm = {
   state: string | { name: string; isoCode: string };
   city: string | { name: string; isoCode: string };
   products: Product[];
+  usedBagsByProduct: {
+  [productId: string]: {
+    [packageKey: string]: {
+      totalPackets: number;
+      byChamber: {
+        [chamberId: string]: number
+      }
+    };
+  };
 };
+};
+
+function buildUsedPackets(usedStock: DispatchUsedStockState) {
+  const result: any = {};
+
+  for (const productId in usedStock) {
+    result[productId] = {};
+
+    for (const pkgKey in usedStock[productId]) {
+      const { packetsPerBag, usedBagsByChamber } =
+        usedStock[productId][pkgKey];
+
+      let totalPackets = 0;
+      const byChamber: any = {};
+
+      for (const chamberId in usedBagsByChamber) {
+        const packets = usedBagsByChamber[chamberId] * packetsPerBag;
+        byChamber[chamberId] = packets;
+        totalPackets += packets;
+      }
+
+      result[productId][pkgKey] = {
+        totalPackets,
+        byChamber,
+      };
+    }
+  }
+
+  return result;
+}
 
 const CreateOrder = () => {
     const { role, policies } = useAuth();
@@ -85,7 +125,7 @@ const CreateOrder = () => {
     const access = resolveAccess(safeRole, safePolicies);
 
   const dispatch = useDispatch();
-  const [step, setStep] = useState<number>(2);
+  const [step, setStep] = useState<number>(1);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastType, setToastType] = useState<"success" | "error" | "info">(
     "info"
@@ -101,6 +141,9 @@ const CreateOrder = () => {
   const selectedProducts = useSelector(
     (state: RootState) => state.multipleProduct.selectedProducts
   );
+const usedStock = useSelector(
+  (state: RootState) => state.usedDispatchPkg
+);
 
   const dispatchOrder = useDispatchOrder();
   const { data: packedItemsData, isFetching: packedItemsLoading } =
@@ -285,10 +328,11 @@ useEffect(() => {
     const result = validateForm();
 
     if (result.success) {
-      console.log("✅ Final form data:", JSON.stringify(result.data));
+      const usedPacketsByProduct = buildUsedPackets(usedStock);
+      // console.log("✅ Final form data:", JSON.stringify({...result.data, usedPacketsByProduct}));
 
       try {
-        dispatchOrder.mutate(result.data, {
+        dispatchOrder.mutate({...result.data, usedBagsByProduct: usedPacketsByProduct}, {
           onSuccess: (result) => {
             resetForm();
             dispatch(clearLocations());

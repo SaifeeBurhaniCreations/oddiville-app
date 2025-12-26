@@ -685,6 +685,7 @@ const handlePackageQuantityChange = useCallback(
             return {
               name: `${pack?.rawSize} ${pack?.unit}`,
               icon: icon,
+              count: Number(pack?.quantity),
               isChecked: false,
             };
           }),

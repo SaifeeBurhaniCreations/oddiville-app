@@ -219,38 +219,74 @@ router.post("/create", async (req, res) => {
       city,
       est_delivered_date,
       products,
+      usedBagsByProduct,
     } = req.body;
 
-    const validatedProducts = validateProducts(products);
+console.log("usedBagsByProduct", usedBagsByProduct);
 
     if (!customer_name) {
-      await t.rollback();
-      return res.status(400).json({ error: "Customer name is required." });
+      throw new Error("Customer name is required");
     }
 
-    const parsedProducts = parseProducts(validatedProducts);
+    if (!Array.isArray(products) || products.length === 0) {
+      throw new Error("Products are required");
+    }
 
-    // 🔒 STOCK DEDUCTION (TRANSACTIONAL)
-    for (const product of parsedProducts ?? []) {
+    if (
+      !usedBagsByProduct ||
+      typeof usedBagsByProduct !== "object"
+    ) {
+      throw new Error("usedBagsByProduct is required for stock deduction");
+    }
+
+    for (const productId of Object.keys(usedBagsByProduct)) {
+      const productUsage = usedBagsByProduct[productId];
+
       const stock = await stockClient.findOne({
-        where: { product_name: product.name },
+        where: { id: productId },
         transaction: t,
         lock: t.LOCK.UPDATE,
       });
 
-      if (!stock || !Array.isArray(stock.chamber)) continue;
+      if (!stock) {
+        throw new Error(`Stock not found for productId ${productId}`);
+      }
 
-      for (const orderedChamber of product.chambers ?? []) {
-        const idx = stock.chamber.findIndex(
-          (ch) => String(ch.id) === String(orderedChamber.id)
-        );
-        if (idx === -1) continue;
+      if (!Array.isArray(stock.chamber)) {
+        throw new Error(`Invalid chamber data for productId ${productId}`);
+      }
 
-        const oldQty = Number(stock.chamber[idx].quantity || 0);
-        const deduct = Number(orderedChamber.quantity || 0);
-        const newQty = Math.max(0, oldQty - deduct);
+      for (const pkgKey of Object.keys(productUsage)) {
+        const pkgUsage = productUsage[pkgKey];
+        const byChamber = pkgUsage?.byChamber || {};
 
-        stock.chamber[idx].quantity = String(newQty);
+        for (const chamberId of Object.keys(byChamber)) {
+          const packetsToDeduct = Number(byChamber[chamberId]);
+
+          if (!packetsToDeduct || packetsToDeduct <= 0) continue;
+
+          const chamberIndex = stock.chamber.findIndex(
+            (c) => String(c.id) === String(chamberId)
+          );
+
+          if (chamberIndex === -1) {
+            throw new Error(
+              `Chamber ${chamberId} not found for productId ${productId}`
+            );
+          }
+
+          const oldQty = Number(stock.chamber[chamberIndex].quantity || 0);
+
+          if (oldQty < packetsToDeduct) {
+            throw new Error(
+              `Insufficient stock in chamber ${chamberId}. Available: ${oldQty}, Required: ${packetsToDeduct}`
+            );
+          }
+
+          const newQty = oldQty - packetsToDeduct;
+
+          stock.chamber[chamberIndex].quantity = String(newQty);
+        }
       }
 
       await stockClient.update(
@@ -259,7 +295,6 @@ router.post("/create", async (req, res) => {
       );
     }
 
-    // ✅ CREATE ORDER (SAME TRANSACTION)
     const order = await orderClient.create(
       {
         customer_name,
@@ -269,41 +304,32 @@ router.post("/create", async (req, res) => {
         city,
         status: "pending",
         est_delivered_date,
-        products: parsedProducts,
-        packages: [],
+        products,
       },
       { transaction: t }
     );
 
     await t.commit();
 
-    // 🔔 NOTIFICATION (AFTER COMMIT)
-    const totalWeight = (parsedProducts ?? []).reduce((productSum, product) => {
-      const chambersQuantity = (product.chambers ?? []).reduce(
-        (chamberSum, chamber) => {
-          const qty = Number(String(chamber.quantity).trim());
-          return chamberSum + (isNaN(qty) ? 0 : qty);
-        },
-        0
-      );
-      return productSum + chambersQuantity;
-    }, 0);
-
-    const description = [
-      parsedProducts.length === 1
-        ? parsedProducts[0].name
-        : parsedProducts.length === 2
-        ? `${parsedProducts[0].name}, ${parsedProducts[1].name}`
-        : `${parsedProducts[0].name} +${parsedProducts.length - 1} more`,
-      `${totalWeight} Kg`,
-    ];
+    const totalPackets = Object.values(usedBagsByProduct).reduce(
+      (sum, productUsage) => {
+        return (
+          sum +
+          Object.values(productUsage).reduce(
+            (pkgSum, pkg) => pkgSum + Number(pkg.totalPackets || 0),
+            0
+          )
+        );
+      },
+      0
+    );
 
     dispatchAndSendNotification({
       type: "order-ready",
-      description,
       title: customer_name,
-      id: order?.id,
-      extraData: { id: order?.id, status: "pending" },
+      description: [`${products.length} Products`, `${totalPackets} Packets`],
+      id: order.id,
+      extraData: { id: order.id, status: "pending" },
     });
 
     return res.status(201).json(order);
@@ -312,148 +338,10 @@ router.post("/create", async (req, res) => {
       await t.rollback();
     } catch (_) {}
 
-    console.error("Error creating order:", error?.message || error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Error creating dispatch order:", error.message);
+    return res.status(400).json({ error: error.message });
   }
 });
-
-// router.post("/create", async (req, res) => {
-//     try {
-//         const {
-//             customer_name,
-//             address,
-//             state,
-//             country,
-//             city,
-//             est_delivered_date,
-//             products,
-//             amount
-//         } = req.body;
-
-//         const validatedProducts = validateProducts(products)
-
-//         if (!amount || Number(amount) > 0) {
-//             return res.status(400).json({ error: "Amount are required." });
-//         }
-
-//         if (!customer_name) {
-//             return res.status(400).json({ error: "Customer name are required." });
-//         }
-
-//         // if (!product_name) {
-//         //     return res.status(400).json({ error: "Product name are required." });
-//         // }
-
-//         // const pkg = await packageClient.findOne({ where: { product_name } });
-
-//         // validatePackages(packages, pkg?.product_name, pkg?.types)
-
-//         // const parsedPostalCode = postal_code ? parseInt(postal_code, 10) : null;
-//         const parsedAmount = amount ? parseFloat(amount) : null;
-
-//         const parsedProducts = parseProducts(validatedProducts);
-//         const finalChamberAllocations = await allocateChamberQuantities(parsedProducts);
-
-//         // ✅ CHAMBER DEDUCTION LOGIC
-//         for (const allocation of finalChamberAllocations) {
-//             const stock = await stockClient.findOne({ where: { product_name: allocation.name } });
-
-//             if (!stock || !Array.isArray(stock.chamber)) continue;
-
-//             for (let i = 0; i < stock.chamber.length; i++) {
-//                 const chamber = stock.chamber[i];
-//                 if (chamber.id === allocation.id && chamber.rating === allocation.rating) {
-//                     const oldQty = parseFloat(chamber.quantity || '0');
-//                     const newQty = oldQty - allocation.quantity;
-//                     stock.chamber[i].quantity = newQty >= 0 ? newQty.toString() : '0';
-//                     break;
-//                 }
-//             }
-
-//             await stockClient.update({ chamber: stock.chamber }, { where: { id: stock.id } });
-//         }
-
-//         // if (product_name && Array.isArray(packages)) {
-
-//         //     if (pkg && Array.isArray(pkg.types)) {
-
-//         //         const updatedTypes = [...pkg.types];
-//         //         const normalize = v => v?.toString().trim().toLowerCase();
-//         //         for (const frontPack of packages) {
-//         //             const hasQty = frontPack.quantity !== '' && !isNaN(frontPack.quantity) && parseFloat(frontPack.quantity) > 0;
-//         //             if (!hasQty) continue;
-
-//         //             const index = updatedTypes.findIndex(
-//         //                 t =>
-//         //                 normalize(t.size) === normalize(frontPack.size) &&
-//         //                 normalize(t.unit) === normalize(frontPack.unit)
-//         //             );
-
-//         //             if (index !== -1) {
-//                 //         const oldQty = parseFloat(updatedTypes[index].quantity || '0');
-//                 //         const deduct = parseFloat(frontPack.quantity);
-//                 //         const newQty = oldQty - deduct;
-//                 //         updatedTypes[index].quantity = newQty >= 0 ? newQty.toString() : '0';
-
-//                 //         if (updatedTypes[index].quantity <= 100) {
-//                 //             const description = [`${updatedTypes[index].size}${updatedTypes[index].unit}`, `${updatedTypes[index].quantity} Left`]
-//                 //             dispatchAndSendNotification({
-//                 //               type: "package-comes-to-end",
-//                 //               title: product_name,
-//                 //               description,
-//                 //               id: pkg.id,
-//                 //             });
-//                 //         }
-//                 //     }
-//                 // }
-
-//             //     await packageClient.update({ types: updatedTypes }, { where: { id: pkg.id }, returning: true });
-//             // }
-//         // }
-
-//         // ✅ Save final order
-//         const order = await orderClient.create({
-//             customer_name,
-//             address,
-//             // postal_code: parsedPostalCode,
-//             state: typeof state === 'object' ? state.name : state,
-//             country: country?.label || country,
-//             city,
-//             status: "pending",
-//             est_delivered_date,
-//             products: parsedProducts,
-//             // product_name,
-//             packages,
-//             amount: parsedAmount
-//         });
-
-//         const totalWeight = (parsedProducts ?? []).reduce((productSum, product) => {
-//             const chambersQuantity = (product.chambers ?? []).reduce((chamberSum, chamber) => {
-//                 const qty = Number(String(chamber.quantity).trim());
-//                 return chamberSum + (isNaN(qty) ? 0 : qty);
-//             }, 0);
-//             return productSum + chambersQuantity;
-//         }, 0);
-
-//         const description = [product_name, `${totalWeight} Kg`];
-
-//         dispatchAndSendNotification({
-//           type: "order-ready",
-//           description,
-//           title: customer_name,
-//           id: order?.id,
-//           extraData: { id: order?.id, status: "pending" },
-//         });
-
-//         return res.status(201).json(order);
-
-//     } catch (error) {
-//         console.error("Error creating order:", error?.message || error);
-//         return res.status(500).json({ error: "Internal server error" });
-//     }
-// });
-
-// Update order status only
 
 router.patch("/status/:id", async (req, res) => {
   try {
