@@ -465,8 +465,6 @@ export interface ChipGroupProps {
   onPress?: () => void;
 }
 
-type RawMaterialFieldNames = "rawMaterial" | "vendor";
-
 export interface SelectProps {
   options?: string[];
   value?: string;

@@ -35,7 +35,6 @@ import { useAdmin } from "@/src/hooks/useAdmin";
 import { clearAdmin } from "@/src/redux/slices/admin.slice";
 import { useAuth } from "@/src/context/AuthContext";
 import { closeFab } from "@/src/redux/slices/fab.Slice";
-import { changeViewTo } from "@/src/redux/slices/change-view.slice";
 import { useRouter } from "expo-router";
 import { resolveAccess } from "@/src/utils/policiesUtils";
 

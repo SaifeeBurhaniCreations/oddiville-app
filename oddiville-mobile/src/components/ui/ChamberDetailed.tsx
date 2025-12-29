@@ -1,4 +1,4 @@
-import { StyleSheet, View, ScrollView, RefreshControl, FlatList } from "react-native";
+import { StyleSheet, View, RefreshControl, FlatList } from "react-native";
 import React, { useState, useMemo, useEffect } from "react";
 import SearchWithFilter from "./Inputs/SearchWithFilter";
 import Select from "./Select";

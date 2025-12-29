@@ -8,7 +8,6 @@ import UpChevron from '../../icons/navigation/UpChevron';
 import FileIcon from '../../icons/common/FileIcon';
 import { chunkArray, getMergedDetails } from '@/src/utils/arrayUtils';
 import { getIcon } from '@/src/utils/iconUtils';
-import { generateImageFileName } from '@/src/utils/common';
 import useValidateAndOpenBottomSheet from '@/src/hooks/useValidateAndOpenBottomSheet';
 
 const DataAccordianComponent = ({ data }: DataAccordianComponentProps) => {

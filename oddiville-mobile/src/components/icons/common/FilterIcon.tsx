@@ -1,5 +1,5 @@
 import * as React from "react"
-import Svg, { G, Path } from "react-native-svg"
+import Svg, { Path } from "react-native-svg"
 import { IconProps } from "@/src/types"
 
 const PencilIcon: React.FC<IconProps> = ({ color = "#0A493B", size = 24, style, ...props }) => {

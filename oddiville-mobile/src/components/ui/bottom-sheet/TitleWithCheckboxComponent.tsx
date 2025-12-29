@@ -10,7 +10,6 @@ import useValidateAndOpenBottomSheet from '@/src/hooks/useValidateAndOpenBottomS
 import { useChamberStock } from '@/src/hooks/useChamberStock'
 import { useSelector } from 'react-redux'
 import { pluck } from '@/src/sbc/utils/pluck/pluck'
-import { FilterEnum } from '@/src/schemas/BottomSheetSchema'
 
 const getSelectedFilters = (node: Record<string, any>, key: string): string[] => {
   const keys = key.split(':');

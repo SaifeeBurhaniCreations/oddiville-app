@@ -1,37 +1,3 @@
-// import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-
-// interface FilterState {
-//     filters: Record<string, string[]>;
-// }
-
-// const initialState: FilterState = {
-//     filters: {},
-// };
-
-// interface ApplyFilterPayload {
-//     main: string;
-//     sub: string[];
-// }
-
-// const filterSlice = createSlice({
-//     name: "filter",
-//     initialState,
-//     reducers: {
-//         applyFilter: (state, action: PayloadAction<ApplyFilterPayload>) => {
-//             state.filters[action.payload.main] = action.payload.sub;
-//         },
-//         clearFilter: (state, action: PayloadAction<string>) => {
-//             delete state.filters[action.payload];
-//         },
-//         clearAllFilters: (state) => {
-//             state.filters = {};
-//         },
-//     },
-// });
-
-// export const { applyFilter, clearFilter, clearAllFilters } = filterSlice.actions;
-// export default filterSlice.reducer;
-
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface FilterNode {
@@ -88,7 +54,13 @@ const filterSlice = createSlice({
         return;
       }
 
-      setFilterNode(state.filters, path, value);
+      if (mainKey === "home:activities") {
+        state.filters[mainKey] = { children: {} };
+      }
+
+      const newFilters = structuredClone(state.filters);
+      setFilterNode(newFilters, path, value);
+      state.filters = newFilters;
     },
 
     // applyFilter: (state, action: PayloadAction<ApplyFilterPayload>) => {

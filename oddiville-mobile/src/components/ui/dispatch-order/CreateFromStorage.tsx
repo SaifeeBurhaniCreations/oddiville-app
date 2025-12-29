@@ -18,11 +18,9 @@ import FormField from "@/src/sbc/form/FormField";
 
 // 4. Project hooks
 import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
-import { useProductItems } from "@/src/hooks/productItems";
 
 // 5. Project constants/utilities
 import { getColor } from "@/src/constants/colors";
-import { setSource } from "@/src/redux/slices/bottomsheet/raw-material.slice";
 
 // 6. Types
 import type { OrderStorageForm } from "@/app/create-orders";

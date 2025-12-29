@@ -12,7 +12,6 @@ import {
 } from "../services/otherProduct.service";
 import { updateChamberStock } from "../services/chamberStock.service";
 import {
-  OthersProductForm,
   OthersProductPayload,
 } from "@/app/other-products-detail";
 import { rejectEmptyOrNull } from "../utils/authUtils";

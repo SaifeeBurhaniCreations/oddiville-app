@@ -8,7 +8,6 @@ import { RawMaterialProps } from "@/src/types/ui";
 import { getImageSource } from "@/src/utils/arrayUtils";
 import StarIcon from "@/src/components/icons/page/StarIcon";
 import ShopIcon from "@/src/components/icons/menu/ShopIcon";
-import PaperRollIcon from "../../icons/packaging/PaperRollIcon";
 
 type TagColor = "red" | "blue" | "green" | "yellow";
 

@@ -1,7 +1,6 @@
 import { OrderStorageForm } from "@/app/create-orders";
 import {
   MultipleProductType,
-  setProductPackages,
 } from "@/src/redux/slices/multiple-product.slice";
 import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
 import { useDispatch, useSelector } from "react-redux";
@@ -14,9 +13,8 @@ import ThreeStarIcon from "../icons/page/Rating/ThreeStarIcon";
 import TwoStarIcon from "../icons/page/Rating/TwoStarIcon";
 import OneStarIcon from "../icons/page/Rating/OneStarIcon";
 import FiveStarIcon from "../icons/page/Rating/FiveStarIcon";
-import { PackageItem } from "@/src/hooks/useChamberStock";
 import { getColor } from "@/src/constants/colors";
-import { View, Pressable, StyleSheet, useWindowDimensions } from "react-native";
+import { View, Pressable, StyleSheet } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { B1, B4, H3, H5 } from "../typography/Typography";
 import Input from "./Inputs/Input";
@@ -31,7 +29,7 @@ import noProductImage from "@/src/assets/images/fallback/raw-material-fallback.p
 import { mapPackageIcon } from "@/src/utils/common";
 import DetailsToast from "./DetailsToast";
 import Select from "./Select";
-import { useChamber, useChamberById } from "@/src/hooks/useChambers";
+import { useChamber } from "@/src/hooks/useChambers";
 import {
   setPacketsPerBag,
   setUsedBags,

@@ -31,7 +31,7 @@ import { setProductionLoading } from "../redux/slices/production.slice";
 import { useChamberStock } from "./useChamberStock";
 import { setChambersAndTotal } from "../redux/slices/production-begin.slice";
 import { clearAllFilters } from "../redux/slices/bottomsheet/filters.slice";
-import { clearPolicies, setSelectionDone } from "../redux/slices/bottomsheet/policies.slice";
+import { setSelectionDone } from "../redux/slices/bottomsheet/policies.slice";
 import { useImageStore } from "../stores/useImageStore";
 import { setIsChoosingChambers } from "../redux/slices/bottomsheet/product-package-chamber.slice";
 import { getTareWeight } from "../utils/weightutils";

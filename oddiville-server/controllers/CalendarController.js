@@ -5,7 +5,7 @@ const { Calendar: calendarClient } = require("../models");
 const {
   dispatchAndSendNotification,
 } = require("../utils/dispatchAndSendNotification");
-
+const notificationQueue = require("../queues/notificationQueue")
 router.post("/", async (req, res) => {
   const body = req.body;
   const io = req.app.get("io");

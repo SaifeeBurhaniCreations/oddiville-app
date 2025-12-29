@@ -1,4 +1,4 @@
-import type { DispatchOrder, RawMaterialOrderProps, SearchActivityProps } from "@/src/types";
+import type { RawMaterialOrderProps, SearchActivityProps } from "@/src/types";
 import { format } from "date-fns";
 import { Vendor } from "../hooks/vendor";
 import { Production } from "../hooks/production";

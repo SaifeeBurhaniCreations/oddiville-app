@@ -1,5 +1,5 @@
 import * as React from "react"
-import Svg, { G, Path } from "react-native-svg"
+import Svg, { Path } from "react-native-svg"
 import { IconProps } from "@/src/types"
 
 const TruckBoxesBg: React.FC<IconProps> = ({ color = "#3D874C", size = 100, style, ...props }) => {

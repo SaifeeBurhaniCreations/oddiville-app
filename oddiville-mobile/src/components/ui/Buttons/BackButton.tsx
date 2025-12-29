@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native'
 import React from 'react'
-import { H2, H3 } from '../../typography/Typography'
+import { H3 } from '../../typography/Typography'
 import { BackButtonProps } from '@/src/types'
 import { Pressable } from 'react-native'
 import BackArrowIcon from '@/src/components/icons/page/BackArrowIcon'

@@ -1,5 +1,5 @@
 import * as React from "react"
-import Svg, { G, Path } from "react-native-svg"
+import Svg, { Path } from "react-native-svg"
 import { IconProps } from "@/src/types"
 
 const MinusIcon: React.FC<IconProps> = ({ color = "#fff", size = 10, style, ...props }) => {

@@ -51,7 +51,7 @@ const normalizeUnit = (unit = "") => {
 //   return "";
 // }
 
-function mapProduct(product, DispatchOrder) {
+function mapProduct(product, DispatchOrder, Chambers) {
   const raw_weight = Array.isArray(product?.chambers)
     ? product.chambers.reduce(
         (sum, chamber) => sum + Number(chamber.quantity || 0),
@@ -70,12 +70,20 @@ function mapProduct(product, DispatchOrder) {
     description: `${product_weight} in ${product.chambers?.length ?? 0} ${
       product.chambers?.length === 1 ? "chamber" : "chambers"
     }`,
-    chambers:
-      product.chambers?.map((pc) => ({
-        ...pc,
-        unit: normalizeUnit(pc.unit),
-        quantity: String(pc.quantity ?? 0),
-      })) || [],
+chambers:
+  product.chambers?.map((pc) => {
+    const chamberMeta = Chambers.find(
+      (c) => String(c.id) === String(pc.id)
+    );
+
+    return {
+      id: pc.id,
+      name: chamberMeta?.chamber_name ?? "Unknown Chamber", // ✅ REQUIRED
+      quantity: String(pc.quantity ?? 0),
+      unit: normalizeUnit(pc.unit),
+      rating: pc.rating,
+    };
+  }) || [],
   };
 }
 
@@ -212,7 +220,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
       ),
       Products:
         DispatchOrder?.products?.map((product) =>
-          mapProduct(product, DispatchOrder)
+          mapProduct(product, DispatchOrder, Chambers)
         ) || [],
 
       buttons: [
@@ -251,7 +259,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
 
       Products:
         DispatchOrder?.products?.map((product) =>
-          mapProduct(product, DispatchOrder)
+          mapProduct(product, DispatchOrder, Chambers)
         ) || [],
 
       buttons: [
@@ -305,7 +313,7 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
 
       Products:
         DispatchOrder?.products?.map((product) =>
-          mapProduct(product, DispatchOrder)
+          mapProduct(product, DispatchOrder, Chambers)
         ) || [],
     },
     "package-comes-to-end": {

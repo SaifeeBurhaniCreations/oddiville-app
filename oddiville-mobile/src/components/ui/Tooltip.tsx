@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Pressable, Dimensions } from 'react-native';
 import InfoCircleIcon from '../icons/common/InfoCircleIcon';
 import { getColor } from '@/src/constants/colors';
-import { B4, B6, H6 } from '../typography/Typography';
+import { B6, H6 } from '../typography/Typography';
 
 type TooltipInfoProps = {
   tooltipText?: {

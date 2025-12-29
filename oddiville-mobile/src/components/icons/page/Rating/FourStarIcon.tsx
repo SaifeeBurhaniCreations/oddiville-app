@@ -1,7 +1,6 @@
 import * as React from "react"
 import Svg, { Path, G, Rect, Defs } from "react-native-svg"
 import { IconRatingProps } from "@/src/types"
-import { getColor } from "@/src/constants/colors"
 
 const FourStarIcon: React.FC<IconRatingProps> = ({
   color = "green",

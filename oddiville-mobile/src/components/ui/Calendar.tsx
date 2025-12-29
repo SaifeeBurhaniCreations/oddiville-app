@@ -12,7 +12,6 @@ import { B2, H5 } from "../typography/Typography";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { useDispatch } from "react-redux";
 import { setCurrentTab } from "@/src/redux/slices/currentCalendarTab.slice";
-import { ScheduleEventForm } from "@/app/calendar";
 import { CalendarEventResponse } from "@/src/hooks/calendar";
 
 const WEEK_DAYS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -35,14 +34,6 @@ const getDaysInMonth = (month: number, year: number) =>
   new Date(year, month + 1, 0).getDate();
 const getFirstDayOfMonth = (month: number, year: number) =>
   new Date(year, month, 1).getDay();
-
-// const getRandomscheduledEvents = (daysInMonth: number, count = 7) => {
-//     const days = new Set<number>();
-//     while (days.size < count) {
-//         days.add(Math.floor(Math.random() * daysInMonth) + 1);
-//     }
-//     return [...days];
-// };
 
 const Calendar = ({
   setSelectedDate,
@@ -135,15 +126,6 @@ const Calendar = ({
           d
         ).padStart(2, "0")}`
     );
-
-  // const scheduledDays = useMemo(
-  //     () => getRandomscheduledEvents(daysInMonth, 6),
-  //     [curMonth, curYear]
-  // );
-
-  // const scheduledYMD = scheduledDays.map(
-  //     (d) => `${curYear}-${String(curMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-  // );
 
   const onEventPress = (day: { ymd: string; type: string; date: number }) => {
     if (day.ymd && scheduledYMD && scheduledYMD.includes(day.ymd)) {

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import Button from '../Buttons/Button'
 import EmptyState from '../EmptyState'
 import ContractorWorkLocationCard from '../ContractorWorkLocationCard'

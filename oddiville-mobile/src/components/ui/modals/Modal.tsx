@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native'
 import Button from '../Buttons/Button';
-import { B1, B2, H2 } from '../../typography/Typography';
+import { B2, H2 } from '../../typography/Typography';
 import { ModalProps } from '@/src/types';
 import CrossIcon from '../../icons/page/CrossIcon';
 import { getColor } from '@/src/constants/colors';

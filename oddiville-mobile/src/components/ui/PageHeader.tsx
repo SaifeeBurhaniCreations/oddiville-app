@@ -26,7 +26,6 @@ import Factory2Icon from "../icons/header/Factory2Icon";
 import MachineHandBoxIcon from "../icons/header/MachineHandBoxIcon";
 import BoxSingleIcon from "../icons/header/BoxSingleIcon";
 import TruckIcon from "../icons/header/TruckIcon";
-import BellRingingIcon from "../icons/page/BellringingIcon";
 
 import { RootState } from "@/src/redux/store";
 import { useDispatch, useSelector } from "react-redux";

@@ -1,6 +1,6 @@
   import React, { createContext, useContext } from 'react';
 
-  import { useToggle, UseToggleResult, UseToggleOptions } from './useToggle';
+  import { useToggle, UseToggleResult } from './useToggle';
 
   interface TogglesMap {
     packageProductLoadingState: UseToggleResult;

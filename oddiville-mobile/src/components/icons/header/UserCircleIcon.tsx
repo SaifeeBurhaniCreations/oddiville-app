@@ -1,6 +1,6 @@
 import { IconProps } from "@/src/types"
 import * as React from "react"
-import Svg, { G, Path, Defs, ClipPath } from "react-native-svg"
+import Svg, { Path } from "react-native-svg"
 
 const UserCircleIcon: React.FC<IconProps> = ({ color = "#fff", size = 32, style, ...props }) => {
 

@@ -1,4 +1,4 @@
-  import { isToday, isAfter, subDays, subHours } from "date-fns";
+  import { isToday, isAfter, subDays, subHours, startOfDay } from "date-fns";
 
   export const filterHandlers: Record<string, (item: any, subKey: string, selected: string[]) => boolean> = {
         "raw-material:overview": (item, subKey, selected) => {
@@ -48,11 +48,11 @@
 
   const itemDate = new Date(item.createdAt);
   if (isNaN(itemDate.getTime())) return false;
-
+  
   const now = new Date();
 
-  if (selectedValues.includes("Last 14 hours")) {
-    return isAfter(itemDate, subHours(now, 14));
+  if (selectedValues.includes("Last 6 hours")) {
+    return isAfter(itemDate, subHours(now, 6));
   }
 
   if (selectedValues.includes("Today")) {
@@ -60,7 +60,8 @@
   }
 
   if (selectedValues.includes("Last 7 days")) {
-    return isAfter(itemDate, subDays(now, 7));
+const cutoff = startOfDay(subDays(now, 7));
+    return isAfter(itemDate, cutoff);
   }
 
   if (selectedValues.includes("Last 30 days")) {

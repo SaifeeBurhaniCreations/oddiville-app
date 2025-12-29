@@ -1,7 +1,7 @@
 import { getColor } from '@/src/constants/colors'
 import { TableProps } from '@/src/types'
 import { Dimensions, ScrollView, StyleSheet, View } from 'react-native'
-import { B2, B3, H6 } from '../typography/Typography'
+import { B3, H6 } from '../typography/Typography'
 import React, { useMemo } from 'react'
 import Radio from './Radio'
 import { labelMap } from '@/src/utils/arrayUtils'

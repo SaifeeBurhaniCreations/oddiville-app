@@ -1,10 +1,9 @@
 import BoxIcon from "@/src/components/icons/common/BoxIcon";
-import CashIcon from "@/src/components/icons/page/CashIcon";
 import CalandarCheckIcon from "@/src/components/icons/page/calandarCheck";
 import WarehouseIcon from "@/src/components/icons/page/WarehouseIcon";
 import StoreIcon from "@/src/components/icons/common/StoreIcon";
 import { ActivityProps, DispatchOrder } from "@/src/types";
-import { formatAmount, formatTimeDifference } from "@/src/utils/common";
+import { formatTimeDifference } from "@/src/utils/common";
 import { differenceInDays, formatDate, isValid as isValidDate } from "date-fns";
 import { getColor } from "../constants/colors";
 

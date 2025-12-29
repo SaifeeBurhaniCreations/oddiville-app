@@ -65,7 +65,7 @@ router.get("/:type/:id", async (req, res) => {
             Vendors = await VendorClient.findAll();
         }
 
-        if (type === "chamber-list" || type === "multiple-chamber-list") {
+        if (type === "chamber-list" || type === "multiple-chamber-list" || "order-ready" || "order-shipped" || "order-reached") {
             Chambers = await ChamberClient.findAll();
         }
 

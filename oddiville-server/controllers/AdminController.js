@@ -86,8 +86,6 @@ router.post("/authentication/login", async (req, res) => {
 
 router.get("/me", async (req, res) => {
   const authHeader = req.headers.authorization;
-  console.log("authHeader", authHeader);
-  
   if (!authHeader) {
     return res.status(401).json({ error: "Authorization token is missing." });
   }

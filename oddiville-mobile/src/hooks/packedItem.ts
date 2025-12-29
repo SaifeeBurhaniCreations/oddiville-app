@@ -5,7 +5,7 @@ import {
   mapStorageFormToPackedDTO,
 } from "@/src/utils/mapStorageFormToPackedDTO";
 import { StorageForm } from "@/app/(tabs)/package";
-import { ChamberStockPage, PackageItem } from "./useChamberStock";
+import { PackageItem, useChamberStock } from "./useChamberStock";
 import { useMemo } from "react";
 
 const CHAMBER_STOCK_KEY = ["chamber-stock"];
@@ -85,15 +85,6 @@ export const useCreatePackedItem = () => {
   });
 };
 
-// export const useCreatePackedItem = () => {
-//   return useMutation({
-//     mutationFn: (form: StorageForm) => {
-//       const dto: CreatePackedItemDTO = mapStorageFormToPackedDTO(form, null);
-//       return createPackedItem(dto); 
-//     },
-//   });
-// };
-
 export const usePackedItems = () => {
   const queryClient = useQueryClient();
 
@@ -119,19 +110,16 @@ export const usePackedItems = () => {
 };
 
 export function usePackedItemsFromChamberStock() {
-  const queryClient = useQueryClient();
+  const { data, isFetching, refetch } = useChamberStock();
 
-  const cachedData = queryClient.getQueryData<{
-    pages: ChamberStockPage[];
-  }>(["chamber-stock"]);
-  
   const packedItems = useMemo(() => {
-    if (!cachedData?.pages) return [];
+    if (!Array.isArray(data)) return [];
+    return data.filter(item => item.category === "packed");
+  }, [data]);
 
-    return cachedData.pages
-      .flatMap((page) => page.data)
-      .filter((item) => item.category === "packed");
-  }, [cachedData]);
-
-  return packedItems;
+  return {
+    data: packedItems,
+    isFetching,
+    refetch,
+  };
 }

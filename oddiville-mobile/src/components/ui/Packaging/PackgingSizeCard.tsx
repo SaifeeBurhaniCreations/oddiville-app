@@ -1,5 +1,5 @@
 import { StyleSheet, TouchableOpacity, View } from 'react-native'
-import React, { useState } from 'react'
+import React from 'react'
 import { getColor } from '@/src/constants/colors'
 import { B4, H5 } from '../../typography/Typography'
 import { PackagingSizeCardProps } from '@/src/types'

@@ -3,7 +3,6 @@ import { StyleSheet, View } from 'react-native';
 import { getColor } from '@/src/constants/colors';
 import { TruckCardProps } from '@/src/types';
 import CustomImage from '../CustomImage';
-import { getImageSource } from '@/src/utils/arrayUtils';
 import Tag from '../Tag';
 import StarIcon from '../../icons/page/StarIcon';
 import { B4, B5, B6, C1, H3, H6, SubHeadingV3 } from '../../typography/Typography';
