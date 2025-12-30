@@ -1,10 +1,16 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
+export type PackageIconKey =
+  | "paper-roll"
+  | "bag"
+  | "big-bag";
+
 type PackageSizeProps = {
   disabled: boolean;
     quantity: string;
     id?: string;
     weight: string;
+    iconKey: PackageIconKey;
 }
 type PackageSizeStateProps = {
   packages: PackageSizeProps,
@@ -17,6 +23,7 @@ const initialState: PackageSizeStateProps = {
     id: "",
     quantity: "",
     weight: "",
+    iconKey: "paper-roll",
   },
   isEdit: false,
   isLoadingPackageSize: false,
@@ -35,6 +42,7 @@ const PackageSizeSlice = createSlice({
         quantity: "",
         id: "",
         weight: "",
+        iconKey: "paper-roll",
       };
     },
     setIsPackageEdit: (state, action: PayloadAction<boolean>) => {

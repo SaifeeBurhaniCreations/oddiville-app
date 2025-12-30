@@ -100,38 +100,41 @@ export const formatTimeDifference = (startDate: Date, endDate: Date): string => 
     const days = differenceInDays(endDate, startDate);
     return `${days} ${days === 1 ? "day" : "days"}`;
 };
-
-export const mapPackageIcon = (value: PackageItem) => {
-    // if (
-    //     typeof value.size !== 'number' ||
-    //     typeof value.quantity !== 'number' ||
-    //     typeof value.unit !== 'string'
-    // ) {
-    //     return null;
-    // }
-
-    const unit = value.unit?.toLowerCase();
-    let grams = Number(value.size);
-
-    switch (unit) {
-        case 'kg':
-            grams = Number(value.size) * 1000;
-            break;
-        case 'gm':
-            grams = Number(value.size);
-            break;
-        default:
-            return null;
-    }
-
-    if (grams <= 250) {
-        return PaperRollIcon;
-    } else if (grams <= 500) {
-        return BagIcon;
-    } else {
-        return BigBagIcon;
-    }
+export type PackageIconInput = {
+  size: string | number;
+  unit: "kg" | "gm" | "qn" | null;
+  quantity?: string | undefined;
+  rawSize: string;
 };
+
+export const mapPackageIcon = (item: PackageIconInput) => {
+  if (!item.unit) return null;
+
+  const size = Number(item.size);
+  if (Number.isNaN(size)) return null;
+
+  let grams = size;
+
+  switch (item.unit) {
+    case "kg":
+      grams = size * 1000;
+      break;
+    case "gm":
+      grams = size;
+      break;
+    default:
+      return null;
+  }
+
+  if (grams <= 250) {
+    return PaperRollIcon;
+  } else if (grams <= 500) {
+    return BagIcon;
+  } else {
+    return BigBagIcon;
+  }
+};
+
 
 export function kConverter(num: number): string {
     if (num >= 1000) {
