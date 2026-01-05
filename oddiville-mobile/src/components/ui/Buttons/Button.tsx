@@ -3,7 +3,6 @@ import { B2, B4 } from "@/src/components/typography/Typography";
 import { Pressable, StyleSheet, View } from "react-native";
 import { getColor } from "@/src/constants/colors";
 import { findBtnPadding } from "@/src/utils/common";
-import { getShadowStyle } from "@/src/utils/shadow";
 import { useState } from "react";
 import Loader from "../Loader";
 import { variantStylesMap, Variant, VariantStyleArgs } from "../../../lookups/variantStyles";

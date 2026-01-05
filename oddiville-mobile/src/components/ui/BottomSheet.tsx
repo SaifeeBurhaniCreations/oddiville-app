@@ -35,7 +35,6 @@ import { isFormValid } from "@/src/sbc/form/globalFormUtils";
 import { clearUnit } from "@/src/redux/slices/unit-select.slice";
 import {
   clearChambers,
-  clearRawMaterials,
 } from "@/src/redux/slices/bottomsheet/raw-material.slice";
 import { setIsChamberSelected } from "@/src/redux/slices/chamber.slice";
 import { clearInputBottomSheet } from "@/src/utils/clearBottomSheetUtils";
@@ -49,7 +48,6 @@ import { ChamberQty } from "@/src/redux/slices/bottomsheet/chamber-ratings.slice
 
 import { optionListEnumKeys } from "@/src/types";
 import { Dimensions } from "react-native";
-import { isPackageSizeChooseSection } from "@/src/utils/bottomSheetUtils";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 

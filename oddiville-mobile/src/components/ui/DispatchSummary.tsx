@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import React from 'react';
 import { getColor } from '@/src/constants/colors';
 import { B1, B4, C1 } from '../typography/Typography';

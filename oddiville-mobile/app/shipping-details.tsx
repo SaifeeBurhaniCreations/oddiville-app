@@ -189,12 +189,21 @@ const ShippingDetailsForm = () => {
     };
   const emptyStateData = getEmptyStateData("truck_details");
 
-  const totalProductWeight = orderData?.products?.reduce((acc: number, product: DispatchOrderProduct) => product.chambers.reduce((acc: number, chamber: {
-        id: string;
-        name: string;
-        stored_quantity: number | string;
-        quantity: number | string;
-    }) => acc + Number(chamber.quantity), 0), 0);
+const totalProductWeight =
+  orderData?.products?.reduce(
+    (total: number, product: DispatchOrderProduct) => {
+      const productTotal = (product.chambers ?? []).reduce(
+        (sum: number, chamber) => {
+          const qty = Number(chamber.quantity);
+          return sum + (isNaN(qty) ? 0 : qty);
+        },
+        0
+      );
+
+      return total + productTotal;
+    },
+    0
+  ) ?? 0;
 
     return (
         <View style={styles.pageContainer}>

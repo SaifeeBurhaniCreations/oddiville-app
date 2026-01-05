@@ -28,6 +28,9 @@ router.get("/:id", async (req, res) => {
 
 // POST create new truck detail
 router.post("/", upload.single("challan"), async (req, res) => {
+  const t = await sequelize.transaction();
+  let uploadedS3Key = null;
+
   try {
     const {
       agency_name,
@@ -48,36 +51,73 @@ router.post("/", upload.single("challan"), async (req, res) => {
       !type ||
       !size ||
       !arrival_date ||
-      !isMyTruck
+      isMyTruck === undefined
     ) {
-      return res.status(400).json({ error: `Required field missing!` });
+      return res.status(400).json({ error: "Required field missing!" });
     }
 
-    let sampleImage = null;
+    let parsedArrivalDate;
+    let parsedIsMyTruck;
+
+    try {
+      parsedArrivalDate = arrival_date
+        ? JSON.parse(arrival_date)
+        : new Date();
+      parsedIsMyTruck = JSON.parse(isMyTruck);
+    } catch {
+      return res.status(400).json({ error: "Invalid JSON values" });
+    }
+
+    let challanUrl = null;
+
     if (req.file) {
-      const uploaded = await uploadToS3({file: req.file, folder: "dispatchOrder/truck-images"});
+      const uploaded = await uploadToS3({
+        file: req.file,
+        folder: "dispatchOrder/truck-images",
+      });
+
       if (!uploaded?.url || !uploaded?.key) {
-        return res
-          .status(500)
-          .json({ error: "Failed to upload sample image." });
+        throw new Error("Failed to upload challan");
       }
-      sampleImage = uploaded.url;
+
+      challanUrl = uploaded.url;
+      uploadedS3Key = uploaded.key; 
     }
 
-    const truck = await truckDetailClient.create({
-      agency_name,
-      driver_name,
-      phone,
-      number,
-      type,
-      size,
-      challan: sampleImage,
-      arrival_date: JSON.parse(arrival_date) ?? new Date(),
-      isMyTruck: JSON.parse(isMyTruck),
-    });
-    res.status(201).json(truck);
+    const truck = await truckDetailClient.create(
+      {
+        agency_name,
+        driver_name,
+        phone,
+        number,
+        type,
+        size,
+        challan: challanUrl,
+        arrival_date: parsedArrivalDate,
+        isMyTruck: parsedIsMyTruck,
+      },
+      { transaction: t }
+    );
+
+    await t.commit();
+
+    return res.status(201).json(truck);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    try {
+      await t.rollback();
+    } catch (_) {}
+
+    if (uploadedS3Key) {
+      try {
+        await deleteFromS3(uploadedS3Key);
+      } catch (cleanupErr) {
+        console.error("Failed to cleanup S3:", cleanupErr.message);
+      }
+    }
+
+    return res.status(500).json({
+      error: err.message || "Failed to create truck",
+    });
   }
 });
 

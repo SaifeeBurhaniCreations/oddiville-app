@@ -1,11 +1,5 @@
 import api from "@/src/lib/axios";
 
-type FetchVendorParams = {
-    search?: string;
-    limit?: number;
-    offset?: number;
-};
-
 export const fetchPackages = async (searchText: string) => {
     const queryParams = new URLSearchParams();
 

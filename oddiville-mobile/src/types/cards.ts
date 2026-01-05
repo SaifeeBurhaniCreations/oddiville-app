@@ -1,10 +1,8 @@
-import { ComponentType, Dispatch, ReactNode, SetStateAction } from "react";
+import { ComponentType, ReactNode } from "react";
 import { ViewStyle } from "react-native";
 import {
   ActivityProps,
-  DetailsProps,
   OrderProps,
-  PackagingDetailParam,
   SearchActivityProps,
   workAssignedMultiple,
 } from "./ui";

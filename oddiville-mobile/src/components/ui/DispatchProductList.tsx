@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import React from 'react'
 import CustomImage from './CustomImage'
 import { B4, C1, H3 } from '../typography/Typography'

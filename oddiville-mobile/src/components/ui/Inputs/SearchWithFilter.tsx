@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import SearchInput from '../SearchInput'
 import ActionButton from '../Buttons/ActionButton'
 import FilterIcon from '../../icons/page/FilterIcon'

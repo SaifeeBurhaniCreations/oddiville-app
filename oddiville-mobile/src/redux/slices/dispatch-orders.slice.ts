@@ -1,6 +1,4 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { useSelector } from "react-redux";
-import { RootState } from "../store";
 
 const dispatchOrder = [
     // :large_yellow_circle: Order 1: No truck_details, no delieverd_date

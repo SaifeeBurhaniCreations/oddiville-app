@@ -11,7 +11,6 @@ import {
   removeProduct,
 } from "@/src/redux/slices/multiple-product.slice";
 import {
-  ChamberProduct,
   multipleProductCardDataProps,
   multipleProductCardProps,
 } from "@/src/types";

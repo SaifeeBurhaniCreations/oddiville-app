@@ -7,22 +7,12 @@ import { ActionButtonConfig, ActivityProps } from "@/src/types";
 import { getColor } from "@/src/constants/colors";
 import { StyleSheet, View } from "react-native";
 import { useAdmin } from "@/src/hooks/useAdmin";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
 import { BottomSheetSchemaKey, FilterEnum } from "@/src/schemas/BottomSheetSchema";
 import Loader from "@/src/components/ui/Loader";
-import {
-  Notification,
-  useNotificationsActionable,
-  useNotificationsInformative,
-  useNotificationsTodays,
-} from "@/src/hooks/useAdminNotifications";
-import * as SecureStore from "expo-secure-store";
-import { parseValidDate } from "@/src/utils/dateUtils";
 import { actionableButtons } from "@/src/lookups/actionableButtons";
-import { useArrayTransformer } from "@/src/sbc/utils/arrayTransformer/useArrayTransformer";
-import { useAppNavigation } from "@/src/hooks/useAppNavigation";
-import Button from "@/src/components/ui/Buttons/Button";
+import * as SecureStore from "expo-secure-store";
 import {
   useActionableNotifications,
   useInformativeNotifications,
@@ -38,6 +28,7 @@ import { filterHandlers } from "@/src/lookups/filters";
 import { useSelector } from "react-redux";
 import { RootState } from "@/src/redux/store";
 import { runFilter } from "@/src/utils/bottomSheetUtils";
+import { FilterNode } from "@/src/redux/slices/bottomsheet/filters.slice";
 
 const informativeNotificationsDataFormatter = (
   data: AdminNotification[]
@@ -92,6 +83,8 @@ const todaysNotificationsDataFormatter = (
     color: val.color,
   }));
 
+  const MAX_LOCAL_FILTER = 100;
+
 const HomeScreen = () => {
     const nestedFilters = useSelector((state: RootState) => state.filter.filters);
   
@@ -102,7 +95,6 @@ const HomeScreen = () => {
     const access = resolveAccess(safeRole, safePolicies);
   
   const [isLoading, setIsLoading] = useState(false);
-  const [isDisabled, setIsDisabled] = useState(false);
   const [username, setUsername] = useState<string | null>(null);    
   const [toastVisible, setToastVisible] = useState(false);
   const [toastType, setToastType] = useState<"success" | "error" | "info">(
@@ -111,7 +103,6 @@ const HomeScreen = () => {
   const [toastMessage, setToastMessage] = useState("");
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   useAdmin();
-const [allPagesLoaded, setAllPagesLoaded] = useState(false);
 
   const showToast = (type: "success" | "error" | "info", message: string) => {
     setToastType(type);
@@ -183,45 +174,29 @@ const [allPagesLoaded, setAllPagesLoaded] = useState(false);
     setIsLoading(false);
   };
 
-// console.log("formatedInformativeNotifications", JSON.stringify(formatedInformativeNotifications, null, 2));
-
-const allNotifications = useMemo(
-  () => formatedInformativeNotifications ?? [],
-  [formatedInformativeNotifications]
-);
-
 const filtersApplied = useMemo(() => {
-  return Object.values(nestedFilters || {}).some(
-    (v) => Array.isArray(v) && v.length > 0
-  );
-}, [nestedFilters]);
-
-useEffect(() => {
-  const applyFilters = async () => {
-    if (filtersApplied && hasNextInformativePage) {
-      await fetchAllPagesIfNeeded();
-    }
+  const hasValue = (node?: FilterNode): boolean => {
+    if (!node) return false;
+    if (node.value != null) return true;
+    return Object.values(node.children ?? {}).some(hasValue);
   };
-  applyFilters();
-}, [filtersApplied]);
 
+  const result = Object.values(nestedFilters).some(hasValue);
+
+  return result;
+}, [nestedFilters]);
 
   const filters = useMemo(
     () => flattenFilters(nestedFilters) as Record<FilterEnum, string[]>,
     [nestedFilters]
   );
 
-const fetchAllPagesIfNeeded = async () => {
-  while (hasNextInformativePage) {
-    await fetchNextInformativePage();
-  }
-  setAllPagesLoaded(true);
-};
-
 const filteredNotifications = useMemo(() => {
-  if (filtersApplied && !allPagesLoaded) return [];
-  return filterItems(allNotifications, filters, filterHandlers);
-}, [allNotifications, filters, filtersApplied, allPagesLoaded]);
+  if (!filtersApplied) return formatedInformativeNotifications;
+
+  const slice = formatedInformativeNotifications.slice(0, MAX_LOCAL_FILTER);
+  return filterItems(slice, filters, filterHandlers);
+}, [formatedInformativeNotifications, filters, filtersApplied]);
 
 const informativeListData = useMemo(() => {
   return filtersApplied
@@ -231,11 +206,30 @@ const informativeListData = useMemo(() => {
 
 const canPaginateInformative = !filtersApplied;
 
+const hasShownFilterToast = useRef(false);
+
 useEffect(() => {
-  if (allNotifications.length > 200) {
+  if (!filtersApplied) {
+    hasShownFilterToast.current = false;
+    return;
+  }
+
+  if (
+    formatedInformativeNotifications.length > MAX_LOCAL_FILTER &&
+    !hasShownFilterToast.current
+  ) {
+    showToast("info", "Refine filters or scroll to load more results");
+    hasShownFilterToast.current = true;
+  }
+}, [filtersApplied, formatedInformativeNotifications.length]);
+
+
+
+useEffect(() => {
+  if (formatedInformativeNotifications.length > 200) {
     showToast("error", "Too many notifications to filter");
   }
-}, [allNotifications.length]);
+}, [formatedInformativeNotifications.length]);
 
   const handleSearchFilter = () => {
     setIsLoading(true);
@@ -246,6 +240,7 @@ useEffect(() => {
     });
     setIsLoading(false);
   };
+
   return (
     <View style={styles.pageContainer}>
       <PageHeader page={"Home"} />

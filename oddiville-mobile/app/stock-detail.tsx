@@ -5,12 +5,23 @@ import {
   ScrollView,
   FlatList,
 } from "react-native";
+import {
+  StyleSheet,
+  View,
+  RefreshControl,
+  ScrollView,
+  FlatList,
+} from "react-native";
 import React, { useState } from "react";
 import SearchWithFilter from "@/src/components/ui/Inputs/SearchWithFilter";
 import { getColor } from "@/src/constants/colors";
 import { useParams } from "@/src/hooks/useParams";
 import PageHeader from "@/src/components/ui/PageHeader";
 import BackButton from "@/src/components/ui/Buttons/BackButton";
+import {
+  ChamberStock,
+  useChamberStockByName,
+} from "@/src/hooks/useChamberStock";
 import {
   ChamberStock,
   useChamberStockByName,
@@ -22,6 +33,9 @@ import PaperRollIcon from "@/src/components/icons/packaging/PaperRollIcon";
 import BoxIcon from "@/src/components/icons/common/BoxIcon";
 import { B4 } from "@/src/components/typography/Typography";
 import StarIcon from "@/src/components/icons/page/StarIcon";
+import { useSelector } from "react-redux";
+import { RootState } from "@/src/redux/store";
+import { useChamberByName } from "@/src/hooks/useChambers";
 import { useSelector } from "react-redux";
 import { RootState } from "@/src/redux/store";
 import { useChamberByName } from "@/src/hooks/useChambers";
@@ -53,6 +67,7 @@ const StockDetail = () => {
   const stock = chamberStock?.[0];
 
   const emptyStateData = getEmptyStateData("no-stock-detail");
+  const emptyStateData = getEmptyStateData("no-stock-detail");
 
   if (!stock) return <EmptyState stateData={emptyStateData} />;
 
@@ -73,7 +88,12 @@ const StockDetail = () => {
     stock.category === "material" && !Array.isArray(stock.packaging)
       ? stock.packaging
       : null;
+  const materialPackaging =
+    stock.category === "material" && !Array.isArray(stock.packaging)
+      ? stock.packaging
+      : null;
 
+  const LeadingIcon = materialPackaging
   const LeadingIcon = materialPackaging
     ? mapPackageIcon({
         size: materialPackaging.size.value,
@@ -87,8 +107,13 @@ const StockDetail = () => {
     stock?.category === "packed" && Array.isArray(stock.packaging)
       ? stock.packaging
       : [];
+  const packedMaterialPackaging =
+    stock?.category === "packed" && Array.isArray(stock.packaging)
+      ? stock.packaging
+      : [];
 
   return (
+    <View style={styles.rootContainer}>
     <View style={styles.rootContainer}>
       <PageHeader page={"Chamber"} />
       <View style={styles.wrapper}>
@@ -147,7 +172,27 @@ console.log("materialPackaging.count", materialPackaging.count);
             <View style={{ gap: 12 }}>
               {packedMaterialPackaging.map((item, index) => {
                 const leadingIcon = getPackedLeadingIcon(item);
+          {/* PACKED */}
+          {stock.category === "packed" && Array.isArray(stock.packaging) && (
+            <View style={{ gap: 12 }}>
+              {packedMaterialPackaging.map((item, index) => {
+                const leadingIcon = getPackedLeadingIcon(item);
 
+                return (
+                  <ChamberCard
+                    key={`${stock.id}-${item.size.value}-${index}`}
+                    id={`${stock.id}-${item.size.value}`}
+                    name={`${item.size.value} ${item.size.unit}`}
+                    category="packed"
+                    description={`${item.count} | ${item.type}`}
+                    plainDescription
+                    onPressOverride={() => {}}
+                    leadingIcon={leadingIcon}
+                  />
+                );
+              })}
+            </View>
+          )}
                 return (
                   <ChamberCard
                     key={`${stock.id}-${item.size.value}-${index}`}
@@ -166,11 +211,17 @@ console.log("materialPackaging.count", materialPackaging.count);
 
           {!stock.packaging && <EmptyState stateData={emptyStateData} />}
         </View>
+          {!stock.packaging && <EmptyState stateData={emptyStateData} />}
+        </View>
       </View>
     </View>
   );
 };
+    </View>
+  );
+};
 
+export default StockDetail;
 export default StockDetail;
 
 const styles = StyleSheet.create({

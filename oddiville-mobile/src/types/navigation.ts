@@ -2,7 +2,6 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Dispatch } from "@reduxjs/toolkit";
 import { ComponentType } from "react";
 import { RawMaterialDetailByRatingProps } from "./ui";
-import { CalendarEventResponse } from "../hooks/calendar";
 
 import { z } from "zod";
 

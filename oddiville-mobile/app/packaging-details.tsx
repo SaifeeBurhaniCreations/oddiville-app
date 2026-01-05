@@ -23,14 +23,13 @@ import { usePackageById, usePackageSocketSync } from '@/src/hooks/Packages';
 import { getColor } from '@/src/constants/colors';
 import { chunkCards } from '@/src/utils/arrayUtils';
 import { formatPackageParams } from '@/src/constants/Packets';
-import { getEmptyStateData } from '@/src/utils/common';
-import { setPackageSize } from '@/src/redux/slices/package-size.slice';
+import { getEmptyStateData, PackageIconInput } from '@/src/utils/common';
+import { PackageIconKey, setPackageSize } from '@/src/redux/slices/package-size.slice';
 import { setCurrentProductId } from '@/src/redux/slices/current-product.slice';
 import { sortBy } from '@/src/utils/numberUtils';
 
 // 6. Types
 import { RootState } from '@/src/redux/store';
-import BagIcon from '@/src/components/icons/packaging/BagIcon';
 
 // 7. Schemas
 // No items of this type
@@ -42,8 +41,33 @@ import { useAuth } from '@/src/context/AuthContext';
 import { resolveAccess } from '@/src/utils/policiesUtils';
 import { PACKAGE_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
 import { getTareWeight, parseWeightBoth } from '@/src/utils/weightutils';
+import PaperRollIcon from "@/src/components/icons/packaging/PaperRollIcon";
+import BagIcon from "@/src/components/icons/packaging/BagIcon";
+import BigBagIcon from "@/src/components/icons/packaging/BigBagIcon";
 
-const EMPTY_BAG_WEIGHT_G = 1;
+
+export const PACKAGE_ICON_MAP: Record<PackageIconKey, React.ComponentType<any>> =
+{
+  "paper-roll": PaperRollIcon,
+  "bag": BagIcon,
+  "big-bag": BigBagIcon,
+};
+
+export const mapPackageIconKey = (item: PackageIconInput): PackageIconKey => {
+  if (!item.unit) return "bag";
+
+  const size = Number(item.size);
+  if (Number.isNaN(size)) return "bag";
+
+  const grams =
+    item.unit === "kg" ? size * 1000 :
+    item.unit === "gm" ? size :
+    0;
+
+  if (grams <= 250) return "paper-roll";
+  if (grams <= 500) return "bag";
+  return "big-bag";
+};
 
 const PackagingDetailsScreen = () => {
     usePackageSocketSync();
@@ -71,7 +95,6 @@ const uiPackages = useMemo(() => {
     const { value: sizeValue, unit: sizeUnit } = parseWeightBoth(pkg.weight);
 
     const tare = getTareWeight("pouch", sizeValue, sizeUnit);
-
     const packetCount =
       tare > 0 ? Math.floor((qtyKg * 1000) / tare) : 0;
 
@@ -98,7 +121,15 @@ const uiPackages = useMemo(() => {
     const packetCount =
       tare > 0 ? Math.floor((qtyKg * 1000) / tare) : 0;
 
-  dispatch(setPackageSize({ ...match, id: packageId }));
+        dispatch(setPackageSize({
+          ...match,
+            iconKey: mapPackageIconKey({
+            size: value,
+            unit,
+            rawSize: match.weight,
+          }),
+          id: packageId,
+        }));
 
     const fillPackage = {
       sections: [
@@ -147,6 +178,7 @@ const uiPackages = useMemo(() => {
   const emptyStateData = getEmptyStateData("packaging-details");
 
   const backRoute = resolveBackRoute(access, PACKAGE_BACK_ROUTES, resolveDefaultRoute(access));
+  // console.log("uiPackages", JSON.stringify(uiPackages, null, 2));
   
   return (
     <View style={styles.pageContainer}>

@@ -195,19 +195,6 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
       } else {
         dispatch(selectChamber(value));
       }
-
-      // const openedSupervisorProduction = key === "supervisor-production";
-
-      // if (!route && openedSupervisorProduction && meta?.type !== "select-role") {
-      //   try {
-      //     await validateAndSetData(id!, "supervisor-production");
-      //   } catch (err) {
-      //     console.warn("Failed to open supervisor-production bottomsheet", err);
-      //     dispatch(closeBottomSheet());
-      //     return;
-      //   }
-      //   return;
-      // }
       
       if (key && key === "user-action") {
         if (item === "Edit User") {

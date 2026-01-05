@@ -4,7 +4,6 @@ import { getColor } from "@/src/constants/colors";
 import { B4, C1, H3, H6 } from "../typography/Typography";
 import Tag from "./Tag";
 import CustomImage from "./CustomImage";
-import PencilIcon from "../icons/common/PencilIcon";
 import ActionButton from "./Buttons/ActionButton";
 import { UserProps } from "@/src/types";
 import { validTagRole } from "@/src/utils/userUtils";

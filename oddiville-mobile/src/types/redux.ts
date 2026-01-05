@@ -1,7 +1,6 @@
 import { BottomSheetConfig } from "@/src/types";
-import { FilterEnum } from "../schemas/BottomSheetSchema";
 
-    export type AllowedMainSelection =
+export type AllowedMainSelection =
       | "chamber:detailed"
       | "order:upcoming"
       | "order:inprogress"

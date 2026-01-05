@@ -15,7 +15,7 @@ const filterDataMap: Record<FilterEnum, CheckboxData[]> = {
         { text: "Packed", isChecked: false },
     ],
     "home:activities": [
-        { text: "Last 14 hours", isChecked: false },
+        { text: "Last 6 hours", isChecked: false },
         { text: "Today", isChecked: false },
         { text: "Last 7 days", isChecked: false },
         { text: "Last 30 days", isChecked: false },

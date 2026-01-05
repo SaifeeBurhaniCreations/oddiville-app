@@ -14,7 +14,6 @@ import TimeAgo from "./TimeAgo";
 import { B4, B5, C1, H2, H5, SubHeadingV3 } from "../typography/Typography";
 import { buttonActionMap } from "@/src/utils/buttonUtils";
 import { useMarkNotificationRead } from "@/src/hooks/useNotifications";
-import { isActionableNotification, isTodaysNotification } from "@/src/utils/arrayUtils";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/src/redux/store";
 import { updateBottomSheetMeta } from "@/src/redux/slices/bottomsheet.slice";

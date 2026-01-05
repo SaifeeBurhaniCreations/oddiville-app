@@ -32,24 +32,6 @@ export function getRandomBackground() {
   return backgroundImages[randomIndex];
 }
 
-const imageMap: Record<string, any> = {
-  Carrot: require('@/src/assets/images/item-icons/Carrot.png'),
-  Carrots: require('@/src/assets/images/item-icons/Carrot.png'),
-  Peas: require('@/src/assets/images/item-icons/Peas.png'),
-  Potato: require('@/src/assets/images/item-icons/Potato.png'),
-  Potatoes: require('@/src/assets/images/item-icons/Potato.png'),
-  Onion: require('@/src/assets/images/item-icons/Onion.png'),
-  Onions: require('@/src/assets/images/item-icons/Onion.png'),
-  Radish: require('@/src/assets/images/item-icons/Radish.png'),
-  Radishes: require('@/src/assets/images/item-icons/Radish.png'),
-  Tomato: require('@/src/assets/images/item-icons/Tomato.png'),
-  Tomatoes: require('@/src/assets/images/item-icons/Tomato.png'),
-  Okra: require('@/src/assets/images/item-icons/Okra.png'),
-  Okras: require('@/src/assets/images/item-icons/Okra.png'),
-  Broccoli: require('@/src/assets/images/item-icons/Broccoli.png'),
-  Broccolis: require('@/src/assets/images/item-icons/Broccoli.png'),
-};
-
 export const labelMap: Record<string, string> = {
   enterCount: 'Count',
   notNeeded: 'Not needed',

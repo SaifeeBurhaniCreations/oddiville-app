@@ -68,7 +68,7 @@ import {
 // 8. Assets
 import noPackageImage from "@/src/assets/images/illustrations/no-packaging.png";
 import { useFormValidator } from "@/src/sbc/form";
-import { IconRatingProps, PackageItem } from "@/src/types";
+import { IconRatingProps, ItemCardProps, PackageItem } from "@/src/types";
 import DetailsToast from "@/src/components/ui/DetailsToast";
 import FiveStarIcon from "@/src/components/icons/page/Rating/FiveStarIcon";
 import FourStarIcon from "@/src/components/icons/page/Rating/FourStarIcon";
@@ -79,7 +79,7 @@ import Input from "@/src/components/ui/Inputs/Input";
 import TrashIcon from "@/src/components/icons/common/TrashIcon";
 import FormField from "@/src/sbc/form/FormField";
 import ChamberIcon from "@/src/components/icons/common/ChamberIcon";
-import { useCreatePackedItem } from "@/src/hooks/packedItem";
+import { useCreatePackedItem, usePackedItemsFromChamberStock } from "@/src/hooks/packedItem";
 import {
   resetPackageSizes,
   setPackageSizes,
@@ -92,6 +92,8 @@ import {
 import { clearDispatchRatings } from "@/src/redux/slices/bottomsheet/dispatch-rating.slice";
 import { clearRatings } from "@/src/redux/slices/bottomsheet/storage.slice";
 import { convertToKg, getMaxPackagesFor } from "@/src/utils/weightutils";
+import RefreshableContent from "@/src/components/ui/RefreshableContent";
+import ItemsFlatList from "@/src/components/ui/ItemsFlatList";
 
 interface Chamber {
   id: string | number;
@@ -202,6 +204,8 @@ const PackageScreen = () => {
 
   const { mutate: createPacked, isPending, error } = useCreatePackedItem();
 
+  const 
+  { data: packedItems, isFetching, refetch } = usePackedItemsFromChamberStock();
   const { data: DryChambersRaw } = useDryChambers();
   const DryChambers = DryChambersRaw || [];
 
@@ -911,6 +915,26 @@ const chambersByRM: ChambersByRM = useMemo(() => {
 
   const allGood = rmMatchStatus === "equal" && packageMatchStatus === "equal";
 
+   const { packagesSummary } = useMemo(() => {
+      const buckets = {
+        packagesSummary: [] as ItemCardProps[],
+      };
+      for(const packedItem of packedItems) {
+        const formatted: ItemCardProps = {
+          id: packedItem.id,
+          name: packedItem.product_name,
+          weight: `${packedItem.category} ${
+            packedItem.unit || "kg"
+          }`,
+          rating: packedItem.category,
+          isActive: true,
+        };
+        buckets.packagesSummary.push(formatted);
+      }
+      return buckets;
+    }, [packedItems])
+    
+  
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -1394,8 +1418,8 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                   placeholder={"Search by product name"}
                 />
               </View>
-                      {/* <RefreshableContent
-                        isEmpty={inCompleted.length === 0}
+                      <RefreshableContent
+                        isEmpty={packagesSummary.length === 0}
                         refreshing={isFetching}
                         onRefresh={refetch}
                         emptyComponent={
@@ -1413,10 +1437,10 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                         listComponent={
                           <ItemsFlatList
                             isProductionCompleted
-                            items={[]}
+                            items={packagesSummary}
                           />
                         }
-                      /> */}
+                      />
                     </View>
           </Tabs>
         </View>

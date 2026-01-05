@@ -1,5 +1,5 @@
 import * as React from "react"
-import Svg, { Path, G, Defs, ClipPath } from "react-native-svg"
+import Svg, { Path } from "react-native-svg"
 import { IconProps } from "@/src/types"
 
 const ErrorIcon: React.FC<IconProps> = ({ color = "#F55747", size = 17, style, ...props }) => {

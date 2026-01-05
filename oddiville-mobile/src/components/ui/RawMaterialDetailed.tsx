@@ -1,5 +1,5 @@
 import { StyleSheet, View, ScrollView } from 'react-native';
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import SearchWithFilter from './Inputs/SearchWithFilter';
 import Select from './Select';
 import { RawMaterialProps, StockDataItem } from '@/src/types';

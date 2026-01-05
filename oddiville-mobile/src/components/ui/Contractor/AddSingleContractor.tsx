@@ -1,5 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
-import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { StyleSheet, View } from "react-native";
+import React, { useEffect, useState } from "react";
 import Button from "../Buttons/Button";
 import Table, { TableColumn } from "../Table";
 import Input from "../Inputs/Input";
