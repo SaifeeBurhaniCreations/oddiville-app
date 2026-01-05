@@ -143,6 +143,7 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
     const raw = rawMap[key] !== undefined ? rawMap[key] : false;
 
     const currentValue = computeCurrentValue(key, raw, chamberRating, placeholder_second_val, packageTypeProduction);
+// console.log("currentValue", currentValue);
 
     const currentChamberName = String(formField_1);
 

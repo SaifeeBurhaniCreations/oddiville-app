@@ -233,6 +233,7 @@ const PackageScreen = () => {
   );
   const { product: selectedProduct, rawMaterials: selectedRawMaterials } =
     useSelector((state: RootState) => state.product);
+
   const storeRawMaterials = useSelector(
     (state: RootState) => state.product.rawMaterials
   );
@@ -252,6 +253,7 @@ const PackageScreen = () => {
     return map;
   }, [chamberStock]);
 
+  
   const {
     rawMaterials,
     isLoading: rmInitialLoading,
@@ -1456,7 +1458,8 @@ const chambersByRM: ChambersByRM = useMemo(() => {
           productsFetching ||
           frozenChambersFetching ||
           isSummaryFetching ||
-          rmLoading) && (
+          rmLoading ||
+          isProductLoading) && (
           <View style={styles.overlay}>
             <View style={styles.loaderContainer}>
               <Loader />

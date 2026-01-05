@@ -10,7 +10,7 @@ import { useGlobalFormValidator } from "../sbc/form/globalFormInstance";
 import { useCreatePackage, useAddPackageType, useIncreasePackageQuantity } from "./Packages";
 import { useUpdateOrder } from "./dispatchOrder";
 import { AddPackageQuantityForm } from "../components/ui/bottom-sheet/InputComponent";
-import { setIsChamberSelected } from "../redux/slices/chamber.slice";
+import { resetChamber, setIsChamberSelected } from "../redux/slices/chamber.slice";
 import { StoreMaterialForm } from "../components/ui/bottom-sheet/AddonInputComponent";
 import { useChamber } from "./useChambers";
 import {
@@ -257,6 +257,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
         dispatch(clearUnit());
         dispatch(clearRawMaterials());
         dispatch(setIsProductLoading(false));
+        dispatch(resetChamber());
         dispatch(setIsChoosingChambers(false));
       },
       onError: () => {

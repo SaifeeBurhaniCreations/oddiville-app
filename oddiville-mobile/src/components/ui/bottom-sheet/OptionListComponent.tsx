@@ -36,6 +36,8 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
     const showVendorDeletePopup = useSelector(
       (state: RootState) => state.deletePopup.showVendorDeletePopup
     );
+    const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
+
   const dispatch = useDispatch();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
 
@@ -82,6 +84,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
       }
 
       if (key === "select-package-type") {
+        console.log("item", item);
         
         selectPackageType(item)
          const supervisorProduction = {
@@ -138,7 +141,8 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
             placeholder_second: "Choose type",
             label_second: "Type",
             alignment: "half",
-            value: item ?? "pouch",
+            value: packageTypeProduction ?? "pouch",
+            // value: item ?? "pouch",
             key: "select-package-type",
             formField_1: "product_name",
             source: "add-product-package",

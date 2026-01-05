@@ -18,6 +18,10 @@ const ChamberSlice = createSlice({
         state.chambers.push(action.payload);
       }
     },
+    resetChamber(state) {
+      state.chamber = "";
+      state.isChamberSelected = false;
+    },
     reset(state) {
       state.chamber = "";
       state.chambers = [];
@@ -26,5 +30,5 @@ const ChamberSlice = createSlice({
   },
 });
 
-export const { selectChamber, selectChambers, setIsChamberSelected, reset } = ChamberSlice.actions;
+export const { selectChamber, selectChambers, setIsChamberSelected, reset, resetChamber } = ChamberSlice.actions;
 export default ChamberSlice.reducer;
