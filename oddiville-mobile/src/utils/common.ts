@@ -101,7 +101,14 @@ export const formatTimeDifference = (startDate: Date, endDate: Date): string => 
     return `${days} ${days === 1 ? "day" : "days"}`;
 };
 
-export const mapPackageIcon = (value: PackageItem) => {
+type PackageIconInput = {
+    size: number;
+    unit: "kg" | "gm" | "qn";
+    quantity: string | number;
+    rawSize: string;
+  };
+  
+export const mapPackageIcon = (value: PackageIconInput) => {
     // if (
     //     typeof value.size !== 'number' ||
     //     typeof value.quantity !== 'number' ||
