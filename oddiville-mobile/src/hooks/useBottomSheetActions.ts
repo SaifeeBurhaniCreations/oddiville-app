@@ -410,7 +410,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
         });
         const result_store_quantity_form =
           storeQuantityForm?.validateForm(updatedValues);
-        
+
         if (result_store_quantity_form.success) {
           dispatch(setProductionLoading(true));
 
@@ -420,15 +420,13 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
             ...formData,
             packaging_type: packageTypeProduction,
             packaging_size: updatedValues.product_name.value,
-            
           }
-
+          
           try {
             await completeProduction.mutateAsync({
               id: meta.id,
               data: newFormData,
             });
-            console.log("compelte produciton");
             
             dispatch(clearChambers());
             dispatch(setProductionLoading(false));
@@ -441,6 +439,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
             dispatch(setProductionLoading(false));
           }
         }
+        
       } catch (error: any) {
         console.log("error in add-raw-material", error.message);
       }

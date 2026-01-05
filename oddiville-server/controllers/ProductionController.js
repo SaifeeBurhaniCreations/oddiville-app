@@ -430,7 +430,7 @@ router.patch("/complete/:id", async (req, res) => {
     end_time,
     chambers = [],
     wastage_quantity = 0,
-    packaging_type = "pouch",
+    packaging_type = "bag",
     packaging_size = 0,
   } = req.body;
 
@@ -439,8 +439,6 @@ router.patch("/complete/:id", async (req, res) => {
     tx = await sequelize.transaction();
 
     const production = await validateAndFetchProduction(productionId, { tx });
-
-    const chamberInstances = await validateAndFetchChambers(chambers, { tx });
 
     const chamberIds = chambers.map((c) => c.id);
     const lockedChambers = chamberIds.length

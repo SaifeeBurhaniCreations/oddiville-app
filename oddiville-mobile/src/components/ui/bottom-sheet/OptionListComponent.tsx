@@ -86,7 +86,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
       if (key === "select-package-type") {
         console.log("item", item);
         
-        selectPackageType(item)
+        dispatch(selectPackageType(item));
          const supervisorProduction = {
             sections: [
               {

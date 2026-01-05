@@ -100,31 +100,32 @@ export const formatTimeDifference = (startDate: Date, endDate: Date): string => 
     const days = differenceInDays(endDate, startDate);
     return `${days} ${days === 1 ? "day" : "days"}`;
 };
-export type PackageIconInput = {
-  size: string | number;
-  unit: "kg" | "gm" | "qn" | null;
-  quantity?: string | undefined;
-  rawSize: string;
-};
 
+type PackageIconInput = {
+    size: number;
+    unit: "kg" | "gm" | "qn";
+    quantity: string | number;
+    rawSize: string;
+  };
+  
 export const mapPackageIcon = (item: PackageIconInput) => {
-  if (!item.unit) return null;
-
-  const size = Number(item.size);
-  if (Number.isNaN(size)) return null;
-
-  let grams = size;
-
-  switch (item.unit) {
-    case "kg":
-      grams = size * 1000;
-      break;
-    case "gm":
-      grams = size;
-      break;
-    default:
-      return null;
-  }
+    if (!item.unit) return null;
+  
+    const size = Number(item.size);
+    if (Number.isNaN(size)) return null;
+  
+    let grams = size;
+  
+    switch (item.unit) {
+        case "kg":
+          grams = size * 1000;
+          break;
+        case "gm":
+          grams = size;
+          break;
+        default:
+          return null;
+      }
 
   if (grams <= 250) {
     return PaperRollIcon;
@@ -134,7 +135,6 @@ export const mapPackageIcon = (item: PackageIconInput) => {
     return BigBagIcon;
   }
 };
-
 
 export function kConverter(num: number): string {
     if (num >= 1000) {
