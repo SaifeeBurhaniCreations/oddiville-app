@@ -104,7 +104,6 @@ const PackageSizeChooseComponent = ({
               : (selected as packageSize[]).some(
                   (s) => s.rawSize === (packageData as packageSize).rawSize
                 );
-          console.log("isSelected", isSelected);
 
           return (
             <Pressable

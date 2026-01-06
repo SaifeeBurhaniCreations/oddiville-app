@@ -101,40 +101,39 @@ export const formatTimeDifference = (startDate: Date, endDate: Date): string => 
     return `${days} ${days === 1 ? "day" : "days"}`;
 };
 
-type PackageIconInput = {
-    size: number;
-    unit: "kg" | "gm" | "qn";
-    quantity: string | number;
-    rawSize: string;
-  };
+export type PackageIconInput = {
+  size: number;
+  unit: "kg" | "gm" | "qn";
+};
   
 export const mapPackageIcon = (item: PackageIconInput) => {
-    if (!item.unit) return null;
-  
-    const size = Number(item.size);
-    if (Number.isNaN(size)) return null;
-  
-    let grams = size;
-  
-    switch (item.unit) {
-        case "kg":
-          grams = size * 1000;
-          break;
-        case "gm":
-          grams = size;
-          break;
-        default:
-          return null;
-      }
+  const size = Number(item.size);
+  if (Number.isNaN(size)) return null;
 
-  if (grams <= 250) {
-    return PaperRollIcon;
-  } else if (grams <= 500) {
-    return BagIcon;
-  } else {
-    return BigBagIcon;
+  let grams = size;
+
+  switch (item.unit) {
+    case "kg":
+      grams = size * 1000;
+      break;
+    case "gm":
+      grams = size;
+      break;
+    default:
+      return null;
   }
+
+  if (grams <= 250) return PaperRollIcon;
+  if (grams <= 500) return BagIcon;
+  return BigBagIcon;
 };
+
+export const toPackageIconInput = (pkg: PackageItem): PackageIconInput => ({
+  size: Number(pkg.size),
+  unit: pkg.unit as "kg" | "gm" | "qn",
+});
+
+
 
 export function kConverter(num: number): string {
     if (num >= 1000) {

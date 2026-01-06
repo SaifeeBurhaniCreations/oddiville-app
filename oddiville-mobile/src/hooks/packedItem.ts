@@ -15,6 +15,7 @@ export type PackedItem = {
   id: string;
   product_name: string;
   unit: string;
+  rating: number;
   image: string | null;
   category: string;
   chamber: { id: string; quantity: string;}[];
@@ -46,6 +47,7 @@ export const useCreatePackedItem = () => {
         id: `temp-${Date.now()}`,
         product_name: dto.product_name,
         unit: dto.unit,
+        rating: dto.rating,
         image: dto.image,
         category: "packed",
         chamber: dto.chambers.map((c) => ({

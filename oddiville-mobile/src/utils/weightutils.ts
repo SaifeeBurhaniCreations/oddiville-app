@@ -64,33 +64,24 @@ export function parseWeightBoth(weight: string): {
   throw new Error(`Invalid weight format: ${weight}`);
 }
 
+export const getMaxPackagesFor = (pkg: PackageItem): number | null => {
+  const storedKg = Number(pkg.stored_quantity)
 
-const getPacketWeightInGrams = (pkg: PackageItem): number => {
-  const unit = pkg.unit?.toLowerCase();
-  const size = Number(pkg.size);
+  if (Number.isNaN(storedKg) || storedKg <= 0) return null
 
-  if (unit === "gm") {
-    return 1;
-  }
-
-  if (unit === "kg") {
-    if (size > 1) return 1.5;
-    return 1;               
-  }
-
-  return 1;
-};
-
-export const getMaxPackagesFor = (pkg: PackageItem) => {
-  const storedKg = Number(pkg.stored_quantity) || 0;
   const storedGrams = storedKg * 1000;
+    const size = Number(pkg.size)
+  const unit = pkg.unit as 'gm' | 'kg'
+  const type = 'pouch' as PackageType
 
-  const packetWeight = getPacketWeightInGrams(pkg);
+   const tareWeightGrams = getTareWeight(
+    type,
+    size,
+    unit
+  )
 
-  if (packetWeight <= 0) return null;
-
-  return Math.floor(storedGrams / packetWeight);
-};
+  return Math.floor(storedGrams / tareWeightGrams)
+}
 
 export const convertToKg = (size: number, unit: string) => {
   const lowerUnit = unit?.toLowerCase();

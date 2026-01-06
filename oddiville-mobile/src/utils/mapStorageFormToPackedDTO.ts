@@ -4,6 +4,7 @@ import { PackageItem } from "@/src/types";
 
 export type CreatePackedItemDTO = {
   product_name: string;
+  rating: number;
   unit: string;
   image: string | null;
   chambers: { id: string; quantity: number }[];
@@ -80,5 +81,6 @@ const rawProducts = Object.entries(form.rmChamberQuantities || {})
     chambers,
     rawProducts,
     packages, 
+    rating: form.rating,
   };
 };

@@ -936,11 +936,8 @@ const useValidateAndOpenBottomSheet = () => {
         case "select-package-type":
           data = selectPackageType;
           break;
-        case "select-package-type":
-          data = selectPackageType;
-          break;
-        // case "calendar-event":
-        //   data = calendarEvent;
+        // case "select-package-type":
+        //   data = selectPackageType;
         //   break;
       }
     }

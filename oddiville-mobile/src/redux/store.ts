@@ -40,6 +40,7 @@ import policiesReducer from "./slices/bottomsheet/policies.slice";
 import packageTypeProductionReducer from "./slices/bottomsheet/package-type-production.slice";
 import multipleProductReducer from "./slices/multiple-product.slice";
 import usedDispatchPkgReducer from "./slices/used-dispatch.slice";
+import packageProductRatingReducer from "./slices/bottomsheet/package-product-rating.slice";
 
 export const store = configureStore({
   reducer: {
@@ -83,6 +84,7 @@ export const store = configureStore({
     policies: policiesReducer,
     packageTypeProduction: packageTypeProductionReducer,
     usedDispatchPkg: usedDispatchPkgReducer,
+    packageProductRating: packageProductRatingReducer,
   },
 });
 

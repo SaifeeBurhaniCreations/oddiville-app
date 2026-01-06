@@ -126,7 +126,7 @@ const uiPackages = useMemo(() => {
             iconKey: mapPackageIconKey({
             size: value,
             unit,
-            rawSize: match.weight,
+            // rawSize: match.weight,
           }),
           id: packageId,
         }));

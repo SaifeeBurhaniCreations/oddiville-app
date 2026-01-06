@@ -17,16 +17,10 @@ export const buttonActionMap: Record<
             console.log("error in ship-order", error.message);
         }
     },
-    "verify-material": () => {
-
-    },
     "order-raw-material": () => {
 
     },
     "create-order": () => {
-
-    },
-    "lane-empty": () => {
 
     },
     "package-comes-to-end": () => {

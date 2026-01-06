@@ -38,7 +38,7 @@ import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomS
 // 5. Project constants/utilities
 import { getColor } from "@/src/constants/colors";
 import { PACKET_ITEMS } from "@/src/constants/Packets";
-import { getEmptyStateData, mapPackageIcon } from "@/src/utils/common";
+import { getEmptyStateData, mapPackageIcon, toPackageIconInput } from "@/src/utils/common";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/src/redux/store";
 import { sortBy } from "@/src/utils/numberUtils";
@@ -143,6 +143,7 @@ export type StorageForm = {
   submitProducts?: SubmitProduct[];
   packedChambers?: PackedChamber[];
   rmChamberQuantities: RMChamberQuantityMap;
+  rating: number;
 };
 
 
@@ -239,6 +240,9 @@ const PackageScreen = () => {
   );
   const choosedChambers = useSelector(
     (state: RootState) => state.rawMaterial.selectedChambers
+  );
+  const productRating = useSelector(
+    (state: RootState) => state.packageProductRating.packageProductRating
   );
   const {chamberStock} = useChamberStockByName(selectedRawMaterials);
   const chamberRatingMap = useMemo(() => {
@@ -777,6 +781,7 @@ const handlePackageQuantityChange = useCallback(
         ...formData,
         packedChambers: packedChambersWithId,
         submitProducts,
+        rating: productRating.rating,
       };
 
       setIsLoading(true);
@@ -936,7 +941,18 @@ const chambersByRM: ChambersByRM = useMemo(() => {
       return buckets;
     }, [packedItems])
     
-  
+         const RatingIconMap: Record<
+        number,
+        React.FC<IconRatingProps>
+      > = {
+        5: FiveStarIcon,
+        4: FourStarIcon,
+        3: ThreeStarIcon,
+        2: TwoStarIcon,
+        1: OneStarIcon,
+      };
+
+      const ProductRatingIcon = RatingIconMap[productRating.rating]
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -983,7 +999,19 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                   >
                     Product name
                   </Select>
-
+                            <Select
+                                value={productRating.message}
+                                showOptions={false}
+                                preIcon={ProductRatingIcon ?? FiveStarIcon}
+                                selectStyle={{ paddingHorizontal: 8 }}
+                                onPress={() =>
+                                  validateAndSetData(
+                                    `product:${productRating.rating}`,
+                                    "storage-rm-rating"
+                                  )
+                                }
+                              />
+                              
                   <View style={[styles.rawMaterialColumn, styles.borderBottom]}>
                     {product_items?.length > 0 &&
                       selectedRawMaterials.map((item: string) => {
@@ -1015,17 +1043,6 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                           );
                         });
 
-                        const RatingIconMap: Record<
-                          number,
-                          React.FC<IconRatingProps>
-                        > = {
-                          5: FiveStarIcon,
-                          4: FourStarIcon,
-                          3: ThreeStarIcon,
-                          2: TwoStarIcon,
-                          1: OneStarIcon,
-                        };
-
                         const RatingIcon =
                           RatingIconMap[selectedRating] ?? FiveStarIcon;
                           if (!rmPackagingObj) {
@@ -1053,7 +1070,8 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                                 value={ratingForThisRM.message}
                                 showOptions={false}
                                 preIcon={RatingIcon ?? FiveStarIcon}
-                                style={{ flex: 0.5 }} onPress={() =>
+                                style={{ flex: 0.5 }} 
+                                onPress={() =>
                                   validateAndSetData(
                                     `${item}:${ratingForThisRM.rating}`,
                                     "storage-rm-rating"
@@ -1273,7 +1291,7 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                         />
                       ) : (
                         values.packages.map((pkg, index) => {
-                          const Icon = mapPackageIcon(pkg);
+                          const Icon = mapPackageIcon(toPackageIconInput(pkg));
 
                           const maxPackages = getMaxPackagesFor(pkg);
 

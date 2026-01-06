@@ -1,14 +1,9 @@
 const router = require("express").Router();
 const {
   Production: productionClient,
-  Lanes: lanesClient,
   RawMaterialOrder: rawMaterialOrderClient,
   Chambers: chambersClient,
 } = require("../models");
-
-const {
-  dispatchAndSendNotification,
-} = require("../utils/dispatchAndSendNotification");
 
 const {
   parseExistingImages,
@@ -18,7 +13,6 @@ const {
   buildUpdatedFields,
   updateProductionRecord,
   validateAndFetchProduction,
-  validateAndFetchChambers,
   updateProductionCompletion,
   updateChamberStocks,
   updateRawMaterialStoreDate,

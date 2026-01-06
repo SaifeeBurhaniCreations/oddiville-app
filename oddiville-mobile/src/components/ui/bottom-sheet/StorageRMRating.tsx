@@ -16,6 +16,7 @@ import { closeBottomSheet } from "@/src/redux/slices/bottomsheet.slice";
 import { RootState } from "@/src/redux/store";
 import { setRatingForRM } from "@/src/redux/slices/bottomsheet/storage.slice";
 import { setDispatchRatingForRM } from "@/src/redux/slices/bottomsheet/dispatch-rating.slice";
+import { setPackageProductRating } from "@/src/redux/slices/bottomsheet/package-product-rating.slice";
 
 const StorageRMRatingComponent = ({
   data,
@@ -54,26 +55,35 @@ const ratingToMessageMap: Record<number, string> = {
             style={[styles.card]}
             onPress={() => {
                 const selectedRating = Number(item.rating);
-                
-               dispatch(
-                setRatingForRM({
-                  rawMaterial,
-                  rating: {
+                if(rawMaterial === "product") {
+                dispatch(setPackageProductRating(
+                  {
                     rating: selectedRating,
                     message: ratingToMessageMap[selectedRating],
-                  },
-                })
-              );
-                dispatch(setDispatchRatingForRM({
-                  product_name: rawMaterial,
-                  rating: {
-                    rating: selectedRating,
-                    message: ratingToMessageMap[selectedRating],
-                  },
-                })
-              );
-              dispatch(closeBottomSheet());
-            }}
+                  }
+                ))
+                } else {
+                  dispatch(
+                   setRatingForRM({
+                     rawMaterial,
+                     rating: {
+                       rating: selectedRating,
+                       message: ratingToMessageMap[selectedRating],
+                     },
+                   })
+                 );
+                   dispatch(setDispatchRatingForRM({
+                     product_name: rawMaterial,
+                     rating: {
+                       rating: selectedRating,
+                       message: ratingToMessageMap[selectedRating],
+                     },
+                   })
+                 );
+                }
+                dispatch(closeBottomSheet());
+              }
+            }
             key={item.rating}
           >
             <View
