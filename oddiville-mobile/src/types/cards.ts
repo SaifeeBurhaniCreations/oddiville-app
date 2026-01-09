@@ -121,6 +121,7 @@ export interface ItemCardProps {
   actionLabel?: string;
   disabled?: boolean;
   isProduction?: boolean;
+  isPacking?: boolean;
   isProductionCompleted?: boolean;
   backgroundIcon?: ComponentType<any>;
   isActive?: boolean;
@@ -132,6 +133,7 @@ export interface ItemsFlatListProps {
   refreshing?: boolean;
   onRefresh?: () => void;
   isProduction?: boolean;
+  isPacking?: boolean;
   isProductionCompleted?: boolean;
   onActionPress?: () => void;
 }

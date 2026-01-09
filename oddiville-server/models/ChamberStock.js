@@ -38,7 +38,7 @@ module.exports = (sequelize, Sequelize) => {
                 throw new Error(`${prefix} must be an object.`);
               }
 
-              const allowedKeys = ["size", "type", "count"];
+              const allowedKeys = ["size", "type", "count", "bags"];
               const keys = Object.keys(pkg);
 
               const extra = keys.filter(k => !allowedKeys.includes(k));

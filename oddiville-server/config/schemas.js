@@ -567,73 +567,49 @@ const PRODUCTION_COMPLETED = {
     ],
 };
 
+// const PACKING_SUMMARY = {
+//     sections: [
+//         {
+//             type: 'header',
+//             data: { label: 'Packing Summary', title: "", value: "", icon: 'calendar', color: "red", description: "" },
+//         },
+//       {
+//         type: "packing-summary", 
+//         data: {
+//           title: "Packing detail",
+//           sizes: [
+//           {
+//             id : "", size: "", packets: 0, rating: 5,
+//             // id : "", size: "", bags: 0, packets: 0, rating: 5,
+//           }
+//         ]
+//         }
+//       }
+//     ],
+// };
+
 const PACKING_SUMMARY = {
-    sections: [
-        {
-            type: 'header',
-            data: { label: 'Packing Summary', title: "", value: "", icon: 'calendar', color: "green" },
-        },
-        {
-            type: 'data',
-            data: [
-                {
-                    title: "Production detail",
-                    details: [
-                        {
-                            row_1: [
-                                {
-                                    label: "",
-                                    value: "",
-                                    icon: "user",
-                                },
-                            ]
-                        },
-                        {
-                            row_2: [
-                                {
-                                    label: "",
-                                    value: "",
-                                    icon: "color-swatch",
-                                },
-                                {
-                                    label: "",
-                                    value: "",
-                                    icon: "trash",
-                                }
-                            ]
-                        },
-                        {
-                            row_3: [
-                                {
-                                    label: "",
-                                    value: "",
-                                    icon: "lane",
-                                },
-                                {
-                                    label: "",
-                                    value: "",
-                                    icon: "box",
-                                },
-                            ]
-                        },
-                        {
-                            row_4: [
-                               {
-                                    label: "",
-                                    value: "",
-                                    icon: "calendar-year",
-                                }
-                            ]
-                        },
-                    ],
-                },
-            ],
-        },
-        {
-            type: 'image-gallery',
-            data: [],
-        },
-    ],
+  sections: [
+    {
+      type: "header",
+      data: {
+        label: "Packing Summary",
+        title: "",
+        value: "",
+        icon: "calendar",
+        color: "red",
+        description: "",
+      },
+    },
+    {
+      type: "packing-summary",
+      data: {
+        title: "Packing detail",
+        rating: 5,
+        sizes: [],
+      },
+    },
+  ],
 };
 
 const LANE_OCCUPIED = {

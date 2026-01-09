@@ -29,13 +29,15 @@
 // module.exports = redisClient;
 
 const Redis = require('ioredis');
+const dotenv = require("dotenv");
+
+dotenv.config();
 
 const redis = new Redis({
   port: 13483,
   host: 'redis-13483.c232.us-east-1-2.ec2.cloud.redislabs.com',
   username: 'default',
-  password: '4N0U0wz8DRPFcXxAepAzgoioib9RzUsL',
-  // optional tuning:
+  password: process.env.REDIS_PASSWORD,
   retryStrategy(times) {
     if (times > 5) return null;
     return Math.min(times * 100, 2000);

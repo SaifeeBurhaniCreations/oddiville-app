@@ -3,7 +3,7 @@ const { formatWeight, formatPrice } = require("../utils/bottomsheetUtils");
 const { format } = require("date-fns/format");
 const { parseISO } = require("date-fns/parseISO");
 const { formatAmount } = require("../utils/common");
-
+const uuidv4 = require("../sbc/utils/uuid/uuid");
 const customTimeFormatter = (rawDate) => {
   if (!rawDate) return "N/A"; 
   const parsedDate =
@@ -179,7 +179,8 @@ const getFillerSchema = ({
   Contractors = [],
   VendorById = {},
   CalendarEvent = {},
-  authenticatedUser = {},
+  authenticatedUser = {}, 
+   chamberStockByIdCategory = {},
 }) => {
   
   const listSections = ["Recent", "Countries"];
@@ -737,11 +738,18 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
           value: CalendarEvent.start_time,
         },
         {
-          label: "StaEndrt Time",
+          label: "End Time",
           value: CalendarEvent.end_time,
         },
       ],
     },
+ "packing-summary": {
+  product_name: chamberStockByIdCategory?.product_name ?? "",
+  createdAt: chamberStockByIdCategory?.createdAt ?? "",
+  rating: Number(chamberStockByIdCategory?.size?.rating ?? 5),
+  sizes: chamberStockByIdCategory?.size ?? [],
+  rawMaterials: chamberStockByIdCategory?.rawMaterials ?? [],
+},
   };
 };
 

@@ -79,7 +79,7 @@ import Input from "@/src/components/ui/Inputs/Input";
 import TrashIcon from "@/src/components/icons/common/TrashIcon";
 import FormField from "@/src/sbc/form/FormField";
 import ChamberIcon from "@/src/components/icons/common/ChamberIcon";
-import { useCreatePackedItem, usePackedItemsFromChamberStock } from "@/src/hooks/packedItem";
+import { useCreatePackedItem, usePackedItemsFromChamberStock, usePackingSummaryToday } from "@/src/hooks/packedItem";
 import {
   resetPackageSizes,
   setPackageSizes,
@@ -94,6 +94,7 @@ import { clearRatings } from "@/src/redux/slices/bottomsheet/storage.slice";
 import { convertToKg, getMaxPackagesFor } from "@/src/utils/weightutils";
 import RefreshableContent from "@/src/components/ui/RefreshableContent";
 import ItemsFlatList from "@/src/components/ui/ItemsFlatList";
+import SearchWithFilter from "@/src/components/ui/Inputs/SearchWithFilter";
 
 interface Chamber {
   id: string | number;
@@ -274,6 +275,8 @@ const PackageScreen = () => {
     refetch: refetchSummary,
     isFetching: isSummaryFetching,
   } = useChambersSummary(choosedChambers);
+
+const { data: packingSummaryToday, isLoading: packingSummaryTodayLoading } = usePackingSummaryToday();
 
   const [isLoading, setIsLoading] = useState(false);
   const [openTab, setOpenTab] = useState<number>(0);
@@ -922,25 +925,42 @@ const chambersByRM: ChambersByRM = useMemo(() => {
 
   const allGood = rmMatchStatus === "equal" && packageMatchStatus === "equal";
 
-   const { packagesSummary } = useMemo(() => {
-      const buckets = {
-        packagesSummary: [] as ItemCardProps[],
-      };
-      for(const packedItem of packedItems) {
-        const formatted: ItemCardProps = {
-          id: packedItem.id,
-          name: packedItem.product_name,
-          weight: `${packedItem.category} ${
-            packedItem.unit || "kg"
-          }`,
-          rating: packedItem.category,
-          isActive: true,
+      const { packingSummary } = useMemo(() => {
+        const buckets = {
+          packingSummary: [] as ItemCardProps[],
         };
-        buckets.packagesSummary.push(formatted);
-      }
-      return buckets;
-    }, [packedItems])
-    
+
+        if (!Array.isArray(packingSummaryToday)) {
+          return buckets;
+        }
+
+        const query = searchText.trim().toLowerCase();
+
+        for (const packedEvent of packingSummaryToday) {
+          if (!packedEvent.size) continue;
+
+          const productName = packedEvent.product_name?.toLowerCase() ?? "";
+          const sizeLabel = packedEvent.size.size?.toLowerCase() ?? "";
+
+          if (
+            query &&
+            !productName.includes(query) &&
+            !sizeLabel.includes(query)
+          ) {
+            continue;
+          }
+
+          buckets.packingSummary.push({
+            id: packedEvent.eventId,
+            name: packedEvent.product_name,
+            weight: `${packedEvent.size.size} | ${packedEvent.size.packets} packets`,
+            rating: String(packedEvent.size.rating),
+          });
+        }
+
+        return buckets;
+      }, [packingSummaryToday, searchText]);
+
          const RatingIconMap: Record<
         number,
         React.FC<IconRatingProps>
@@ -1380,7 +1400,13 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                 </Button>
               </View>
               <View style={styles.searchinputWrapper}>
-                <SearchInput
+                      <SearchWithFilter
+                        value={searchText}
+                        onChangeText={(text: string) => setSearchText(text)}
+                        placeholder={"Search by product name"}
+                        onFilterPress={() => {}}
+                      />
+                {/* <SearchInput
                   border
                   value={searchText}
                   cross={true}
@@ -1388,7 +1414,7 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                   onClear={() => setSearchText("")}
                   returnKeyType="search"
                   placeholder={"Search by product name"}
-                />
+                /> */}
               </View>
               <FlatList
                 style={{ flex: 1, paddingHorizontal: 16 }}
@@ -1428,7 +1454,13 @@ const chambersByRM: ChambersByRM = useMemo(() => {
             </View>
             <View style={styles.flexGrow}>
                  <View style={styles.searchinputWrapper}>
-                <SearchInput
+                <SearchWithFilter
+                        value={searchText}
+                        onChangeText={(text: string) => setSearchText(text)}
+                        placeholder={"Search by product name"}
+                        onFilterPress={() => {}}
+                      />
+                {/* <SearchInput
                   border
                   value={searchText}
                   cross={true}
@@ -1436,10 +1468,10 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                   onClear={() => setSearchText("")}
                   returnKeyType="search"
                   placeholder={"Search by product name"}
-                />
+                /> */}
               </View>
                       <RefreshableContent
-                        isEmpty={packagesSummary.length === 0}
+                        isEmpty={packingSummary.length === 0}
                         refreshing={isFetching}
                         onRefresh={refetch}
                         emptyComponent={
@@ -1455,10 +1487,11 @@ const chambersByRM: ChambersByRM = useMemo(() => {
                           </View>
                         }
                         listComponent={
-                          <ItemsFlatList
-                            isProductionCompleted
-                            items={packagesSummary}
-                          />
+                        <ItemsFlatList
+                        isPacking
+                        items={packingSummary}
+                      />
+
                         }
                       />
                     </View>

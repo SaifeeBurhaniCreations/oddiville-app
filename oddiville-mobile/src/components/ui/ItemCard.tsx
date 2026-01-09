@@ -26,6 +26,7 @@ const ItemCard = ({
   isActive,
   style,
   lane,
+  isPacking,
 }: ItemCardProps) => {
   const { goTo } = useAppNavigation();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
@@ -34,6 +35,8 @@ const ItemCard = ({
       goTo("production-complete", { id });
     } else if (isProductionCompleted) {
         validateAndSetData(id ?? "", "production-completed")
+    } else if (isPacking) {
+      validateAndSetData(id ?? "", "packing-summary")
     } else {
       goTo("production-start", { rmId: id });
     }
@@ -67,7 +70,16 @@ const ItemCard = ({
         <View style={styles.details}>
           <H3>{name}</H3>
 
-          {isActive ? (
+          {isPacking ? (
+            <View style={styles.detailsContainer}>
+              {weight && (
+                <View style={styles.ratingContainer}>
+                  <DatabaseIcon color={getColor("green", 700)} size={12} />
+                  <C1 color={getColor("green", 700)}>{weight} | {rating}</C1>
+                </View>
+              )}
+            </View>
+          ) : isActive ? (
             <View style={styles.detailsContainer}>
               {weight && (
                 <View style={styles.ratingContainer}>

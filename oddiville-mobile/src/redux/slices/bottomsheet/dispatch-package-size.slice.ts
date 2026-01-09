@@ -9,7 +9,7 @@ export type DispatchPackageSize = {
   size: number;
   rawSize: string;
   count: number;
-  unit: "kg" | "gm" | "qn" | null;
+  unit: "kg" | "gm" | "qn";
 };
 
 type DispatchPackageSizeState = {

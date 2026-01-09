@@ -35,6 +35,42 @@ require("./models/Admin");
 
 dotenv.config();
 
+async function printAllRedisData() {
+  let cursor = "0";
+
+  do {
+    const [nextCursor, keys] = await redis.scan(cursor, "MATCH", "*", "COUNT", 100);
+    cursor = nextCursor;
+
+    for (const key of keys) {
+      const type = await redis.type(key);
+
+      let value;
+      switch (type) {
+        case "string":
+          value = await redis.get(key);
+          break;
+        case "hash":
+          value = await redis.hgetall(key);
+          break;
+        case "list":
+          value = await redis.lrange(key, 0, -1);
+          break;
+        case "set":
+          value = await redis.smembers(key);
+          break;
+        case "zset":
+          value = await redis.zrange(key, 0, -1, "WITHSCORES");
+          break;
+        default:
+          value = "<unknown type>";
+      }
+
+      console.log({ key, type, value });
+    }
+  } while (cursor !== "0");
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -129,6 +165,8 @@ const PORT = process.env.PORT || 8022;
   await redisClient.set('health-check', 'ok'); 
   const value = await redisClient.get('health-check');
   console.log("Redis health-check value:", value);
+
+// await printAllRedisData();
  }
 
   app.set("redis", redisClient);

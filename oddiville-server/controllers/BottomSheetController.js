@@ -11,10 +11,13 @@ const {
   Contractor: ContractorClient,
   Calendar: CalendarClient,
   Admin: adminClient,
+  ChamberStock: ChamberStockClient,
 } = require("../models");
 const { getBottomSheet } = require("../utils/getBottomSheet");
 const { isValidUUID } = require("../utils/auth");
 const jwt = require("jsonwebtoken");
+
+const safeRedis = require("../utils/safeRedis");
 
 let Country = require('country-state-city').Country;
 let State = require('country-state-city').State;
@@ -22,6 +25,8 @@ let City = require('country-state-city').City;
 
 router.get("/:type/:id", async (req, res) => {
     const { type, id } = req.params;
+    
+    const redis = req.app.get("redis");
     
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -49,6 +54,7 @@ router.get("/:type/:id", async (req, res) => {
     let VendorById = {};
     let Contractors = [];
     let CalendarEvent = {};
+    let chamberStockByIdCategory = {};
     
     try {
         
@@ -65,8 +71,14 @@ router.get("/:type/:id", async (req, res) => {
             Vendors = await VendorClient.findAll();
         }
 
-        if (type === "chamber-list" || type === "multiple-chamber-list" || "order-ready" || "order-shipped" || "order-reached") {
-            Chambers = await ChamberClient.findAll();
+        if (
+          type === "chamber-list" ||
+          type === "multiple-chamber-list" ||
+          type === "order-ready" ||
+          type === "order-shipped" ||
+          type === "order-reached"
+        ) {
+          Chambers = await ChamberClient.findAll();
         }
 
         if (type === "country") {
@@ -154,6 +166,32 @@ router.get("/:type/:id", async (req, res) => {
                 Contractors.push(...contractors.map(c => c.dataValues));
             }
         }
+
+        if (type === "packing-summary") {
+            const today = new Date().toISOString().slice(0, 10);
+            const redisKey = `bottomsheet:packing-summary:${today}`;
+            const cache = await safeRedis(redis, r => r.get(redisKey));
+            if (!cache) {
+              return res.status(404).json({ error: "Expired or not found" });
+            }
+            
+            let list;
+            try {
+              list = JSON.parse(cache);
+            } catch {
+              return res.status(500).json({ error: "Corrupted cache data" });
+            }
+
+            const event = list.find(e => e.eventId === id);
+            if (!event) {
+              return res.status(404).json({ error: "Packing event not found" });
+            }
+            const rawMaterials = await PackageClient.findOne({where: {product_name: event.product_name}});
+
+            chamberStockByIdCategory = {...event, rawMaterials: rawMaterials?.dataValues.raw_materials};
+          }
+
+
     } catch (error) {
         console.error("Error during fetch:", error.message || error);
         return res.status(500).json({ error: "Internal server error, please try again later." });
@@ -176,6 +214,7 @@ router.get("/:type/:id", async (req, res) => {
       cities,
       CalendarEvent,
       authenticatedUser,
+      chamberStockByIdCategory,
     });
 // console.log('bottomSheet', JSON.stringify(bottomSheet, null, 2));
 

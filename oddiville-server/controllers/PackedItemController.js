@@ -9,6 +9,8 @@ const {
 } = require("../models");
 require("dotenv").config();
 const { getTareWeight } = require("../constants/tareWeight");
+const uuidv4 = require("../sbc/utils/uuid/uuid");
+const safeRedis = require("../utils/safeRedis");
 
 /* ------------------------------------------------------------------ */
 /* HELPERS                                                            */
@@ -26,13 +28,22 @@ const mergeBy = (list, predicate, onFound, onNew) => {
 
 const normalizeUnit = (u) => (u || "gm").toLowerCase();
 const packetsToKg = ({ count, tare }) => (count * tare) / 1000;
+
+function secondsUntilMidnight() {
+  const now = new Date();
+  const midnight = new Date();
+  midnight.setHours(24, 0, 0, 0);
+  return Math.floor((midnight - now) / 1000);
+}
+
 /* ------------------------------------------------------------------ */
 /* POST /packed                                                       */
 /* ------------------------------------------------------------------ */
 
 router.post("/", async (req, res) => {
   const t = await sequelize.transaction();
-const DEBUG_ROLLBACK = false;
+  const DEBUG_ROLLBACK = false;
+  const redis = req.app.get("redis");
 
   try {
     const {
@@ -150,7 +161,8 @@ const DEBUG_ROLLBACK = false;
         mergedChambers = mergeBy(
           mergedChambers,
           (c) => c.id === inc.id,
-          (c) => (c.quantity = String(Number(c.quantity) + Number(inc.quantity))),
+          (c) =>
+            (c.quantity = String(Number(c.quantity) + Number(inc.quantity))),
           () => inc
         );
       }
@@ -204,9 +216,7 @@ const DEBUG_ROLLBACK = false;
       if (!rawStock) continue;
 
       rawStock.chamber = rawStock.chamber.map((c) => {
-        const used = raw.chambers?.find(
-          (u) => String(u.id) === String(c.id)
-        );
+        const used = raw.chambers?.find((u) => String(u.id) === String(c.id));
         if (!used) return c;
         return {
           ...c,
@@ -267,52 +277,82 @@ const DEBUG_ROLLBACK = false;
     // console.log("BEFORE pkgRow.types:", JSON.stringify(pkgRow?.types, null, 2));
 
     if (pkgRow?.types) {
-       pkgRow.types = pkgRow.types.map((tp) => {
-    const used = preparedPackages.find(
-      (p) => String(p.size) === String(tp.size)
-    );
-    if (!used) return tp;
+      pkgRow.types = pkgRow.types.map((tp) => {
+        const used = preparedPackages.find(
+          (p) => String(p.size) === String(tp.size)
+        );
+        if (!used) return tp;
 
-    const tare = getTareWeight({
-      type: normalizedType,
-      size: tp.size,
-      unit: tp.unit,
-    });
+        const tare = getTareWeight({
+          type: normalizedType,
+          size: tp.size,
+          unit: tp.unit,
+        });
 
-    const usedKg = packetsToKg({
-      count: used.quantity,
-      tare,
-    });
+        const usedKg = packetsToKg({
+          count: used.quantity,
+          tare,
+        });
 
-    const availableKg = Number(tp.quantity);
+        const availableKg = Number(tp.quantity);
 
-    if (availableKg < usedKg) {
-      throw new Error(
-        `Insufficient package stock for ${tp.size}${tp.unit}`
-      );
-    }
+        if (availableKg < usedKg) {
+          throw new Error(
+            `Insufficient package stock for ${tp.size}${tp.unit}`
+          );
+        }
 
-    const remainingKg = Math.max(0, availableKg - usedKg);
+        const remainingKg = Math.max(0, availableKg - usedKg);
 
-    return {
-      ...tp,
-      quantity: remainingKg.toFixed(3), 
-    };
-  });
+        return {
+          ...tp,
+          quantity: remainingKg.toFixed(3),
+        };
+      });
 
       // console.log("AFTER pkgRow.types:", JSON.stringify(pkgRow.types, null, 2));
 
       await pkgRow.save({ transaction: t });
     }
-          
-      if (DEBUG_ROLLBACK) {
-        console.warn("⚠️ DEBUG MODE: rolling back transaction intentionally");
-        await t.rollback();
-        return res.status(409).json({
-          debug: true,
-          message: "Debug rollback – no data persisted",
-        });
-      }
+
+    if (DEBUG_ROLLBACK) {
+      console.warn("⚠️ DEBUG MODE: rolling back transaction intentionally");
+      await t.rollback();
+      return res.status(409).json({
+        debug: true,
+        message: "Debug rollback – no data persisted",
+      });
+    }
+      const redisKey = `bottomsheet:packing-summary:${new Date()
+      .toISOString()
+      .slice(0, 10)}`;
+
+      await safeRedis(redis, async (r) => {
+        const existing = await r.get(redisKey);
+        const list = existing ? JSON.parse(existing) : [];
+
+        for (const pkg of incomingPackaging) {
+          list.push({
+            eventId: uuidv4(),
+            stockId: stock.id,
+            product_name: stock.product_name,
+            createdAt: new Date().toISOString(),
+            size: {
+              size: `${pkg.size.value} ${pkg.size.unit}`,
+              packets: Number(pkg.count),
+              rating: Number(rating),
+            },
+            rawMaterials: rawProducts.map(r => r.product_name),
+          });
+        }
+
+        await r.set(
+          redisKey,
+          JSON.stringify(list),
+          "EX",
+          secondsUntilMidnight()
+        );
+      });
 
     await t.commit();
     return res.status(201).json(stock);
@@ -323,7 +363,7 @@ const DEBUG_ROLLBACK = false;
   }
 });
 
-router.get("/", async (req, res) => { 
+router.get("/", async (req, res) => {
   try {
     const packedItemChamberStock = await ChamberStockClient.findAll({
       where: { category: "packed" },
@@ -351,6 +391,32 @@ router.get("/", async (req, res) => {
     return res.status(200).json(cleaned);
   } catch (error) {
     console.error("Error during fetching packed items:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/packing-summary/today", async (req, res) => {
+  const redis = req.app.get("redis");
+
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const redisKey = `bottomsheet:packing-summary:${today}`;
+
+    const raw = await safeRedis(redis, r => r.get(redisKey));
+    if (!raw) {
+      return res.status(200).json([]);
+    }
+
+    let list;
+    try {
+      list = JSON.parse(raw);
+    } catch {
+      return res.status(500).json({ error: "Corrupted cache data" });
+    }
+
+    return res.status(200).json(list);
+  } catch (error) {
+    console.error("Error during fetching packing summary:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

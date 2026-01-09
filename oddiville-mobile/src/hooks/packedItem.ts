@@ -7,9 +7,11 @@ import {
 import { StorageForm } from "@/app/(tabs)/package";
 import { PackageItem, useChamberStock } from "./useChamberStock";
 import { useMemo } from "react";
+import { getPackedItemsToday } from "@/src/services/productItem.service";
 
 const CHAMBER_STOCK_KEY = ["chamber-stock"];
 const DRY_CHAMBER_QUERY_KEY: QueryKey = ["dry", "chamber", "summary"];
+const PACKING_TODAY_QUERY_KEY: QueryKey = ["packing-summary", "today"];
 
 export type PackedItem = {
   id: string;
@@ -22,6 +24,20 @@ export type PackedItem = {
   packages?: PackageItem[];
   __optimistic?: boolean;
 };
+
+export type PackingSummaryEvent = {
+  eventId: string;
+  stockId: string;
+  product_name: string;
+  createdAt: string;
+  size: {
+    size: string;
+    packets: number;
+    rating: number;
+  };
+  rawMaterials: string[];
+};
+
 
 export const useCreatePackedItem = () => {
   const queryClient = useQueryClient();
@@ -83,6 +99,7 @@ export const useCreatePackedItem = () => {
     onSettled() {
       queryClient.invalidateQueries({ queryKey: CHAMBER_STOCK_KEY });
       queryClient.invalidateQueries({ queryKey: DRY_CHAMBER_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: PACKING_TODAY_QUERY_KEY });
     },
   });
 };
@@ -125,3 +142,16 @@ export function usePackedItemsFromChamberStock() {
     refetch,
   };
 }
+
+export const usePackingSummaryToday = () => {
+  return useQuery<PackingSummaryEvent[]>({
+    queryKey: PACKING_TODAY_QUERY_KEY,
+    queryFn: async () => {
+      const res = await getPackedItemsToday();
+      return Array.isArray(res?.data) ? res.data : [];
+    },
+    staleTime: 1000 * 60 * 10,        
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+};

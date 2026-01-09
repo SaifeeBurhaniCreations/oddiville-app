@@ -20,6 +20,7 @@ const {
   fillOrderReachedSchema,
   fillCalendarEventSchema,
   fillScheduledDateEventSchema,
+  fillPackingSummarySchema,
 } = require("../utils/fillers");
 const { schemaMap } = require('../constants/constants');
 
@@ -40,6 +41,7 @@ function getBottomSheet({
   VendorById,
   CalendarEvent,
   authenticatedUser,
+  chamberStockByIdCategory,
 }) {
   const fillerSchema = getFillerSchema({
     RawMaterials,
@@ -57,6 +59,7 @@ function getBottomSheet({
     VendorById,
     CalendarEvent,
     authenticatedUser,
+    chamberStockByIdCategory,
   });
 
   if (type === "order-ready") {
@@ -101,8 +104,10 @@ function getBottomSheet({
     return fillProductionCompletedSchema(schemaMap[type], fillerSchema[type]);
   } else if (type === "calendar-event-scheduled") {
     return fillCalendarEventSchema(schemaMap[type], fillerSchema[type]);
-  }else if (type === "calendar-event-reminder") {
+  } else if (type === "calendar-event-reminder") {
     return fillScheduledDateEventSchema(schemaMap[type], fillerSchema[type]);
+  } else if (type === "packing-summary") {
+    return fillPackingSummarySchema(schemaMap[type], fillerSchema[type]);
   } else {
     return [{ error: "Invalid type" }];
   }

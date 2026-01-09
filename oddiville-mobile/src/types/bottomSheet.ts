@@ -42,6 +42,7 @@ import PoliciesCardComponent from "../components/ui/bottom-sheet/PoliciesCompone
 import FileUploadComponent from "../components/ui/bottom-sheet/FileUploadComponent";
 import ChooseProductCardComponent from "../components/ui/bottom-sheet/ChooseProductCardComponent";
 import { PackageItem } from "../hooks/useChamberStock";
+import PackageSummarySizesComponent from "../components/ui/bottom-sheet/PackageSummarySizesComponent";
 
 export type BottomSheetActionKey =
   | "add-raw-material"
@@ -61,7 +62,7 @@ export type BottomSheetActionKey =
   | "choose-chamber"
   | "select-policies"
   | "cancel-policies"
-  | "add-dispatch-product"
+  | "add-dispatch-product";
 
 // ButtonConfig interface
 export interface ButtonConfig {
@@ -82,7 +83,11 @@ export interface BottomSheetProps {
 export type validRouteOptionList = "state" | "city" | "product" | "chamber";
 
 type aligmentEnum = "full" | "half";
-type keyEnum = "add-raw-material" | "package-weight" | "supervisor-production" | "select-package-type";
+type keyEnum =
+  | "add-raw-material"
+  | "package-weight"
+  | "supervisor-production"
+  | "select-package-type";
 type sourceEnum =
   | "add-product-package"
   | "add-package"
@@ -288,14 +293,14 @@ export type SectionConfig =
       type: "package-size-choose-list";
       data: {
         list: {
-        name: string;
-        count: number;
-        icon: DataAccordianEnum;
-        isChecked: boolean;
-      }[];
-      source: "package" | "dispatch";
-       productId?: string;
-      }
+          name: string;
+          count: number;
+          icon: DataAccordianEnum;
+          isChecked: boolean;
+        }[];
+        source: "package" | "dispatch";
+        productId?: string;
+      };
     }
   | {
       type: "title-with-details-cross";
@@ -467,9 +472,22 @@ export type SectionConfig =
         key: string;
         uploadedTitle?: string;
       };
-    } | {
+    }
+  | {
       type: "multiple-product-card";
       data: multipleProductCardDataProps[];
+    }
+  | {
+      type: "packing-summary";
+      data: {
+    title: string;
+    rating: number;
+    sizes: {
+      id: string;
+      size: string;
+      packets: number;
+    }[];
+  };
     };
 
 export interface BottomSheetConfig {
@@ -493,7 +511,7 @@ export interface HeaderComponentProps {
     }[];
   };
   onClose?: () => void;
-    color?: "red" | "green" | "blue" | "yellow";
+  color?: "red" | "green" | "blue" | "yellow";
 }
 
 export interface FullWidthImageComponentProps {
@@ -688,14 +706,14 @@ export interface SearchProps {
 export interface PackageSizeChooseComponentProps {
   data: {
     list: {
-    name: string;
-    count: number;
-    icon: DataAccordianEnum;
-    isChecked: boolean;
-  }[];
-  source: "package" | "dispatch";
-   productId?: string;
-  }
+      name: string;
+      count: number;
+      icon: DataAccordianEnum;
+      isChecked: boolean;
+    }[];
+    source: "package" | "dispatch";
+    productId?: string;
+  };
   color: "red" | "green" | "blue" | "yellow";
 }
 
@@ -907,6 +925,31 @@ export interface AddonInputComponentProps {
   };
 }
 
+// export interface PackageSummarySizeProps {
+//   data: {
+//         title: string,
+//         sizes: {
+//           id: string,
+//         size: string;
+//         // bags: number;
+//         packets: number;
+//         rating: number;
+//       }[]
+//       };
+// }
+
+export interface PackageSummarySizeProps {
+  data: {
+    title: string;
+    rating: number;
+    sizes: {
+      id: string;
+      size: string;
+      packets: number;
+    }[];
+  };
+}
+
 export interface ImagePreviewComponentProps {
   data: {
     imageUri: string;
@@ -923,22 +966,23 @@ export interface MultiplePackageSizeComponentProps {
     isChecked: boolean;
   }[];
 }
-export type ChamberProduct = { 
-   id: string;
-   quantity: string;
-    rating: number
-   }
+export type ChamberProduct = {
+  id: string;
+  quantity: string;
+  rating: number;
+};
+
 export interface multipleProductCardDataProps {
-    id: string;
-    rating: string
-    product_name: string;
-    description?: string;
-    image: string;
-    isChecked: boolean;
-    // added extra
-    packages: PackageItem[];
-    chambers: ChamberProduct[];
-  }
+  id: string;
+  rating: string;
+  product_name: string;
+  description?: string;
+  image: string;
+  isChecked: boolean;
+  // added extra
+  packages: PackageItem[];
+  chambers: ChamberProduct[];
+}
 export interface multipleProductCardProps {
   data: multipleProductCardDataProps[];
 }
@@ -999,4 +1043,5 @@ export const sectionComponents: Record<
   "storage-rm-rating": StorageRMRatingComponent,
   "policies-card": PoliciesCardComponent,
   "file-upload": FileUploadComponent,
+  "packing-summary": PackageSummarySizesComponent,
 };

@@ -1,6 +1,6 @@
 import peasPacketImg from "@/src/assets/images/packaging/packaging-1.png"
 import peasPacketBundleImg from "@/src/assets/images/packaging/packaging-1-bundle.png"
-import { mapPackageIcon } from "../utils/common"
+import { mapPackageIcon, toPackageIconInput } from "../utils/common"
 import { kConverter } from "../utils/common"
 import { PackageItem, PackageItemProp, RootStackParamList } from "../types"
 
@@ -10,7 +10,7 @@ interface FormatParamsOptions {
 
 export const formatPackageParams = ({ types = [] }: FormatParamsOptions) => {
     return types?.map((item) => {
-        const iconComp = mapPackageIcon(item);
+        const iconComp = mapPackageIcon(toPackageIconInput(item));
         const parseSize = String(item.size)
         let weight = "";
 

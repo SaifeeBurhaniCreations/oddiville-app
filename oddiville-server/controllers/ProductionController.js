@@ -4,6 +4,7 @@ const {
   RawMaterialOrder: rawMaterialOrderClient,
   Chambers: chambersClient,
 } = require("../models");
+const safeRedis = require("../utils/safeRedis");
 
 const {
   parseExistingImages,
@@ -108,7 +109,10 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
 
     let sampleImage = null;
     if (req.file) {
-      const uploaded = await uploadToS3({file: req.file, folder: "production"});
+      const uploaded = await uploadToS3({
+        file: req.file,
+        folder: "production",
+      });
       if (!uploaded?.url || !uploaded?.key) {
         return res
           .status(500)
@@ -133,7 +137,10 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
       supervisor,
     });
 
-    await redis.set(`production:save:${newProduction.id}`, true);
+    await safeRedis(redis, (r) =>
+      r.set(`production:save:${newProduction.id}`, "1")
+    );
+
     const isStarted = true;
 
     const productionDetails = {
@@ -191,12 +198,14 @@ router.get("/:id", async (req, res) => {
     if (!production) {
       return res.status(404).json({ error: "Production not found" });
     }
-    const raw = await redis.get(`production:save:${id}`);
-    const isStarted = raw === "true";
+    const raw = await safeRedis(redis, (r) => r.get(`production:save:${id}`));
 
-    return res
-      .status(200)
-      .json({ ...production, isStarted: isStarted ?? false });
+    const isStarted = raw === "1";
+
+    return res.status(200).json({
+      ...production.dataValues,
+      isStarted,
+    });
   } catch (error) {
     console.error("Error during fetching Production:", error?.message || error);
     return res
@@ -263,13 +272,11 @@ router.patch("/:id", upload.array("sample_images"), async (req, res) => {
       return res.status(404).json({ error: "Production not found" });
     }
 
-    await redis.set(`production:save:${id}`, true);
-    const raw = await redis.get(`production:save:${id}`);
-    const isStarted = raw === "true";
+    await safeRedis(redis, (r) => r.set(`production:save:${id}`, "1"));
 
     return res.status(200).json({
       ...updatedProduction.dataValues,
-      isStarted: isStarted ?? false,
+      isStarted: true,
     });
   } catch (error) {
     // ✅ SAFE CLEANUP
@@ -352,7 +359,10 @@ router.patch("/start/:id", upload.single("sample_image"), async (req, res) => {
 
     if (req.file) {
       try {
-        const uploaded = await uploadToS3({file: req.file, folder: "production"});
+        const uploaded = await uploadToS3({
+          file: req.file,
+          folder: "production",
+        });
         if (!uploaded?.url || !uploaded?.key) {
           return res
             .status(500)
@@ -405,7 +415,9 @@ router.patch("/start/:id", upload.single("sample_image"), async (req, res) => {
       }
     }
 
-    await redis.set(`production:save:${id}`, true);
+    await safeRedis(redis, r =>
+      r.set(`production:save:${id}`, "1")
+    );
 
     return res.status(200).json(updatedRows[0].dataValues);
   } catch (err) {
@@ -551,7 +563,7 @@ router.patch("/complete/:id", async (req, res) => {
     }
 
     try {
-      await redis.del(`production:save:${productionId}`);
+      await safeRedis(redis, (r) => r.del(`production:save:${productionId}`));
     } catch (rerr) {
       console.warn("Redis cleanup failed:", rerr);
     }
