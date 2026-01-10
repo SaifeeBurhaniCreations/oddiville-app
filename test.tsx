@@ -1,4 +1,5 @@
 // 1. React and React Native core
+    // @ts-ignore
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
@@ -7,55 +8,89 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
+    // @ts-ignore
 } from "react-native";
 
 // 2. Third-party dependencies
 import {
   clearChambers,
   setSource,
+    // @ts-ignore
 } from "@/src/redux/slices/bottomsheet/raw-material.slice";
 import {
   clearProduct,
   setRawMaterials,
+    // @ts-ignore
 } from "@/src/redux/slices/product.slice";
 
 // 3. Project components
+    // @ts-ignore
 import PageHeader from "@/src/components/ui/PageHeader";
+    // @ts-ignore
 import SearchInput from "@/src/components/ui/SearchInput";
+    // @ts-ignore
 import PackageCard from "@/src/components/ui/PackageCard";
+    // @ts-ignore
 import Loader from "@/src/components/ui/Loader";
+    // @ts-ignore
 import Button from "@/src/components/ui/Buttons/Button";
+    // @ts-ignore
 import BottomSheet from "@/src/components/ui/BottomSheet";
+    // @ts-ignore
 import EmptyState from "@/src/components/ui/EmptyState";
+    // @ts-ignore
 import Tabs from "@/src/components/ui/Tabs";
+    // @ts-ignore
 import { B1, B4, H3, H6 } from "@/src/components/typography/Typography";
+    // @ts-ignore
 
 // 4. Project hooks
 import { usePackages } from "@/src/hooks/Packages";
+    // @ts-ignore
 import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
 
 // 5. Project constants/utilities
+    // @ts-ignore
 import { getColor } from "@/src/constants/colors";
+    // @ts-ignore
 import { PACKET_ITEMS } from "@/src/constants/Packets";
-import { getEmptyStateData, mapPackageIcon, toPackageIconInput } from "@/src/utils/common";
+    // @ts-ignore
+import {
+  getEmptyStateData,
+  mapPackageIcon,
+  toPackageIconInput,
+    // @ts-ignore
+} from "@/src/utils/common";
+    // @ts-ignore
 import { useDispatch, useSelector } from "react-redux";
+    // @ts-ignore
 import { RootState } from "@/src/redux/store";
+    // @ts-ignore
 import { sortBy } from "@/src/utils/numberUtils";
+    // @ts-ignore
 import { FlatList } from "react-native";
 import {
   Chamber as DryChambersTypes,
   useChambersSummary,
   useDryChambers,
   useFrozenChambers,
+    // @ts-ignore
 } from "@/src/hooks/useChambers";
+    // @ts-ignore
 import { useGlobalFormValidator } from "@/src/sbc/form/globalFormInstance";
+    // @ts-ignore
 import { AddProductPackageForm } from "@/src/components/ui/bottom-sheet/InputWithSelectComponent";
+    // @ts-ignore
 import Select from "@/src/components/ui/Select";
+    // @ts-ignore
 import ItemsRepeater from "@/src/components/ui/ItemsRepeater";
+    // @ts-ignore
 import {
   useProductItems,
   useProductPackage,
   useRawMaterialByProduct,
+    // @ts-ignore
 } from "@/src/hooks/productItems";
 
 // 6. Types
@@ -65,25 +100,69 @@ import {
 // No items of this type
 
 // 8. Assets
+    // @ts-ignore
 import noPackageImage from "@/src/assets/images/illustrations/no-packaging.png";
+    // @ts-ignore
 import { useFormValidator } from "@/src/sbc/form";
-import { IconRatingProps, PackageItem } from "@/src/types";
+    // @ts-ignore
+import { IconRatingProps, ItemCardProps, PackageItem } from "@/src/types";
+    // @ts-ignore
 import DetailsToast from "@/src/components/ui/DetailsToast";
+    // @ts-ignore
 import FiveStarIcon from "@/src/components/icons/page/Rating/FiveStarIcon";
+    // @ts-ignore
 import FourStarIcon from "@/src/components/icons/page/Rating/FourStarIcon";
+    // @ts-ignore
 import ThreeStarIcon from "@/src/components/icons/page/Rating/ThreeStarIcon";
+    // @ts-ignore
 import TwoStarIcon from "@/src/components/icons/page/Rating/TwoStarIcon";
+    // @ts-ignore
 import OneStarIcon from "@/src/components/icons/page/Rating/OneStarIcon";
+    // @ts-ignore
 import Input from "@/src/components/ui/Inputs/Input";
+    // @ts-ignore
 import TrashIcon from "@/src/components/icons/common/TrashIcon";
+    // @ts-ignore
 import FormField from "@/src/sbc/form/FormField";
+    // @ts-ignore
 import ChamberIcon from "@/src/components/icons/common/ChamberIcon";
-import { useCreatePackedItem } from "@/src/hooks/packedItem";
-import { resetPackageSizes } from "@/src/redux/slices/bottomsheet/package-size.slice";
+    // @ts-ignore
+import {
+  useCreatePackedItem,
+  usePackedItemsFromChamberStock,
+  usePackingSummaryToday,
+    // @ts-ignore
+} from "@/src/hooks/packedItem";
+import {
+  resetPackageSizes,
+  setPackageSizes,
+    // @ts-ignore
+} from "@/src/redux/slices/bottomsheet/package-size.slice";
+    // @ts-ignore
 import { RefreshControl } from "react-native-gesture-handler";
+    // @ts-ignore
+import {
+  useChamberStock,
+  useChamberStockByName,
+    // @ts-ignore
+} from "@/src/hooks/useChamberStock";
+    // @ts-ignore
+import { clearDispatchRatings } from "@/src/redux/slices/bottomsheet/dispatch-rating.slice";
+    // @ts-ignore
+import { clearRatings } from "@/src/redux/slices/bottomsheet/storage.slice";
+    // @ts-ignore
+import { convertToKg, getMaxPackagesFor } from "@/src/utils/weightutils";
+    // @ts-ignore
+import RefreshableContent from "@/src/components/ui/RefreshableContent";
+    // @ts-ignore
+import ItemsFlatList from "@/src/components/ui/ItemsFlatList";
+    // @ts-ignore
+import SearchWithFilter from "@/src/components/ui/Inputs/SearchWithFilter";
+    // @ts-ignore
 
 interface Chamber {
   id: string | number;
+    // @ts-ignore
   name: string | number;
   stored_quantity: number | string;
   quantity: number | string;
@@ -95,24 +174,41 @@ interface Product {
   chambers: Chamber[];
 }
 
+interface SubmitChamber {
+  id: string;
+  quantity: number;
+  rating: number;
+}
+
+interface SubmitProduct {
+  name: string;
+  chambers: SubmitChamber[];
+}
+
 interface PackedChamber {
   id: string;
   quantity: number | string;
 }
+
+type RMChamberQuantityMap = {
+  [rmName: string]: {
+    [chamberId: string]: {
+      count: number;
+      quantity: number;
+      rating: number;
+    };
+  };
+};
 
 export type StorageForm = {
   image: string;
   product_name: string;
   packages: PackageItem[];
   products: Product[];
+  submitProducts?: SubmitProduct[];
   packedChambers?: PackedChamber[];
-};
-
-const convertToKg = (size: number, unit: string) => {
-  const lowerUnit = unit?.toLowerCase();
-  if (lowerUnit === "kg") return size;
-  if (lowerUnit === "gm") return size / 1000;
-  return 0;
+  rmChamberQuantities: RMChamberQuantityMap;
+  rating: number;
 };
 
 const validatePackageQuantity = (
@@ -142,38 +238,6 @@ const validatePackageQuantity = (
   return totalPackageQuantity >= totalOrderQuantity;
 };
 
-const validateProductChambers = (products: Product[]): boolean => {
-  if (!Array.isArray(products) || products?.length === 0) return false;
-
-  return products.every((product: Product) => {
-    if (
-      !product.name ||
-      !Array.isArray(product.chambers) ||
-      product.chambers?.length === 0
-    ) {
-      return false;
-    }
-
-    const hasValidQuantity = product.chambers.some((chamber: Chamber) => {
-      const quantity = Number(chamber.quantity);
-      const storedQuantity = Number(chamber.stored_quantity);
-
-      if (
-        !chamber.id ||
-        !chamber.name ||
-        isNaN(quantity) ||
-        isNaN(storedQuantity)
-      ) {
-        return false;
-      }
-
-      return quantity > 0 && quantity <= storedQuantity;
-    });
-
-    return hasValidQuantity;
-  });
-};
-
 const calculateTotalPackedQuantity = (
   packedChambers?: PackedChamber[]
 ): number => {
@@ -186,6 +250,7 @@ const calculateTotalPackedQuantity = (
 };
 
 const PackageScreen = () => {
+  const { height: screenHeight } = useWindowDimensions();
   const [searchText, setSearchText] = useState("");
   const {
     data: packageData,
@@ -195,17 +260,20 @@ const PackageScreen = () => {
     isFetching: packageFetching,
   } = usePackages(searchText);
 
-  const storageRMRating = useSelector(
-    (state: RootState) => state.StorageRMRating.ratingByRM
-  );
   const {
     productPackages,
     isLoading: productPackagesLoading,
     refetch: productPackageRefetch,
     isFetching: productPackageFetching,
   } = useProductPackage();
+
   const { mutate: createPacked, isPending, error } = useCreatePackedItem();
 
+  const {
+    data: packedItems,
+    isFetching,
+    refetch,
+  } = usePackedItemsFromChamberStock();
   const { data: DryChambersRaw } = useDryChambers();
   const DryChambers = DryChambersRaw || [];
 
@@ -218,8 +286,12 @@ const PackageScreen = () => {
     refetch: productItemsRefetch,
   } = useProductItems();
 
-  const { data: frozenChambers, isLoading: frozenLoading, refetch: frozenChambersRefetch, isFetching: frozenChambersFetching } =
-    useFrozenChambers();
+  const {
+    data: frozenChambers,
+    isLoading: frozenLoading,
+    refetch: frozenChambersRefetch,
+    isFetching: frozenChambersFetching,
+  } = useFrozenChambers();
 
   const isProductLoading = useSelector(
     (state: RootState) => state.product.isProductLoading
@@ -229,29 +301,49 @@ const PackageScreen = () => {
   );
   const { product: selectedProduct, rawMaterials: selectedRawMaterials } =
     useSelector((state: RootState) => state.product);
+
   const storeRawMaterials = useSelector(
     (state: RootState) => state.product.rawMaterials
   );
   const choosedChambers = useSelector(
     (state: RootState) => state.rawMaterial.selectedChambers
   );
+  const productRating = useSelector(
+    (state: RootState) => state.packageProductRating.packageProductRating
+  );
+  const { chamberStock } = useChamberStockByName(selectedRawMaterials);
+  const chamberRatingMap = useMemo(() => {
+    const map = new Map<string, number>();
+    // @ts-ignore
+    chamberStock?.forEach((stock) => {
+    // @ts-ignore
+      stock.chamber?.forEach((ch) => {
+        map.set(ch.id, Number(ch.rating));
+      });
+    });
 
-const {
-  rawMaterials,
-  isLoading: rmInitialLoading,
-  refetch: refetchRM,
-  isFetching: rmLoading
-} = useRawMaterialByProduct(selectedProduct);
+    return map;
+  }, [chamberStock]);
+
+  const {
+    rawMaterials,
+    isLoading: rmInitialLoading,
+    refetch: refetchRM,
+    isFetching: rmLoading,
+  } = useRawMaterialByProduct(selectedProduct);
 
   const productPackageForm = useGlobalFormValidator<AddProductPackageForm>(
     "add-product-package"
   );
 
- const {
-  summaries: choosedChamberSummary,
-  refetch: refetchSummary,
-  isFetching: isSummaryFetching
-} = useChambersSummary(choosedChambers);
+  const {
+    summaries: choosedChamberSummary,
+    refetch: refetchSummary,
+    isFetching: isSummaryFetching,
+  } = useChambersSummary(choosedChambers);
+
+  const { data: packingSummaryToday, isLoading: packingSummaryTodayLoading } =
+    usePackingSummaryToday();
 
   const [isLoading, setIsLoading] = useState(false);
   const [openTab, setOpenTab] = useState<number>(0);
@@ -270,6 +362,7 @@ const {
         packages: [],
         products: [],
         packedChambers: [],
+        rmChamberQuantities: {},
       },
       {
         packages: [
@@ -316,20 +409,9 @@ const {
         product_name: [
           { type: "required" as const, message: "Product name is required!" },
         ],
-        products: [
-          {
-            type: "custom" as const,
-            validate: (products: Product[]) => {
-              if (!Array.isArray(products) || products?.length === 0) {
-                return false;
-              }
-              return validateProductChambers(products);
-            },
-            message:
-              "Each product must have a valid name and at least one chamber with quantity > 0 (not exceeding stored quantity).",
-          },
-        ],
+        products: [],
         image: [],
+        rmChamberQuantities: [],
       },
       {
         validateOnChange: true,
@@ -343,18 +425,6 @@ const {
     setToastVisible(true);
   };
 
-  const getMaxPackagesFor = (pkg: PackageItem) => {
-    const match = productPackages?.find(
-      (pp) => pp.rawSize === pkg.rawSize && pp.unit === pkg.unit
-    );
-    if (!match) return null;
-
-    const stored = Number(match.stored_quantity) || 0;
-    const size = Number(pkg.size) || 1;
-
-    return Math.floor(stored / size);
-  };
-
   const handleToggleToast = () => {
     showToast(
       "error",
@@ -362,24 +432,24 @@ const {
     );
   };
 
- useEffect(() => {
-  if (!selectedProduct) return;
+  useEffect(() => {
+    if (!selectedProduct) return;
 
-  if (rmLoading || rmInitialLoading) return;
+    if (rmLoading || rmInitialLoading) return;
 
-  const noRM = !Array.isArray(rawMaterials) || rawMaterials.length === 0;
+    const noRM = !Array.isArray(rawMaterials) || rawMaterials.length === 0;
 
-  if (noRM) {
-    showToast(
-      "error",
-      `${selectedProduct} raw materials are not in your chambers!`
-    );
-  }
-}, [selectedProduct, rawMaterials, rmLoading, rmInitialLoading]);
+    if (noRM) {
+      showToast(
+        "error",
+        `${selectedProduct} raw materials are not in your chambers!`
+      );
+    }
+  }, [selectedProduct, rawMaterials, rmLoading, rmInitialLoading]);
 
-useEffect(() => {
-  setField("products", product_items);
-}, [product_items]);
+  useEffect(() => {
+    setField("products", product_items);
+  }, [product_items]);
 
   useEffect(() => {
     setField("product_name", selectedProduct);
@@ -395,14 +465,17 @@ useEffect(() => {
     if (!productPackages || !selectedPackage) return;
 
     const updated = selectedPackage
+    // @ts-ignore
       .map((sp) => {
         const match = productPackages.find(
+    // @ts-ignore
           (pp) =>
             `${pp.rawSize} ${pp.unit}` === sp.rawSize && pp.unit === sp.unit
         );
         if (!match) return null;
 
         const existing = values.packages?.find(
+    // @ts-ignore
           (p) => p.rawSize === sp.rawSize && p.unit === sp.unit
         );
 
@@ -418,6 +491,7 @@ useEffect(() => {
       updated?.length === values.packages?.length &&
       updated.every((up) =>
         values.packages.some(
+    // @ts-ignore
           (vp) =>
             vp.size === up?.size &&
             vp.unit === up.unit &&
@@ -429,6 +503,10 @@ useEffect(() => {
       setField("packages", updated);
     }
   }, [productPackages, selectedPackage, values.packages]);
+
+  const ratingByRM = useSelector(
+    (state: RootState) => state.StorageRMRating.ratingByRM
+  );
 
   const formattedData = useMemo(() => {
     return !packageLoading
@@ -475,8 +553,8 @@ useEffect(() => {
             label: "Packing Size",
             key: "package-weight",
             formField_1: "size",
-            keyboardType: "number-pad",
             label_second: "Unit",
+            keyboardType: "number-pad",
             source: "add-product-package",
           },
         },
@@ -550,20 +628,8 @@ useEffect(() => {
     setIsLoading(false);
   }
 
-  const itemsToRender = useMemo(() => {
-    if (!product_items || product_items?.length === 0) return [];
-
-    if (product_items?.length === 1) {
-      return [product_items[0]];
-    } else {
-      const count = selectedRawMaterials?.length || 0;
-      return product_items.slice(0, count);
-    }
-  }, [product_items, selectedRawMaterials]);
-
-  // --- PACKAGE LOGIC (TOP LEVEL) ---
-
   const totalPackageQuantityKg = useMemo(() => {
+    // @ts-ignore
     return (values.packages || []).reduce((sum, pkg) => {
       return (
         sum +
@@ -576,32 +642,63 @@ useEffect(() => {
     return calculateTotalPackedQuantity(values.packedChambers);
   }, [values.packedChambers]);
 
+  const totalRawMaterialUsed = useMemo(() => {
+    const rmMap = values.rmChamberQuantities || {};
+
+    return Object.values(rmMap).reduce((rmSum, chamberMap) => {
+      return (
+        rmSum +
+        Object.values(chamberMap || {}).reduce(
+          (sum, v) => sum + (Number(v?.quantity) || 0),
+          0
+        )
+      );
+    }, 0);
+  }, [values.rmChamberQuantities]);
+
   const handlePackageQuantityChange = useCallback(
     (index: number, text: string) => {
-      const numeric = parseFloat(text.replace(/[^0-9.]/g, "") || "0");
+      const numeric = parseInt(text.replace(/[^0-9]/g, ""), 10);
 
-      if (isNaN(numeric)) return;
+      if (isNaN(numeric)) {
+        setField(`packages.${index}.quantity`, "");
+        return;
+      }
 
       const updatedPackages = [...(values.packages || [])];
       const currentPackage = updatedPackages[index];
       if (!currentPackage) return;
 
+      const maxPackages = getMaxPackagesFor(currentPackage);
+
+      let finalQty = numeric;
+
+      if (maxPackages !== null && numeric > maxPackages) {
+        finalQty = maxPackages;
+
+        showToast(
+          "error",
+          `You can pack maximum ${maxPackages} units for this SKU`
+        );
+      }
+
+      // 🔒 CHECK TOTAL KG ALSO
       const newTotalKg = updatedPackages.reduce((sum, pkg, i) => {
-        const qty = i === index ? numeric : Number(pkg.quantity) || 0;
+        const qty = i === index ? finalQty : Number(pkg.quantity) || 0;
         return sum + convertToKg(Number(pkg.size), pkg.unit!) * qty;
       }, 0);
 
       if (newTotalKg > totalPackedQuantity) {
         showToast(
           "error",
-          "Total package quantity (in KG) cannot exceed total packed chamber quantity!"
+          "Total package quantity cannot exceed packed chamber quantity"
         );
         return;
       }
 
       updatedPackages[index] = {
         ...currentPackage,
-        quantity: String(numeric),
+        quantity: String(finalQty),
       };
 
       setField("packages", updatedPackages);
@@ -609,10 +706,23 @@ useEffect(() => {
     [values.packages, setField, totalPackedQuantity]
   );
 
-  const handleRemovePackage = (index: number) => {
-    const updatedPackages =
-      values.packages?.filter((_, i) => i !== index) || [];
-    setField("packages", updatedPackages);
+  const chamberNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    // @ts-ignore
+    frozenChambers?.forEach((ch) => {
+      map.set(String(ch.id), ch.chamber_name);
+    });
+
+    return map;
+  }, [frozenChambers]);
+
+  const handleRemovePackage = (pkg: PackageItem) => {
+    dispatch(
+      setPackageSizes(
+    // @ts-ignore
+        selectedPackage.filter((sp) => sp.rawSize !== pkg.rawSize)
+      )
+    );
   };
 
   async function handleTogglePackageSizeBottomSheet() {
@@ -635,36 +745,41 @@ useEffect(() => {
         },
         {
           type: "package-size-choose-list",
-          data: productPackages?.map((pack) => {
-            const unit = pack?.unit?.toLowerCase();
-            let grams = Number(pack.size);
+          data: {
+    // @ts-ignore
+            list: productPackages?.map((pack) => {
+              const unit = pack?.unit?.toLowerCase();
+              let grams = Number(pack.size);
 
-            switch (unit) {
-              case "kg":
-                grams = Number(pack.size) * 1000;
-                break;
-              case "gm":
-                grams = Number(pack.size);
-                break;
-              default:
-                return null;
-            }
+              switch (unit) {
+                case "kg":
+                  grams = Number(pack.size) * 1000;
+                  break;
+                case "gm":
+                  grams = Number(pack.size);
+                  break;
+                default:
+                  return null;
+              }
 
-            let icon = "paper-roll";
+              let icon = "paper-roll";
 
-            if (grams <= 250) {
-              icon = "paper-roll";
-            } else if (grams <= 500) {
-              icon = "bag";
-            } else {
-              icon = "big-bag";
-            }
-            return {
-              name: `${pack?.rawSize} ${pack?.unit}`,
-              icon: icon,
-              isChecked: false,
-            };
-          }),
+              if (grams <= 250) {
+                icon = "paper-roll";
+              } else if (grams <= 500) {
+                icon = "bag";
+              } else {
+                icon = "big-bag";
+              }
+              return {
+                name: `${pack?.rawSize} ${pack?.unit}`,
+                icon: icon,
+                count: Number(pack?.quantity),
+                isChecked: false,
+              };
+            }),
+            source: "package",
+          },
         },
       ],
       buttons: [
@@ -685,54 +800,90 @@ useEffect(() => {
 
   const onSubmit = async () => {
     try {
+      const totalRM = Object.values(values.rmChamberQuantities || {}).reduce(
+        (rmSum, chamberMap) => {
+          return (
+            rmSum +
+            Object.values(chamberMap || {}).reduce(
+              (sum, v) => sum + (Number(v?.quantity) || 0),
+              0
+            )
+          );
+        },
+        0
+      );
+
+      if (totalRM === 0) {
+        showToast(
+          "error",
+          "Please enter raw material quantity before submitting."
+        );
+        return;
+      }
+
+      if (totalRM !== totalPackedQuantity) {
+        showToast(
+          "error",
+          `Raw material quantity (${totalRM} kg) must exactly match packed quantity (${totalPackedQuantity} kg).`
+        );
+        return;
+      }
+
       const result = validateForm();
 
-      if (result.success) {
-        const formData = result.data as StorageForm;
+      if (!result.success) return;
 
-        const ratingValue =
-          storageRMRating?.rating != null ? Number(storageRMRating.rating) : 5;
+      const formData = result.data as StorageForm;
 
-        const productsWithRating = (formData.products || []).map((p) => ({
-          ...p,
-          chambers: (p.chambers || []).map((ch) => ({
-            ...ch,
-            rating: ratingValue,
-          })),
-        }));
-        
+      const rmChamberEntries = Object.entries(values.rmChamberQuantities || {});
 
-        const packedChambersWithId = (choosedChamberSummary || [])
-          .map((ch, idx) => ({
-            id: String(ch.chamber_id),
-            quantity: Number(formData.packedChambers?.[idx]?.quantity || 0),
-          }))
-          .filter((item) => item.quantity > 0);
+      const submitProducts: SubmitProduct[] = rmChamberEntries.map(
+        ([rmName, chambers]) => ({
+          name: rmName,
+    // @ts-ignore
+          chambers: Object.entries(chambers)
+    // @ts-ignore
+            .filter(([, qty]) => qty.quantity > 0)
+            .map(([chamberId, data]) => ({
+              id: chamberId,
+    // @ts-ignore
+              quantity: data.quantity,
+    // @ts-ignore
+              rating: data.rating,
+            })),
+        })
+      );
 
-        const finalPayload: StorageForm = {
-          ...formData,
-          products: productsWithRating,
-          packedChambers: packedChambersWithId,
-        };
-        // console.log("finalPayload", JSON.stringify(finalPayload, null, 2));
+      const packedChambersWithId = (choosedChamberSummary || [])
+    // @ts-ignore
+        .map((ch, idx) => ({
+          id: String(ch.chamber_id),
+          quantity: Number(formData.packedChambers?.[idx]?.quantity || 0),
+        }))
+    // @ts-ignore
+        .filter((item) => item.quantity > 0);
 
-        setIsLoading(true);
-        createPacked(finalPayload);
-        setIsLoading(false);
+      const finalPayload: StorageForm = {
+        ...formData,
+        packedChambers: packedChambersWithId,
+        submitProducts,
+        rating: productRating.rating,
+      };
+      console.log("finalPayload", JSON.stringify(finalPayload));
 
-        resetForm();
+      // setIsLoading(true);
+      // createPacked(finalPayload);
+      // setIsLoading(false);
 
-        dispatch(clearProduct());
-        dispatch(setRawMaterials([]));
+      // resetForm();
+      // dispatch(clearProduct());
+      // dispatch(setRawMaterials([]));
+      // dispatch(resetPackageSizes());
+      // dispatch(clearChambers());
+      // dispatch(clearRatings());
+      // dispatch(clearDispatchRatings());
 
-        dispatch(resetPackageSizes());
-        dispatch(clearChambers());
-        dispatch(setSource("choose"));
-
-        setSearchText("");
-        setOpenTab(0);
-        showToast("success", "Packed item created!");
-      }
+      showToast("success", "Packed item created!");
     } catch (error) {
       console.error("Error submitting form:", error);
     }
@@ -750,6 +901,7 @@ useEffect(() => {
         },
         {
           type: "productCard",
+    // @ts-ignore
           data: frozenChambers?.map((chamber) => ({
             name: chamber.chamber_name,
           })),
@@ -780,21 +932,131 @@ useEffect(() => {
     setIsLoading(false);
   };
 
-const selectedLabel = selectedProduct || "Select products";
+  type StockChamber = {
+    id: string | number;
+    name: string | number;
+    quantity: number;
+    stored_quantity: number | string;
+    rating?: number | string;
+  };
 
-type Rating = "1" | "2" | "3" | "4" | "5";
+  type ChambersByRM = Map<string, StockChamber[]>;
 
-const rating = storageRMRating?.rating as Rating | undefined;
+  const chambersByRM: ChambersByRM = useMemo(() => {
+    const map = new Map<string, Map<string, StockChamber>>();
+    // @ts-ignore
 
-const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
-  "5": FiveStarIcon,
-  "4": FourStarIcon,
-  "3": ThreeStarIcon,
-  "2": TwoStarIcon,
-  "1": OneStarIcon,
-};
+    chamberStock?.forEach((stock) => {
+      const rmName = stock.product_name;
+      if (!rmName) return;
 
+      if (!map.has(rmName)) {
+        map.set(rmName, new Map());
+      }
+
+      const chamberMap = map.get(rmName)!;
+    // @ts-ignore
+
+      stock.chamber?.forEach((ch) => {
+        const id = String(ch.id);
+
+        if (!chamberMap.has(id)) {
+          chamberMap.set(id, {
+            id,
+            name: chamberNameMap.get(id) ?? "Unknown Chamber",
+            quantity: Number(ch.quantity) || 0,
+            stored_quantity: Number(ch.quantity) || 0,
+            rating: Number(ch.rating) || 0,
+          });
+        }
+      });
+    });
+
+    const finalMap = new Map<string, StockChamber[]>();
+    map.forEach((value, key) => {
+      finalMap.set(key, Array.from(value.values()));
+    });
+
+    return finalMap;
+  }, [chamberStock, chamberNameMap]);
+
+  const selectedLabel = selectedProduct || "Select products";
+
+  const rmMatchStatus = useMemo(() => {
+    if (totalRawMaterialUsed === 0) return "neutral";
+    if (totalRawMaterialUsed < totalPackedQuantity) return "less";
+    if (totalRawMaterialUsed > totalPackedQuantity) return "more";
+    return "equal";
+  }, [totalRawMaterialUsed, totalPackedQuantity]);
+    // @ts-ignore
+
+  const rmColor = {
+    neutral: getColor("green", 700),
+    less: getColor("red", 500),
+    more: getColor("yellow", 500),
+    equal: getColor("green", 500),
+  }[rmMatchStatus];
+
+  const packageMatchStatus = useMemo(() => {
+    if (totalPackageQuantityKg === 0) return "neutral";
+    if (totalPackageQuantityKg < totalPackedQuantity) return "less";
+    if (totalPackageQuantityKg > totalPackedQuantity) return "more";
+    return "equal";
+  }, [totalPackageQuantityKg, totalPackedQuantity]);
+    // @ts-ignore
+  const packageColor = {
+    neutral: getColor("green", 700),
+    less: getColor("red", 500),
+    more: getColor("yellow", 500),
+    equal: getColor("green", 500),
+  }[packageMatchStatus];
+
+  const allGood = rmMatchStatus === "equal" && packageMatchStatus === "equal";
+
+  const { packingSummary } = useMemo(() => {
+    const buckets = {
+      packingSummary: [] as ItemCardProps[],
+    };
+
+    if (!Array.isArray(packingSummaryToday)) {
+      return buckets;
+    }
+
+    const query = searchText.trim().toLowerCase();
+
+    for (const packedEvent of packingSummaryToday) {
+      if (!packedEvent.size) continue;
+
+      const productName = packedEvent.product_name?.toLowerCase() ?? "";
+      const sizeLabel = packedEvent.size.size?.toLowerCase() ?? "";
+
+      if (query && !productName.includes(query) && !sizeLabel.includes(query)) {
+        continue;
+      }
+
+      buckets.packingSummary.push({
+        id: packedEvent.eventId,
+        name: packedEvent.product_name,
+        weight: `${packedEvent.size.size} | ${packedEvent.size.packets} packets`,
+        rating: String(packedEvent.size.rating),
+      });
+    }
+
+    return buckets;
+  }, [packingSummaryToday, searchText]);
+    // @ts-ignore
+
+  const RatingIconMap: Record<number, React.FC<IconRatingProps>> = {
+    5: FiveStarIcon,
+    4: FourStarIcon,
+    3: ThreeStarIcon,
+    2: TwoStarIcon,
+    1: OneStarIcon,
+  };
+
+  const ProductRatingIcon = RatingIconMap[productRating.rating];
   return (
+    // @ts-ignore
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -804,17 +1066,23 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
         <PageHeader page={"Packing"} />
         <View style={styles.wrapper}>
           <Tabs
-            tabTitles={["Stock", "Packing material"]}
+            tabTitles={["Stock", "Packing material", "Daily packing"]}
             color="green"
             style={styles.flexGrow}
           >
             <View style={{ flex: 1 }}>
               <ScrollView
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ flexGrow: 1 }}
+                contentContainerStyle={{ flexGrow: 1, paddingBottom: 4 }}
                 refreshControl={
                   <RefreshControl
-                    refreshing={productPackageFetching || productsFetching || frozenChambersFetching || isSummaryFetching || rmLoading}
+                    refreshing={
+                      productPackageFetching ||
+                      productsFetching ||
+                      frozenChambersFetching ||
+                      isSummaryFetching ||
+                      rmLoading
+                    }
                     onRefresh={() => {
                       productPackageRefetch();
                       productItemsRefetch();
@@ -826,14 +1094,212 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
                 }
               >
                 <View style={styles.storageColumn}>
+    {/* // @ts-ignore */}
                   <Select
                     value={selectedLabel}
-                    style={{ paddingHorizontal: 16 }}
+                    style={{ paddingHorizontal: 8 }}
                     showOptions={false}
                     onPress={handleToggleProductBottomSheet}
                   >
                     Product name
                   </Select>
+                  <Select
+                    value={productRating.message}
+                    showOptions={false}
+                    preIcon={ProductRatingIcon ?? FiveStarIcon}
+                    selectStyle={{ paddingHorizontal: 8 }}
+                    onPress={() =>
+                      validateAndSetData(
+                        `product:${productRating.rating}`,
+                        "storage-rm-rating"
+                      )
+                    }
+                  />
+
+                  <View style={[styles.rawMaterialColumn, styles.borderBottom]}>
+                    {product_items?.length > 0 &&
+                      selectedRawMaterials.map((item: string) => {
+                        const rmPackaging = chamberStock?.find(
+    // @ts-ignore
+                          (s) => s.product_name === item
+                        )?.packaging;
+
+                        const rmPackagingObj =
+                          rmPackaging && !Array.isArray(rmPackaging)
+                            ? rmPackaging
+                            : null;
+
+                        const ratingForThisRM = ratingByRM[item] ?? {
+                          rating: 5,
+                          message: "Excellent",
+                        };
+
+                        const selectedRating = ratingForThisRM.rating;
+
+                        const rmChambers = chambersByRM.get(item) || [];
+
+                        const visibleChambers = rmChambers.filter((chamber) => {
+                          const chamberRating =
+                            chamberRatingMap.get(String(chamber.id)) ?? 5;
+
+                          return (
+                            chamberRating === selectedRating &&
+                            Number(chamber.quantity) > 0
+                          );
+                        });
+
+                        const RatingIcon =
+                          RatingIconMap[selectedRating] ?? FiveStarIcon;
+                        if (!rmPackagingObj) {
+                          return (
+                            // @ts-ignore
+
+                            <EmptyState
+                              stateData={{
+                                title: "Packaging missing",
+                                description: `${item} packaging data not found`,
+                              }}
+                              style={{ marginTop: -(screenHeight / 7) }}
+                              compact
+                            />
+                          );
+                        }
+
+                        return (
+                          <ItemsRepeater
+                            key={item}
+                            title={item}
+                            description={item}
+                            noValue={true}
+                          >
+    {/* // @ts-ignore */}
+                            <View style={styles.cardBody}>
+                              <Select
+                                value={ratingForThisRM.message}
+                                showOptions={false}
+                                preIcon={RatingIcon ?? FiveStarIcon}
+                                style={{ flex: 0.5 }}
+                                onPress={() =>
+                                  validateAndSetData(
+                                    `${item}:${ratingForThisRM.rating}`,
+                                    "storage-rm-rating"
+                                  )
+                                }
+                              />
+
+                              {/* <View style={styles.separator} /> */}
+                              {visibleChambers.length === 0 ? (
+                                <View
+                                  style={{
+                                    marginBottom: 16,
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <EmptyState
+                                    stateData={{
+                                      title: "No stock found",
+                                      description: `${item} is not available in any chamber`,
+                                    }}
+                                    style={{ marginTop: -(screenHeight / 16) }}
+                                    compact
+                                  />
+                                </View>
+                              ) : (
+                                visibleChambers.map((chamber) => {
+                                  const chamberName =
+                                    chamberNameMap.get(String(chamber.id)) ??
+                                    "Unknown Chamber";
+
+                                  return (
+                                    <View
+                                      key={`${item}-${chamber.id}`}
+                                      style={[
+                                        styles.chamberCard,
+                                        styles.borderBottom,
+                                      ]}
+                                    >
+                                      <View style={styles.Hstack}>
+                                        <View style={styles.iconWrapper}>
+                                          <ChamberIcon
+                                            color={getColor("green")}
+                                            size={32}
+                                          />
+                                        </View>
+
+                                        <View style={styles.Vstack}>
+                                          <B1>
+                                            {String(chamberName).slice(0, 12)}
+                                            ...
+                                          </B1>
+                                          <B4>
+                                            {chamber.quantity} qty. |{" "}
+                                            {rmPackagingObj.size.value}{" "}
+                                            {rmPackagingObj.size.unit} bag
+                                          </B4>
+                                        </View>
+                                      </View>
+
+                                      <View style={{ flex: 0.7 }}>
+                                        <Input
+                                          placeholder=""
+                                          addonText="bags"
+                                          mask="addon"
+                                          post
+                                          keyboardType="numeric"
+                                          value={
+                                            values.rmChamberQuantities?.[
+                                              item
+                                            ]?.[chamber.id]?.count
+                                              ? String(
+                                                  values.rmChamberQuantities[
+                                                    item
+                                                  ][chamber.id].count
+                                                )
+                                              : ""
+                                          }
+                                          onChangeText={(text: string) => {
+                                            if (!rmPackagingObj) return;
+
+                                            const bagCount = Number(
+                                              text.replace(/[^0-9]/g, "")
+                                            );
+                                            if (isNaN(bagCount)) return;
+                                            const kgPerBag = convertToKg(
+                                              rmPackagingObj.size.value,
+                                              rmPackagingObj.size.unit
+                                            );
+
+                                            const usedKg = bagCount * kgPerBag;
+
+                                            if (
+                                              usedKg >
+                                              Number(chamber.stored_quantity)
+                                            ) {
+                                              handleToggleToast();
+                                              return;
+                                            }
+
+                                            setField(
+                                              `rmChamberQuantities.${item}.${chamber.id}`,
+                                              {
+                                                count: bagCount,
+                                                quantity: usedKg,
+                                                rating: selectedRating,
+                                              }
+                                            );
+                                          }}
+                                        />
+                                      </View>
+                                    </View>
+                                  );
+                                })
+                              )}
+                            </View>
+                          </ItemsRepeater>
+                        );
+                      })}
+                  </View>
+                {/* // @ts-ignore */}
                   <Select
                     value={chamberSelectLabel}
                     style={{ paddingHorizontal: 16 }}
@@ -846,10 +1312,15 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
                       rawMaterials.length === 0
                     }
                   >
-                    Chambers
+                    Stacking Location
                   </Select>
+                {/* // @ts-ignore */}
+
                   <View style={[styles.Vstack, { paddingHorizontal: 16 }]}>
-                    {choosedChamberSummary?.map((chamber, idx) => (
+
+                    {
+    // @ts-ignore
+                    choosedChamberSummary?.map((chamber, idx) => (
                       <View
                         key={idx}
                         style={[styles.chamberCard, styles.borderBottom]}
@@ -866,11 +1337,17 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
                           </View>
                         </View>
                         <View style={{ flex: 0.7 }}>
+    {/* // @ts-ignore */}
+
                           <FormField
                             name={`packedChambers.${idx}.quantity`}
                             form={{ values, setField, errors }}
                           >
-                            {({ value, onChange, error }) => (
+
+                            {
+    // @ts-ignore
+                      
+                            ({ value, onChange, error }) => (
                               <Input
                                 placeholder="Qty."
                                 addonText="KG"
@@ -904,160 +1381,42 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
                     ))}
                   </View>
 
-                  <View style={[styles.rawMaterialColumn, styles.borderBottom]}>
-                    {product_items?.length > 0 &&
-                      selectedRawMaterials.map((item: string) => {
-                        const Icon = rating ? ratingIconMap[rating] : undefined;
-
-                        return (
-                          <ItemsRepeater
-                            key={item}
-                            title={item}
-                            description={item}
-                            noValue={true}
-                          >
-                            <View style={styles.cardBody}>
-                              <Select
-                                value={storageRMRating?.message || "Excellent"}
-                                style={{ flex: 0.5 }}
-                                showOptions={false}
-                                onPress={() =>
-                                  validateAndSetData(
-                                    storageRMRating?.rating || "5",
-                                    "storage-rm-rating"
-                                  )
-                                }
-                                preIcon={Icon ?? FiveStarIcon}
-                              />
-
-                              <View style={styles.separator} />
-                              {itemsToRender?.length > 0 &&
-                                itemsToRender.map((value, index) => {
-                                  const productIndex =
-                                    values.products?.findIndex(
-                                      (p) => p.name === value?.name
-                                    );
-                                  const currentProduct = values.products?.[
-                                    productIndex
-                                  ] || { packages: [], chambers: [] };
-
-                                  return (
-                                    <View style={styles.Vstack} key={index}>
-                                      {currentProduct.chambers?.map(
-                                        (chamber, idx) => (
-                                          <View
-                                            key={`${index}-${idx}`}
-                                            style={[
-                                              styles.chamberCard,
-                                              styles.borderBottom,
-                                            ]}
-                                          >
-                                            <View style={styles.Hstack}>
-                                              <View style={styles.iconWrapper}>
-                                                <ChamberIcon
-                                                  color={getColor("green")}
-                                                  size={32}
-                                                />
-                                              </View>
-                                              <View style={styles.Vstack}>
-                                                <B1>
-                                                  {String(chamber.name).slice(
-                                                    0,
-                                                    12
-                                                  )}
-                                                  ...
-                                                </B1>
-                                                <B4>
-                                                  {chamber.stored_quantity}kg
-                                                </B4>
-                                              </View>
-                                            </View>
-                                            <View style={{ flex: 0.7 }}>
-                                              <FormField
-                                                name={`products.${productIndex}.chambers.${idx}.quantity`}
-                                                form={{
-                                                  values,
-                                                  setField,
-                                                  errors,
-                                                }}
-                                              >
-                                                {({
-                                                  value,
-                                                  onChange,
-                                                  error,
-                                                }) => (
-                                                  <Input
-                                                    placeholder="Qty."
-                                                    addonText="KG"
-                                                    value={
-                                                      value === 0 ||
-                                                      value === null ||
-                                                      value === undefined
-                                                        ? ""
-                                                        : String(value)
-                                                    }
-                                                    onChangeText={(
-                                                      text: string
-                                                    ) => {
-                                                      const numeric =
-                                                        text.replace(
-                                                          /[^0-9.]/g,
-                                                          ""
-                                                        );
-                                                      const enteredValue =
-                                                        numeric === ""
-                                                          ? 0
-                                                          : parseFloat(numeric);
-                                                      const maxQuantity =
-                                                        Number(
-                                                          chamber.stored_quantity
-                                                        );
-                                                      if (
-                                                        enteredValue >
-                                                        maxQuantity
-                                                      ) {
-                                                        handleToggleToast();
-                                                        return;
-                                                      }
-                                                      onChange(text);
-                                                    }}
-                                                    mask="addon"
-                                                    post
-                                                    keyboardType="decimal-pad"
-                                                    error={error}
-                                                  />
-                                                )}
-                                              </FormField>
-                                            </View>
-                                          </View>
-                                        )
-                                      )}
-                                    </View>
-                                  );
-                                })}
-                            </View>
-                          </ItemsRepeater>
-                        );
-                      })}
-                  </View>
-
                   {/* --- PACKAGE UI (TOP LEVEL) --- */}
                   <View style={styles.packageWrapper}>
-                    <H3>Select package type</H3>
-                    <View style={[styles.sizeQtyRow, styles.borderBottom]}>
+                    <H3>Select SKU</H3>
+                    <View style={[styles.sizeQtyRow]}>
                       <View style={{ flex: 0.7 }}>
                         <Select
                           showOptions={false}
-                          options={["Package size"]}
+                          options={["Pouch size"]}
                           onPress={handleTogglePackageSizeBottomSheet}
                           disabled={selectedProduct?.length === 0}
                         />
                       </View>
-                      <View style={styles.quantityCard}>
-                        <H6>Packed Qty:</H6>
-                        <B4>
-                          {totalPackageQuantityKg} / {totalPackedQuantity} kg
-                        </B4>
+    {/* // @ts-ignore */}
+                      <View
+                        style={[
+                          styles.quantityCard,
+                          {
+                            borderColor: allGood
+                              ? getColor("green", 500)
+                              : getColor("green", 100),
+                          },
+                        ]}
+                      >
+                        <View style={{ alignItems: "center" }}>
+                          <H6>Packed Qty</H6>
+                          <B4 style={{ color: packageColor }}>
+                            {totalPackageQuantityKg} / {totalPackedQuantity} kg
+                          </B4>
+                        </View>
+
+                        <View style={{ alignItems: "center" }}>
+                          <H6>RM Used</H6>
+                          <B4 style={{ color: rmColor }}>
+                            {totalRawMaterialUsed} / {totalPackedQuantity} kg
+                          </B4>
+                        </View>
                       </View>
                     </View>
 
@@ -1071,6 +1430,7 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
                       }}
                     >
                       {values.packages?.length === 0 ? (
+    // @ts-ignore
                         <EmptyState
                           image={noPackageImage}
                           stateData={{
@@ -1079,8 +1439,10 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
                           }}
                         />
                       ) : (
+    // @ts-ignore
                         values.packages.map((pkg, index) => {
                           const Icon = mapPackageIcon(toPackageIconInput(pkg));
+
                           const maxPackages = getMaxPackagesFor(pkg);
 
                           const currentQty = Number(
@@ -1092,7 +1454,7 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
                               : null;
 
                           return (
-                            <View key={index} style={[styles.packageRow]}>
+                            <View key={pkg.rawSize} style={[styles.packageRow]}>
                               <View style={styles.row}>
                                 <View style={styles.iconWrapper}>
                                   {Icon && (
@@ -1106,11 +1468,15 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
                               </View>
 
                               <View style={[styles.Hstack, { flex: 0.8 }]}>
+    {/* // @ts-ignore */}
                                 <FormField
                                   name={`packages.${index}.quantity`}
                                   form={{ values, setField, errors }}
                                 >
-                                  {({ value, onChange, error }) => (
+                                  {
+    // @ts-ignore
+                                  
+                                  ({ value, onChange, error }) => (
                                     <Input
                                       placeholder="Enter count"
                                       keyboardType="numeric"
@@ -1129,7 +1495,7 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
                                   )}
                                 </FormField>
                                 <Pressable
-                                  onPress={() => handleRemovePackage(index)}
+                                  onPress={() => handleRemovePackage(pkg)}
                                 >
                                   <TrashIcon color={getColor("green")} />
                                 </Pressable>
@@ -1143,13 +1509,15 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
                   {/* --- END PACKAGE UI --- */}
                 </View>
               </ScrollView>
-              <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
+              <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
                 <Button onPress={onSubmit} disabled={isPending} variant="fill">
                   {isPending ? "Packing product..." : "Pack product"}
                 </Button>
               </View>
             </View>
             <View style={styles.flexGrow}>
+    {/* // @ts-ignore */}
+
               <View
                 style={[
                   styles.HStack,
@@ -1168,7 +1536,13 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
                 </Button>
               </View>
               <View style={styles.searchinputWrapper}>
-                <SearchInput
+                <SearchWithFilter
+                  value={searchText}
+                  onChangeText={(text: string) => setSearchText(text)}
+                  placeholder={"Search by product name"}
+                  onFilterPress={() => {}}
+                />
+                {/* <SearchInput
                   border
                   value={searchText}
                   cross={true}
@@ -1176,22 +1550,26 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
                   onClear={() => setSearchText("")}
                   returnKeyType="search"
                   placeholder={"Search by product name"}
-                />
+                /> */}
               </View>
               <FlatList
                 style={{ flex: 1, paddingHorizontal: 16 }}
                 data={formattedData}
+    // @ts-ignore
                 keyExtractor={(item, index) =>
                   item.id?.toString() ?? index.toString()
                 }
+    // @ts-ignore
                 renderItem={({ item }) => (
-                  <PackageCard
-                    name={item.name}
-                    id={item.id}
-                    href={item.href}
-                    bundle={item.bundle}
-                    img={item.img}
-                  />
+                  <View style={{ marginBottom: 20 }}>
+                    <PackageCard
+                      name={item.name}
+                      id={item.id}
+                      href={item.href}
+                      bundle={item.bundle}
+                      img={item.img}
+                    />
+                  </View>
                 )}
                 numColumns={2}
                 columnWrapperStyle={{
@@ -1212,6 +1590,45 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
                 }
               />
             </View>
+            <View style={styles.flexGrow}>
+              <View style={styles.searchinputWrapper}>
+                <SearchWithFilter
+                  value={searchText}
+                  onChangeText={(text: string) => setSearchText(text)}
+                  placeholder={"Search by product name"}
+                  onFilterPress={() => {}}
+                />
+                {/* <SearchInput
+                  border
+                  value={searchText}
+                  cross={true}
+                  onChangeText={(text: string) => setSearchText(text)}
+                  onClear={() => setSearchText("")}
+                  returnKeyType="search"
+                  placeholder={"Search by product name"}
+                /> */}
+              </View>
+              <RefreshableContent
+                isEmpty={packingSummary.length === 0}
+                refreshing={isFetching}
+                onRefresh={refetch}
+                emptyComponent={
+                  <View style={styles.emptyStateWrapper}>
+                    <EmptyState
+                      style={{ marginTop: -(screenHeight / 7) }}
+                      image={noPackageImage}
+                      stateData={{
+                        title: "No packages",
+                        description: "Packages will appear here.",
+                      }}
+                    />
+                  </View>
+                }
+                listComponent={
+                  <ItemsFlatList isPacking items={packingSummary} />
+                }
+              />
+            </View>
           </Tabs>
         </View>
         <DetailsToast
@@ -1222,10 +1639,12 @@ const ratingIconMap: Record<Rating, React.FC<IconRatingProps>> = {
         />
         <BottomSheet color="green" />
         {(isLoading ||
-          packageLoading ||
-          !fromCache ||
-          isProductLoading ||
-          productPackagesLoading) && (
+          productPackageFetching ||
+          productsFetching ||
+          frozenChambersFetching ||
+          isSummaryFetching ||
+          rmLoading ||
+          isProductLoading) && (
           <View style={styles.overlay}>
             <View style={styles.loaderContainer}>
               <Loader />
@@ -1249,6 +1668,7 @@ const styles = StyleSheet.create({
     borderTopStartRadius: 16,
     borderTopEndRadius: 16,
     paddingVertical: 16,
+    paddingBottom: 32,
   },
   flexGrow: {
     flex: 1,
@@ -1374,7 +1794,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: getColor("light", 400),
     flex: 1,
-    gap: 4,
+    gap: 16,
   },
   packageWrapper: {
     paddingHorizontal: 12,
@@ -1395,6 +1815,17 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: getColor("green", 100),
   },
+  inlineEmptyState: {
+    height: 200,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyStateWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
 });
-
 export default PackageScreen;

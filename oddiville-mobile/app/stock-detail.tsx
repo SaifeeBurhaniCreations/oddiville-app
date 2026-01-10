@@ -1,10 +1,5 @@
 import React, { useState } from "react";
-import {
-  StyleSheet,
-  View,
-  RefreshControl,
-  ScrollView,
-} from "react-native";
+import { StyleSheet, View, RefreshControl, ScrollView } from "react-native";
 import { useSelector } from "react-redux";
 
 import SearchWithFilter from "@/src/components/ui/Inputs/SearchWithFilter";
@@ -15,10 +10,7 @@ import EmptyState from "@/src/components/ui/EmptyState";
 
 import { getColor } from "@/src/constants/colors";
 import { useParams } from "@/src/hooks/useParams";
-import {
-  Packaging,
-  useChamberStockByName,
-} from "@/src/hooks/useChamberStock";
+import { Packaging, useChamberStockByName } from "@/src/hooks/useChamberStock";
 import { useChamberByName } from "@/src/hooks/useChambers";
 
 import { getEmptyStateData, mapPackageIcon } from "@/src/utils/common";
@@ -42,7 +34,6 @@ const StockDetail = () => {
   const { chamber: selectedChamber } = useSelector(
     (state: RootState) => state.chamber
   );
-
   const { data: chamberData } = useChamberByName(selectedChamber);
   const chamberId = chamberData?.id ?? null;
 
@@ -61,9 +52,7 @@ const StockDetail = () => {
     );
   }
 
-  const currentChamber = stock.chamber.find(
-    (ch) => ch.id === chamberId
-  );
+  const currentChamber = stock.chamber.find((ch) => ch.id === chamberId);
 
   if (!currentChamber) {
     return (
@@ -107,22 +96,33 @@ const StockDetail = () => {
     : BoxIcon;
 
   const safeMaterialPackaging = materialPackaging as Packaging;
-  const chamberKg = Number(currentChamber.quantity) / 1000;
-  const totalKgForRating =
-    materialByRating[currentChamber.rating] ?? 0;
+  // const chamberKg = Number(currentChamber.quantity) / 1000;
+  const totalKgForRating = materialByRating[currentChamber.rating] ?? 0;
+
+  const chamberKg = Number(currentChamber.quantity);
 
   const chamberBags =
     totalKgForRating > 0
-      ? Math.round(
-          (chamberKg / totalKgForRating) *
-            safeMaterialPackaging.count
-        )
+      ? Math.round((chamberKg / totalKgForRating) * safeMaterialPackaging.count)
       : 0;
 
   const packedPackaging =
     stock.category === "packed" && Array.isArray(stock.packaging)
       ? stock.packaging
       : [];
+
+  const packedByChamber = packedPackaging.map((pkg) => {
+    const sizeKg =
+      pkg.size.unit === "gm" ? pkg.size.value / 1000 : pkg.size.value;
+
+    const packetsInChamber = Math.floor(chamberKg / sizeKg);
+
+    return {
+      ...pkg,
+      packetsInChamber,
+      totalKg: packetsInChamber * sizeKg,
+    };
+  });
 
   return (
     <View style={styles.rootContainer}>
@@ -147,10 +147,7 @@ const StockDetail = () => {
 
           <ScrollView
             refreshControl={
-              <RefreshControl
-                refreshing={isFetching}
-                onRefresh={refetch}
-              />
+              <RefreshControl refreshing={isFetching} onRefresh={refetch} />
             }
           >
             {/* MATERIAL */}
@@ -163,10 +160,7 @@ const StockDetail = () => {
                     gap: 4,
                   }}
                 >
-                  <StarIcon
-                    color={getColor("green", 700)}
-                    size={16}
-                  />
+                  <StarIcon color={getColor("green", 700)} size={16} />
                   <B4 style={{ fontWeight: "700" }}>
                     Rating: {currentChamber.rating}
                   </B4>
@@ -185,42 +179,35 @@ const StockDetail = () => {
             )}
 
             {/* PACKED */}
-            {stock.category === "packed" &&
-              packedPackaging.length > 0 && (
-                <View style={{ gap: 12 }}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    <StarIcon
-                      color={getColor("green", 700)}
-                      size={16}
-                    />
-                    <B4 style={{ fontWeight: "700" }}>
-                      Rating: {currentChamber.rating}
-                    </B4>
-                  </View>
-
-                  {packedPackaging.map((item, index) => (
-                    <ChamberCard
-                      key={`${stock.id}-${item.size.value}-${item.type}-${index}`}
-                      id={`${stock.id}-${item.size.value}`}
-                      name={`${item.size.value} ${item.size.unit}`}
-                      category="packed"
-                      description={`${item.count} | ${item.type}`}
-                      plainDescription
-                      onPressOverride={() => {}}
-                      leadingIcon={getLeadingIcon(
-                        item.size.value,
-                        item.size.unit
-                      )}
-                    />
-                  ))}
+            {stock.category === "packed" && packedPackaging.length > 0 && (
+              <View style={{ gap: 12 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <StarIcon color={getColor("green", 700)} size={16} />
+                  <B4 style={{ fontWeight: "700" }}>
+                    Rating: {currentChamber.rating}
+                  </B4>
                 </View>
-              )}
+
+                {packedByChamber.map((pkg, index) => (
+                  <ChamberCard
+                    key={`${stock.id}-${pkg.size.value}-${index}`}
+                    id={`${stock.id}-${pkg.size.value}`}
+                    name={`${pkg.size.value} ${pkg.size.unit}`}
+                    category="packed"
+                    description={`${pkg.packetsInChamber} pouches | ${pkg.totalKg} kg`}
+                    plainDescription
+                    onPressOverride={() => {}}
+                    leadingIcon={getLeadingIcon(pkg.size.value, pkg.size.unit)}
+                  />
+                ))}
+              </View>
+            )}
           </ScrollView>
         </View>
       </View>

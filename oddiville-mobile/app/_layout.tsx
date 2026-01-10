@@ -26,6 +26,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { SocketProvider } from "@/src/context/SocketProvider";
 import Constants from "expo-constants";
+import { ToastProvider } from "@/src/context/ToastContext";
 
 function InnerLayout() {
   const { role } = useAuth();
@@ -111,6 +112,7 @@ export default function RootLayout() {
       >
         <Provider store={store}>
           <MultiToggleProvider>
+             <ToastProvider>
             <SocketProvider url={apiUrl}>
               <QueryClientProvider client={queryClient}>
                 <AuthProvider>
@@ -127,6 +129,7 @@ export default function RootLayout() {
                 </AuthProvider>
               </QueryClientProvider>
             </SocketProvider>
+            </ToastProvider>
           </MultiToggleProvider>
         </Provider>
       </PersistQueryClientProvider>

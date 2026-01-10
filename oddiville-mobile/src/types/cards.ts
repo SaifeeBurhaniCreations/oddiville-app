@@ -170,7 +170,7 @@ export interface ChamberEntry {
 export interface StockDataItem {
   id: string;
   product_name?: string;
-  image?: string;
+  image?: string | null;
   category?: string;
   unit?: string;
   chamber?: ChamberEntry[];

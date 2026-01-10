@@ -33,7 +33,12 @@ import { useAuth } from "@/src/context/AuthContext";
 import { resolveAccess } from "@/src/utils/policiesUtils";
 
 const EditUserScreen = () => {
-
+    const { role, policies } = useAuth();
+    
+    const safeRole = role ?? "guest";
+    const safePolicies = policies ?? [];
+    const access = resolveAccess(safeRole, safePolicies);
+    
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const selectedRole = useSelector(
     (state: RootState) => state.selectRole.selectedRole
@@ -289,6 +294,7 @@ const EditUserScreen = () => {
                 }}
                 showOptions={false}
                 error={error}
+                legacy
               >
                 Role
               </Select>
@@ -311,6 +317,7 @@ const EditUserScreen = () => {
                   }}
                   showOptions={false}
                   error={error}
+                  legacy
                 >
                   Policies
                 </Select>

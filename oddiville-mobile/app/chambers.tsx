@@ -11,7 +11,7 @@ import { getColor } from "@/src/constants/colors";
 import Tabs from "@/src/components/ui/Tabs";
 import { useChamber } from "@/src/hooks/useChambers";
 import { ChamberStock, useChamberStock } from "@/src/hooks/useChamberStock";
-import { ChamberEntry, StockDataItem } from "@/src/types";
+import { ChamberEntry } from "@/src/types";
 import ChamberDetailed from "@/src/components/ui/ChamberDetailed";
 import Loader from "@/src/components/ui/Loader";
 import { getEmptyStateData } from "@/src/utils/common";

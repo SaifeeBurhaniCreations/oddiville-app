@@ -252,6 +252,7 @@ const handleRemoveProduct = (productId: string) => {
                     }}
                     showOptions={false}
                     error={error}
+                    legacy
                   >
                     Country
                   </Select>
@@ -271,6 +272,7 @@ const handleRemoveProduct = (productId: string) => {
                     }}
                     showOptions={false}
                     error={error}
+                    legacy
                   >
                     State
                   </Select>
@@ -288,6 +290,7 @@ const handleRemoveProduct = (productId: string) => {
                     }}
                     showOptions={false}
                     error={error}
+                    legacy
                   >
                     City
                   </Select>
@@ -336,6 +339,7 @@ const handleRemoveProduct = (productId: string) => {
                 style={{ flex: 0.5 }}
                 showOptions={false}
                 onPress={handleToggleProductBottomSheet}
+                legacy
               >
                 Products
               </Select>

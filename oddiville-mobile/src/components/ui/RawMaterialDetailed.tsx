@@ -155,6 +155,7 @@ const RawMaterialDetailed = () => {
 
                 <Select value={selectedChamber}
                     options={["Chamber 1", "Chamber 2", "Chamber 3"]} showOptions={false} onPress={handleChamberSearch}
+                    legacy
                 />
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.cardContainerV2}>

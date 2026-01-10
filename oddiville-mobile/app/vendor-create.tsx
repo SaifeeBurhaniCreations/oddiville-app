@@ -442,6 +442,7 @@ const onSubmit = async (userId: string | null) => {
                     }}
                     showOptions={false}
                     error={error}
+                    legacy
                   >
                     State
                   </Select>
@@ -460,6 +461,7 @@ const onSubmit = async (userId: string | null) => {
                     }}
                     showOptions={false}
                     error={error}
+                    legacy
                   >
                     City
                   </Select>
@@ -497,6 +499,7 @@ const onSubmit = async (userId: string | null) => {
                   }}
                   showOptions={false}
                   error={error}
+                  legacy
                 >
                   Materials
                 </Select>

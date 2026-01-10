@@ -23,7 +23,7 @@ const SelectGroupComponent = ({ data }: SelectGroupProps) => {
         style={styles.flexGrow}
         isVirtualised={false}
         showOptions={false}
-        onPress={handleFirstSelectPress}>
+        onPress={handleFirstSelectPress} legacy>
           {labels[0]}
           </Select>
       <Select
@@ -31,7 +31,7 @@ const SelectGroupComponent = ({ data }: SelectGroupProps) => {
         style={styles.flexGrow}
         isVirtualised={false}
         showOptions={false}
-        onPress={handleSecondSelectPress}>
+        onPress={handleSecondSelectPress} legacy>
           {labels[1]}
           </Select>
     </View>

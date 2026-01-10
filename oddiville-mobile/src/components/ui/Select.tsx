@@ -1,55 +1,108 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, FlatList, Text } from 'react-native';
-import { getColor } from '@/src/constants/colors';
-import { B4, C1, H4 } from '../typography/Typography';
-import DownChevron from '../icons/navigation/DownChevron';
-import { SelectProps } from '@/src/types';
-const Select = ({
-  value,
-  options = ["option_1", "option_2", "option_3"],
-  children,
-  onPress,
-  showOptions = true,
-  isVirtualised,
-  defaultDropdown = false,
-  style,
-  selectStyle,
-  error,
-  disabled = false,
-  onSelect,
-  preIcon: PreIcon,
-  ...props
-}: SelectProps) => {
+import React, { useState } from "react";
+import {
+  StyleSheet,
+  View,
+  TouchableOpacity,
+  FlatList,
+  Text,
+} from "react-native";
+
+import { getColor } from "@/src/constants/colors";
+import { B4, C1, H4 } from "../typography/Typography";
+import DownChevron from "../icons/navigation/DownChevron";
+import { SelectProps } from "@/src/types";
+
+/* Error mode definitions */
+
+type LegacyErrorProps = {
+  legacy: true;
+  error?: string;
+};
+
+type NewErrorProps = {
+  legacy?: false;
+  hasError?: boolean;
+  errorMessage?: string;
+};
+
+type ExtendedSelectProps =
+  Omit<SelectProps, "error"> &
+  (LegacyErrorProps | NewErrorProps) & {
+    onChange?: (value: string) => void;
+  };
+
+/* Component */
+
+const Select = (props: ExtendedSelectProps) => {
+  const {
+    value,
+    options = ["option_1", "option_2", "option_3"],
+    children,
+    onPress,
+    showOptions = true,
+    isVirtualised,
+    defaultDropdown = false,
+    style,
+    selectStyle,
+    disabled = false,
+    onSelect,
+    preIcon: PreIcon,
+  } = props;
+
+  const legacy = props.legacy === true;
+
+  /* Error resolution (SINGLE SOURCE) */
+  const resolvedHasError = legacy
+    ? Boolean("error" in props && props.error)
+    : Boolean("hasError" in props && props.hasError);
+
+  const resolvedErrorMessage = legacy
+    ? ("error" in props ? props.error : undefined)
+    : ("errorMessage" in props ? props.errorMessage : undefined);
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen((prevState) => !prevState);
-  };
-
-  const handlePress = () => {
-    showOptions && toggleDropdown();
-    onPress && onPress();
-  };
 
   const displayValue = value ?? options[0];
 
+  /* Handlers */
+  const handlePress = () => {
+    if (disabled) return;
+    if (showOptions) setIsDropdownOpen((p) => !p);
+    onPress?.();
+  };
+
+  const handleSelect = (item: string) => {
+    setIsDropdownOpen(false);
+
+    if (legacy) {
+      onSelect?.(); // legacy behavior
+    } else {
+      props.onChange?.(item); // new behavior
+    }
+  };
+
+  /* Render */
   const SelectedElement = (
-    <View style={[selectStyle]}>
+    <View style={selectStyle}>
       <TouchableOpacity
         activeOpacity={disabled ? 1 : 0.7}
         style={[
           styles.selectContainer,
-          error && { borderColor: getColor("red", 500) },
-          disabled && { backgroundColor: getColor("green", 100) }
+          resolvedHasError && { borderColor: getColor("red", 500) },
+          disabled && { backgroundColor: getColor("green", 100) },
         ]}
-        onPress={() => !disabled && handlePress()}
+        onPress={handlePress}
       >
-        <View style={{flexDirection: "row", alignItems: "center", gap: 8 }}>
-        {PreIcon && <PreIcon />}
-        
-        <B4 color={getColor("green", disabled ? 200 : 700)}>{displayValue}</B4>
+        <View style={styles.row}>
+          {PreIcon && <PreIcon />}
+          <B4 color={getColor("green", disabled ? 200 : 700)}>
+            {displayValue}
+          </B4>
         </View>
-        {!disabled && <DownChevron size={16} color={getColor("green", 700)} />}
+
+        {!disabled && (
+          <DownChevron size={16} color={getColor("green", 700)} />
+        )}
       </TouchableOpacity>
 
       {isDropdownOpen && defaultDropdown && (
@@ -58,11 +111,10 @@ const Select = ({
             data={options}
             keyExtractor={(item) => item}
             renderItem={({ item }) => (
-              <TouchableOpacity onPress={() => {
-                setIsDropdownOpen(false);
-                onPress?.();
-              }}
-                style={styles.option}>
+              <TouchableOpacity
+                onPress={() => handleSelect(item)}
+                style={styles.option}
+              >
                 <Text style={styles.optionText}>{item}</Text>
               </TouchableOpacity>
             )}
@@ -71,11 +123,11 @@ const Select = ({
         ) : (
           <View style={styles.dropdown}>
             {options.map((item) => (
-              <TouchableOpacity key={item} onPress={() => {
-                setIsDropdownOpen(false);
-                onPress?.();
-              }}
-                style={styles.option}>
+              <TouchableOpacity
+                key={item}
+                onPress={() => handleSelect(item)}
+                style={styles.option}
+              >
                 <Text style={styles.optionText}>{item}</Text>
               </TouchableOpacity>
             ))}
@@ -83,12 +135,14 @@ const Select = ({
         )
       )}
 
-      {error && <C1 style={styles.errorText}>{error}</C1>}
+      {resolvedHasError && resolvedErrorMessage && (
+        <C1 style={styles.errorText}>{resolvedErrorMessage}</C1>
+      )}
     </View>
   );
 
   return children ? (
-    <View style={[styles.labelContainer, style]} {...props}>
+    <View style={[styles.labelContainer, style]}>
       <H4>{children}</H4>
       {SelectedElement}
     </View>
@@ -115,6 +169,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     height: 44,
   },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   dropdown: {
     backgroundColor: getColor("light", 200),
     borderWidth: 1,
@@ -135,6 +194,4 @@ const styles = StyleSheet.create({
     color: getColor("red"),
     marginTop: 4,
   },
-
 });
-

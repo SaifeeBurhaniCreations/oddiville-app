@@ -125,7 +125,7 @@ const CreateOrder = () => {
     const access = resolveAccess(safeRole, safePolicies);
 
   const dispatch = useDispatch();
-  const [step, setStep] = useState<number>(1);
+  const [step, setStep] = useState<number>(2);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastType, setToastType] = useState<"success" | "error" | "info">(
     "info"
@@ -329,24 +329,24 @@ useEffect(() => {
 
     if (result.success) {
       const usedPacketsByProduct = buildUsedPackets(usedStock);
-      // console.log("✅ Final form data:", JSON.stringify({...result.data, usedPacketsByProduct}));
+      console.log("✅ Final form data:", JSON.stringify({...result.data, usedPacketsByProduct}));
 
-      try {
-        dispatchOrder.mutate({...result.data, usedBagsByProduct: usedPacketsByProduct}, {
-          onSuccess: (result) => {
-            resetForm();
-            dispatch(clearLocations());
-            dispatch(clearRawMaterials());
-            dispatch(clearProduct());
-            goTo("sales");
-          },
-          onError: (error) => {
-            showToast("error", "Failed to dispatch order");
-          },
-        });
-      } catch (error) {
-        console.log("✅ Final form data:", JSON.stringify(result.data));
-      }
+      // try {
+      //   dispatchOrder.mutate({...result.data, usedBagsByProduct: usedPacketsByProduct}, {
+      //     onSuccess: (result) => {
+      //       resetForm();
+      //       dispatch(clearLocations());
+      //       dispatch(clearRawMaterials());
+      //       dispatch(clearProduct());
+      //       goTo("sales");
+      //     },
+      //     onError: (error) => {
+      //       showToast("error", "Failed to dispatch order");
+      //     },
+      //   });
+      // } catch (error) {
+      //   console.log("✅ Final form data:", JSON.stringify(result.data));
+      // }
       showToast("info", "Dispatch Order created!");
     } else {
       setToastVisible(true);

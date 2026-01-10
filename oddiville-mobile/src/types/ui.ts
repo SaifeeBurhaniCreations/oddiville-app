@@ -468,7 +468,6 @@ export interface ChipGroupProps {
 export interface SelectProps {
   options?: string[];
   value?: string;
-  error?: string;
   disabled?: boolean;
   showOptions?: boolean;
   onPress?: () => void;
@@ -479,6 +478,9 @@ export interface SelectProps {
   defaultDropdown?: boolean;
   onSelect?: () => void;
   preIcon?: ComponentType<IconRatingProps>;
+
+  /** @deprecated legacy only */
+  error?: string;
 }
 
 export interface VendorProductProps {

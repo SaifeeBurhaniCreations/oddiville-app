@@ -64,12 +64,6 @@ const normalizeRating = (r: any) => Number(r);
 
 const normalizeQty = (q: any) => Number(q) || 0;
 
-const normalizeUnitToKg = (size: number, unit: string | null) => {
-  if (unit === "kg") return size;
-  if (unit === "gm") return size / 1000;
-  return 0;
-};
-
 const AddProductsForSell = ({
   product,
   isFirst,
@@ -309,6 +303,7 @@ const AddProductsForSell = ({
                     "storage-rm-rating"
                   );
                 }}
+                legacy
               />
 
               <Select
@@ -322,6 +317,7 @@ const AddProductsForSell = ({
                     choosePackaging
                   );
                 }}
+                legacy
               />
             </View>
             <View style={[styles.Vstack, { gap: 12 }]}>

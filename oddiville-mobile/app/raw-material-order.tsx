@@ -236,6 +236,7 @@ const RawMaterialOrderScreen = () => {
                                                         }}
                                                         showOptions={false}
                                                         error={error}
+                                                        legacy
                                                     >
                                                         Raw material
                                                     </Select>
@@ -264,7 +265,7 @@ const RawMaterialOrderScreen = () => {
                                     </View>
 
                                     :
-                                    <Select options={["Select raw material"]} onPress={handleOpen} showOptions={false} style={styles.paddingH16}>
+                                    <Select options={["Select raw material"]} onPress={handleOpen} showOptions={false} style={styles.paddingH16} legacy>
                                         Raw material
                                     </Select>
                                 }
@@ -294,6 +295,7 @@ const RawMaterialOrderScreen = () => {
                                         showOptions={false}
                                         disabled={totalWeight === 0}
                                         error={errors?.vendors}
+                                        legacy
                                     >
                                         Vendor
                                     </Select>
