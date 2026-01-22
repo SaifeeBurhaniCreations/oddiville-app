@@ -589,27 +589,27 @@ const PRODUCTION_COMPLETED = {
 // };
 
 const PACKING_SUMMARY = {
-  sections: [
-    {
-      type: "header",
-      data: {
-        label: "Packing Summary",
-        title: "",
-        value: "",
-        icon: "calendar",
-        color: "red",
-        description: "",
-      },
-    },
-    {
-      type: "packing-summary",
-      data: {
-        title: "Packing detail",
-        rating: 5,
-        sizes: [],
-      },
-    },
-  ],
+    sections: [
+        {
+            type: "header",
+            data: {
+                label: "Packing Summary",
+                title: "",
+                value: "",
+                icon: "calendar",
+                color: "red",
+                description: "",
+            },
+        },
+        {
+            type: "packing-summary",
+            data: {
+                title: "",
+                rating: 0,
+                metrics: [],
+            },
+        },
+    ],
 };
 
 const LANE_OCCUPIED = {

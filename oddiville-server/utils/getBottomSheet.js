@@ -41,7 +41,7 @@ function getBottomSheet({
   VendorById,
   CalendarEvent,
   authenticatedUser,
-  chamberStockByIdCategory,
+  packingSummary,
 }) {
   const fillerSchema = getFillerSchema({
     RawMaterials,
@@ -59,7 +59,7 @@ function getBottomSheet({
     VendorById,
     CalendarEvent,
     authenticatedUser,
-    chamberStockByIdCategory,
+    packingSummary,
   });
 
   if (type === "order-ready") {

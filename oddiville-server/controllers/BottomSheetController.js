@@ -12,7 +12,10 @@ const {
   Calendar: CalendarClient,
   Admin: adminClient,
   ChamberStock: ChamberStockClient,
+  PackingEvent,
 } = require("../models");
+const { Op } = require("sequelize");
+
 const { getBottomSheet } = require("../utils/getBottomSheet");
 const { isValidUUID } = require("../utils/auth");
 const jwt = require("jsonwebtoken");
@@ -54,7 +57,7 @@ router.get("/:type/:id", async (req, res) => {
     let VendorById = {};
     let Contractors = [];
     let CalendarEvent = {};
-    let chamberStockByIdCategory = {};
+    let packingSummary = {};
     
     try {
         
@@ -167,30 +170,78 @@ router.get("/:type/:id", async (req, res) => {
             }
         }
 
-        if (type === "packing-summary") {
-            const today = new Date().toISOString().slice(0, 10);
-            const redisKey = `bottomsheet:packing-summary:${today}`;
-            const cache = await safeRedis(redis, r => r.get(redisKey));
-            if (!cache) {
-              return res.status(404).json({ error: "Expired or not found" });
-            }
-            
-            let list;
-            try {
-              list = JSON.parse(cache);
-            } catch {
-              return res.status(500).json({ error: "Corrupted cache data" });
-            }
+      if (type === "packing-summary") {
+        const { product, sku, date } = JSON.parse(id);
 
-            const event = list.find(e => e.eventId === id);
-            if (!event) {
-              return res.status(404).json({ error: "Packing event not found" });
-            }
-            const rawMaterials = await PackageClient.findOne({where: {product_name: event.product_name}});
+        let start, end;
 
-            chamberStockByIdCategory = {...event, rawMaterials: rawMaterials?.dataValues.raw_materials};
+        if (date === "today") {
+          start = new Date();
+          start.setHours(0, 0, 0, 0);
+          end = new Date();
+          end.setHours(23, 59, 59, 999);
+        } else {
+          start = new Date(date);
+          end = new Date(date);
+
+          if (isNaN(start.getTime())) {
+            return res.status(400).json({ error: "Invalid date format" });
           }
 
+          start.setHours(0, 0, 0, 0);
+          end.setHours(23, 59, 59, 999);
+        }
+
+        const events = await PackingEvent.findAll({
+          where: {
+            product_name: product,
+            sku_label: sku,
+            createdAt: { [Op.between]: [start, end] }
+          }
+        });
+
+        if (!events.length) {
+          return res.status(404).json({ error: "No packing events found" });
+        }
+
+        const chambers = [];
+        const rmConsumption = {};
+        let totalBags = 0;
+        let totalPackets = 0;
+        let lastEventAt = null;
+
+        for (const e of events) {
+          totalBags += e.bags_produced;
+          totalPackets += e.total_packets;
+
+          if (!lastEventAt || new Date(e.createdAt) > new Date(lastEventAt)) {
+            lastEventAt = e.createdAt;
+          }
+
+          e.storage.forEach(s => chambers.push(s));
+
+          Object.entries(e.rm_consumption || {}).forEach(([rm, data]) => {
+            rmConsumption[rm] ??= {};
+            Object.assign(rmConsumption[rm], data);
+          });
+        }
+        
+        packingSummary = {
+          product,
+          sku,
+
+          summary: {
+            totalBags,
+            totalPackets,
+            eventsCount: events.length,
+            lastEventAt,
+          },
+
+          chambers,
+
+          rawMaterials: Object.keys(rmConsumption),
+        };
+      }
 
     } catch (error) {
         console.error("Error during fetch:", error.message || error);
@@ -214,7 +265,7 @@ router.get("/:type/:id", async (req, res) => {
       cities,
       CalendarEvent,
       authenticatedUser,
-      chamberStockByIdCategory,
+      packingSummary,
     });
 // console.log('bottomSheet', JSON.stringify(bottomSheet, null, 2));
 
