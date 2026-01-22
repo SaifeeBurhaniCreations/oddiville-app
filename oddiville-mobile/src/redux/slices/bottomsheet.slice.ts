@@ -10,7 +10,7 @@ const initialState: BottomSheetState = {
     mode: "select-main",
     mainSelection: undefined,
     subSelection: '',
-    data: {} 
+    data: {}
   },
 };
 
@@ -30,8 +30,14 @@ const bottomSheetSlice = createSlice({
     updateBottomSheetConfig: (state, action: PayloadAction<BottomSheetConfig>) => {
       state.config = action.payload;
     },
-    updateBottomSheetMeta: (state, action: PayloadAction<BottomSheetMeta>) => {
-      state.meta = action.payload;
+    updateBottomSheetMeta: (
+      state,
+      action: PayloadAction<Partial<BottomSheetMeta>>
+    ) => {
+      state.meta = {
+        ...state.meta,
+        ...action.payload,
+      };
     },
   },
 });

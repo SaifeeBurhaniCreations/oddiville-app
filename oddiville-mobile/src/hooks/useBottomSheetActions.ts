@@ -34,7 +34,7 @@ import { clearAllFilters } from "../redux/slices/bottomsheet/filters.slice";
 import { setSelectionDone } from "../redux/slices/bottomsheet/policies.slice";
 import { useImageStore } from "../stores/useImageStore";
 import { setIsChoosingChambers } from "../redux/slices/bottomsheet/product-package-chamber.slice";
-import { getTareWeight } from "../utils/weightutils";
+import { getTareWeight } from "../utils/packing/weightutils";
 
 export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const source = useSelector(

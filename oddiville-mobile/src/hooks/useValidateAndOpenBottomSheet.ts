@@ -859,28 +859,6 @@ const useValidateAndOpenBottomSheet = () => {
       },
     ],
   };
-    const packingSummary = {
-    sections: [
-        {
-        type: 'header',
-        data: { label: 'Packing summary', title: "Oddi Mix Veg", value: formatDistanceToNow(new Date(Date.now() - 1 * 60 * 1000), { addSuffix: true }), icon: 'calendar', description: "Carrot, Green Peas, Okra, Onion", color: "red" },
-      },
-      {
-        type: "packing-summary", 
-        data: {
-          title: "packing detail",
-          sizes: [
-          {
-            size: "250 gm", bags: 20, packets: 80, rating: 5, id : "1",
-          },
-          {
-            size: "500 gm", bags: 10, packets: 100, rating: 4, id : "2",
-          },
-        ]
-        }
-      }
-    ],
-  };
 
   const validateAndSetData = async (id: string, type: BottomSheetSchemaKey, overrideConfig?: any) => {
     if (!type || !(type in bottomSheetSchemas)) {

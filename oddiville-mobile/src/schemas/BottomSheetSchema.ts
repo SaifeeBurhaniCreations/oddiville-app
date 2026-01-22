@@ -599,12 +599,14 @@ export const PackageSummarySection = z.object({
   data: z.object({
     title: z.string(),
     rating: z.number(),
-    sizes: z.array(
+    metrics: z.array(
       z.object({
         id: z.string(),
-        size: z.string(),
-        packets: z.number(),
-      })
+        label: z.string(),
+        value: z.number(),
+        unit: z.string().optional(),
+        icon: z.enum(["box", "roll", "clock"]).optional(),
+      }),
     ),
   }),
 });
@@ -1146,8 +1148,8 @@ export type PackingSummaryBottomSheetConfig = z.infer<
 export type MultipleProductBottomSheetConfig = z.infer<
   typeof MultipleProductBottomSheetConfigSchema
 >;
-// ------------------- Central Schema Registry ------------------- //
 
+// ------------------- Central Schema Registry ------------------- //
 export const bottomSheetSchemas = {
   "order-ready": OrderReadyBottomSheetConfigSchema,
   "package-comes-to-end": PackageComesToEndBottomSheetConfigSchema,

@@ -42,7 +42,8 @@ import PoliciesCardComponent from "../components/ui/bottom-sheet/PoliciesCompone
 import FileUploadComponent from "../components/ui/bottom-sheet/FileUploadComponent";
 import ChooseProductCardComponent from "../components/ui/bottom-sheet/ChooseProductCardComponent";
 import { PackageItem } from "../hooks/useChamberStock";
-import PackageSummarySizesComponent from "../components/ui/bottom-sheet/PackageSummarySizesComponent";
+import PackageSummaryMetricsComponent from "../components/ui/bottom-sheet/PackageSummaryMetricsComponent";
+import z, { number, string } from "zod";
 
 export type BottomSheetActionKey =
   | "add-raw-material"
@@ -480,14 +481,14 @@ export type SectionConfig =
   | {
       type: "packing-summary";
       data: {
-    title: string;
-    rating: number;
-    sizes: {
-      id: string;
-      size: string;
-      packets: number;
-    }[];
-  };
+        title: string;
+        rating: number;
+        sizes: {
+          id: string;
+          size: string;
+          packets: number;
+        }[];
+      };
     };
 
 export interface BottomSheetConfig {
@@ -938,15 +939,17 @@ export interface AddonInputComponentProps {
 //       };
 // }
 
-export interface PackageSummarySizeProps {
+export interface PackageSummaryMetricsProps {
   data: {
-    title: string;
-    rating: number;
-    sizes: {
-      id: string;
-      size: string;
-      packets: number;
-    }[];
+    title: string,
+    rating: number,
+    metrics: {
+      id: string,
+      label: string,
+      value: number,
+      unit: string,
+      icon: "box" | "roll" | "clock" | undefined,
+    }[],
   };
 }
 
@@ -1043,5 +1046,5 @@ export const sectionComponents: Record<
   "storage-rm-rating": StorageRMRatingComponent,
   "policies-card": PoliciesCardComponent,
   "file-upload": FileUploadComponent,
-  "packing-summary": PackageSummarySizesComponent,
+  "packing-summary": PackageSummaryMetricsComponent,
 };

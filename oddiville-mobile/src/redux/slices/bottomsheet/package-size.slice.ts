@@ -1,7 +1,7 @@
 import { DataAccordianEnum } from '@/src/types';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-export type packageSize = {
+export type PackageSize = {
     name: string;
     icon: DataAccordianEnum;
     isChecked: boolean;
@@ -11,7 +11,7 @@ export type packageSize = {
 };
 
 
-interface PackageSizeState { selectedSizes: packageSize[] };
+interface PackageSizeState { selectedSizes: PackageSize[] };
 
 const initialState: PackageSizeState = {
     selectedSizes: [],
@@ -21,7 +21,7 @@ const packageSizeSlice = createSlice({
     name: 'packageSize',
     initialState,
     reducers: {
-   togglePackageSize(state, action: PayloadAction<packageSize>) {
+   togglePackageSize(state, action: PayloadAction<PackageSize>) {
   const index = state.selectedSizes.findIndex(
     (s) => s.rawSize === action.payload.rawSize
   );
@@ -36,7 +36,7 @@ const packageSizeSlice = createSlice({
     state.selectedSizes = [...state.selectedSizes, action.payload];
   }
 },
-        setPackageSizes(state, action: PayloadAction<packageSize[]>) {
+        setPackageSizes(state, action: PayloadAction<PackageSize[]>) {
             state.selectedSizes = action.payload;
         },
         resetPackageSizes(state) {
