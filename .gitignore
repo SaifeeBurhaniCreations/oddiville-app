@@ -3,5 +3,5 @@ oddiville-server/node_modules
 oddiville-web/node_modules
 resource
 call.md
-temp\
+temp/
 test.tsx
