@@ -120,9 +120,6 @@ module.exports = (sequelize, Sequelize) => {
             if (!Array.isArray(value)) {
               throw new Error("Chamber must be an array.");
             }
-            if (value.length === 0)
-              throw new Error("Chamber must have at least one entry.");
-
 
             value.forEach((item, index) => {
               const allowedKeys = ["id", "quantity", "rating"];
@@ -189,7 +186,39 @@ module.exports = (sequelize, Sequelize) => {
             });
           },
         },
-      }
+      },
+      packed_ref: {
+        type: Sequelize.JSON,
+        allowNull: true,
+        validate: {
+          isValidPackedRef(value) {
+            if (value == null) return;
+
+            const allowedKeys = ["lastPackedAt", "skus", "eventCount"];
+            const keys = Object.keys(value);
+
+            const extra = keys.filter(k => !allowedKeys.includes(k));
+            if (extra.length > 0) {
+              throw new Error(`packed_ref has invalid fields: ${extra.join(", ")}`);
+            }
+
+            if (value.lastPackedAt && isNaN(Date.parse(value.lastPackedAt))) {
+              throw new Error("packed_ref.lastPackedAt must be valid ISO date");
+            }
+
+            if (value.skus && !Array.isArray(value.skus)) {
+              throw new Error("packed_ref.skus must be an array");
+            }
+
+            if (
+              value.eventCount != null &&
+              isNaN(Number(value.eventCount))
+            ) {
+              throw new Error("packed_ref.eventCount must be numeric");
+            }
+          },
+        },
+      },
     },
     {
       timestamps: true,
