@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { FlatList, View, StyleSheet, RefreshControl } from "react-native";
 import Loader from "./Loader";
-import { getRandomBackground } from "@/src/utils/arrayUtils";
+import { getStableBackground } from "@/src/utils/arrayUtils";
 import { B2 } from "../typography/Typography";
 import noBatchImage from "@/src/assets/images/illustrations/no-batch.png";
 import EmptyState from "./EmptyState";
@@ -57,7 +57,7 @@ const SearchActivitesFlatList = ({
   const [items, setItems] = useState<SearchActivityItem[]>(normalizedItems);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMoreData, setHasMoreData] = useState(true);
-  const bgMapRef = useRef<Map<string, ReturnType<typeof getRandomBackground>>>(new Map());
+  const bgMapRef = useRef<Map<string, ReturnType<typeof getStableBackground>>>(new Map());
 
   useEffect(() => {
     setItems(normalizedItems);
@@ -76,7 +76,7 @@ const SearchActivitesFlatList = ({
 
       let randomBg = bgMapRef.current.get(key);
       if (!randomBg) {
-        randomBg = getRandomBackground();
+        randomBg = getStableBackground(key);
         bgMapRef.current.set(key, randomBg);
       }
       return (

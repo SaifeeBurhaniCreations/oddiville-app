@@ -110,33 +110,36 @@ export interface ProductionCardProps {
   image: string;
 }
 
-export interface ItemCardProps {
+export type ItemCardMode =
+  | "production"
+  | "production-completed"
+  | "packing"
+  | "default";
+
+export interface ItemCardData {
   id?: string;
   name: string;
   weight?: string;
-  time?: string | null;
-  lane?: string | null;
   rating?: string;
-  onActionPress?: () => void;
+  lane?: string | null;
   actionLabel?: string;
   disabled?: boolean;
-  isProduction?: boolean;
-  isPacking?: boolean;
-  isProductionCompleted?: boolean;
   backgroundIcon?: ComponentType<any>;
   isActive?: boolean;
   style?: ViewStyle;
-}
-
-export interface ItemsFlatListProps {
-  items: ItemCardProps[];
-  refreshing?: boolean;
-  onRefresh?: () => void;
-  isProduction?: boolean;
-  isPacking?: boolean;
-  isProductionCompleted?: boolean;
+  mode?: ItemCardMode;
+  meta?: {
+    product: string;
+    sku: string;
+  };
   onActionPress?: () => void;
 }
+
+export interface ItemCardListProps {
+  items: ItemCardData[];
+  onActionPress?: () => void;
+}
+
 export interface SupervisorOrderCardProps {
   order: OrderProps;
   style?: any;

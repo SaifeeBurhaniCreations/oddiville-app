@@ -30,8 +30,8 @@ export interface RawMaterialOrderStatusChanged {
     type: 'RAW_MATERIAL_ORDER_STATUS_CHANGED';
 }
 
-export const PENDING_KEY = ["raw-material-orders", { status: "pending" }];
-export const ALL_KEY = ["raw-material-orders", "all"];
+export const PENDING_KEY = ["raw-material-orders", "pending"] as const;
+export const ALL_KEY = ["raw-material-orders", "all"] as const;
 
 export function useRawMaterialOrders() {
   const queryClient = useQueryClient();
@@ -56,6 +56,7 @@ export function useRawMaterialOrders() {
         if (idx === -1) return [updated, ...old];
         const copy = old.slice(); copy[idx] = updated; return copy;
       });
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
     };
 
     const onStatusChanged = (data: RawMaterialOrderStatusChanged) => {
@@ -68,8 +69,11 @@ export function useRawMaterialOrders() {
           return old.filter(o => o.id !== updated.id);
         } else {
           const idx = old.findIndex(o => o.id === updated.id);
-          if (idx === -1) return [updated, ...old];
-          const copy = old.slice(); copy[idx] = updated; return copy;
+          if (idx === -1) return [{ ...updated }, ...old];
+          const copy = old.map((o) =>
+            o.id === updated.id ? { ...updated } : o,
+          );
+          return copy;
         }
       });
 
@@ -78,6 +82,9 @@ export function useRawMaterialOrders() {
         if (idx === -1) return [updated, ...old];
         const copy = old.slice(); copy[idx] = updated; return copy;
       });
+
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+
     };
 
     socket.on('raw-material-order:created', onCreated);

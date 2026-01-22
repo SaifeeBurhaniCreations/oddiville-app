@@ -56,6 +56,8 @@ export interface ButtonProps {
   loading?: boolean;
   size?: "sm" | "md" | "lg" | "xl" | "icon";
   disabled?: boolean;
+  disableUi?: boolean;
+  interactive?: boolean;
   onPress?: () => void | Promise<void>;
   onPressIn?: () => void | Promise<void>;
   onPressOut?: () => void | Promise<void>;

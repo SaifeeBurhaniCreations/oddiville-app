@@ -41,6 +41,7 @@ import packageTypeProductionReducer from "./slices/bottomsheet/package-type-prod
 import multipleProductReducer from "./slices/multiple-product.slice";
 import usedDispatchPkgReducer from "./slices/used-dispatch.slice";
 import packageProductRatingReducer from "./slices/bottomsheet/package-product-rating.slice";
+import packingDraftReducer from "./slices/packingDraft.slice";
 
 export const store = configureStore({
   reducer: {
@@ -85,6 +86,7 @@ export const store = configureStore({
     packageTypeProduction: packageTypeProductionReducer,
     usedDispatchPkg: usedDispatchPkgReducer,
     packageProductRating: packageProductRatingReducer,
+    packingDraft: packingDraftReducer,
   },
 });
 

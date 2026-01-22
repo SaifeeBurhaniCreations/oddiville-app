@@ -3,7 +3,7 @@ import { FlatList, Text, View, RefreshControl } from "react-native";
 import Loader from "../Loader";
 import { OrderProps } from "@/src/types";
 import SupervisorCard from "./SupervisorCard";
-import { getRandomBackground } from "@/src/utils/arrayUtils";
+import { getStableBackground } from "@/src/utils/arrayUtils";
 
 type SupervisorFlatlistProps = {
   data?: OrderProps[]; 
@@ -24,13 +24,16 @@ const SupervisorFlatlist = ({
   isEdit,
   reFetchers = [],
 }: SupervisorFlatlistProps) => {
-  const orders = useMemo(() => (pages ? pages.flat() : data ?? []), [pages, data]);
+  const orders = useMemo(
+    () => [...(pages ? pages.flat() : data ?? [])],
+    [pages, data]
+  );
 
   const [refreshing, setRefreshing] = useState(false);
 
   const renderActivityCard = useCallback(
     ({ item }: { item: OrderProps }) => {
-      const randomBg = getRandomBackground();
+      const randomBg = getStableBackground(item.id!);
       return <SupervisorCard order={item} color="green" bgSvg={randomBg} isEdit={isEdit} />;
     },
     [isEdit]
@@ -68,8 +71,9 @@ const SupervisorFlatlist = ({
   return (
     <FlatList
       data={orders}
+      extraData={orders.length}
       renderItem={renderActivityCard}
-      keyExtractor={(item) => item.id ?? item.title ?? Math.random().toString()}
+      keyExtractor={(item) => String(item.id)}
       style={{ flex: 1 }}
       contentContainerStyle={{ paddingTop: 16, paddingBottom: 100 }}
       ItemSeparatorComponent={() => <View style={{ height: 16 }} />}

@@ -27,9 +27,16 @@ const backgroundImages = [
   FarmhouseBg,
 ];
 
-export function getRandomBackground() {
-  const randomIndex = Math.floor(Math.random() * backgroundImages?.length);
-  return backgroundImages[randomIndex];
+export function getStableBackground(id: string | number) {
+  const index =
+    Math.abs(
+      id
+        .toString()
+        .split("")
+        .reduce((acc, c) => acc + c.charCodeAt(0), 0),
+    ) % backgroundImages.length;
+
+  return backgroundImages[index];
 }
 
 export const labelMap: Record<string, string> = {

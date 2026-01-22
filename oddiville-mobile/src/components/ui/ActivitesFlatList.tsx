@@ -3,9 +3,8 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { FlatList, View } from 'react-native';
 import Loader from './Loader';
 import { ActivityProps } from "@/src/types"
-import { getRandomBackground } from '@/src/utils/arrayUtils';
+import { getStableBackground } from '@/src/utils/arrayUtils';
 import { B2 } from '../typography/Typography';
-import { fetchActivities } from '@/src/services/activities.service';
 import { BottomSheetSchemaKey } from '@/src/schemas/BottomSheetSchema';
 
 import noBatchImage from "@/src/assets/images/illustrations/no-batch.png"
@@ -50,7 +49,7 @@ const ActivitesFlatList = ({
   const [isLoading, setIsLoading] = useState(false);
   const [hasMoreData, setHasMoreData] = useState(true);
   const [page, setPage] = useState<number>(1);
-  const bgMapRef = useRef<Map<string, ReturnType<typeof getRandomBackground>>>(new Map());
+  const bgMapRef = useRef<Map<string, ReturnType<typeof getStableBackground>>>(new Map());
 
   const renderActivityCard = useCallback(
     ({ item, index }: { item: ActivityProps; index: number }) => {
@@ -58,7 +57,7 @@ const ActivitesFlatList = ({
 
       let randomBg = bgMapRef.current.get(key);
       if (!randomBg) {
-        randomBg = getRandomBackground();
+        randomBg = getStableBackground(key);
         bgMapRef.current.set(key, randomBg);
       }
       return (
@@ -86,21 +85,6 @@ const ActivitesFlatList = ({
       if (!hasMoreData || isLoading) return;
 
       setIsLoading(true);
-
-      try {
-        const newActivities = await fetchActivities(page);
-
-        if (!newActivities?.length) {
-          setHasMoreData(false);
-        } else {
-          setActivities((prev) => [...prev, ...newActivities]);
-          setPage((prev) => prev + 1);
-        }
-      } catch (error) {
-        console.error("Error loading more data:", error);
-      } finally {
-        setIsLoading(false);
-      }
     }
   }, [fetchMore, hasMore, externalLoading, page, isLoading, hasMoreData]);
 

@@ -16,6 +16,8 @@ const Button = ({
   style,
   size = "md",
   disabled = false,
+  disableUi = false,
+  interactive = true,
   preIcon,
   postIcon,
   onPress,
@@ -25,7 +27,7 @@ const Button = ({
 }: ButtonProps) => {
   const [isPressed, setIsPressed] = useState(false);
   const { paddingHorizontal, paddingVertical } = findBtnPadding(size);
-
+  const isUiDisabled = disableUi || disabled;
 
   function isValidVariant(variant: string): variant is Variant {
     return variant === "outline" || variant === "ghost" || variant === "fill";
@@ -50,7 +52,7 @@ const Button = ({
       style,
       color,
       isPressed,
-      disabled,
+      disabled: isUiDisabled,
       full,
       half,
     };
@@ -58,8 +60,9 @@ const Button = ({
     return variantStylesMap[safeVariant](styleArgs);
   };
 
-
   const { container, textColor } = getVariantStyles();
+
+  const Container = interactive ? Pressable : View;
 
   const handlePressIn = () => {
     setIsPressed(true);
@@ -71,13 +74,18 @@ const Button = ({
     onPressOut?.();
   };
 
+  const handlePress = () => {
+    if (disabled || loading) return;
+    onPress?.();
+  };
+
   const renderContent = () => (
     <View style={styles.contentRow}>
       {preIcon && <View style={styles.iconContainer}>{preIcon}</View>}
       <B2
         numberOfLines={1}
         ellipsizeMode="tail"
-        color={disabled ? getColor(color, 200) : textColor}
+        color={isUiDisabled ? getColor(color, 200) : textColor}
         style={{ textAlign: "center", flexShrink: 1 }}
       >
         {children}
@@ -88,15 +96,17 @@ const Button = ({
   );
 
   return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+    <Container
+      {...(interactive && {
+        onPress: handlePress,
+        onPressIn: handlePressIn,
+        onPressOut: handlePressOut,
+        disabled,
+      })}
       style={container}
-      disabled={disabled}
     >
       {renderContent()}
-    </Pressable>
+    </Container>
   );
 };
 

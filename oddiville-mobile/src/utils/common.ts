@@ -6,6 +6,7 @@ import PaperRollIcon from '../components/icons/packaging/PaperRollIcon'
 import BagIcon from "../components/icons/packaging/BagIcon";
 import BigBagIcon from "../components/icons/packaging/BigBagIcon";
 import { PackageItem } from "../types";
+import { PackingPackages } from "../types/domain/packing/packing.types";
 
 export function findPadding(size: string | undefined) {
     switch (size) {
@@ -103,7 +104,7 @@ export const formatTimeDifference = (startDate: Date, endDate: Date): string => 
 
 export type PackageIconInput = {
   size: number;
-  unit: "kg" | "gm" | "qn";
+  unit: "kg" | "gm" | "unit";
 };
   
 export const mapPackageIcon = (item: PackageIconInput) => {
@@ -128,12 +129,15 @@ export const mapPackageIcon = (item: PackageIconInput) => {
   return BigBagIcon;
 };
 
-export const toPackageIconInput = (pkg: PackageItem): PackageIconInput => ({
+export const toPackageIconInput = (pkg: PackingPackages): PackageIconInput => ({
   size: Number(pkg.size),
-  unit: pkg.unit as "kg" | "gm" | "qn",
+  unit: pkg.unit as "kg" | "gm" | "unit",
 });
 
-
+// export const toPackageIconInput = (pkg: PackageItem): PackageIconInput => ({
+//   size: Number(pkg.size),
+//   unit: pkg.unit as "kg" | "gm" | "qn",
+// });
 
 export function kConverter(num: number): string {
     if (num >= 1000) {

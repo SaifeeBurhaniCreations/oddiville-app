@@ -2,7 +2,7 @@
 export type UUID = string;
 export type ISODate = string;
 
-export type ContainerType = "bag" | "unit";
+export type ContainerType = "bag" | "box";
 
 // Meta
 export interface PackingDraftMeta {
@@ -87,8 +87,67 @@ export interface PackingValidationState {
 export interface PackingDraft {
   meta: PackingDraftMeta;
   product: PackingProduct;
-  rawMaterialConsumption: RawMaterialConsumption[];
+  rawMaterialConsumption: RawMaterialConsumptionPayload;
   packagingPlan: PackagingPlanItem[];
   packedStorageSummary: PackedStorageSummary[];
   validation: PackingValidationState;
+}
+
+
+export type PackageInputState = {
+  bagCount?: number | undefined;
+  packetsPerBag?: number | undefined;
+
+  chambers?: Record<string, number>;
+};
+
+// inputs for ALL packages in a chamber
+export type PackageInputsByKey = Record<string, PackageInputState>
+
+// inputs for ALL chambers
+export type PackageFormState = Record<string, PackageInputsByKey>
+
+export type PacketsAvailableInput = {
+  size: number;
+  unit: "gm" | "kg";
+  storedKg: number;
+};
+
+export type PackingChamberOption = {
+    chamberId: string;
+    chamberName: string;
+
+    maxBags: number;     
+    availableKg: number;   
+
+    assignedBags: number;  
+};
+
+export type PackagingPlanValidation = {
+  skuId: string;
+  skuLabel: string;
+  bagsProduced: number;
+  bagsAssigned: number;
+  isValid: boolean;
+  error?: string;
+};
+
+export type RawMaterialConsumptionPayload = {
+  [rmName: string]: {
+    [chamberId: string]: {
+      outer_used: number;
+      rating: number;
+    };
+  };
+};
+
+// Dispatch page
+export interface PackingPackages {
+  size: number;
+  unit: "kg" | "gm" | "unit";
+  count: number;
+}
+export interface DispatchPackagingChambers {
+  chamberName: string;
+  packages: PackingPackages[];
 }

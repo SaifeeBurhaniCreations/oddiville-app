@@ -26,3 +26,7 @@ export function sortBy<T extends Record<string, any>>(arr: T[], key: keyof T, is
         return [...arr].sort((a, b) => parseWeight(String(a[key])) - parseWeight(String(b[key])));
     }
 }
+
+export function sortByNumber<T>(arr: T[], key: keyof T): T[] {
+  return [...arr].sort((a, b) => Number(a[key]) - Number(b[key]));
+}

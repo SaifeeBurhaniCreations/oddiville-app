@@ -62,27 +62,14 @@ export function useCompletedRawMaterialOrders() {
   const limit = 10;
 
   useEffect(() => {
-    const upsertCompletedIfNeeded = (updated: RawMaterialOrderProps) => {
-      const isCompleted =
-        updated.status === "completed" || !!updated.arrival_date;
+const upsertCompletedIfNeeded = (updated: RawMaterialOrderProps) => {
+  const isCompleted = updated.status === "completed" || !!updated.arrival_date;
 
-      if (isCompleted) {
-        queryClient.invalidateQueries({ queryKey: ["production"] });
-      }
-      
-      queryClient.setQueryData<InfiniteData<CompletedOrdersPage>>(
-        COMPLETED_KEY,
-        (old) => {
-          if (isCompleted) {
-            return upsertFirstPage(old, updated);
-          } else {
-            return removeFromAllPages(old, updated.id) as
-              | InfiniteData<CompletedOrdersPage>
-              | undefined;
-          }
-        }
-      );
-    };
+  queryClient.setQueryData<CompletedInfinite>(COMPLETED_KEY, (old) => {
+    if (isCompleted) return upsertFirstPage(old, { ...updated });
+    return removeFromAllPages(old, updated.id);
+  });
+};
 
     const onCreated = (data: RawMaterialOrderCreated) => {
       const updated = data.materialDetails;
@@ -94,6 +81,7 @@ export function useCompletedRawMaterialOrders() {
       );
 
       upsertCompletedIfNeeded(updated);
+      
     };
 
     const onStatusChanged = (data: RawMaterialOrderStatusChanged) => {

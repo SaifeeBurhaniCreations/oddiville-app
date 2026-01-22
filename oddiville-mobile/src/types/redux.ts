@@ -11,15 +11,15 @@ export type AllowedMainSelection =
       | "vendor:overview"
       | "user:overview";
 
-      export interface BottomSheetMeta {
-    id: string;
-    type: any | undefined;
-    mode?: "select-main" | "select-detail";
-    mainSelection?: AllowedMainSelection;
-    subSelection?: string;
-    data?: Record<string, any>;
-  };
-      
+export type BottomSheetMeta = {
+  id?: string;
+  type?: any;
+  mode?: string;
+  mainSelection?: string;
+  subSelection?: string;
+  data?: Record<string, any>;
+};
+
 export interface BottomSheetState {
   isVisible: boolean;
   config: BottomSheetConfig | null;

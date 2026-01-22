@@ -7,7 +7,7 @@ import { usePackageByName } from './Packages';
 import Carrot from '../assets/images/item-icons/Carrot.png';
 import { InfiniteData } from '@tanstack/query-core';
 
-// --- Interfaces ---
+// Interfaces
 
 interface Chamber {
     id: string;
@@ -35,7 +35,7 @@ interface PackageData {
     types: PackageType[];
 }
 
-// --- Return Types ---
+// Return Types
 interface FormattedChamber {
     id: string;
     name: string;
@@ -56,18 +56,6 @@ interface ProductItem {
     chambers: FormattedChamber[];
     image: any;
 }
-
-export function useFlattenedChamberStock(
-  data?: InfiniteData<ChamberStockPage>
-): ChamberStock[] {
-  return useMemo(() => {
-    if (!data?.pages) return [];
-    return data.pages.flatMap((page) => page.data);
-  }, [data]);
-}
-
-
-// --- Hook ---
 
 export function useProductItems() {
   const selectedRm = useSelector(
@@ -196,10 +184,24 @@ type ProductPackageItem = {
   rawUnit?: string | null;
 };
 
-export function useProductPackage() {
-  const { product: selectedProduct } = useSelector((state: RootState) => state.product);
+type UseProductPackageResult = {
+  productPackages: ProductPackageItem[];
+  isLoading: boolean;
+  isFetching: boolean;
+  refetch: () => void;
+};
 
-  const { data: packageData = { types: [] }, isLoading, refetch, isFetching } = usePackageByName(selectedProduct) as {
+export function useProductPackage(): UseProductPackageResult {
+  const { product: selectedProduct } = useSelector(
+    (state: RootState) => state.product
+  );
+
+  const {
+    data: packageData = { types: [] },
+    isLoading,
+    refetch,
+    isFetching,
+  } = usePackageByName(selectedProduct) as {
     data: PackageData;
     isLoading: boolean;
     isFetching: boolean;
@@ -208,14 +210,16 @@ export function useProductPackage() {
 
   const productPackages: ProductPackageItem[] = useMemo(() => {
     return (packageData?.types || []).map((pkg) => {
-      const rawSizeStr = pkg.size === undefined || pkg.size === null ? "" : String(pkg.size);
+      const rawSizeStr =
+        pkg.size === undefined || pkg.size === null ? "" : String(pkg.size);
 
-      let size = typeof pkg.size === "number" ? pkg.size : extractFirstNumber(pkg.size);
+      let size =
+        typeof pkg.size === "number" ? pkg.size : extractFirstNumber(pkg.size);
 
       const unitFromPkgField = normalizeUnit(pkg.unit);
-const unitFromSizeString = extractUnitFromString(
-  pkg.size != null ? String(pkg.size) : undefined
-);
+      const unitFromSizeString = extractUnitFromString(
+        pkg.size != null ? String(pkg.size) : undefined
+      );
 
       const unit = unitFromPkgField ?? unitFromSizeString ?? null;
 
@@ -237,7 +241,6 @@ const unitFromSizeString = extractUnitFromString(
 
   return { productPackages, isLoading, isFetching, refetch };
 }
-
 
 export function useRawMaterialByProduct(name: string | null) {
   const {

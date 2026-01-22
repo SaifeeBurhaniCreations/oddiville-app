@@ -56,3 +56,11 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
 })
+
+export const EmptyStateStyles = StyleSheet.create({
+    center: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    }
+})

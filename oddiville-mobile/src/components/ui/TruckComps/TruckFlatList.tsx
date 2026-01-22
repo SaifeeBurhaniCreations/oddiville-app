@@ -3,7 +3,7 @@ import { FlatList, Text, View } from 'react-native';
 import { TruckProps } from "@/src/types";
 import Loader from '../Loader';
 import TruckCard from './TruckCard';
-import { getRandomBackground } from '@/src/utils/arrayUtils';
+import { getStableBackground } from '@/src/utils/arrayUtils';
 
 const TruckFlatList = ({
   trucks,
@@ -18,7 +18,7 @@ const TruckFlatList = ({
 }) => {
 
   const renderItem = useCallback(({ item }: { item: TruckProps }) => {
-    const randomBg = getRandomBackground();
+    const randomBg = getStableBackground(item.id!);
     return <TruckCard {...item} color="green" bgSvg={randomBg} />;
   }, []);
 

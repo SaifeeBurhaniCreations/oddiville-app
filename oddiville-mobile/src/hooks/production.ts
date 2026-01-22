@@ -41,24 +41,22 @@ const toProduction = (payload: any): Production | null => {
 export function useProduction() {
   const queryClient = useQueryClient();
   useEffect(() => {
-    const listener = (payload: any) => {
-      const updated = toProduction(payload);
-      if (!updated?.id) return;
+   const listener = (payload: any) => {
+     const updated = toProduction(payload);
+     if (!updated?.id) return;
 
-      queryClient.setQueryData(
-        ["production"],
-        (old: Production[] | undefined) => {
-          if (!old) return [updated];
-          const idx = old.findIndex((i) => i.id === updated.id);
-          if (idx === -1) return [updated, ...old];
-          const copy = old.slice();
-          copy[idx] = updated;
-          return copy;
-        }
-      );
+     queryClient.setQueryData<Production[]>(["production"], (old = []) => {
+       const exists = old.some((p) => p.id === updated.id);
 
-      queryClient.setQueryData(["production", updated.id], updated);
-    };
+       if (!exists) {
+         return [{ ...updated }, ...old];
+       }
+
+       return old.map((p) => (p.id === updated.id ? { ...updated } : p));
+     });
+
+     queryClient.setQueryData(["production", updated.id], { ...updated });
+   };
 
     socket.on("production:receive", listener);
     socket.on("production:status-changed", listener);
@@ -215,7 +213,9 @@ export function useCompleteProduction() {
       if (!production?.id) return;
 
       queryClient.setQueryData(["production"], (oldData: Production[] = []) => {
-        return oldData.filter((item) => item.id !== production.id);
+        return oldData
+          .filter((item) => item.id !== production.id)
+          .map((i) => ({ ...i }));
       });
 
       queryClient.setQueryData(["production", variables.id], production);
