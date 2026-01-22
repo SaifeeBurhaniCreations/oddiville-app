@@ -189,7 +189,7 @@ const { height: screenHeight } = useWindowDimensions()
                 </ScrollView>
               </View>
             )}
-            <SupervisorFlatlist data={pendingOrders} reFetchers={[refetchRM, refetchVendor]} />
+            <SupervisorFlatlist key={pendingOrders.length} data={pendingOrders} reFetchers={[refetchRM, refetchVendor]} />
           </View>
           <View style={styles.flexGrow}>
                  <View
@@ -229,6 +229,7 @@ const { height: screenHeight } = useWindowDimensions()
               </View>
             )}
             <SupervisorFlatlist
+              key={completedOrders.length}
               data={completedOrders}
               isEdit
               fetchNext={fetchNextPage}

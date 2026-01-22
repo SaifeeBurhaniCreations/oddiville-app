@@ -5,8 +5,9 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
 } from "react-native";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 // 2. Third-party dependencies
 
@@ -23,35 +24,112 @@ import { useToast } from "@/src/context/ToastContext";
 // 5. Project constants/utilities
 import { getColor } from "@/src/constants/colors";
 import RawMaterialConsumptionSection from "@/src/components/ui/package/RawMaterialConsumptionSection";
-import { usePackingForm } from "@/src/hooks/usePackingForm";
+import { usePackingForm } from "@/src/hooks/packing/usePackingForm";
 import Button from "@/src/components/ui/Buttons/Button";
-import { useCreatePackedItem } from "@/src/hooks/packedItem";
+import PackingSKUSection from "@/src/components/ui/package/PackingSKUSection";
+import EmptyState, { EmptyStateStyles } from "@/src/components/ui/EmptyState";
+import { getEmptyStateData } from "@/src/utils/common";
+import { useRawMaterialConsumption } from "@/src/hooks/packing/useRawMaterialConsumption";
+import { setFinalDraft } from "@/src/redux/slices/packingDraft.slice";
+import { useDispatch, useSelector } from "react-redux";
+import { useChamberStockByName } from "@/src/hooks/useChamberStock";
+import { RootState } from "@/src/redux/store";
+import { B4 } from "@/src/components/typography/Typography";
+import { clearProduct, setRawMaterials } from "@/src/redux/slices/product.slice";
+import { resetPackageSizes } from "@/src/redux/slices/bottomsheet/package-size.slice";
+import { clearChambers } from "@/src/redux/slices/bottomsheet/raw-material.slice";
+import { clearRatings } from "@/src/redux/slices/bottomsheet/storage.slice";
+import { clearDispatchRatings } from "@/src/redux/slices/bottomsheet/dispatch-rating.slice";
+import PackingSummarySection from "@/src/components/ui/package/PackingSummarySection";
+import { useCreatePacking } from "@/src/hooks/packing/useGetPackedItemsToday";
 
 // 6. Project types
 
 const PackageScreen = () => {
+  // selectors
+  const selectedRawMaterials = useSelector(
+    (state: RootState) => state.product.rawMaterials
+  );
+  
   // custom hooks
   const toast = useToast();
+  const dispatch = useDispatch();
   const form =
     usePackingForm({validateOnChange: true});
-  const { mutate: createPacked, isPending, error } = useCreatePackedItem();
+        const { chamberStock } = useChamberStockByName(selectedRawMaterials);
+        const rmUsed = useMemo(
+          () => chamberStock ?? [],
+          [chamberStock]
+        );
+  const rm = useRawMaterialConsumption(rmUsed);
+
+  const { mutate: createPacked, isPending, error } = useCreatePacking();
 
   // states
   const [searchText, setSearchText] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isCurrentProduct, setIsCurrentProduct] = useState<boolean>(false);
+  const [showTooltip, setShowTooltip] = useState(false);
 
-  // selectors
+//  memo 
+  const submitDisabledReason = useMemo(() => {
+    if (isPending) return "Packing in progress";
+
+    if (!form.canSubmit) {
+      const errors = form.getErrors?.();
+
+      if (!errors) return "Form is incomplete";
+
+      if (errors.rmConsumption)
+        return "Raw material consumption is invalid";
+
+      if (errors.packagingPlan)
+        return "Packaging quantities do not match";
+
+      return "Please complete all required fields";
+    }
+
+    return null;
+  }, [form.canSubmit, isPending]);
+
+  // effect
+  useEffect(() => {
+    if (!showTooltip) return;
+    const t = setTimeout(() => setShowTooltip(false), 2000);
+    return () => clearTimeout(t);
+  }, [showTooltip]);
 
   // functions
   const onSubmit = async () => {
     const result = form.validateForm();
-    if (!result.success) {
-      console.log(result.errors);
-      return;
-    }
+    if (!result.success) return;
 
-    console.log("FINAL PACKING EVENT", result.data);
+    dispatch(setFinalDraft(result.data));
+    setIsLoading(true);
+
+    createPacked(result.data, {
+      onSuccess: () => {
+        form.resetForm();
+
+        dispatch(clearProduct());
+        dispatch(setRawMaterials([]));
+        dispatch(resetPackageSizes());
+        dispatch(clearChambers());
+        dispatch(clearRatings());
+        dispatch(clearDispatchRatings());
+
+        toast.success("Packed item created!");
+      },
+      onError: (err: any) => {
+        toast.error(err?.message || "Packing failed");
+      },
+      onSettled: () => {
+        setIsLoading(false);
+      },
+    });
   };
+
+  const emptyStateData = getEmptyStateData("products")
 
   return (
     <KeyboardAvoidingView
@@ -70,17 +148,46 @@ const PackageScreen = () => {
             <View style={{ flex: 1 }}>
               <ScrollView
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ flexGrow: 1, paddingBottom: 4 }}
+                contentContainerStyle={{ flexGrow: 1, paddingBottom: 56 }}
               >
                 <View style={styles.storageColumn}>
-                  <ProductContextSection setIsLoading={setIsLoading} form={form} />
-                  <RawMaterialConsumptionSection setIsLoading={setIsLoading} />
+                  <ProductContextSection setIsLoading={setIsLoading} form={form} setIsCurrentProduct={setIsCurrentProduct} />
+                  <RawMaterialConsumptionSection setIsLoading={setIsLoading} isCurrentProduct={isCurrentProduct} form={form} rm={rm} rmUsed={rmUsed} />
+                  <PackingSKUSection setIsLoading={setIsLoading} isCurrentProduct={isCurrentProduct} form={form} />
+
+                  {!isCurrentProduct && <View style={EmptyStateStyles.center}><EmptyState stateData={emptyStateData} /></View>}
                 </View>
               </ScrollView>
               <View style={{ paddingHorizontal: 16 }}>
-                <Button onPress={onSubmit} disabled={!form.canSubmit || isPending} variant="fill">
-                  {isPending ? "Packing product..." : "Pack product"}
-                </Button>
+                <View>
+                  <Pressable
+                    onPress={() => {
+                      if (!form.canSubmit) {
+                        setShowTooltip(true);
+                        return;
+                      }
+                      onSubmit();
+                    }}
+                    disabled={isPending}
+                  >
+                    <Button
+                      variant="fill"
+                      interactive={false}
+                      disableUi={!form.canSubmit}
+                      disabled={isPending}
+                    >
+                      Pack product
+                    </Button>
+                  </Pressable>
+
+                  {showTooltip && submitDisabledReason && (
+                    <View style={styles.tooltip}>
+                      <B4 style={styles.tooltipText}>
+                        {submitDisabledReason}
+                      </B4>
+                    </View>
+                  )}
+                </View>
               </View>
             </View>
             <PackingListingSection
@@ -88,11 +195,11 @@ const PackageScreen = () => {
               setSearchText={setSearchText}
               setIsLoading={setIsLoading}
             />
-            <View></View>
+            <PackingSummarySection />
           </Tabs>
         </View>
         <BottomSheet color="green" />
-        {isLoading && <OverlayLoader />}
+        {(isLoading && isPending) && <OverlayLoader />}
       </View>
     </KeyboardAvoidingView>
   );
@@ -110,7 +217,6 @@ const styles = StyleSheet.create({
     borderTopStartRadius: 16,
     borderTopEndRadius: 16,
     paddingVertical: 16,
-    paddingBottom: 24,
   },
   flexGrow: {
     flex: 1,
@@ -118,9 +224,25 @@ const styles = StyleSheet.create({
   storageColumn: {
     flexDirection: "column",
     gap: 16,
-    paddingVertical: 24,
+    paddingTop: 20,
     flex: 1,
   },
+
+  tooltip: {
+    position: "absolute",
+    bottom: 56,
+    left: 0,
+    right: 0,
+    backgroundColor: "#000",
+    padding: 8,
+    borderRadius: 6,
+    alignItems: "center",
+  },
+  tooltipText: {
+    color: "#fff",
+    fontSize: 12,
+  },
+
 });
 
 export default PackageScreen;

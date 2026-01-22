@@ -9,7 +9,7 @@ import { FlatList, StyleSheet, View } from "react-native";
 import BottomSheet from "@/src/components/ui/BottomSheet";
 import PageHeader from "@/src/components/ui/PageHeader";
 import Tabs from "@/src/components/ui/Tabs";
-import ItemsFlatList from "@/src/components/ui/ItemsFlatList";
+import ItemsFlatList from "@/src/components/ui/ItemCardList";
 import EmptyState from "@/src/components/ui/EmptyState";
 import SearchWithFilter from "@/src/components/ui/Inputs/SearchWithFilter";
 import SearchInput from "@/src/components/ui/SearchInput";
@@ -25,7 +25,7 @@ import { getEmptyStateData } from "@/src/utils/common";
 import { getColor } from "@/src/constants/colors";
 
 // 6. Types
-import { ItemCardProps } from "@/src/types";
+import { ItemCardData } from "@/src/types";
 
 // 7. Schemas
 // No items of this type
@@ -36,6 +36,9 @@ import noBatchImageProduction from "@/src/assets/images/illustrations/no-product
 import ProductionLane from "@/src/components/icons/common/ProductionLane";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { RefreshControl } from "react-native-gesture-handler";
+import { mapProductionToItemCards } from "@/src/utils/mappers/mappers.utils";
+import RefreshableContent from "@/src/components/ui/RefreshableContent";
+import ItemCardList from "@/src/components/ui/ItemCardList";
 
 const ProductionScreen = () => {
   const { goTo } = useAppNavigation();
@@ -54,37 +57,21 @@ const ProductionScreen = () => {
       return lanes?.find((lane: any) => lane.id === id)?.name;
     }
   }
-
-  const { inQueue, inPending, inProgress } = useMemo(() => {
-    const inQueue: ItemCardProps[] = [];
-    const inPending: ItemCardProps[] = [];
-    const inProgress: ItemCardProps[] = [];
-
-    if (!isLoading) {
-      productionData?.forEach((item: any) => {
-        const formattedItem: ItemCardProps = {
-          id: item.id,
-          name: item.product_name,
-          weight: `${item.quantity} ${item.unit || "kg"}`,
-          rating: item.rating || "0",
-          isActive: false,
-          lane: item?.lane ? getLaneNameById(item?.lane) : null,
-        };
-
-        if (item.status === "in-queue") {
-          formattedItem.isActive = true;
-          formattedItem.actionLabel = "Start production";
-          inQueue.push(formattedItem);
-        } else if (item.status === "pending") {
-          inPending.push(formattedItem);
-        } else if (item.status === "in-progress") {
-          inProgress.push(formattedItem);
-        }
-      });
-    }
-
-    return { inQueue, inPending, inProgress };
+  const productionCards: ItemCardData[] = useMemo(() => {
+    return productionData ? mapProductionToItemCards(productionData) : [];
   }, [productionData]);
+
+  const pendingCards = productionCards.filter((c) => c.mode === "default");
+
+  const inQueueCards = productionCards.filter((c) => c.isActive);
+
+  const inProgressCards = productionCards.filter(
+    (c) => c.mode === "production",
+  );
+
+  const completedCards = productionCards.filter(
+    (c) => c.mode === "production-completed",
+  );
 
   const handleLanePress = () => {
     goTo("lane");
@@ -100,25 +87,11 @@ const ProductionScreen = () => {
           color="green"
           style={styles.flexGrow}
         >
-          <FlatList
-            data={inPending?.concat(inQueue) ?? []}
-            contentContainerStyle={{ flexGrow: 1 }}
-            renderItem={({ item }) => (
-              <View style={styles.flexGrow}>
-                <View style={styles.searchinputWrapper}>
-                  <SearchWithFilter
-                    value=""
-                    onChangeText={() => {}}
-                    placeholder="Search by material name"
-                    onFilterPress={handleLanePress}
-                    icon={ProductionLane}
-                  />
-                </View>
-
-                <ItemsFlatList items={inPending?.concat(inQueue) ?? []} />
-              </View>
-            )}
-            ListEmptyComponent={
+          <RefreshableContent
+            isEmpty={pendingCards.length === 0 && inQueueCards.length === 0}
+            refreshing={productionLoading}
+            onRefresh={productionRefetch}
+            emptyComponent={
               <View
                 style={[
                   styles.flexGrow,
@@ -134,32 +107,26 @@ const ProductionScreen = () => {
                 />
               </View>
             }
-            keyExtractor={(_, index) => index.toString()}
-            refreshControl={
-              <RefreshControl
-                refreshing={productionLoading}
-                onRefresh={productionRefetch}
-              />
-            }
-          />
-          <FlatList
-            data={inProgress ?? []}
-            contentContainerStyle={{ flexGrow: 1 }}
-            renderItem={({ item }) => (
-              <View style={styles.flexGrow}>
-                <View style={styles.searchinputWrapper}>
-                  <SearchWithFilter
-                    value=""
-                    onChangeText={() => {}}
-                    placeholder={"Search by material name"}
-                    onFilterPress={handleLanePress}
-                    icon={ProductionLane}
-                  />
-                </View>
-                <ItemsFlatList isProduction={true} items={inProgress} />
+          >
+            <View style={styles.flexGrow}>
+              <View style={styles.searchinputWrapper}>
+                <SearchWithFilter
+                  value=""
+                  onChangeText={() => { }}
+                  placeholder={"Search by material name"}
+                  onFilterPress={handleLanePress}
+                  icon={ProductionLane}
+                />
               </View>
-            )}
-            ListEmptyComponent={
+              <ItemCardList items={[...pendingCards, ...inQueueCards]} />
+            </View>
+          </RefreshableContent>
+
+          <RefreshableContent
+            isEmpty={inProgressCards.length === 0}
+            refreshing={productionLoading}
+            onRefresh={productionRefetch}
+            emptyComponent={
               <View
                 style={[
                   styles.flexGrow,
@@ -176,14 +143,21 @@ const ProductionScreen = () => {
                 />
               </View>
             }
-            keyExtractor={(_, index) => index.toString()}
-            refreshControl={
-              <RefreshControl
-                refreshing={productionLoading}
-                onRefresh={productionRefetch}
-              />
-            }
-          />
+          >
+            <View style={styles.flexGrow}>
+              <View style={styles.searchinputWrapper}>
+                <SearchWithFilter
+                  value=""
+                  onChangeText={() => { }}
+                  placeholder={"Search by material name"}
+                  onFilterPress={handleLanePress}
+                  icon={ProductionLane}
+                />
+              </View>
+              <ItemCardList items={inProgressCards} />
+            </View>
+          </RefreshableContent>
+
 
           {/* {inProgress?.length === 0 ? (
             <View style={[styles.flexGrow, { flexDirection: "row", justifyContent: "center", alignItems: "center" }]}>

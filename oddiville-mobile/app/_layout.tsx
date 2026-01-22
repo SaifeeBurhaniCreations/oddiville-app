@@ -1,8 +1,10 @@
 import "@/global.css";
+import 'react-native-gesture-handler';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider, useSelector } from "react-redux";
 import { RootState, store } from "@/src/redux/store";
 import { MultiToggleProvider } from "@/src/hooks/useToggleGlobal";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "@/src/context/AuthContext";
 import { StatusBar } from "expo-status-bar";
 import { getColor } from "@/src/constants/colors";
@@ -11,14 +13,12 @@ import { useEffect, useState } from "react";
 import * as Font from "expo-font";
 import { Platform, View, StatusBar as RNStatusBar } from "react-native";
 import { Slot } from "expo-router";
-import { useRoute } from "@react-navigation/native";
 import { isFabRoute } from "@/src/utils/userUtils";
 import Fab from "@/src/components/ui/Fab";
 import MenuSheet from "@/src/components/ui/MenuSheet";
 import Toast from 'react-native-toast-message';
 import { toastConfig } from "@/src/components/ui/ToastConfig";
 import { StyleSheet } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { setupQueryPersistence } from "@/src/lib/react-query/persist";
 import BottomSheet from "@/src/components/ui/BottomSheet";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
@@ -27,13 +27,14 @@ import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persi
 import { SocketProvider } from "@/src/context/SocketProvider";
 import Constants from "expo-constants";
 import { ToastProvider } from "@/src/context/ToastContext";
+import { usePathname } from "expo-router";
 
 function InnerLayout() {
   const { role } = useAuth();
 
   const { isOpen } = useSelector((state: RootState) => state.fab);
-  const route = useRoute();
-  const shouldShowFab = isFabRoute(route.name);
+  const pathname = usePathname();
+  const shouldShowFab = isFabRoute(pathname);
 
   const isAdminLike = role === "admin" || role === "superadmin";
 
@@ -112,9 +113,8 @@ export default function RootLayout() {
       >
         <Provider store={store}>
           <MultiToggleProvider>
-             <ToastProvider>
+            <ToastProvider>
             <SocketProvider url={apiUrl}>
-              <QueryClientProvider client={queryClient}>
                 <AuthProvider>
                   <View style={{ flex: 1, backgroundColor: getColor("light", 200) }}>
                     <View style={{ height: statusBarHeight, backgroundColor: getColor("green", 500) }} />
@@ -127,7 +127,6 @@ export default function RootLayout() {
                     <BottomSheet color="green" />
                   </View>
                 </AuthProvider>
-              </QueryClientProvider>
             </SocketProvider>
             </ToastProvider>
           </MultiToggleProvider>

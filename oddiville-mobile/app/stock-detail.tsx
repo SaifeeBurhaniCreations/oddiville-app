@@ -20,11 +20,12 @@ import StarIcon from "@/src/components/icons/page/StarIcon";
 import { B4 } from "@/src/components/typography/Typography";
 
 import { RootState } from "@/src/redux/store";
+import { safeNumber, toKg } from "@/src/utils/chamberstock/stockUtils";
 
 const getLeadingIcon = (size: number, unit: string) =>
   mapPackageIcon({
     size,
-    unit: unit as "kg" | "gm" | "qn",
+    unit: unit as "kg" | "gm" | "unit",
   });
 
 const StockDetail = () => {
@@ -62,19 +63,6 @@ const StockDetail = () => {
     );
   }
 
-  const materialByRating =
-    stock.category === "material"
-      ? stock.chamber.reduce((acc, ch) => {
-          const rating = ch.rating;
-          const qtyKg = Number(ch.quantity) / 1000;
-
-          if (!acc[rating]) acc[rating] = 0;
-          acc[rating] += qtyKg;
-
-          return acc;
-        }, {} as Record<string, number>)
-      : {};
-
   const materialPackaging =
     stock.category === "material" && !Array.isArray(stock.packaging)
       ? stock.packaging
@@ -88,34 +76,59 @@ const StockDetail = () => {
     );
   }
 
+  const safeMaterialPackaging = materialPackaging as Packaging;
+
   const materialIcon = materialPackaging
     ? mapPackageIcon({
-        size: materialPackaging.size.value,
-        unit: materialPackaging.size.unit as "kg" | "gm" | "qn",
-      })
+      size: safeMaterialPackaging.size.value,
+      unit: safeMaterialPackaging.size.unit as "kg" | "gm" | "unit",
+    })
     : BoxIcon;
 
-  const safeMaterialPackaging = materialPackaging as Packaging;
-  // const chamberKg = Number(currentChamber.quantity) / 1000;
-  const totalKgForRating = materialByRating[currentChamber.rating] ?? 0;
+  const chamberRows =
+    stock.category === "material"
+      ? stock.chamber.filter(
+        ch => ch.id === chamberId && ch.rating === currentChamber.rating
+      )
+      : [];
 
-  const chamberKg = Number(currentChamber.quantity);
+  const normalizeToKg = (qty: number) => {
+    return safeNumber(qty);
+  };
+
+  const chamberKg = chamberRows.reduce((sum, ch) => {
+    return sum + normalizeToKg(Number(ch.quantity));
+  }, 0);
+
+
+  const bagSizeKg = toKg(
+    safeMaterialPackaging.size.value,
+    safeMaterialPackaging.size.unit as "kg" | "gm"
+  );
 
   const chamberBags =
-    totalKgForRating > 0
-      ? Math.round((chamberKg / totalKgForRating) * safeMaterialPackaging.count)
-      : 0;
+    bagSizeKg > 0 ? Math.floor(chamberKg / bagSizeKg) : 0;
+
+    // -----------------------Packed--------------------------
+  const packedRows =
+    stock.category === "packed"
+      ? stock.chamber.filter(ch => ch.id === chamberId)
+      : [];
+      
+  const packedChamberKg = packedRows.reduce((sum, ch) => {
+    return sum + safeNumber(ch.quantity); // already KG
+  }, 0);
 
   const packedPackaging =
     stock.category === "packed" && Array.isArray(stock.packaging)
       ? stock.packaging
       : [];
 
-  const packedByChamber = packedPackaging.map((pkg) => {
-    const sizeKg =
-      pkg.size.unit === "gm" ? pkg.size.value / 1000 : pkg.size.value;
+  const packedByChamber = packedPackaging.map(pkg => {
+    const sizeKg = toKg(pkg.size.value, pkg.size.unit as "kg" | "gm");
 
-    const packetsInChamber = Math.floor(chamberKg / sizeKg);
+    const packetsInChamber =
+      sizeKg > 0 ? Math.floor(packedChamberKg / sizeKg) : 0;
 
     return {
       ...pkg,

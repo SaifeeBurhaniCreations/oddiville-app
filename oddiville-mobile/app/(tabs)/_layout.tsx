@@ -5,7 +5,7 @@ import { Dimensions } from "react-native";
 
 export default function TabLayout() {
   const { width } = Dimensions.get("window");
-  const isSmallDevice = width <= 360; // ✅ small phones
+  const isSmallDevice = width <= 360;
 
   return (
     <Tabs

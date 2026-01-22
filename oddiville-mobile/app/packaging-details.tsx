@@ -40,7 +40,7 @@ import { RootState } from '@/src/redux/store';
 import { useAuth } from '@/src/context/AuthContext';
 import { resolveAccess } from '@/src/utils/policiesUtils';
 import { PACKAGE_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
-import { getTareWeight, parseWeightBoth } from '@/src/utils/weightutils';
+import { getTareWeight, parseWeightBoth } from '@/src/utils/packing/weightutils';
 import PaperRollIcon from "@/src/components/icons/packaging/PaperRollIcon";
 import BagIcon from "@/src/components/icons/packaging/BagIcon";
 import BigBagIcon from "@/src/components/icons/packaging/BigBagIcon";

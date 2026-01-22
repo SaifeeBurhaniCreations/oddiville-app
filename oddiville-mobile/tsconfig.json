@@ -11,33 +11,8 @@
     "jsx": "react-native",
     "strict": true,
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts",
-    "nativewind-env.d.ts",
-    "images.d.ts"
-,
-"../resource/componnets/InfoRowComponent.tsx",
-"../resource/componnets/VendorDetailsComponent.tsx",
-"../resource/componnets/TruckDetailsComponent.tsx",
-"../resource/componnets/ManageRoleComponent.tsx",
-"src/types/bottomSheet.ts",
-"../resource/componnets/TitleWithBackButtonComponent.tsx",
-"../resource/componnets/SepratorComponent.tsx",
-"../resource/componnets/TitleWithCrossComponent.tsx",
-"../resource/componnets/CardComponent.tsx",
-"../resource/componnets/ChipComponent.tsx",
-"../resource/componnets/SelectIconComponent.tsx",
-"../resource/componnets/TextDescriptionComponent.tsx",
-"../resource/componnets/TitleWithLinkComponent.tsx"
-,
-"../resource/useOtherProductHistory.ts"
-, "../resource/ChamberCard.tsx", "../resource/useAdminNotifications.ts"]
+  "include": ["**/*.ts", "**/*.tsx", "**/*.d.ts"]
 }
