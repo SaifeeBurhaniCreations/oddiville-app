@@ -1,3 +1,4 @@
+// Later have to resovle dispatch dep issue
 import { useEffect } from "react";
 import { StyleSheet } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
@@ -18,14 +19,17 @@ import { setRawMaterials } from "@/src/redux/slices/product.slice";
 
 import { useRawMaterialByProduct } from "@/src/hooks/productItems";
 import { IconRatingProps } from "@/src/types";
-import { PackingFormController } from "@/src/hooks/usePackingForm";
+import { PackingFormController } from "@/src/hooks/packing/usePackingForm";
 
 type Props = {
   setIsLoading: (v: boolean) => void;
   form: PackingFormController;
+  setIsCurrentProduct: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-const ProductContextSection = ({ setIsLoading, form }: Props) => {
+const ProductContextSection = ({ setIsLoading, form, setIsCurrentProduct }: Props) => {
+  console.count("🔁 ProductContextSection render");
+
   const dispatch = useDispatch();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
 
@@ -48,37 +52,39 @@ const ProductContextSection = ({ setIsLoading, form }: Props) => {
     1: OneStarIcon,
   };
 
-  const ProductRatingIcon =
-    RatingIconMap[productRating.rating] ?? FiveStarIcon;
+  const ProductRatingIcon = RatingIconMap[productRating.rating] ?? FiveStarIcon;
 
   /* -------------------------------
-     🔑 Sync PRODUCT NAME
+      🔑 Sync PRODUCT NAME
   -------------------------------- */
   useEffect(() => {
     if (!selectedProductName) return;
+    if (form.values.product.productName === selectedProductName) return;
 
-    // Redux (shared state)
+    setIsCurrentProduct(true);
+
     dispatch(updateProduct({ productName: selectedProductName }));
 
-    // Local form (authoritative for validation)
     form.setField("product.productName", selectedProductName);
-  }, [selectedProductName, dispatch, form.setField]);
+  }, [selectedProductName, form.setField, dispatch]);
 
   /* -------------------------------
-     🔑 Sync PRODUCT RATING
+      🔑 Sync PRODUCT RATING
   -------------------------------- */
   useEffect(() => {
+    if (!productRating?.rating) return;
+
     dispatch(updateProduct({ finalRating: productRating.rating }));
     form.setField("product.finalRating", productRating.rating);
-  }, [productRating.rating, dispatch, form.setField]);
+  }, [productRating.rating, form.setField]);
 
   /* -------------------------------
-     Raw materials (unchanged)
+      Raw materials (unchanged)
   -------------------------------- */
   useEffect(() => {
-    if (!rawMaterials) return;
+    if (!rawMaterials || rawMaterials.length === 0) return;
     dispatch(setRawMaterials(rawMaterials));
-  }, [rawMaterials, dispatch]);
+  }, [rawMaterials]);
 
   useEffect(() => {
     setIsLoading(rmLoading);

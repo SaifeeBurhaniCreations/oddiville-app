@@ -1,5 +1,5 @@
 // 1. React and React Native core
-import React, { useMemo} from "react";
+import React, { useEffect, useMemo} from "react";
 import { StyleSheet, View } from "react-native";
 import { FlatList, RefreshControl } from "react-native-gesture-handler";
 
@@ -64,6 +64,11 @@ const PackingListingSection = ({
       : [];
   }, [packageData, packageLoading]);
   // custom hooks end
+
+// Effects
+  useEffect(() => {
+    setIsLoading(packageLoading);
+  }, [packageLoading]);
 
   //   variables start
   const emptyStateData = getEmptyStateData("products");
