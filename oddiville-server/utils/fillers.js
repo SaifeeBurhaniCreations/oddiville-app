@@ -1,7 +1,7 @@
 const uuidv4 = require("../sbc/utils/uuid/uuid")
 function fillRawMaterialSchema(schema, filler) {
     const updatedSchema = JSON.parse(JSON.stringify(schema));
-    
+
     for (const section of updatedSchema.sections) {
 
         // 🟦 HEADER
@@ -191,112 +191,112 @@ function fillPackageComesToEndSchema(schema, filler) {
 }
 
 function fillOrderReadySchema(schema, filler) {
-  const updatedSchema = JSON.parse(JSON.stringify(schema));
-  let { buttons } = updatedSchema;
+    const updatedSchema = JSON.parse(JSON.stringify(schema));
+    let { buttons } = updatedSchema;
 
-  for (const section of updatedSchema.sections) {
-    // 🟦 HEADER
-    if (section.type === "header" && typeof section.data === "object") {
-      if (!section.data.title) {
-        section.data.title = filler?.title || "Untitled";
-        section.data.value = filler?.createdAt || "";
-      }
-      if (!section.data.description) {
-        section.data.description = filler?.description || "";
-      }
-    }
-
-    // 🟦 DATA (Product Details)
-    if (section.type === "data" && Array.isArray(section.data)) {
-      for (const dataGroup of section.data) {
-        const fillerDetails = filler["Product Details"];
-        if (!Array.isArray(fillerDetails)) continue;
-
-        if (Array.isArray(dataGroup.details)) {
-          dataGroup.details.forEach((rowObj, i) => {
-            const fillerRow = fillerDetails[i];
-            for (const rowKey in rowObj) {
-              const rowItems = rowObj[rowKey];
-              const fillerItems = fillerRow?.[rowKey];
-
-              if (Array.isArray(rowItems) && Array.isArray(fillerItems)) {
-                rowItems.forEach((item, idx) => {
-                  const fillerItem = fillerItems[idx] || {};
-
-                  if (!item.label) {
-                    item.label = fillerItem.label || "";
-                  }
-                  if (!item.value) {
-                    item.value = fillerItem.value || "";
-                  }
-                  if (!item.icon) {
-                    item.icon = fillerItem.icon || "";
-                  }
-                });
-              }
+    for (const section of updatedSchema.sections) {
+        // 🟦 HEADER
+        if (section.type === "header" && typeof section.data === "object") {
+            if (!section.data.title) {
+                section.data.title = filler?.title || "Untitled";
+                section.data.value = filler?.createdAt || "";
             }
-          });
+            if (!section.data.description) {
+                section.data.description = filler?.description || "";
+            }
         }
-      }
-    }
 
-    // 🟦 PRODUCTS LIST — deeply merge only if field is still empty
-    // if (
-    //   section.type === "product-list" &&
-    //   section.data &&
-    //   Array.isArray(section.data.products)
-    // ) {
-    //   const fillerProducts = filler["Products"];
+        // 🟦 DATA (Product Details)
+        if (section.type === "data" && Array.isArray(section.data)) {
+            for (const dataGroup of section.data) {
+                const fillerDetails = filler["Product Details"];
+                if (!Array.isArray(fillerDetails)) continue;
 
-    //   if (Array.isArray(fillerProducts)) {
-    //     section.data.products = section.data.products.map((product, i) => {
-    //       const fillerProduct = fillerProducts[i] || {};
+                if (Array.isArray(dataGroup.details)) {
+                    dataGroup.details.forEach((rowObj, i) => {
+                        const fillerRow = fillerDetails[i];
+                        for (const rowKey in rowObj) {
+                            const rowItems = rowObj[rowKey];
+                            const fillerItems = fillerRow?.[rowKey];
 
-    //       return {
-    //         ...product,
-    //         title: product.title || fillerProduct.title || "",
-    //         image: product.image || fillerProduct.image || "",
-    //         description: product.description || fillerProduct.description || "",
-    //         packagesSentence:
-    //           product.packagesSentence || fillerProduct.packagesSentence || "",
-    //         weight: product.weight || fillerProduct.weight || "",
-    //         price: product.price || fillerProduct.price || "",
-    //         packages: fillerProduct.packages || [],
-    //         chambers: fillerProduct.chambers || [],
-    //       };
-    //     });
-    //   }
-    // }
+                            if (Array.isArray(rowItems) && Array.isArray(fillerItems)) {
+                                rowItems.forEach((item, idx) => {
+                                    const fillerItem = fillerItems[idx] || {};
+
+                                    if (!item.label) {
+                                        item.label = fillerItem.label || "";
+                                    }
+                                    if (!item.value) {
+                                        item.value = fillerItem.value || "";
+                                    }
+                                    if (!item.icon) {
+                                        item.icon = fillerItem.icon || "";
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        // 🟦 PRODUCTS LIST — deeply merge only if field is still empty
+        // if (
+        //   section.type === "product-list" &&
+        //   section.data &&
+        //   Array.isArray(section.data.products)
+        // ) {
+        //   const fillerProducts = filler["Products"];
+
+        //   if (Array.isArray(fillerProducts)) {
+        //     section.data.products = section.data.products.map((product, i) => {
+        //       const fillerProduct = fillerProducts[i] || {};
+
+        //       return {
+        //         ...product,
+        //         title: product.title || fillerProduct.title || "",
+        //         image: product.image || fillerProduct.image || "",
+        //         description: product.description || fillerProduct.description || "",
+        //         packagesSentence:
+        //           product.packagesSentence || fillerProduct.packagesSentence || "",
+        //         weight: product.weight || fillerProduct.weight || "",
+        //         price: product.price || fillerProduct.price || "",
+        //         packages: fillerProduct.packages || [],
+        //         chambers: fillerProduct.chambers || [],
+        //       };
+        //     });
+        //   }
+        // }
         if (
-    section.type === "product-list" &&
-    section.data &&
-    Array.isArray(section.data.products)
-    ) {
-    const fillerProducts = filler["Products"];
+            section.type === "product-list" &&
+            section.data &&
+            Array.isArray(section.data.products)
+        ) {
+            const fillerProducts = filler["Products"];
 
-    if (Array.isArray(fillerProducts)) {
-        section.data.products = fillerProducts.map((fillerProduct) => ({
-        title: fillerProduct.title || "",
-        image: fillerProduct.image || "box",
-        description: fillerProduct.description || "",
-        packagesSentence: fillerProduct.packagesSentence || "",
-        weight: fillerProduct.weight || "",
-        price: fillerProduct.price || "",
-        packages: fillerProduct.packages || [],
-        chambers: fillerProduct.chambers || [],
-        }));
+            if (Array.isArray(fillerProducts)) {
+                section.data.products = fillerProducts.map((fillerProduct) => ({
+                    title: fillerProduct.title || "",
+                    image: fillerProduct.image || "box",
+                    description: fillerProduct.description || "",
+                    packagesSentence: fillerProduct.packagesSentence || "",
+                    weight: fillerProduct.weight || "",
+                    price: fillerProduct.price || "",
+                    packages: fillerProduct.packages || [],
+                    chambers: fillerProduct.chambers || [],
+                }));
+            }
+        }
     }
-    }
-  }
 
-  // 🟦 BUTTONS
-  if (buttons && Array.isArray(buttons)) {
-    const fillerButtons = filler["buttons"];
-    if (Array.isArray(fillerButtons)) {
-      updatedSchema.buttons = fillerButtons;
+    // 🟦 BUTTONS
+    if (buttons && Array.isArray(buttons)) {
+        const fillerButtons = filler["buttons"];
+        if (Array.isArray(fillerButtons)) {
+            updatedSchema.buttons = fillerButtons;
+        }
     }
-  }
-  return updatedSchema;
+    return updatedSchema;
 }
 
 function fillProductionStartedSchema(schema, filler) {
@@ -451,13 +451,13 @@ function fillStateSchema(schema, filler) {
             section.data.title = filler?.title || "Untitled";
             section.data.value = filler?.createdAt || "";
         }
-        
+
         // 🟦 OptionList
         if (section.type === "optionList" && Array.isArray(filler?.optionList)) {
             section.data.options = filler.optionList;
         }
     }
-    
+
     return updatedSchema;
 }
 
@@ -545,7 +545,7 @@ function fillOrderShippedSchema(schema, filler) {
 
         if (section.type === "truck-full-details" && typeof section.data === "object") {
             const truckData = filler['Truck Detail']
-            section.data.title ='Truck Detail'
+            section.data.title = 'Truck Detail'
             section.data.driverName = truckData?.driverName
             section.data.driverImage = truckData?.driverImage
             section.data.number = truckData?.number
@@ -614,7 +614,7 @@ function fillOrderShippedSchema(schema, filler) {
         }
 
     }
-    
+
     // 🟦 BUTTONS — deeply merge only if field is still empty
     if (buttons && Array.isArray(buttons)) {
         const fillerButtons = filler["buttons"];
@@ -645,7 +645,7 @@ function fillOrderReachedSchema(schema, filler) {
 
         if (section.type === "truck-full-details" && typeof section.data === "object") {
             const truckData = filler['Truck Detail']
-            section.data.title ='Truck Detail'
+            section.data.title = 'Truck Detail'
             section.data.driverName = truckData?.driverName
             section.data.driverImage = truckData?.driverImage
             section.data.number = truckData?.number
@@ -671,8 +671,8 @@ function fillOrderReachedSchema(schema, filler) {
                                 rowItems.forEach((item, idx) => {
                                     const fillerItem = fillerItems[idx] || {};
 
-                                    if(fillerItem.value) {
-                                        
+                                    if (fillerItem.value) {
+
                                         if (!item.label) {
                                             item.label = fillerItem.label || "";
                                         }
@@ -765,124 +765,166 @@ function fillProductionCompletedSchema(schema, filler) {
     return updatedSchema;
 }
 
-function fillPackingSummarySchema(schema, filler) {
-  const updatedSchema = JSON.parse(JSON.stringify(schema));
+function fillPackingSummarySchema(schema, filler, meta) {
+    const updatedSchema = JSON.parse(JSON.stringify(schema));
 
-  for (const section of updatedSchema.sections) {
+    for (const section of updatedSchema.sections) {
 
-    // 🟦 HEADER
-    if (section.type === "header") {
-      section.data.title = filler?.product_name ?? "";
-      section.data.value = filler?.createdAt ?? "";
-      section.data.description = Array.isArray(filler?.rawMaterials)
-        ? filler.rawMaterials.join(", ")
-        : "";
+        // 🟦 HEADER
+        if (section.type === "header") {
+            section.data.title = `${filler?.product ?? ""} ${filler?.sku ?? ""}`.trim();
+            section.data.value = filler?.summary?.lastEventAt ?? "";
+            section.data.description = Array.isArray(filler?.rawMaterials)
+                ? filler.rawMaterials.join(", ")
+                : "";
+        }
+
+        // 🟦 PACKING SUMMARY
+        if (section.type === "packing-summary") {
+            section.data.rating = filler?.summary?.eventsCount ?? 0;
+
+            // 🟢 EVENT MODE (default)
+            if (meta?.mode === "event" || !meta?.mode) {
+                section.data.title = "Packing activity";
+
+                section.data.metrics = [
+                    {
+                        id: "total-bags",
+                        label: "Total bags: ",
+                        value: filler?.summary?.totalBags ?? 0,
+                        unit: "bags",
+                        icon: "box",
+                    },
+                    {
+                        id: "total-packets",
+                        label: "Total packets: ",
+                        value: filler?.summary?.totalPackets ?? 0,
+                        unit: "packets",
+                        icon: "roll",
+                    },
+                ];
+            }
+
+            // 🟡 SKU MODE
+            if (meta?.mode === "sku") {
+                section.data.title = "Storage by chamber";
+
+                section.data.metrics = (filler?.chambers ?? []).map(c => ({
+                    id: c.id,
+                    label: c.name || "Chamber",
+                    value: c.bagsStored ?? 0,
+                    unit: "bags",
+                    icon: "box",
+                }));
+            }
+
+            // 🔵 PRODUCT MODE
+            if (meta?.mode === "product") {
+                section.data.title = "Product summary";
+
+                section.data.metrics = [
+                    {
+                        id: "events",
+                        label: "Packing events",
+                        value: filler?.summary?.eventsCount ?? 0,
+                        unit: "events",
+                        icon: "clock",
+                    },
+                ];
+            }
+        }
     }
 
-    // 🟦 PACKING SUMMARY
-    if (section.type === "packing-summary") {
-        section.data.title = "Packing detail";
-        section.data.rating = Number(filler?.rating ?? 5);
-        section.data.sizes = [{
-                id: uuidv4(),
-                size: filler?.sizes?.size ?? "",
-                packets: Number(filler?.sizes?.packets ?? 0),
-            }];
-        }
-  }
-
-  return updatedSchema;
+    return updatedSchema;
 }
 
-
-
 function fillCalendarEventSchema(schema, filler) {
-  const updatedSchema = JSON.parse(JSON.stringify(schema));
+    const updatedSchema = JSON.parse(JSON.stringify(schema));
 
-  for (const section of updatedSchema.sections) {
-    // 🟦 HEADER
-    if (section.type === "header" && typeof section.data === "object") {
-      section.data.title = filler?.title || "Untitled";
-        section.data.value = filler?.createdAt || "";
-    }
-
-    // 🟦 DATA-GROUP
-    if (section.type === "data-group") {
-      for (const group of section.data) {
-        const groupFiller = filler[group.title];
-        if (!groupFiller) continue;
-
-        if (Array.isArray(groupFiller) && group.details) {
-          group.details.forEach((item, i) => {
-            item.label ||= groupFiller[i]?.label || "";
-            item.value ||= groupFiller[i]?.value || "";
-          });
-
-          if (group.fileName && filler.fileName) {
-            group.fileName = filler.fileName;
-          }
+    for (const section of updatedSchema.sections) {
+        // 🟦 HEADER
+        if (section.type === "header" && typeof section.data === "object") {
+            section.data.title = filler?.title || "Untitled";
+            section.data.value = filler?.createdAt || "";
         }
-      }
-    }
-  }
 
-  return updatedSchema;
+        // 🟦 DATA-GROUP
+        if (section.type === "data-group") {
+            for (const group of section.data) {
+                const groupFiller = filler[group.title];
+                if (!groupFiller) continue;
+
+                if (Array.isArray(groupFiller) && group.details) {
+                    group.details.forEach((item, i) => {
+                        item.label ||= groupFiller[i]?.label || "";
+                        item.value ||= groupFiller[i]?.value || "";
+                    });
+
+                    if (group.fileName && filler.fileName) {
+                        group.fileName = filler.fileName;
+                    }
+                }
+            }
+        }
+    }
+
+    return updatedSchema;
 }
 
 function fillScheduledDateEventSchema(schema, filler) {
-  const updatedSchema = JSON.parse(JSON.stringify(schema));
+    const updatedSchema = JSON.parse(JSON.stringify(schema));
 
-  for (const section of updatedSchema.sections) {
-    // 🟦 HEADER
-    if (section.type === "header" && typeof section.data === "object") {
-      section.data.title = filler?.title || "Untitled";
-      section.data.value = filler?.createdAt || "";
-    }
-
-    // 🟦 DATA-GROUP
-    if (section.type === "data-group") {
-      for (const group of section.data) {
-        const groupFiller = filler[group.title];
-        if (!groupFiller) continue;
-
-        if (Array.isArray(groupFiller) && group.details) {
-          group.details.forEach((item, i) => {
-            item.label ||= groupFiller[i]?.label || "";
-            item.value ||= groupFiller[i]?.value || "";
-          });
-
-          if (group.fileName && filler.fileName) {
-            group.fileName = filler.fileName;
-          }
+    for (const section of updatedSchema.sections) {
+        // 🟦 HEADER
+        if (section.type === "header" && typeof section.data === "object") {
+            section.data.title = filler?.title || "Untitled";
+            section.data.value = filler?.createdAt || "";
         }
-      }
-    }
-  }
 
-  return updatedSchema;
+        // 🟦 DATA-GROUP
+        if (section.type === "data-group") {
+            for (const group of section.data) {
+                const groupFiller = filler[group.title];
+                if (!groupFiller) continue;
+
+                if (Array.isArray(groupFiller) && group.details) {
+                    group.details.forEach((item, i) => {
+                        item.label ||= groupFiller[i]?.label || "";
+                        item.value ||= groupFiller[i]?.value || "";
+                    });
+
+                    if (group.fileName && filler.fileName) {
+                        group.fileName = filler.fileName;
+                    }
+                }
+            }
+        }
+    }
+
+    return updatedSchema;
 }
 
 
 module.exports = {
-  fillRawMaterialSchema,
-  fillLaneOccupiedSchema,
-  fillRawMaterialAddSchema,
-  fillWorkerMultipleSchema,
-  fillWorkerSingleSchema,
-  fillPackageComesToEndSchema,
-  fillOrderReadySchema,
-  fillProductionStartedSchema,
-  fillVendorSchema,
-  fillChamberListSchema,
-  fillMultipleChamberListSchema,
-  fillCountrySchema,
-  fillProductAddSchema,
-  fillOrderShippedSchema,
-  fillStateSchema,
-  fillCitySchema,
-  fillProductionCompletedSchema,
-  fillOrderReachedSchema,
-  fillCalendarEventSchema,
-  fillScheduledDateEventSchema,
-  fillPackingSummarySchema,
+    fillRawMaterialSchema,
+    fillLaneOccupiedSchema,
+    fillRawMaterialAddSchema,
+    fillWorkerMultipleSchema,
+    fillWorkerSingleSchema,
+    fillPackageComesToEndSchema,
+    fillOrderReadySchema,
+    fillProductionStartedSchema,
+    fillVendorSchema,
+    fillChamberListSchema,
+    fillMultipleChamberListSchema,
+    fillCountrySchema,
+    fillProductAddSchema,
+    fillOrderShippedSchema,
+    fillStateSchema,
+    fillCitySchema,
+    fillProductionCompletedSchema,
+    fillOrderReachedSchema,
+    fillCalendarEventSchema,
+    fillScheduledDateEventSchema,
+    fillPackingSummarySchema,
 };

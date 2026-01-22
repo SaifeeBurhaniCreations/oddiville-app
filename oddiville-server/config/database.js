@@ -25,15 +25,15 @@ const sequelize = new Sequelize(
   process.env.DATABASE_USERNAME, 
   process.env.DATABASE_PASSWORD, 
   {
-    host: process.env.AIVEN_HOST,        
-    port: process.env.AIVEN_PORT,         
+    host: process.env.DATABASE_HOST,        
+    port: process.env.DATABASE_PORT,         
     dialect: 'postgres',
     dialectOptions: {
       // ssl: {
-      //   ca: process.env.AIVEN_CA_PATH,
+      //   ca: process.env.DATABASE_CA_PATH,
       // }
       ssl: {
-        ca: fs.readFileSync(process.env.AIVEN_CA_PATH).toString(),
+        ca: fs.readFileSync(process.env.DATABASE_CA_PATH).toString(),
       }
     },
     pool: {

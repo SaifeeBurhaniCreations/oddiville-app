@@ -28,6 +28,7 @@ const {
   Contractor,
   Admin,
   TruckDetails,
+  PackingEvent,
   sequelize
 } = require("./models");
 const { setIO } = require("./config/socket");
@@ -140,8 +141,9 @@ const PORT = process.env.PORT || 8022;
       // await sequelize.authenticate();
       // await Chambers.sync({ force: true });
       
-      await Lanes.sync({ force: true });
+      // await Lanes.sync({ force: true });
       await ChamberStock.sync({ force: true });
+      await PackingEvent.sync({ force: true });
       await TruckDetails.sync({ force: true });
       await Notifications.sync({ force: true });
       await Production.sync({ force: true });

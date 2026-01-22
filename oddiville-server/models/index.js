@@ -27,6 +27,7 @@ db.OthersItem = require("./third-party-client/OthersItem")(sequelize, Sequelize)
 db.TruckDetails = require("./TruckDetails")(sequelize, Sequelize);
 db.Calendar = require("./Calendar")(sequelize, Sequelize);
 db.Admin = require("./Admin")(sequelize, Sequelize);
+db.PackingEvent = require("./PackingEvent")(sequelize, Sequelize);
 
 Object.values(db).forEach(model => {
   if (model.associate) {

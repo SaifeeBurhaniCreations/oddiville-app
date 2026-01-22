@@ -180,7 +180,7 @@ const getFillerSchema = ({
   VendorById = {},
   CalendarEvent = {},
   authenticatedUser = {}, 
-   chamberStockByIdCategory = {},
+   packingSummary = {},
 }) => {
   
   const listSections = ["Recent", "Countries"];
@@ -743,13 +743,20 @@ const safeRawMaterials = Array.isArray(RawMaterials) ? RawMaterials : [];
         },
       ],
     },
- "packing-summary": {
-  product_name: chamberStockByIdCategory?.product_name ?? "",
-  createdAt: chamberStockByIdCategory?.createdAt ?? "",
-  rating: Number(chamberStockByIdCategory?.size?.rating ?? 5),
-  sizes: chamberStockByIdCategory?.size ?? [],
-  rawMaterials: chamberStockByIdCategory?.rawMaterials ?? [],
-},
+    "packing-summary": {
+      product: packingSummary?.product ?? "",
+      sku: packingSummary?.sku ?? "",
+
+      summary: packingSummary?.summary ?? {
+        totalBags: 0,
+        totalPackets: 0,
+        eventsCount: 0,
+        lastEventAt: null,
+      },
+
+      chambers: packingSummary?.chambers ?? [],
+      rawMaterials: packingSummary?.rawMaterials ?? [],
+    },
   };
 };
 

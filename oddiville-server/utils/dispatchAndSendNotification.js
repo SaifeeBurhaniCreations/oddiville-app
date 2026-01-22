@@ -1,5 +1,5 @@
 const { Notifications } = require("../models");
-const buttonsByType = require("../utils/buttonByType");
+const buttonsByType = require("./buttonByType");
 const NOTIFICATION_CATEGORIES = require("../types/notification-types");
 const getNotificationtype = require("./getNotificationtype");
 const { getIO } = require("../config/socket");
