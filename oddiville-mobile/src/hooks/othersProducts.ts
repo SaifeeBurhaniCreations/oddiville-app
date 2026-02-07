@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import useSocket from "@/src/hooks/useSocketFromContext";
 import {
   fetchOtherProductById,
+  fetchStockById,
   fetchOthersProductHistory,
 } from "../services/otherProduct.service";
 import { updateChamberStock } from "../services/chamberStock.service";
@@ -57,20 +58,6 @@ export function useOtherProductHistoryById(id: string) {
   });
 }
 
-// export function useOtherProductHistory() {
-
-//     return useQuery({
-//       queryKey: ["otherProductHistory"],
-//       queryFn: rejectEmptyOrNull(async () => {
-//         const response = await fetchOthersProductHistory("id");
-//         return response?.data || [];
-//       }),
-//       staleTime: 1000 * 60 * 60,
-//       refetchOnWindowFocus: false,
-//       refetchOnMount: false,
-//     });
-// }
-
 export function useOthersProductsById(id: string | null) {
   const queryClient = useQueryClient();
   const socket = useSocket();
@@ -103,6 +90,20 @@ export function useOthersProductsById(id: string | null) {
   });
 }
 
+export function useOtherProductStockById(stockId: string | null) {
+  return useQuery({
+    queryKey: ["other-product-stock", stockId],
+    queryFn: async () => {
+      if (!stockId) return null;
+      const res = await fetchStockById(stockId); 
+      return res.data;
+    },
+    enabled: !!stockId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+
 export function useUpdateOtherProduct(): UseMutationResult<
   any,
   Error,
@@ -120,29 +121,32 @@ export function useUpdateOtherProduct(): UseMutationResult<
       id: string;
       data: OthersProductPayload;
     }) => {
-      
       const response = await updateChamberStock({ othersItemId, id, data });
       return response;
     },
-    onSuccess: (updatedStock, { id }) => {
-      queryClient.setQueryData(["chamber-stock", id], updatedStock);
-      // queryClient.setQueryData(["chamber-stock", id], updatedStock);
-      queryClient.setQueryData(
-        ["chamber-stock"],
-        (oldData: UpdateChamberStockPayload[]) => {
-          if (!oldData) return [updatedStock];
-          const idx = oldData.findIndex((item) => item.id === id);
-          if (idx === -1) {
-            return [...oldData, updatedStock];
-          }
-          const newData = [...oldData];
-          newData[idx] = updatedStock;
-          return newData;
-        }
-      );
+    onSuccess: (res, { othersItemId }) => {
+      const { stock, item } = res;
+console.log("res", res);
 
-      queryClient.invalidateQueries({ queryKey: ["chamber-stock"] });
-      queryClient.invalidateQueries({ queryKey: ["chamber"] });
+      queryClient.setQueryData(
+        ["others-product-by-id", othersItemId],
+        (old: any) => {
+          console.log("old", old);
+          
+          if (!old) return old;
+console.log("data - ", {
+  ...old,
+  chambers: stock.chamber,
+  stored_quantity: item.stored_quantity,
+});
+
+          return {
+            ...old,
+            chambers: stock.chamber, 
+            stored_quantity: item.stored_quantity,
+          };
+        },
+      );
     },
     onError: (error) => {
       console.error("Error updating product:", error);

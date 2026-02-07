@@ -71,11 +71,6 @@ function parseDisplayCount(display?: string | null): {
   return { male: 0, female: 0 }
 }
 
-
-/* ---------------------------------- */
-/* TABLE CONFIG */
-/* ---------------------------------- */
-
 type WorkerRow = {
   label: string
   countMale: number
@@ -142,17 +137,17 @@ const SupervisorWorkerDetailsScreen = () => {
         {
           name: 'Contractor',
           value: singleContractor.name,
-          icon: <UserIcon />,
+          iconKey: 'user',
         },
         {
           name: 'Date',
           value: new Date(singleContractor.updatedAt).toLocaleDateString(),
-          icon: <Calendar12Icon />,
+          iconKey: 'calendar',
         },
       ],
       helperDetails: [
-        { name: 'Male', value: String(singleContractor.male_count), icon: <MaleIcon /> },
-        { name: 'Female', value: String(singleContractor.female_count), icon: <FemaleIcon /> },
+        { name: 'Male', value: String(singleContractor.male_count), iconKey: 'male' },
+        { name: 'Female', value: String(singleContractor.female_count), iconKey: 'female' },
       ],
       identifier: 'order-ready',
     }
@@ -237,8 +232,8 @@ const multipleTables = useMemo(() => {
                   isImage: false,
                   title: `${totalWorkers} workers`,
                   sepratorDetails: [
-                    { name: 'Male', value: String(totalMaleWorkers), icon: <MaleIcon /> },
-                    { name: 'Female', value: String(totalFemaleWorkers), icon: <FemaleIcon /> },
+                    { name: 'Male', value: String(totalMaleWorkers), iconKey: 'male' },
+                    { name: 'Female', value: String(totalFemaleWorkers), iconKey: 'female' },
                   ],
                   identifier: 'order-ready',
                 }}

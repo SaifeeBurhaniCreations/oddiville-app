@@ -21,6 +21,7 @@ import Calendar12Icon from '../components/icons/page/Calendar12Icon';
 import UserSquareIcon from '../components/icons/page/UserSquareIcon';
 import BagIcon from '../components/icons/packaging/BagIcon';
 import BigBagIcon from '../components/icons/packaging/BigBagIcon';
+import FileIcon from '../components/icons/common/FileIcon';
 
 export function getIcon(iconName: DataAccordianEnum) {
     switch (iconName) {
@@ -68,6 +69,8 @@ export function getIcon(iconName: DataAccordianEnum) {
             return <BagIcon color={getColor("green")} />;
         case "big-bag":
             return <BigBagIcon color={getColor("green")} />;
+        case "file":
+            return <FileIcon color={getColor("green")} />;
         default:
             return null;
     }

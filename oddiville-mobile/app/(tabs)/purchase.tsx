@@ -1,5 +1,6 @@
 // 1. React and React Native core
 import { useState, useMemo, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 
 import { ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 
@@ -17,11 +18,7 @@ import DatabaseIcon from "@/src/components/icons/page/DatabaseIcon";
 
 // 4. Project hooks
 import { useAdmin } from "@/src/hooks/useAdmin";
-import { useRawMaterialOrders } from "@/src/hooks/rawMaterialOrders";
-import {
-  CompletedOrdersPage,
-  useCompletedRawMaterialOrders,
-} from "@/src/hooks/useCompletedRawMaterialOrders";
+import { CompletedOrdersPage, useRawMaterialOrders } from "@/src/hooks/useRawMaterialOrders";
 import { useAllVendors } from "@/src/hooks/vendor";
 
 // 5. Project constants/utilities
@@ -32,7 +29,7 @@ import { OrderProps, RawMaterialOrderProps } from "@/src/types";
 
 // 7. Schemas
 import { BottomSheetSchemaKey } from "@/src/schemas/BottomSheetSchema";
-import EmptyState from "@/src/components/ui/EmptyState";
+import EmptyState, { EmptyStateStyles } from "@/src/components/ui/EmptyState";
 import { getEmptyStateData } from "@/src/utils/common";
 import { InfiniteData } from "@tanstack/query-core";
 import Button from "@/src/components/ui/Buttons/Button";
@@ -45,15 +42,19 @@ import { RefreshControl } from "react-native-gesture-handler";
 
 const PurchaseScreen = () => {
   const { goTo } = useAppNavigation();
-const { height: screenHeight } = useWindowDimensions()
+  const { height: screenHeight } = useWindowDimensions()
 
   const [pendingSearch, setPendingSearch] = useState("");
   const [completedSearch, setCompletedSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   useAdmin();
 
-  const { data: pendingData = [], isFetching: pendingLoading, refetch: refetchRM } =
-    useRawMaterialOrders();
+  const {
+    data: pendingData = [],
+    isFetching: pendingLoading,
+    refetch: refetchRM,
+  } = useRawMaterialOrders("pending");
+
   const { data: vendorData = [], isFetching: vendorLoading, refetch: refetchVendor } = useAllVendors();
 
   const formatOrder = useCallback(
@@ -68,32 +69,30 @@ const { height: screenHeight } = useWindowDimensions()
             name: "Order date",
             value:
               order.order_date &&
-              !isNaN(new Date(order.order_date as string).getTime())
+                !isNaN(new Date(order.order_date as string).getTime())
                 ? formatDate(
-                    new Date(order.order_date as string),
-                    "MMM d, yyyy"
-                  )
+                  new Date(order.order_date as string),
+                  "MMM d, yyyy"
+                )
                 : "--",
-            icon: null,
           },
           {
             name: order.arrival_date ? "Arrival date" : "Est. Arrival date",
             value:
               (order.arrival_date &&
-              !isNaN(new Date(order.arrival_date as string).getTime())
+                !isNaN(new Date(order.arrival_date as string).getTime())
                 ? formatDate(
-                    new Date(order.arrival_date as string),
-                    "MMM d, yyyy"
-                  )
+                  new Date(order.arrival_date as string),
+                  "MMM d, yyyy"
+                )
                 : undefined) ??
               (order.est_arrival_date &&
-              !isNaN(new Date(order.est_arrival_date as string).getTime())
+                !isNaN(new Date(order.est_arrival_date as string).getTime())
                 ? formatDate(
-                    new Date(order.est_arrival_date as string),
-                    "MMM d, yyyy"
-                  )
+                  new Date(order.est_arrival_date as string),
+                  "MMM d, yyyy"
+                )
                 : "--"),
-            icon: null,
           },
         ],
         address: vendor?.address ?? "N/A",
@@ -101,7 +100,7 @@ const { height: screenHeight } = useWindowDimensions()
           {
             name: "Order quantity",
             value: `${order.quantity_ordered ?? "--"} ${order.unit ?? ""}`,
-            icon: <DatabaseIcon size={16} color={getColor("green", 700)} />,
+            iconKey: 'database',
           },
         ],
         href: "raw-material-receive",
@@ -111,6 +110,8 @@ const { height: screenHeight } = useWindowDimensions()
     [vendorData]
   );
 
+  const completedQuery = useRawMaterialOrders("completed");
+
   const {
     data: completedData,
     fetchNextPage,
@@ -119,12 +120,13 @@ const { height: screenHeight } = useWindowDimensions()
     isFetching: completedFetching,
     isLoading: completedInitialLoading,
     refetch: refetchCompleted,
-  } = useCompletedRawMaterialOrders();
+  } = completedQuery;
+
 
   const completedItems: RawMaterialOrderProps[] =
     (
       completedData as InfiniteData<CompletedOrdersPage> | undefined
-    )?.pages.flatMap((p) => p.data) ?? [];
+    )?.pages?.flatMap((p) => p.data ?? []) ?? [];
 
   const completedUnique = useMemo(
     () => Array.from(new Map(completedItems.map((i) => [i.id, i])).values()),
@@ -140,6 +142,15 @@ const { height: screenHeight } = useWindowDimensions()
     () => completedUnique.map(formatOrder),
     [completedUnique, formatOrder]
   );
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchRM();
+      refetchCompleted();
+      refetchVendor();
+    }, [])
+  );
+
 
   const emptyStateData = getEmptyStateData("no-order-pending");
 
@@ -185,14 +196,16 @@ const { height: screenHeight } = useWindowDimensions()
                   refetchRM()
                   refetchVendor()
                 }} />}>
-                <EmptyState stateData={emptyStateData} style={{marginTop: -(screenHeight/ 7)}} />
+                  <View style={EmptyStateStyles.center}>
+                    <EmptyState stateData={emptyStateData} compact />
+                  </View>
                 </ScrollView>
               </View>
             )}
-            <SupervisorFlatlist key={pendingOrders.length} data={pendingOrders} reFetchers={[refetchRM, refetchVendor]} />
+            <SupervisorFlatlist data={pendingOrders} reFetchers={[refetchRM, refetchVendor]} />
           </View>
           <View style={styles.flexGrow}>
-                 <View
+            <View
               style={[
                 styles.HStack,
                 styles.justifyBetween,
@@ -224,12 +237,14 @@ const { height: screenHeight } = useWindowDimensions()
                   refetchCompleted()
                   refetchRM()
                 }} />}>
-                <EmptyState stateData={emptyStateData} style={{marginTop: -(screenHeight/ 7)}} />
-                                </ScrollView>
+                  <View style={EmptyStateStyles.center}>
+                    <EmptyState stateData={emptyStateData} compact />
+                  </View>
+
+                </ScrollView>
               </View>
             )}
             <SupervisorFlatlist
-              key={completedOrders.length}
               data={completedOrders}
               isEdit
               fetchNext={fetchNextPage}
@@ -247,12 +262,12 @@ const { height: screenHeight } = useWindowDimensions()
         pendingLoading ||
         vendorLoading ||
         completedInitialLoading) && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <Loader />
+          <View style={styles.overlay}>
+            <View style={styles.loaderContainer}>
+              <Loader />
+            </View>
           </View>
-        </View>
-      )}
+        )}
     </View>
   );
 };

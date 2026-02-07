@@ -22,11 +22,11 @@ import DatabaseIcon from "@/src/components/icons/page/DatabaseIcon";
 
 // 4. Project hooks
 import { useAdmin } from "@/src/hooks/useAdmin";
-import { useRawMaterialOrders } from "@/src/hooks/rawMaterialOrders";
+import { useRawMaterialOrders } from "@/src/hooks/useRawMaterialOrders";
 import {
   CompletedOrdersPage,
   useCompletedRawMaterialOrders,
-} from "@/src/hooks/useCompletedRawMaterialOrders";
+} from "@/src/hooks/useRawMaterialOrders";
 import { useAllVendors } from "@/src/hooks/vendor";
 
 // 5. Project constants/utilities

@@ -77,7 +77,6 @@ const ProductionScreen = () => {
               emptyComponent={
                 <View style={styles.emptyStateWrapper}>
                   <EmptyState
-                    style={{ marginTop: -(screenHeight / 7) }}
                     image={noBatchImage}
                     stateData={{
                       title: "No active batches",
@@ -102,7 +101,6 @@ const ProductionScreen = () => {
               emptyComponent={
                 <View style={styles.emptyStateWrapper}>
                   <EmptyState
-                    style={{ marginTop: -(screenHeight / 7) }}
                     image={noBatchImageProduction}
                     stateData={{
                       title: "No production running",
@@ -126,7 +124,6 @@ const ProductionScreen = () => {
               emptyComponent={
                 <View style={styles.emptyStateWrapper}>
                   <EmptyState
-                    style={{ marginTop: -(screenHeight / 7) }}
                     image={noBatchImageProduction}
                     stateData={{
                       title: "No completed batches",

@@ -723,6 +723,32 @@ const useValidateAndOpenBottomSheet = () => {
     ],
   };
 
+  const chooseExportType = {
+    sections: [
+      {
+        type: "optionList",
+        data: {
+          isCheckEnable: false,
+          options: ["Dashboard", "Chamber", "Production", "Raw Material", "Dispatch"],
+          key: "choose-export-type"
+        },
+      },
+    ],
+  };
+  
+  const chooseExportFormat = {
+    sections: [
+      {
+        type: "optionList",
+        data: {
+          isCheckEnable: false,
+          options: ["Excel (.xlsx)", "CSV (.csv)"],
+          key: "choose-export-type",
+        },
+      },
+    ],
+  };
+
   const role = {
     sections: [
       {
@@ -860,6 +886,78 @@ const useValidateAndOpenBottomSheet = () => {
     ],
   };
 
+  const exportDataOptions = {
+    sections: [
+      {
+        type: "header",
+        data: {
+          label: "Export options",
+          title: "",
+          value: "",
+          icon: "calendar",
+          description: "",
+          color: "red",
+        },
+      },
+      {
+        type: "data",
+        data: [
+          {
+            title: "Export Details",
+            details: [
+              {
+                row_1: [
+                  {
+                    label: "Rows exported",
+                    value: "",
+                    icon: "database",
+                  },
+                  {
+                    label: "File size",
+                    value: "",
+                    icon: "file",
+                  },
+                ],
+              },
+              {
+                row_2: [
+                  {
+                    label: "Report type",
+                    value: "",
+                    icon: "truck-number",
+                  },
+                  {
+                    label: "Time range",
+                    value: "",
+                    icon: "clock",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    buttons: [
+      {
+        text: "open",
+        variant: "fill",
+        color: "green",
+        alignment: "half",
+        disabled: false,
+        actionKey: "export-open",
+      },
+      {
+        text: "share",
+        variant: "outline",
+        color: "green",
+        alignment: "half",
+        disabled: false,
+        actionKey: "export-share",
+      },
+    ],
+  };
+
   const validateAndSetData = async (id: string, type: BottomSheetSchemaKey, overrideConfig?: any) => {
     if (!type || !(type in bottomSheetSchemas)) {
       console.log(`[validateAndSetData] No bottom sheet configured for type: ${type}`);
@@ -936,9 +1034,15 @@ const useValidateAndOpenBottomSheet = () => {
         case "select-package-type":
           data = selectPackageType;
           break;
-        // case "packing-summary":
-        //   data = packingSummary;
-        //   break;
+        case "choose-export-type":
+          data = chooseExportType;
+          break;
+        case "choose-export-format":
+          data = chooseExportFormat;
+          break;
+        case "export-data-options":
+          data = exportDataOptions;
+          break;
       }
     }
 
@@ -973,18 +1077,21 @@ const useValidateAndOpenBottomSheet = () => {
       actionKey: currentActionsType[idx] || undefined,
     })) as ButtonConfig[];
 
-    // @ts-ignore
-    dispatch(openBottomSheet({
-      ...validationResult.data,
-      buttons: enhancedButtons,
-      meta: {
-        id,
-        type: type,
-        mode: overrideConfig?.mode,
-        mainSelection: overrideConfig?.mainSelection,
-        subSelection: overrideConfig?.subSelection,
-      }
-    }));
+    dispatch(
+      // @ts-ignore
+      openBottomSheet({
+        ...validationResult.data,
+        buttons: enhancedButtons,
+        meta: {
+          id,
+          type,
+          mode: overrideConfig?.mode,
+          mainSelection: overrideConfig?.mainSelection,
+          subSelection: overrideConfig?.subSelection,
+          data: overrideConfig?.metaData,
+        },
+      }),
+    );
   };
 
   return { validateAndSetData };

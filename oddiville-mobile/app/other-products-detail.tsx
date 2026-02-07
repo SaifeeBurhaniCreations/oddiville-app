@@ -5,24 +5,19 @@ import BackButton from "@/src/components/ui/Buttons/BackButton";
 import { useParams } from "@/src/hooks/useParams";
 import { useEffect, useMemo, useState } from "react";
 import DatabaseIcon from "@/src/components/icons/page/DatabaseIcon";
-import { format, formatDate } from "date-fns";
+import { formatDate } from "date-fns";
 import {
-  ActivityProps,
   ChamberData,
-  ChamberEntry,
   OrderProps,
   OtherClientHistory,
 } from "@/src/types";
 import SupervisorOrderDetailsCard from "@/src/components/ui/Supervisor/SupervisorOrderDetailsCard";
 import Tabs from "@/src/components/ui/Tabs";
-import ActivitesFlatList from "@/src/components/ui/ActivitesFlatList";
-import Input from "@/src/components/ui/Inputs/Input";
-import FormField from "@/src/sbc/form/FormField";
 import { useFormValidator } from "@/src/sbc/form";
 import Button from "@/src/components/ui/Buttons/Button";
-import DetailsToast from "@/src/components/ui/DetailsToast";
 import {
   useOtherProductHistoryById,
+  useOtherProductStockById,
   useOthersProductsById,
   useUpdateOtherProduct,
 } from "@/src/hooks/othersProducts";
@@ -31,6 +26,10 @@ import ItemsRepeater from "@/src/components/ui/ItemsRepeater";
 import { useChamberById } from "@/src/hooks/useChambers";
 import Loader from "@/src/components/ui/Loader";
 import PriceInput from "@/src/components/ui/Inputs/PriceInput";
+import { useToast } from "@/src/context/ToastContext";
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
+import { useQueryClient } from "@tanstack/react-query";
+
 
 export type OthersProductForm = {
   name: string;
@@ -43,8 +42,29 @@ export type OthersProductPayload = Omit<OthersProductForm, "chambers"> & {
   chambers: { id: string; add_quantity: number; sub_quantity: number }[];
 };
 
+type OtherProductChamber = {
+  id: string;
+  quantity: string;
+  rating?: string;
+};
+
+type StockChamber = {
+  id: string;
+  quantity: string;
+  rating: string;
+};
+
+const sumRecordValues = (obj: Record<string, number> | undefined) =>
+  Object.values(obj || {}).reduce(
+    (sum: number, val: number) => sum + val,
+    0
+  );
+
+  
 const OthersProductScreen = () => {
   const { data } = useParams("other-products-detail", "data");
+  const queryClient = useQueryClient();
+  const toast = useToast();
 
   if (!data) return;
 
@@ -58,15 +78,14 @@ const OthersProductScreen = () => {
   } = JSON.parse(data);
 
   if (!otherProduct) return;
-  const [toastVisible, setToastVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [toastType, setToastType] = useState<"success" | "error" | "info">(
-    "info"
-  );
-  const [toastMessage, setToastMessage] = useState("");
 
   const updateMutation = useUpdateOtherProduct();
   const { data: otherProductData } = useOthersProductsById(otherProduct.id);
+
+  const { data: stockData } = useOtherProductStockById(
+    otherProductData?.product_id
+  );
 
   const { data: otherProductHistoryRaw = [] } = useOtherProductHistoryById(
     otherProductData?.id
@@ -78,7 +97,7 @@ const OthersProductScreen = () => {
   const productIds: string[] | undefined = otherProduct?.chambers?.map(
     (product) => product?.id
   );
-
+  
   const queryIds = productIds ?? null;
 
   const { data: chamberData } = useChamberById(null, queryIds);
@@ -91,59 +110,39 @@ const OthersProductScreen = () => {
     }, {} as Record<string, ChamberData>);
   }, [chamberData]);
 
-  const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setToastVisible(true);
-  };
+  const totalQuantity = useMemo(() => {
+    if (!stockData?.chamber) return 0;
 
-  const totalQuantity = otherProduct.chambers
-    ? otherProduct.chambers.reduce(
-        (sum, chamber) => sum + Number(chamber.quantity),
-        0
-      )
-    : 0;
+    return stockData.chamber.reduce(
+      (sum: number, ch: StockChamber) =>
+        sum + Number(ch.quantity || 0),
+      0
+    );
+  }, [stockData?.chamber]);
 
   const orderDetail: OrderProps = useMemo(() => {
     return {
-      title: otherProduct?.product_name,
-      name: otherProduct.company,
+      title: otherProductData?.product_name ?? "",
+      name: otherProductData?.company ?? "",
       description: [
         {
           name: "Quantity",
           value: `${formatWeight(totalQuantity)}`,
-          icon: <DatabaseIcon color={getColor("green", 700)} size={16} />,
+          iconKey: "database",
         },
       ],
       helperDetails: [
         {
           name: "Stored",
           value: formatDate(new Date().toISOString(), "MMM d, yyyy"),
-          icon: null,
         },
         {
           name: "Est. Dis",
           value: formatDate(new Date().toISOString(), "MMM d, yyyy"),
-          icon: null,
         },
       ],
     };
-  }, []);
-
-  const activities = otherProductHistory?.map((history) => ({
-    id: history.id,
-    title: orderDetail.title,
-    type: "",
-    createdAt: new Date(),
-    extra_details: [
-      `${formatWeight(history?.remaining_quantity)}`,
-      `${format(new Date(history?.createdAt), "MMM d, yyyy")}`,
-      `${format(new Date(history?.createdAt), "hh:mm:ss a")}`,
-      // `Quantity: ${formatWeight(history?.remaining_quantity)}`,
-      // `Date: ${format(new Date(history?.createdAt), "MMM d, yyyy")}`,
-      // `Time: ${format(new Date(history?.createdAt), "hh:mm:ss a")}`,
-    ],
-  })) as ActivityProps[];
+  }, [otherProductData?.product_name, otherProductData?.company, totalQuantity]);
 
   const { values, setField, errors, resetForm, validateForm, isValid } =
     useFormValidator<OthersProductForm>(
@@ -165,36 +164,31 @@ const OthersProductScreen = () => {
       }
     );
 
-    // sum all numbers in a Record<string, number>
-    const sumRecordValues = (obj: Record<string, number> | undefined) =>
-      Object.values(obj || {}).reduce((sum, val) => sum + (Number(val) || 0), 0);
-
     const totalAdd = sumRecordValues(values.add_quantity);
     const totalSub = sumRecordValues(values.sub_quantity);
 
-    // true when both add & sub have total 0
     const isAllZero = totalAdd === 0 && totalSub === 0;
 
-
   useEffect(() => {
-    setField("name", orderDetail.title);
-    setField("chambers", queryIds);
+    if (!stockData?.chamber) return;
 
-    if (otherProduct?.chambers?.length) {
-      const addMap: Record<string, number> = { ...(values.add_quantity || {}) };
-      const subMap: Record<string, number> = { ...(values.sub_quantity || {}) };
+    const addMap: Record<string, number> = {};
+    const subMap: Record<string, number> = {};
 
-      otherProduct.chambers.forEach((ch) => {
-        if (addMap[ch.id] === undefined) addMap[ch.id] = 0;
-        if (subMap[ch.id] === undefined) subMap[ch.id] = 0;
-      });
+    stockData.chamber.forEach((ch: StockChamber) => {
+      addMap[ch.id] = 0;
+      subMap[ch.id] = 0;
+    });
 
-      setField("add_quantity", addMap);
-      setField("sub_quantity", subMap);
-    }
-  }, []);
+    setField("add_quantity", addMap);
+    setField("sub_quantity", subMap);
+  }, [stockData?.chamber]);
 
   const onSubmit = () => {
+    if (!otherProductData?.id) {
+      toast.error("Product not loaded yet");
+      return;
+    }
     setIsLoading(true);
     const result = validateForm();
     if (!result.success) {
@@ -202,10 +196,9 @@ const OthersProductScreen = () => {
       return;
     }
 
-    // Build per-chamber payload
     const addMap = result.data.add_quantity || {};
     const subMap = result.data.sub_quantity || {};
-    const chambersPayload = otherProduct.chambers.map((ch) => ({
+    const chambersPayload = stockData!.chamber.map((ch: StockChamber) => ({
       id: ch.id,
       add_quantity: Number(addMap[ch.id] ?? 0),
       sub_quantity: Number(subMap[ch.id] ?? 0),
@@ -221,19 +214,35 @@ const OthersProductScreen = () => {
         },
       },
       {
-        onSuccess: (data) => {
+        onSuccess: (res) => {
           setIsLoading(false);
-          showToast("success", "Quantity updated successfully");
+          toast.success("Quantity updated successfully");
+
+          queryClient.setQueryData(
+            ["other-product-stock-by-id", otherProductData.product_id],
+            res.stock
+          );
+
           resetForm();
         },
         onError: (error) => {
           setIsLoading(false);
-          showToast("error", "Failed to update quantity");
+          toast.error("Failed to update quantity");
           console.error("Update error", error);
         },
       }
     );
   };
+
+  if (!otherProductData) {
+    return (
+      <OverlayLoader />
+    );
+  }
+
+  // console.log("item", otherProductData);
+  // console.log("stock", stockData);
+  // console.log("chambers", stockData?.chamber);
 
   return (
     <View style={styles.pageContainer}>
@@ -267,7 +276,7 @@ const OthersProductScreen = () => {
                   styles.mt16,
                 ]}
               >
-                {otherProduct.chambers?.map((chamber) => (
+                {stockData?.chamber?.map((chamber: StockChamber) => (
                   <ItemsRepeater
                     key={chamber.id}
                     title={
@@ -311,22 +320,13 @@ const OthersProductScreen = () => {
                   </ItemsRepeater>
                 ))}
               </View>
-              {/* <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={[styles.pX16]}
-              >
-                <ActivitesFlatList
-                  isVirtualised={false}
-                  activities={activities}
-                />
-              </ScrollView> */}
             </Tabs>
           </View>
         </ScrollView>
         <Button
           variant="fill"
           onPress={onSubmit}
-          disabled={!isValid || isAllZero}
+          disabled={!isValid || isAllZero || !otherProductData}
           style={styles.mx16}
         >
           Done
@@ -339,13 +339,6 @@ const OthersProductScreen = () => {
           </View>
         </View>
       )}
-
-      <DetailsToast
-        type={toastType}
-        message={toastMessage}
-        visible={toastVisible}
-        onHide={() => setToastVisible(false)}
-      />
     </View>
   );
 };

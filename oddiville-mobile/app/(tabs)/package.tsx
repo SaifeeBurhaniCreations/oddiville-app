@@ -70,6 +70,10 @@ const PackageScreen = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isCurrentProduct, setIsCurrentProduct] = useState<boolean>(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [overPackMap, setOverPackMap] = useState<Record<string, boolean>>({});
+
+  // derived variable
+  const disableButton = Object.values(overPackMap).some(Boolean);
 
 //  memo 
   const submitDisabledReason = useMemo(() => {
@@ -98,6 +102,13 @@ const PackageScreen = () => {
     const t = setTimeout(() => setShowTooltip(false), 2000);
     return () => clearTimeout(t);
   }, [showTooltip]);
+
+  useEffect(() => {
+    if (disableButton) {
+      toast.error("Not enough packets in stock");
+    }
+  }, [disableButton]);
+
 
   // functions
   const onSubmit = async () => {
@@ -129,6 +140,10 @@ const PackageScreen = () => {
     });
   };
 
+  const handleOverPackChange = (key: string, value: boolean) => {
+    setOverPackMap(prev => ({ ...prev, [key]: value }));
+  };
+
   const emptyStateData = getEmptyStateData("products")
 
   return (
@@ -153,7 +168,7 @@ const PackageScreen = () => {
                 <View style={styles.storageColumn}>
                   <ProductContextSection setIsLoading={setIsLoading} form={form} setIsCurrentProduct={setIsCurrentProduct} />
                   <RawMaterialConsumptionSection setIsLoading={setIsLoading} isCurrentProduct={isCurrentProduct} form={form} rm={rm} rmUsed={rmUsed} />
-                  <PackingSKUSection setIsLoading={setIsLoading} isCurrentProduct={isCurrentProduct} form={form} />
+                  <PackingSKUSection setIsLoading={setIsLoading} isCurrentProduct={isCurrentProduct} form={form} onOverPackChange={handleOverPackChange} />
 
                   {!isCurrentProduct && <View style={EmptyStateStyles.center}><EmptyState stateData={emptyStateData} /></View>}
                 </View>
@@ -174,7 +189,7 @@ const PackageScreen = () => {
                       variant="fill"
                       interactive={false}
                       disableUi={!form.canSubmit}
-                      disabled={isPending}
+                      disabled={isPending || disableButton}
                     >
                       Pack product
                     </Button>

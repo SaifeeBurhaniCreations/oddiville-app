@@ -103,36 +103,39 @@ export const formatTimeDifference = (startDate: Date, endDate: Date): string => 
 };
 
 export type PackageIconInput = {
-  size: number;
-  unit: "kg" | "gm" | "unit";
+  size: number | string;
+  unit?: "kg" | "gm" | "unit";
 };
-  
+
 export const mapPackageIcon = (item: PackageIconInput) => {
-  const size = Number(item.size);
-  if (Number.isNaN(size)) return null;
+    const size = Number(item.size);
+    if (Number.isNaN(size)) return null;
 
-  let grams = size;
+    let grams = size;
 
-  switch (item.unit) {
-    case "kg":
-      grams = size * 1000;
-      break;
-    case "gm":
-      grams = size;
-      break;
-    default:
-      return null;
-  }
+    switch (item.unit) {
+        case "kg":
+            grams = size * 1000;
+            break;
+        case "gm":
+            grams = size;
+            break;
+        default:
+            return null;
+    }
 
-  if (grams <= 250) return PaperRollIcon;
-  if (grams <= 500) return BagIcon;
-  return BigBagIcon;
+    if (grams <= 250) return PaperRollIcon;
+    if (grams <= 500) return BagIcon;
+    return BigBagIcon;
 };
 
-export const toPackageIconInput = (pkg: PackingPackages): PackageIconInput => ({
+export const toPackageIconInput = (
+  pkg: Pick<PackageItem, "size" | "unit">,
+): PackageIconInput => ({
   size: Number(pkg.size),
-  unit: pkg.unit as "kg" | "gm" | "unit",
+  unit: (pkg.unit ?? "unit") as "kg" | "gm" | "unit",
 });
+
 
 // export const toPackageIconInput = (pkg: PackageItem): PackageIconInput => ({
 //   size: Number(pkg.size),
@@ -219,20 +222,20 @@ export function getRatingColor(rating: 1 | 2 | 3 | 4 | 5) {
 export function formatAmount(
     amount: number,
     overloadOptions?: {
-      unit: "rs" | "lakh" | "crore";
+        unit: "rs" | "lakh" | "crore";
     }
-  ) {
+) {
     let format = "Rs"
-    if(overloadOptions?.unit === "rs") {
+    if (overloadOptions?.unit === "rs") {
         format = "Rs"
-    } else if(overloadOptions?.unit === "lakh") {
+    } else if (overloadOptions?.unit === "lakh") {
         format = "Lakh"
-    } else if(overloadOptions?.unit === "crore") {
+    } else if (overloadOptions?.unit === "crore") {
         format = "Crore"
     } else {
         format = "Rs"
     };
-  
+
     if (amount < 100000) {
         return `${amount} ${format}`;
     } else {
@@ -302,11 +305,12 @@ export function getStatusDescription(
 }
 
 
-export  function computeCurrentValue(key: string, raw: string | false, chamberRating: string, placeholder_second: string, productionPackageType: string) {
+export function computeCurrentValue(key: string, raw: string | false, chamberRating: string, placeholder_second: string, productionPackageType: string) {
     if (!!raw && typeof raw === 'string' && raw.trim() !== '') {
         if (key === 'add-raw-material') return raw;
         if (key === 'supervisor-production') return chamberRating || raw;
         if (key === 'select-package-type') return productionPackageType || raw;
         return raw;
     }
-    return placeholder_second || 'Select'; }
+    return placeholder_second || 'Select';
+}

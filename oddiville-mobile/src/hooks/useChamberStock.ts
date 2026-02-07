@@ -29,7 +29,7 @@ export interface Packaging {
   count: number;
 }
 
-export interface PackageItem {
+export interface PackageItemLocal {
   size: string;
   unit?: string;
   rawSize?: string;
@@ -43,11 +43,9 @@ export interface ChamberStock {
   category: "material" | "other" | "packed";
   unit: string;
 
-  packaging:
-    | Packaging            
-    | Packaging[];        
+  packaging: Packaging | Packaging[];
 
-  packages?: PackageItem[] | null;
+  packages?: PackageItemLocal[] | null;
 
   chamber: Array<{
     id: string;
@@ -66,37 +64,6 @@ export interface ChamberStockPage {
 
 export function useChamberStockById(id: string | null) {
   const queryClient = useQueryClient();
-  const socket = useSocket();
-
-  // useEffect(() => {
-  //     if (!id) return;
-  //     const listener = (data: ChamberStock) => {
-  //         if (data?.orderDetails?.id === id) {
-  //             queryClient.setQueryData(['chamber-stock', id], data.orderDetails);
-
-  //             queryClient.setQueryData(['chamber-stock'], (oldData: ChamberStock[] | undefined) => {
-  //                 if (!oldData) return [data.orderDetails];
-
-  //                 const index = oldData.findIndex(item => item.id === data.orderDetails.id);
-
-  //                 if (index !== -1) {
-  //                     const newData = [...oldData];
-  //                     newData[index] = data.orderDetails;
-  //                     return newData;
-  //                 } else {
-  //                     return [...oldData, data.orderDetails];
-  //                 }
-  //             });
-  //         }
-  //     };
-
-  //     socket.on('chamber-stock-id:receive', listener);
-
-  //     return () => {
-  //         socket.off('chamber-stock-id:receive', listener);
-  //     };
-  // }, [queryClient, id]);
-
   return useQuery<ChamberStock>({
     queryKey: ["chamber-stock", id],
     queryFn: rejectEmptyOrNull(async () => {
@@ -325,93 +292,3 @@ export function useChamberStockDetails(productName: string) {
     isReady: !!finalStock && chambersArray?.length > 0,
   };
 }
-
-// export function useChamberStockDetails(productName: string) {
-//     const { data: chambers } = useChamber();
-//     const { data: stocks } = useChamberStock();
-
-//     const stock = stocks?.find((s) => s.product_name === productName);
-
-//     // console.log("chambers", chambers);
-//     // console.log("stocks", stocks);
-
-//     const { data: stockFallback } = useQuery<
-//         ChamberStock | { status: string } | null
-//     >({
-//         queryKey: ["chamber-stock-production", productName],
-//         queryFn: async () => {
-//             const result = await getChamberStockProduction(productName);
-//             return result?.data ?? null;
-//         },
-//         enabled: !stock && !!productName,
-//         gcTime: 1000 * 60 * 1,
-//         staleTime: 1000 * 60 * 5,
-//     });
-
-//     const finalStock = stock ?? stockFallback;
-//     const newChamberNames = pluck(chambers ?? [], "chamber_name")
-
-//     const remainingCapacities = chambers?.map(chamber => {
-//         const stocksInChamber = stocks?.filter(stock => {
-//             return stock.chamber.some(item => item.id === chamber.id);
-//         }) ?? [];
-
-//         const usedQuantity = stocksInChamber.reduce((sum, stock) => {
-//             const match = stock.chamber.find(item => item.id === chamber.id);
-//             if (!match) return sum;
-//             return sum + Number(match.quantity);
-//         }, 0);
-
-//         return chamber.capacity - usedQuantity;
-//     }) ?? [];
-
-//     const newChambers = zipAndFit(newChamberNames, remainingCapacities, [
-//         "chamberName",
-//         "chamberCapacity",
-//     ]);
-
-//     if (finalStock && "status" in finalStock && finalStock.status === "new") {
-//         return {
-//             chambers: [],
-//             total: 0,
-//             chamberCapacityWithName: newChambers,
-//             isReady: true,
-//             message: "No material yet in any chamber",
-//         };
-//     }
-
-//     if (!isChamberStock(finalStock)) {
-//         return {
-//             chambers: [],
-//             total: 0,
-//             isReady: false,
-//         };
-//     }
-
-//     const chamberIds = pluck(finalStock.chamber, "id");
-
-//     const chamberQuantities = finalStock.chamber.map((c) => Number(c.quantity));
-
-//     const { data: chambersData = [] } = useChamberById(undefined, chamberIds);
-//     const chambersArray = Array.isArray(chambersData)
-//         ? chambersData
-//         : chambersData
-//             ? [chambersData]
-//             : [];
-
-//     const chamberNames = pluck(chambersArray, "chamber_name");
-
-//     const responseChambers = zipAndFit(chamberNames, chamberQuantities, remainingCapacities, [
-//         "chamberName",
-//         "quantity",
-//         "chamberCapacity",
-//     ]);
-
-//     const totalQty = sumBy({ array: chamberQuantities, transform: "number" });
-
-//     return {
-//         chambers: responseChambers,
-//         total: totalQty,
-//         isReady: !!finalStock && chambersArray?.length > 0,
-//     };
-// }

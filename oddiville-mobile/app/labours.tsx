@@ -242,9 +242,9 @@ import { useAuth } from "@/src/context/AuthContext";
       <View style={styles.pageContainer}>
         <PageHeader page={"Labour"} />
         <View style={styles.wrapper}>
-          <View style={[styles.paddingTLR16]}>
-            <BackButton label="Labours" backRoute={backRoute} /> 
-            </View>
+          {(safeRole !== "admin" && safeRole !== "superadmin") && <View style={[styles.paddingTLR16]}>
+            <BackButton label="Labours" backRoute={backRoute} />
+          </View>}
           <Tabs
             tabTitles={["Today's worker", "History"]}
             headerStyle={{ padding: 16 }}

@@ -5,7 +5,7 @@ import {
   getPackingSummaryToday,
 } from "@/src/services/packing.service";
 
-import { PackageItem, useChamberStock } from "./useChamberStock";
+import { PackageItemLocal, useChamberStock } from "./useChamberStock";
 import { useMemo } from "react";
 import { CreatePackingEventDTO } from "./packing/usePackingForm";
 
@@ -21,7 +21,7 @@ export type PackedItem = {
   image: string | null;
   category: string;
   chamber: { id: string; quantity: string }[];
-  packages?: PackageItem[];
+  packages?: PackageItemLocal[];
   __optimistic?: boolean;
 };
 
