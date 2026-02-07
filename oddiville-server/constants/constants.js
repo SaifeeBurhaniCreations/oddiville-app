@@ -22,6 +22,7 @@ const {
   CALENDAR_EVENT_SCHEDULED,
   SCHEDULED_DATE_EVENT,
   PACKING_SUMMARY,
+  CHOOSE_MULTIPLE_PRODUCT,
 } = require("../config/schemas");
 
 const schemaMap = {
@@ -49,6 +50,7 @@ const schemaMap = {
   "calendar-event-scheduled": CALENDAR_EVENT_SCHEDULED,
   "calendar-event-reminder": SCHEDULED_DATE_EVENT,
   "packing-summary": PACKING_SUMMARY,
+  "multiple-product-card": CHOOSE_MULTIPLE_PRODUCT,
 };
 
 module.exports = {schemaMap};

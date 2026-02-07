@@ -18,8 +18,8 @@ routes.use("/api/vendor", require("../controllers/VendorController"))
 routes.use("/api/other-product", require("../controllers/OtherProductController"))
 routes.use("/api/old-inventory", require("../controllers/OldInventoryController"))
 
-routes.use("/api/chamber-stock/", require("../controllers/ChamberStockController"))
-routes.use("/api/chamber/", require("../controllers/WarehouseController/Chamber"))
+routes.use("/api/chamber-stock", require("../controllers/ChamberStockController"))
+routes.use("/api/chamber", require("../controllers/WarehouseController/Chamber"))
 routes.use("/api/chamber/type/frozen", require("../controllers/WarehouseController/Frozen"))
 routes.use("/api/chamber/type/dry", require("../controllers/WarehouseController/Dry"))
 // routes.use("/api/packed-item", require("../controllers/PackedItemController"))
@@ -30,5 +30,7 @@ routes.use("/api/notifications", require("../controllers/notificationController"
 
 routes.use("/api/packing-event", require("../controllers/packing/packingPackedItem"))
 routes.use("/api/packing-event", require("../controllers/packing/packingEvents"))
+routes.use("/api/packing-summary", require("../controllers/packing/PackingToday"))
+routes.use("/api/export", require("../controllers/ExportDataController"))
 
 module.exports = routes
