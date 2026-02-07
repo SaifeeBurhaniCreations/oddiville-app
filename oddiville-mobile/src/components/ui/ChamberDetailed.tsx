@@ -21,6 +21,7 @@ import { filterItems, flattenFilters } from "@/src/utils/filterUtils";
 import { filterHandlers } from "@/src/lookups/filters";
 import { FilterEnum } from "@/src/schemas/BottomSheetSchema";
 import { useRawMaterial } from "@/src/hooks/rawMaterial";
+import OverlayLoader from "./OverlayLoader";
 
 const ChamberDetailed = ({
   chamberLoading,
@@ -94,88 +95,6 @@ const ChamberDetailed = ({
     setIsLoading(false);
   };
 
-  //   const parsedStock: RawMaterialProps[] = useMemo(() => {
-  //   if (!chamberData?.id || flatStockData?.length === 0) return [];
-
-  //   return flatStockData
-  //     .map((item) => {
-  //       const matchingChamberData = item.chamber?.filter(
-  //         (entry) => entry.id === chamberData.id
-  //       );
-
-  //       console.log("matchingChamberData", matchingChamberData);
-
-  //       if (!matchingChamberData || matchingChamberData.length === 0) {
-  //         return null;
-  //       }
-
-  //       const detailByRating = matchingChamberData.map((entry) => ({
-  //         rating: item.category === "packed" ? "packed" : entry.rating,
-  //         quantity: `${entry.quantity}${item.unit}`,
-  //       }));
-
-  //       const ratingStrings =
-  //         matchingChamberData.map((entry) => entry.rating).filter(Boolean);
-
-  //       const ratingNumbers = ratingStrings
-  //         .map((r) => parseFloat(r))
-  //         .filter((n) => !isNaN(n));
-
-  //       const minRating = ratingNumbers.length
-  //         ? Math.min(...ratingNumbers).toFixed(1)
-  //         : "";
-  //       const maxRating = ratingNumbers.length
-  //         ? Math.max(...ratingNumbers).toFixed(1)
-  //         : "";
-
-  //       const totalQuantity = matchingChamberData.reduce(
-  //         (sum, entry) => sum + parseFloat(entry.quantity || "0"),
-  //         0
-  //       );
-
-  //       const disabled = totalQuantity <= 0;
-
-  //       let ratingDisplay = "";
-  //       if (minRating && maxRating) {
-  //         ratingDisplay =
-  //           minRating === maxRating
-  //             ? minRating
-  //             : `${minRating} - ${maxRating}`;
-  //       } else if (item.category === "other") {
-  //         ratingDisplay = ratingStrings.join(", ") || "other";
-  //       } else {
-  //         ratingDisplay = ratingStrings.join(", ") || "N/A";
-  //       }
-
-  //       const matchedMaterial = rawMaterial.find(
-  //         (m) =>
-  //           m?.name?.trim().toLowerCase() ===
-  //           item.product_name?.trim().toLowerCase()
-  //       );
-
-  //       const image = matchedMaterial?.sample_image?.url
-  //         ? matchedMaterial.sample_image.url
-  //         : item.category === "other"
-  //         ? require("@/src/assets/images/fallback/others-stock-fallback.png")
-  //         : require("@/src/assets/images/fallback/chamber-stock-fallback.png");
-
-  //       return {
-  //         name: item.product_name,
-  //         description: `${totalQuantity} ${item.unit}`,
-  //         rating: ratingDisplay, // always set
-  //         disabled,
-  //         href: item.category === "other" ? "other-products-detail" : item.category === "material" ? "stock-detail" : "",
-  //         quantity: detailByRating[0]?.quantity ?? "",
-  //         detailByRating,
-  //         category: item.category,
-  //         chambers: item.category === "other" ? item.chamber : null,
-  //         id: item.category === "other" ? item.id : item.category === "material" ? item.id : null,
-  //         image,
-  //       };
-  //     })
-  //     .filter(Boolean) as RawMaterialProps[];
-  // }, [flatStockData, chamberData, rawMaterial, selectedChamber]);
-
   const parsedStock = useMemo(() => {
     if (!chamberData?.id) return [];
 
@@ -197,17 +116,26 @@ const ChamberDetailed = ({
           .map((c) => c.rating)
           .filter(Boolean);
 
+        const isOtherCategory = item.category === "other";
+        const isMaterialCategory = item.category === "material";
+
         const ratingDisplay =
-          ratingStrings.length > 1
-            ? `${Math.min(...ratingStrings.map(Number))} - ${Math.max(
-                ...ratingStrings.map(Number)
-              )}`
-            : ratingStrings[0] ?? "N/A";
+          isOtherCategory
+            ? ratingStrings[0] ?? "N/A"
+            : ratingStrings.length
+              ? `★ ${ratingStrings.length > 1
+                ? `${Math.min(...ratingStrings.map(Number))} - ${Math.max(
+                  ...ratingStrings.map(Number)
+                )}`
+                : ratingStrings[0]
+              }`
+              : "";
 
         const href: keyof RootStackParamList | undefined =
-          item.category === "other"
+          isOtherCategory
+
             ? "other-products-detail"
-            : item.category === "material"
+            : isMaterialCategory
             ? "stock-detail"
             : undefined;
 
@@ -219,7 +147,7 @@ const ChamberDetailed = ({
 
         const image = matchedMaterial?.sample_image?.url
           ? matchedMaterial.sample_image.url
-          : item.category === "other"
+          : isOtherCategory
           ? require("@/src/assets/images/fallback/others-stock-fallback.png")
           : require("@/src/assets/images/fallback/chamber-stock-fallback.png");
 
@@ -235,7 +163,7 @@ const ChamberDetailed = ({
 
           ...(href ? { href } : {}),
 
-          chambers: item.category === "other" ? item.chamber : chamberEntries,
+          chambers: isOtherCategory ? item.chamber : chamberEntries,
 
           detailByRating: chamberEntries.map((c) => ({
             rating: c.rating,
@@ -310,6 +238,7 @@ const ChamberDetailed = ({
           onEndReachedThreshold={0.6}
         />
       </View>
+      {(isLoading && chamberLoading && stockLoading) && <OverlayLoader />}
     </>
   );
 };

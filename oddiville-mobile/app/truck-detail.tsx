@@ -66,21 +66,18 @@ const formatTruckData = (truckData: any): OrderProps => ({
         {
             name: "Truck Type",
             value: truckData?.type,
-            icon: null
         },
         {
             name: "Truck Size",
             value: `${truckData?.size} Tons`,
-            icon: null
         }
     ],
     helperDetails: [{
         name: "Arrived at",
         value: formatDateTime(truckData?.arrival_date),
-        icon: null
     }],
     identifier: undefined,
-    sideIcon: <PhoneIcon size={24} color={getColor('green', 700)} />
+    sideIconKey: 'phone',
 }) 
 
 const TruckDetailScreen = () => {

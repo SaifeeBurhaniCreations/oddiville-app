@@ -7,6 +7,7 @@ import Radio from './Radio'
 import { labelMap } from '@/src/utils/arrayUtils'
 import Input from './Inputs/Input'
 import { isNumber } from 'lodash'
+import { DimensionValue } from 'react-native'
 
 export type TableColumn<T> = {
   label: string
@@ -36,7 +37,9 @@ const isIndexInAnyRange = (
 /**
  * Calculates the maximum width for cell content based on its value
  */
-const getCellMaxWidth = (value: any): string => {
+
+const getCellMaxWidth = (value: any): DimensionValue => {
+
   if (value === undefined) return '100%'
   if (Number(value) === 0) return '60%'
   if (isNumber(value)) return '100%'

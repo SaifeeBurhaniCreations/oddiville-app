@@ -10,7 +10,7 @@ import TruckWeightCard from '@/src/components/ui/TruckWeightCard';
 import { useParams } from '@/src/hooks/useParams';
 import { format } from 'date-fns';
 import { useVendors } from '@/src/hooks/vendor';
-import { useRawMaterialOrdersAll } from '@/src/hooks/rawMaterialOrders';
+import { useRawMaterialOrdersAll } from '@/src/hooks/useRawMaterialOrders';
 import { formatDateForDisplay } from '@/src/utils/dateUtils';
 import { formatWeight } from '@/src/utils/common';
 
@@ -35,19 +35,17 @@ const getOrderDetails = (
             {
                 name: 'Order quantity',
                 value: `${formatWeight(order.quantity_ordered) ?? "--"}`,
-                icon: <DatabaseIcon size={16} color={getColor('green', 700)} />,
+                iconKey: 'database',
             },
         ],
         helperDetails: [
             {
                 name: 'Order',
                 value: order.order_date ? formatDateForDisplay(order?.order_date) : "---",
-                icon: null,
             },
             {
                 name: 'Arrival',
                 value: order.arrival_date ? formatDateForDisplay(order?.arrival_date) : "---",
-                icon: null,
             },
         ],
         href: 'raw-material-receive',

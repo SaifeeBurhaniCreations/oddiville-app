@@ -1,6 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { FlatList, Text, View } from 'react-native';
-import Loader from './Loader';
+import React, { useCallback } from 'react';
+import { FlatList, View } from 'react-native';
 import { ItemCardData, ItemCardListProps } from "@/src/types";
 import ItemCard from './ItemCard';
 import { getStableBackground } from '@/src/utils/arrayUtils';
@@ -28,7 +27,8 @@ const ItemCardList = ({
       renderItem={renderItem}
       keyExtractor={(item) => String(item.id)}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 100, gap: 12 }}
+      contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16 }}
+      ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       {...listProps}
     />
   );

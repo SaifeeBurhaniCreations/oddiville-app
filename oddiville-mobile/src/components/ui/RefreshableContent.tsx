@@ -1,21 +1,13 @@
 import React from "react";
 import { View } from "react-native";
-import { RefreshControl } from "react-native-gesture-handler";
-
-type ListProps = {
-  data: any[];
-  renderItem: any;
-  keyExtractor?: any;
-  ListEmptyComponent?: React.ReactNode;
-  refreshControl?: React.ReactElement;
-};
+import { RefreshControl, ScrollView } from "react-native-gesture-handler";
 
 type RefreshableContentProps = {
   isEmpty: boolean;
   refreshing: boolean;
   onRefresh: () => void;
   emptyComponent: React.ReactNode;
-  children: React.ReactElement<ListProps>;
+  children: React.ReactNode;
 };
 
 const RefreshableContent = ({
@@ -25,12 +17,20 @@ const RefreshableContent = ({
   emptyComponent,
   children,
 }: RefreshableContentProps) => {
-  return React.cloneElement(children, {
-    ListEmptyComponent: isEmpty ? emptyComponent : undefined,
-    refreshControl: (
-      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-    ),
-  });
+  if (isEmpty) {
+    return (
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+      >
+        {emptyComponent}
+      </ScrollView>
+    );
+  }
+
+  return <View style={{ flex: 1 }}>{children}</View>;
 };
 
 export default RefreshableContent;

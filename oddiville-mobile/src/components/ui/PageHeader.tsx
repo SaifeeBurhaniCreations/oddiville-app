@@ -47,6 +47,7 @@ type PageVariant =
   | "order"
   | "production"
   | "searchResult"
+  | "exportReports"
   | "default";
 
 const getPageVariant = (page: string): PageVariant => {
@@ -182,6 +183,11 @@ const BACKGROUND_CONFIG: Record<PageVariant, BgIconConfig[]> = {
     { key: "truck", Component: TruckIcon, styleName: "backgroundImage3" },
   ],
   production: [
+    { key: "factory", Component: FactoryIcon, styleName: "backgroundImage6" },
+    { key: "gears", Component: GearsIcon, styleName: "backgroundImage7" },
+    { key: "boxes", Component: BoxIcon, styleName: "backgroundImage8" },
+  ],
+  exportReports: [
     { key: "factory", Component: FactoryIcon, styleName: "backgroundImage6" },
     { key: "gears", Component: GearsIcon, styleName: "backgroundImage7" },
     { key: "boxes", Component: BoxIcon, styleName: "backgroundImage8" },

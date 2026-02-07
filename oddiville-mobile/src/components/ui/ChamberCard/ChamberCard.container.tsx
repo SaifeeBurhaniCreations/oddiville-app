@@ -27,6 +27,7 @@ const ChamberCardContainer = (props: ChamberCardProps) => {
     if (category === "other" && href) {
       goTo(href, {
         data: JSON.stringify({
+          id: props.id,
           product_name: name,
           company: rating,
           chambers,

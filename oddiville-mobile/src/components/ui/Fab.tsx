@@ -1,8 +1,15 @@
 import PlusIcon from "@/src/components/icons/page/PlusIcon";
 import { FabProps } from "@/src/types";
 import { getColor } from "@/src/constants/colors";
-import { StyleSheet, View, TouchableOpacity, Animated, Dimensions, Pressable } from "react-native";
-import {  useEffect, memo } from "react";
+import {
+    StyleSheet,
+    View,
+    TouchableOpacity,
+    Animated,
+    Dimensions,
+    Pressable,
+} from "react-native";
+import { useEffect, memo } from "react";
 import { FAB_ITEMS } from "@/src/constants/FabItems";
 import { B3 } from "../typography/Typography";
 import { useDispatch, useSelector } from "react-redux";
@@ -11,10 +18,10 @@ import { RootState } from "@/src/redux/store";
 import { useMemoizedStyle } from "@/src/hooks/useMemoizedStyle";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 
-const { width: screenWidth } = Dimensions.get("window")
+const { width: screenWidth } = Dimensions.get("window");
 const Fab = ({ position, color }: FabProps) => {
-    const dispatch = useDispatch()
-    const { isOpen } = useSelector((state: RootState) => state.fab)
+    const dispatch = useDispatch();
+    const { isOpen } = useSelector((state: RootState) => state.fab);
 
     const fadeAnim = new Animated.Value(0);
     const translateY = new Animated.Value(10);
@@ -37,19 +44,17 @@ const Fab = ({ position, color }: FabProps) => {
         {
             transform: [{ rotate: isOpen ? "45deg" : "0deg" }],
         },
-        [isOpen]
+        [isOpen],
     );
 
     const { goTo } = useAppNavigation();
 
     const fabButtonStyle = useMemoizedStyle(
         {
-            backgroundColor: isOpen
-                ? getColor("light", 500)
-                : getColor(color, 500),
+            backgroundColor: isOpen ? getColor("light", 500) : getColor(color, 500),
             ...(isOpen ? styles.activeShadow : styles.inactiveShadow),
         },
-        [isOpen, color]
+        [isOpen, color],
     );
 
     return (
@@ -58,7 +63,7 @@ const Fab = ({ position, color }: FabProps) => {
                 <Animated.View
                     style={[
                         styles.fabContainer,
-                        { opacity: fadeAnim, transform: [{ translateY }] }
+                        { opacity: fadeAnim, transform: [{ translateY }] },
                     ]}
                 >
                     {FAB_ITEMS.map((item, index) => {
@@ -81,12 +86,20 @@ const Fab = ({ position, color }: FabProps) => {
                         };
 
                         return (
-                            <Animated.View key={index} style={[styles.fabItemsContainer, { transform: [{ scale }] }]}>
+                            <Animated.View
+                                key={index}
+                                style={[styles.fabItemsContainer, { transform: [{ scale }] }]}
+                            >
                                 <Pressable
                                     onPressIn={handlePressIn}
-                                    onPress={()=> {
-                                        goTo(item.href);
-                                        dispatch(closeFab())
+                                    onPress={() => {
+                                        if (item.onPress) {
+                                            item.onPress();
+                                        } else if (item.href) {
+                                            goTo(item.href);
+                                        }
+
+                                        dispatch(closeFab());
                                     }}
                                     onPressOut={handlePressOut}
                                     style={styles.fabItem}
@@ -97,7 +110,6 @@ const Fab = ({ position, color }: FabProps) => {
                             </Animated.View>
                         );
                     })}
-
                 </Animated.View>
             )}
 
@@ -105,16 +117,18 @@ const Fab = ({ position, color }: FabProps) => {
             <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => {
-                    dispatch(toggleFab(!isOpen))
+                    dispatch(toggleFab(!isOpen));
                 }}
                 style={[
                     styles.fab,
                     fabButtonStyle,
-                    position === "left" ? styles.left : styles.right
+                    position === "left" ? styles.left : styles.right,
                 ]}
             >
                 <View style={rotateStyle}>
-                    <PlusIcon color={isOpen ? getColor(color, 500) : getColor("light", 500)} />
+                    <PlusIcon
+                        color={isOpen ? getColor(color, 500) : getColor("light", 500)}
+                    />
                 </View>
             </TouchableOpacity>
         </View>
@@ -150,7 +164,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 6,
-        elevation: 3,// Android shadow
+        elevation: 3, // Android shadow
     },
 
     /* ✅ FAB Styles */
@@ -181,6 +195,6 @@ const styles = StyleSheet.create({
     },
     fabItemsContainer: {
         flexDirection: "row",
-         alignSelf: "flex-end"
-    }
+        alignSelf: "flex-end",
+    },
 });

@@ -35,6 +35,7 @@ const ItemCard = ({
   const bottomSheetMeta = useSelector(
     (state: RootState) => state.bottomSheet.meta
   );
+
   const handlePress = () => {
     switch (mode) {
       case "production":
@@ -49,6 +50,7 @@ const ItemCard = ({
             product: meta?.product,
             sku: meta?.sku,
             date: "today",
+            mode: meta?.mode,
           }),
           "packing-summary"
         );
@@ -71,18 +73,32 @@ const ItemCard = ({
 
   const renderMeta = () => {
     if (mode === "packing") {
-      return (
-        weight && (
+      if (meta?.mode === "product") {
+        return (
           <View style={styles.detailsContainer}>
             <View style={styles.ratingContainer}>
               <DatabaseIcon color={getColor("green", 700)} size={12} />
               <C1 color={getColor("green", 700)}>
-                {weight} {rating ? `| ${rating}` : ""}
+                {meta?.totalBags} bags | {meta?.totalPackets} packets
+                {meta?.events ? ` | ${meta?.events} events` : ""}
               </C1>
             </View>
           </View>
-        )
-      );
+        );
+      } else {
+        return (
+          weight && (
+            <View style={styles.detailsContainer}>
+              <View style={styles.ratingContainer}>
+                <DatabaseIcon color={getColor("green", 700)} size={12} />
+                <C1 color={getColor("green", 700)}>
+                  {weight} {rating ? `| ${rating}` : ""} {meta?.sku ? `| ${meta?.sku}` : ""}
+                </C1>
+              </View>
+            </View>
+          )
+        );
+      }
     }
 
     if (isActive) {
@@ -158,7 +174,7 @@ const ItemCard = ({
         </View>
 
         <View style={styles.details}>
-          <H3>{name}</H3>
+          {name && <H3>{name}</H3>}
           {renderMeta()}
         </View>
 

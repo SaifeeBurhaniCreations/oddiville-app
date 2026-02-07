@@ -21,21 +21,6 @@ const RawMaterialDetailed = () => {
     const { data: stockData = [], isFetching: stockLoading } = useChamberStock();
     const { chamber: selectedChamber } = useSelector((state: RootState) => state.chamber);
 
-    // const fallBackChamber = useSelector((state: RootState) => {
-    //     const sections = state.bottomSheet.config?.sections || [];
-    //     const sectionToCheck = sections[1] || sections[0];
-
-    //     if (
-    //         sectionToCheck?.type === "optionList" &&
-    //         sectionToCheck?.data?.options?.length > 0
-    //     ) {
-    //         return sectionToCheck.data.options[0];
-    //     }
-    //     return undefined;
-    // });
-
-    // const isVisible = useSelector((state: RootState) => state.bottomSheet.isVisible);
-
     const { data: chambers = [] } = useChamber();
 
     const { data: chamberData, isFetching: chamberLoading } = useChamberByName(selectedChamber);

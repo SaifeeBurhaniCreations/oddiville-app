@@ -93,9 +93,9 @@ const MenuSheet = () => {
   };
 
   const handleLogout = async () => {
-    await logout();
-    dispatch(clearAdmin());
     dispatch(closeMenu());
+    dispatch(clearAdmin());
+    await logout();
     router.replace("/");
   };
 

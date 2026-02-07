@@ -97,14 +97,14 @@ const ChipGroup = ({
                   {item.icon}
                   {isSm ? (
                     <C1 color={getColor("green", 700)}>
-                      {item.title ?? item.name ?? item}
+                      {item.label ?? item.title ?? item.name ?? item}
                     </C1>
                   ) : (
-                    <B4>{item.title ?? item.name ?? item}</B4>
+                    <B4>{item.label ?? item.title ?? item.name ?? item}</B4>
                   )}
                 </View>
               ) : (
-                item.title ?? item.name ?? item
+                item.label ?? item.title ?? item.name ?? item
               )}
             </ChipComponent>
           );

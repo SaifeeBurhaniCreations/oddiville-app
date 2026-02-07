@@ -7,7 +7,7 @@ import {
   Platform,
 } from "react-native";
 import SearchInput from "@/src/components/ui/SearchInput";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Chip from "@/src/components/ui/Chip";
 import BellRingingIcon from "@/src/components/icons/page/BellringingIcon";
 import HistoryIcon from "@/src/components/icons/page/HistoryIcon";
@@ -26,8 +26,16 @@ import { useGlobalSearch } from "@/src/hooks/globalSearch";
 import { getCreatedAt, getDescription } from "@/src/utils/formatUtils";
 import useDebouncedValue from "@/src/utils/debounceUtil";
 import PageHeader from "@/src/components/ui/PageHeader";
+import type { SearchRegistryKey } from "@/src/utils/searchRegistyUtil";
 
-const initialChips = [
+type ChipItem = {
+  text: string;
+  icon: JSX.Element;
+  key: SearchRegistryKey;
+  isActive: boolean;
+};
+
+const initialChips: ChipItem[] = [
   { text: "Raw material ordered", icon: <HistoryIcon />, key: "raw-material-ordered", isActive: false },
   { text: "Order shipped", icon: <BellRingingIcon />, key: "order-shipped", isActive: false },
   { text: "Raw material reached", icon: <HistoryIcon />, key: "raw-material-reached", isActive: false },
@@ -44,23 +52,23 @@ const KEYBOARD_VERTICAL_OFFSET = Platform.OS === "ios" ? 88 : 0;
 
 const SearchResultsScreen = () => {
   const { query } = useParams("search-results", "query");
-  const [searchText, setSearchText] = useState(query || "");
+  const queryString = typeof query === "string" ? query : "";
+
+  const [searchText, setSearchText] = useState(queryString || "");
   const [searchedState, setSearchedState] = useState(false);
 
   const [chipList, setChipList] = useState(() => initialChips);
 
   const selectedKeys = useMemo(
-    () => chipList.filter((c) => c.isActive).map((c) => c.key as string),
+    () => chipList.filter((c) => c.isActive).map((c) => c.key),
     [chipList]
   );
 
-  const debouncedSelectedKeys = useDebouncedValue<string[]>(selectedKeys, 300);
+  const debouncedSelectedKeys = useDebouncedValue<SearchRegistryKey[]>(selectedKeys, 300);
   const debouncedSearchText = useDebouncedValue(searchText, 300);
 
-  const { items: activities, count, isLoading } = useGlobalSearch(
-    debouncedSelectedKeys as any,
-    debouncedSearchText
-  );
+  const { items: activities = [], count = 0 } =
+    useGlobalSearch(debouncedSelectedKeys, debouncedSearchText);
 
   const [recentSearchTerm, setRecentSearchTerm] = useState<string[]>([]);
   const isRecentSearch = recentSearchTerm.length > 0;
@@ -96,6 +104,13 @@ const SearchResultsScreen = () => {
     });
   }, []);
 
+  useEffect(() => {
+    if (!searchText && selectedKeys.length === 0) {
+      setSearchedState(false);
+    }
+  }, [searchText, selectedKeys]);
+
+
   const handleSearchInputChange = (text: string) => {
     setSearchText(text);
   };
@@ -129,7 +144,7 @@ const SearchResultsScreen = () => {
 
               <SearchInput
                 value={searchText}
-                defaultValue={query}
+                defaultValue={queryString}
                 onChangeText={handleSearchInputChange}
                 onSubmitEditing={handleSubmit}
                 returnKeyType="search"
@@ -152,7 +167,8 @@ const SearchResultsScreen = () => {
                   const withIndex = chipList.map((c, i) => ({ ...c, originalIndex: i }));
                   const chipsToRender = searchedState ? withIndex.filter((c) => c.isActive) : withIndex;
                   return chipsToRender.map((chip) => (
-                    <Chip key={chip.text} icon={chip.icon} isActive={chip.isActive} onPress={() => toggleChip(chip.originalIndex)}>
+                    <Chip key={chip.key}
+ icon={chip.icon} isActive={chip.isActive} onPress={() => toggleChip(chip.originalIndex)}>
                       {chip.text}
                     </Chip>
                   ));
@@ -168,7 +184,7 @@ const SearchResultsScreen = () => {
                         {recentSearchTerm.map((value, index) => (
                           <RecentSearchItem
                             color="green"
-                            key={index}
+                            key={value}
                             recentSearchTerm={recentSearchTerm}
                             setRecentSearchTerm={setRecentSearchTerm}
                             index={index}
@@ -253,26 +269,6 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 12,
   },
-  flexGrow: {
-    flex: 1,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: getColor("green", 500, 0.05),
-    zIndex: 2,
-  },
-  content: {
-    flexDirection: "column",
-    gap: 16,
-    height: "100%",
-  },
-  HStack: {
-    flexDirection: "row",
-  },
-  justifyBetween: { justifyContent: "space-between" },
-  alignCenter: { alignItems: "center" },
-  gap8: { gap: 8 },
-  loaderContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   centeredChips: {
     flexDirection: "row",
     flexWrap: "wrap",

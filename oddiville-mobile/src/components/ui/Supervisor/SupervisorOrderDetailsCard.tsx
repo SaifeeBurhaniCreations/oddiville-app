@@ -17,24 +17,29 @@ import {
 } from "../../typography/Typography";
 import { chunkBySize } from "@/src/sbc/utils/chunkBy/chunkBy";
 import { useOrders } from "@/src/hooks/dispatchOrder";
+import { ICON_MAP } from "@/src/lookups/icons";
 
 const KeyValueRow = ({
-  icon,
+  iconKey,
   name,
   value,
 }: {
-  icon: React.ReactNode;
+  iconKey?: keyof typeof ICON_MAP;
   name: string;
   value: string | number;
-}) => (
-  <View style={styles.rowItem}>
-    {icon}
-    <View style={styles.keyValue}>
-      <B6 color={getColor("green", 700)}>{name}:</B6>
-      <C1 color={getColor("green", 700)}>{value}</C1>
+}) => {
+  const Icon = iconKey ? ICON_MAP[iconKey] : null;
+
+  return (
+    <View style={styles.rowItem}>
+      {Icon && <Icon />}
+      <View style={styles.keyValue}>
+        <B6 color={getColor("green", 700)}>{name}:</B6>
+        <C1 color={getColor("green", 700)}>{value}</C1>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const SupervisorOrderDetailsCard = ({
   order,
@@ -74,15 +79,20 @@ const SupervisorOrderDetailsCard = ({
                 order?.description?.map((desc, idx) => (
                   <KeyValueRow
                     key={idx}
-                    icon={desc.icon}
+                    iconKey={desc.iconKey}
                     name={desc.name}
                     value={desc.value}
                   />
                 ))}
 
-              {order?.sideIcon && (
+              {order?.sideIconKey && (
                 <Pressable style={[styles.sideIcon]} onPress={call}>
-                  {order?.sideIcon}
+                  {order?.sideIconKey && (
+                    (() => {
+                      const Icon = ICON_MAP[order.sideIconKey];
+                      return <Icon />;
+                    })()
+                  )}
                 </Pressable>
               )}
             </View>
@@ -100,7 +110,7 @@ const SupervisorOrderDetailsCard = ({
           order.details.map((detail, idx) => (
             <KeyValueRow
               key={idx}
-              icon={detail.icon}
+              iconKey={detail.iconKey}
               name={detail.name!}
               value={detail.value}
             />
@@ -127,7 +137,7 @@ const SupervisorOrderDetailsCard = ({
                 {row.map((item, itemIndex) => (
                   <React.Fragment key={itemIndex}>
                     <KeyValueRow
-                      icon={item.icon}
+                      iconKey={item.iconKey}
                       name={item.name}
                       value={item.value}
                     />
@@ -147,7 +157,11 @@ const SupervisorOrderDetailsCard = ({
           {order.helperDetails.map((h, idx) => (
             <React.Fragment key={idx}>
               <View style={styles.helperItem}>
-                {h.icon}
+                {(() => {
+                  const Icon = h.iconKey ? ICON_MAP[h.iconKey] : null;
+
+                  return Icon && <Icon />;
+                })()}
                 <View style={styles.keyValue}>
                   <H6 style={{ flexWrap: "wrap" }} color={getColor("light")}>
                     {h.name}:
@@ -171,7 +185,10 @@ const SupervisorOrderDetailsCard = ({
               <View style={styles.helperItem}>
                 {idx % 2 === 0 ? (
                   <React.Fragment>
-                    <View style={[styles.dispatchIcon]}>{h.icon}</View>
+                    <View style={[styles.dispatchIcon]}> {(() => {
+                      const Icon = h.iconKey ? ICON_MAP[h.iconKey] : null;
+                      return Icon && <Icon />;
+                    })()}</View>
                     <B5 style={{ flexWrap: "wrap" }} color={getColor("light")}>
                       {h.value}
                     </B5>
@@ -181,7 +198,10 @@ const SupervisorOrderDetailsCard = ({
                     <B5 style={{ flexWrap: "wrap" }} color={getColor("light")}>
                       {h.value}
                     </B5>
-                    <View style={[styles.dispatchIcon]}>{h.icon}</View>
+                      <View style={[styles.dispatchIcon]}> {(() => {
+                        const Icon = h.iconKey ? ICON_MAP[h.iconKey] : null;
+                        return Icon && <Icon />;
+                      })()}</View>
                   </React.Fragment>
                 )}
               </View>

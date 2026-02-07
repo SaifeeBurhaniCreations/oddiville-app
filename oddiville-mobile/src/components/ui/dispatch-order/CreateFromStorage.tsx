@@ -43,13 +43,7 @@ import AddProductsForSell from "../AddProductsForSell";
 import { useAuth } from "@/src/context/AuthContext";
 import { resolveAccess } from "@/src/utils/policiesUtils";
 import { removeProduct } from "@/src/redux/slices/multiple-product.slice";
-
-const convertToKg = (size: number, unit: string) => {
-  const lowerUnit = unit.toLowerCase();
-  if (lowerUnit === "kg") return size;
-  if (lowerUnit === "gm") return size / 1000;
-  return 0;
-};
+import imageFallback from "@/src/assets/images/fallback/chamber-stock-fallback.png";
 
 type ControlledFormProps<T> = {
   values: T;
@@ -83,7 +77,7 @@ const CreateFromStorage = ({
     usePackedItems();
 
   const filteredPackedItemsData = useMemo(() => {
-    console.log("packedItemsData", JSON.stringify(packedItemsData));
+    // console.log("packedItemsData", JSON.stringify(packedItemsData));
 
     return packedItemsData?.map((item) => ({
       ...item,
@@ -134,48 +128,56 @@ useEffect(() => {
         chambers: item.chamber,
       })),
     }));
-    
-    const ADD_PRODUCTS = {
-      sections: [
-        {
-          type: "title-with-details-cross",
-          data: {
-            title: "Add Products",
-          },
-        },
-        {
-          type: "search",
-          data: {
-            searchTerm: "",
-            placeholder: "Search Product",
-            searchType: "add-product",
-          },
-        },
-        {
-          type: "multiple-product-card",
-          data: updatedPackedItemsData?.map((item) => {
-                return {
-                  product_name: item.product_name,
-                  id: item.id,
-                  rating: 5,
-                  image: item.image,
-                  description: "",
-                  isChecked: false,
-                  packages: item.packages,
-                  chambers: item.chamber,
-                };
-              }),
-        },
-      ],
-      buttons: [
-        { text: 'Cancel', variant: 'outline', color: 'green', alignment: "half", disabled: false, actionKey: 'cancel' },
-        { text: 'Add', variant: 'fill', color: 'green', alignment: "half", disabled: false, actionKey: 'add-dispatch-product' },
-    ],
-    };
 
-    setIsLoading(true);
-    await validateAndSetData("Abc1", "multiple-product-card", ADD_PRODUCTS);
-    setIsLoading(false);
+    // const ADD_PRODUCTS = {
+    //   sections: [
+    //     {
+    //       type: "title-with-details-cross",
+    //       data: {
+    //         title: "Choose Products",
+    //       },
+    //     },
+    //     {
+    //       type: "search",
+    //       data: {
+    //         searchTerm: "",
+    //         placeholder: "Search Product",
+    //         searchType: "add-product",
+    //       },
+    //     },
+    //     {
+    //       type: "multiple-product-card",
+    //       data: updatedPackedItemsData?.map((item) => {
+
+    //             return {
+    //               product_name: item.product_name,
+    //               id: item.id,
+    //               rating: 5,
+    //               image:
+    //                 typeof item.image === "string" && item.image.length > 0 && item.image !== null
+    //                   ? item.image
+    //                   : imageFallback,
+    //               description: "",
+    //               isChecked: false,
+    //               packages: item.packages,
+    //               chambers: item.chamber,
+    //             };
+    //           }),
+    //     },
+    //   ],
+    //   buttons: [
+    //     { text: 'Cancel', variant: 'outline', color: 'green', alignment: "half", disabled: false, actionKey: 'cancel' },
+    //     { text: 'Add', variant: 'fill', color: 'green', alignment: "half", disabled: false, actionKey: 'add-dispatch-product' },
+    // ],
+    // };
+
+    // setIsLoading(true);
+    // await validateAndSetData("Abc1", "multiple-product-card", ADD_PRODUCTS);
+    // setIsLoading(false);
+   setIsLoading(true);
+   await validateAndSetData("Abc1", "multiple-product-card");
+   setIsLoading(false);
+
   }
 
   async function handleToggleCountryBottomSheet() {
