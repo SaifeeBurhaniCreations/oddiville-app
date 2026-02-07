@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { StyleSheet, View, RefreshControl, ScrollView } from "react-native";
 import { useSelector } from "react-redux";
 
@@ -12,6 +12,7 @@ import { getColor } from "@/src/constants/colors";
 import { useParams } from "@/src/hooks/useParams";
 import { Packaging, useChamberStockByName } from "@/src/hooks/useChamberStock";
 import { useChamberByName } from "@/src/hooks/useChambers";
+import { usePackedItems } from "@/src/hooks/packing/getPackedItemsEvent";
 
 import { getEmptyStateData, mapPackageIcon } from "@/src/utils/common";
 
@@ -21,12 +22,28 @@ import { B4 } from "@/src/components/typography/Typography";
 
 import { RootState } from "@/src/redux/store";
 import { safeNumber, toKg } from "@/src/utils/chamberstock/stockUtils";
+import { PackagingStorage } from "@/src/types/domain/packing/packing.types";
 
-const getLeadingIcon = (size: number, unit: string) =>
-  mapPackageIcon({
-    size,
-    unit: unit as "kg" | "gm" | "unit",
-  });
+type PackedItemStorage = {
+  chamberId: string;
+  bagsStored: number;
+  chamberName?: string;
+};
+
+type PackedItemEvent = {
+  id: string;
+  product_name: string;
+  sku_id: string;
+  sku_label: string;
+  packet: {
+    size: number;
+    unit: "gm" | "kg";
+    packetsPerBag: number;
+  };
+  bags_produced: number;
+  total_packets: number;
+  storage: PackedItemStorage[];
+};
 
 const StockDetail = () => {
   const { product_name } = useParams("stock-detail", "product_name");
@@ -36,16 +53,18 @@ const StockDetail = () => {
     (state: RootState) => state.chamber
   );
   const { data: chamberData } = useChamberByName(selectedChamber);
-  const chamberId = chamberData?.id ?? null;
+  const chamberId = chamberData?.id;
 
   const { chamberStock, refetch, isFetching } = useChamberStockByName([
     product_name ?? "",
   ]);
 
+  const { data: packedItems, isLoading: packedLoading } = usePackedItems();
+
   const stock = chamberStock?.[0];
   const emptyStateData = getEmptyStateData("no-stock-detail");
 
-  if (!stock) {
+  if (!stock || !chamberId) {
     return (
       <View style={styles.center}>
         <EmptyState stateData={emptyStateData} />
@@ -53,89 +72,130 @@ const StockDetail = () => {
     );
   }
 
-  const currentChamber = stock.chamber.find((ch) => ch.id === chamberId);
+  /* =========================
+     MATERIAL (chamber stock)
+     ========================= */
+  let materialBlock = null;
 
-  if (!currentChamber) {
-    return (
-      <View style={styles.center}>
-        <EmptyState stateData={emptyStateData} />
+  if (stock.category === "material" && !Array.isArray(stock.packaging)) {
+    const materialPackaging = stock.packaging as Packaging;
+
+    const currentChamber = stock.chamber.find(
+      (ch) => ch.id === chamberId
+    );
+
+    if (!currentChamber) {
+      return (
+        <View style={styles.center}>
+          <EmptyState stateData={emptyStateData} />
+        </View>
+      );
+    }
+
+    const chamberRows = stock.chamber.filter(
+      (ch) =>
+        ch.id === chamberId &&
+        ch.rating === currentChamber.rating
+    );
+
+    const chamberKg = chamberRows.reduce(
+      (sum, ch) => sum + safeNumber(Number(ch.quantity)),
+      0
+    );
+
+    const bagSizeKg = toKg(
+      materialPackaging.size.value,
+      materialPackaging.size.unit as "kg" | "gm"
+    );
+
+    const chamberBags =
+      bagSizeKg > 0 ? Math.floor(chamberKg / bagSizeKg) : 0;
+
+    const materialIcon = mapPackageIcon({
+      size: materialPackaging.size.value,
+      unit: materialPackaging.size.unit,
+    });
+
+    materialBlock = (
+      <View style={{ gap: 8, marginBottom: 16 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <StarIcon color={getColor("green", 700)} size={16} />
+          <B4 style={{ fontWeight: "700" }}>
+            Rating: {currentChamber.rating}
+          </B4>
+        </View>
+
+        <ChamberCard
+          id={chamberId}
+          name={`${chamberBags} ${materialPackaging.type}`}
+          category="material"
+          description={`${chamberKg} kg`}
+          plainDescription
+          onPressOverride={() => { }}
+          leadingIcon={materialIcon}
+        />
       </View>
     );
   }
 
-  const materialPackaging =
-    stock.category === "material" && !Array.isArray(stock.packaging)
-      ? stock.packaging
-      : null;
+  /* =========================
+     PACKED (event based)
+     ========================= */
+  const packedByChamber = useMemo(() => {
+    if (!packedItems || !product_name) return [];
 
-  if (stock.category === "material" && !materialPackaging) {
-    return (
-      <View style={styles.center}>
-        <EmptyState stateData={emptyStateData} />
+    return packedItems
+      .filter(item => item.product_name === product_name)
+      .flatMap(item =>
+        item.storage
+          .filter(s => s.chamberId === chamberId)
+          .map(s => {
+            const packetKg =
+              item.packet.unit === "gm"
+                ? item.packet.size / 1000
+                : item.packet.size;
+
+            const totalPackets =
+              s.bagsStored * item.packet.packetsPerBag;
+
+            return {
+              key: `${item.id}-${item.skuId}-${s.chamberId}`,
+              sizeLabel: item.skuLabel,
+              packets: totalPackets,
+              totalKg: totalPackets * packetKg,
+              icon: mapPackageIcon({
+                size: item.packet.size,
+                unit: item.packet.unit,
+              }),
+            };
+          })
+      );
+  }, [packedItems, product_name, chamberId]);
+
+  const packedBlock =
+    stock.category === "packed" && packedByChamber.length > 0 ? (
+      <View style={{ gap: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <StarIcon color={getColor("green", 700)} size={16} />
+          <B4 style={{ fontWeight: "700" }}>
+            Packed in this chamber
+          </B4>
+        </View>
+
+        {packedByChamber.map((pkg) => (
+          <ChamberCard
+            key={pkg.key}
+            id={pkg.key}
+            name={pkg.sizeLabel}
+            category="packed"
+            description={`${pkg.packets} packets | ${pkg.totalKg} kg`}
+            plainDescription
+            onPressOverride={() => { }}
+            leadingIcon={pkg.icon}
+          />
+        ))}
       </View>
-    );
-  }
-
-  const safeMaterialPackaging = materialPackaging as Packaging;
-
-  const materialIcon = materialPackaging
-    ? mapPackageIcon({
-      size: safeMaterialPackaging.size.value,
-      unit: safeMaterialPackaging.size.unit as "kg" | "gm" | "unit",
-    })
-    : BoxIcon;
-
-  const chamberRows =
-    stock.category === "material"
-      ? stock.chamber.filter(
-        ch => ch.id === chamberId && ch.rating === currentChamber.rating
-      )
-      : [];
-
-  const normalizeToKg = (qty: number) => {
-    return safeNumber(qty);
-  };
-
-  const chamberKg = chamberRows.reduce((sum, ch) => {
-    return sum + normalizeToKg(Number(ch.quantity));
-  }, 0);
-
-
-  const bagSizeKg = toKg(
-    safeMaterialPackaging.size.value,
-    safeMaterialPackaging.size.unit as "kg" | "gm"
-  );
-
-  const chamberBags =
-    bagSizeKg > 0 ? Math.floor(chamberKg / bagSizeKg) : 0;
-
-    // -----------------------Packed--------------------------
-  const packedRows =
-    stock.category === "packed"
-      ? stock.chamber.filter(ch => ch.id === chamberId)
-      : [];
-      
-  const packedChamberKg = packedRows.reduce((sum, ch) => {
-    return sum + safeNumber(ch.quantity); // already KG
-  }, 0);
-
-  const packedPackaging =
-    stock.category === "packed" && Array.isArray(stock.packaging)
-      ? stock.packaging
-      : [];
-
-  const packedByChamber = packedPackaging.map(pkg => {
-    const sizeKg = toKg(pkg.size.value, pkg.size.unit as "kg" | "gm");
-
-    const packetsInChamber =
-      sizeKg > 0 ? Math.floor(packedChamberKg / sizeKg) : 0;
-
-    return {
-      ...pkg,
-      packetsInChamber,
-      totalKg: packetsInChamber * sizeKg,
-    };
-  });
+    ) : null;
 
   return (
     <View style={styles.rootContainer}>
@@ -149,10 +209,9 @@ const StockDetail = () => {
         <View style={styles.flexGrow}>
           <View style={styles.searchinputWrapper}>
             <SearchWithFilter
-              placeholder="Search by material name"
+              placeholder="Search by product name"
               value={searchValue}
               cross
-              onSubmitEditing={() => {}}
               onChangeText={setSearchValue}
               onClear={() => setSearchValue("")}
             />
@@ -160,66 +219,17 @@ const StockDetail = () => {
 
           <ScrollView
             refreshControl={
-              <RefreshControl refreshing={isFetching} onRefresh={refetch} />
+              <RefreshControl
+                refreshing={isFetching || packedLoading}
+                onRefresh={refetch}
+              />
             }
           >
-            {/* MATERIAL */}
-            {materialPackaging && (
-              <View style={{ gap: 8, marginBottom: 16 }}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  <StarIcon color={getColor("green", 700)} size={16} />
-                  <B4 style={{ fontWeight: "700" }}>
-                    Rating: {currentChamber.rating}
-                  </B4>
-                </View>
+            {materialBlock}
+            {packedBlock}
 
-                <ChamberCard
-                  id={currentChamber.id}
-                  name={`${chamberBags} ${materialPackaging.type}`}
-                  category="material"
-                  description={`${chamberKg} kg`}
-                  plainDescription
-                  onPressOverride={() => {}}
-                  leadingIcon={materialIcon}
-                />
-              </View>
-            )}
-
-            {/* PACKED */}
-            {stock.category === "packed" && packedPackaging.length > 0 && (
-              <View style={{ gap: 12 }}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  <StarIcon color={getColor("green", 700)} size={16} />
-                  <B4 style={{ fontWeight: "700" }}>
-                    Rating: {currentChamber.rating}
-                  </B4>
-                </View>
-
-                {packedByChamber.map((pkg, index) => (
-                  <ChamberCard
-                    key={`${stock.id}-${pkg.size.value}-${index}`}
-                    id={`${stock.id}-${pkg.size.value}`}
-                    name={`${pkg.size.value} ${pkg.size.unit}`}
-                    category="packed"
-                    description={`${pkg.packetsInChamber} pouches | ${pkg.totalKg} kg`}
-                    plainDescription
-                    onPressOverride={() => {}}
-                    leadingIcon={getLeadingIcon(pkg.size.value, pkg.size.unit)}
-                  />
-                ))}
-              </View>
+            {!materialBlock && !packedBlock && (
+              <EmptyState stateData={emptyStateData} />
             )}
           </ScrollView>
         </View>

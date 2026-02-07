@@ -1,5 +1,5 @@
 // 1. React and React Native core
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 
@@ -35,7 +35,7 @@ import { clearProduct } from "@/src/redux/slices/product.slice";
 import { useAuth } from '@/src/context/AuthContext';
 import { resolveAccess } from '@/src/utils/policiesUtils';
 import { SALES_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
-import { PackageItem } from "@/src/hooks/useChamberStock";
+import { PackageItemLocal } from "@/src/hooks/useChamberStock";
 import { DispatchUsedStockState } from "@/src/redux/slices/used-dispatch.slice";
 
 // 7. Schemas
@@ -54,7 +54,7 @@ interface Product {
     image: string;
     isChecked: boolean;
     // added extra
-    packages: PackageItem[];
+  packages: PackageItemLocal[];
     chambers: ChamberProduct[];
 //     usedBagsByProduct: {
 //   [productId: string]: {

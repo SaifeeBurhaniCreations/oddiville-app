@@ -39,7 +39,7 @@ import {
   ALL_KEY,
   PENDING_KEY,
   useRawMaterialOrderById,
-} from "@/src/hooks/rawMaterialOrders";
+} from "@/src/hooks/useRawMaterialOrders";
 import { useUpdateRawMaterialOrder } from "@/src/hooks/useUpdateRawMaterialOrder";
 
 // 5. Project constants/utilities
@@ -92,7 +92,7 @@ const formatOrder = (order: any): OrderProps => ({
     {
       name: "Order quantity",
       value: `${order?.quantity_ordered ?? "--"} ${order?.unit ?? ""}`,
-      icon: <DatabaseIcon size={16} color={getColor("green", 700)} />,
+      iconKey: 'database',
     },
   ],
   // address: order?.address ?? "N/A",
@@ -100,12 +100,10 @@ const formatOrder = (order: any): OrderProps => ({
     {
       name: "Order",
       value: formatDateForDisplay(order?.order_date),
-      icon: null,
     },
     {
       name: "Arrival",
       value: formatDateForDisplay(order?.arrival_date),
-      icon: null,
     },
   ],
   href: "raw-material-receive",

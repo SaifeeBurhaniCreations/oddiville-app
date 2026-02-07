@@ -78,32 +78,32 @@ const formatOrder = {
       title: order.customer_name,
       address: order.address,
       dateDifference: timeTaken,
-      sideIcon: <PhoneIcon />,
+      sideIconKey: "phone",
       sepratorDetails: [
         {
           name: "Amount",
           value: `${order.amount} Rs`,
-          icon: <CashIcon />,
+          iconKey: "cash",
         },
         {
           name: "Quantity",
           value: `${totalQuantityKg} Kg`,
-          icon: <DatabaseIcon />,
+          iconKey: "database",
         },
         {
           name: "Product",
           value: uniqueProductCount,
-          icon: <BoxIcon />,
+          iconKey: "box",
         },
       ],
       dispatchDetails: [
         {
           value: dispatchDate ? formatDate(dispatchDate, "dd-MM-yy") : "N/A",
-          icon: <WarehouseIcon />,
+          iconKey: "warehouse",
         },
         {
           value: deliveredDate ? formatDate(deliveredDate, "dd-MM-yy") : "",
-          icon: <StoreIcon />,
+          iconKey: "store",
         },
       ],
       identifier: undefined,
