@@ -1,3 +1,5 @@
+import { ItemCardData } from "@/src/types";
+
 // Common
 export type UUID = string;
 export type ISODate = string;
@@ -93,7 +95,6 @@ export interface PackingDraft {
   validation: PackingValidationState;
 }
 
-
 export type PackageInputState = {
   bagCount?: number | undefined;
   packetsPerBag?: number | undefined;
@@ -102,10 +103,10 @@ export type PackageInputState = {
 };
 
 // inputs for ALL packages in a chamber
-export type PackageInputsByKey = Record<string, PackageInputState>
+export type PackageInputsByKey = Record<string, PackageInputState>;
 
 // inputs for ALL chambers
-export type PackageFormState = Record<string, PackageInputsByKey>
+export type PackageFormState = Record<string, PackageInputsByKey>;
 
 export type PacketsAvailableInput = {
   size: number;
@@ -114,13 +115,13 @@ export type PacketsAvailableInput = {
 };
 
 export type PackingChamberOption = {
-    chamberId: string;
-    chamberName: string;
+  chamberId: string;
+  chamberName: string;
 
-    maxBags: number;     
-    availableKg: number;   
+  maxBags: number;
+  availableKg: number;
 
-    assignedBags: number;  
+  assignedBags: number;
 };
 
 export type PackagingPlanValidation = {
@@ -141,6 +142,13 @@ export type RawMaterialConsumptionPayload = {
   };
 };
 
+// packing summary start
+export interface ItemCardSection {
+  title: string;
+  data: ItemCardData[];
+}
+// packing summary end
+
 // Dispatch page
 export interface PackingPackages {
   size: number;
@@ -151,3 +159,27 @@ export interface DispatchPackagingChambers {
   chamberName: string;
   packages: PackingPackages[];
 }
+
+export interface PackedItemEvent extends PackagingPlanItem {
+  id: UUID;
+  product_name: string;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export type ApiPackedItem = {
+  id: string;
+  product_name: string;
+  sku_id: string;
+  sku_label: string;
+  packet: {
+    size: number;
+    unit: "gm" | "kg" | "unit";
+    packetsPerBag: number;
+  };
+  bags_produced: number;
+  total_packets: number;
+  storage?: unknown[];
+  createdAt: string;
+  updatedAt: string;
+};

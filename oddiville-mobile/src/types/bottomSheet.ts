@@ -41,9 +41,8 @@ import StorageRMRatingComponent from "../components/ui/bottom-sheet/StorageRMRat
 import PoliciesCardComponent from "../components/ui/bottom-sheet/PoliciesComponent";
 import FileUploadComponent from "../components/ui/bottom-sheet/FileUploadComponent";
 import ChooseProductCardComponent from "../components/ui/bottom-sheet/ChooseProductCardComponent";
-import { PackageItem } from "../hooks/useChamberStock";
+import { PackageItemLocal } from "../hooks/useChamberStock";
 import PackageSummaryMetricsComponent from "../components/ui/bottom-sheet/PackageSummaryMetricsComponent";
-import z, { number, string } from "zod";
 
 export type BottomSheetActionKey =
   | "add-raw-material"
@@ -63,7 +62,9 @@ export type BottomSheetActionKey =
   | "choose-chamber"
   | "select-policies"
   | "cancel-policies"
-  | "add-dispatch-product";
+  | "add-dispatch-product"
+  | "export-open"
+  | "export-share";
 
 // ButtonConfig interface
 export interface ButtonConfig {
@@ -95,6 +96,24 @@ type sourceEnum =
   | "supervisor-production";
 
 export type optionListEnumKeys = string[] | { name: string; isoCode: string }[];
+
+export type NormalMetric = {
+  id: string;
+  label: string;
+  value: number;
+  unit?: string;
+  icon?: "box" | "roll" | "clock";
+};
+
+export type SkuSummaryMetric = {
+  id: string;
+  label: string;
+  type: "sku-summary"; 
+  bags: number;
+  packets: number;
+};
+
+export type PackageSummaryMetric = NormalMetric | SkuSummaryMetric;
 
 // SectionConfig types
 export type SectionConfig =
@@ -483,18 +502,14 @@ export type SectionConfig =
       data: {
         title: string;
         rating: number;
-        sizes: {
-          id: string;
-          size: string;
-          packets: number;
-        }[];
+        metrics: PackageSummaryMetric[];  
       };
     };
 
 export interface BottomSheetConfig {
   sections: SectionConfig[];
   buttons?: ButtonConfig[];
-  meta?: BottomSheetMeta;
+  meta: BottomSheetMeta;
 }
 
 export interface HeaderComponentProps {
@@ -552,7 +567,8 @@ export type DataAccordianEnum =
   | "calendar-year"
   | "paper-roll"
   | "bag"
-  | "big-bag";
+  | "big-bag"
+  | "file";
 
 export interface DataAccordianComponentProps {
   data: {
@@ -624,7 +640,7 @@ export interface productDetails {
   amount?: string;
   price?: string;
   packagesSentence?: string;
-  packages?: PackageItem[];
+  packages?: PackageItemLocal[];
   chambers?: Chamber[];
 }
 
@@ -694,12 +710,12 @@ export interface SearchProps {
     searchTerm: string;
     placeholder: string;
     searchType?:
-      | "state"
-      | "city"
-      | "country"
-      | "add-raw-material"
-      | "add-product"
-      | "add-package";
+    | "state"
+    | "city"
+    | "country"
+    | "add-raw-material"
+    | "add-product"
+    | "add-package";
   };
   color: "red" | "green" | "blue" | "yellow";
 }
@@ -910,6 +926,7 @@ export interface OptionListComponentProps {
       | "supervisor-production"
       | "product-package"
       | "select-package-type"
+      | "choose-export-type"
       | string;
   };
 }
@@ -941,15 +958,9 @@ export interface AddonInputComponentProps {
 
 export interface PackageSummaryMetricsProps {
   data: {
-    title: string,
-    rating: number,
-    metrics: {
-      id: string,
-      label: string,
-      value: number,
-      unit: string,
-      icon: "box" | "roll" | "clock" | undefined,
-    }[],
+    title: string;
+    rating: number;
+    metrics: PackageSummaryMetric[];
   };
 }
 
@@ -983,7 +994,7 @@ export interface multipleProductCardDataProps {
   image: string;
   isChecked: boolean;
   // added extra
-  packages: PackageItem[];
+  packages: PackageItemLocal[];
   chambers: ChamberProduct[];
 }
 export interface multipleProductCardProps {

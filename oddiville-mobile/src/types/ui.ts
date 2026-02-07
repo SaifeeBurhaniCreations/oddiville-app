@@ -19,7 +19,7 @@ import {
 import { z } from "zod";
 import { TextInput } from "react-native";
 import { DispatchOrderData } from "../hooks/dispatchOrder";
-import { PackageItem as DispatchPackageItem } from "@/src/hooks/useChamberStock"
+import { PackageItemLocal as DispatchPackageItem } from "@/src/hooks/useChamberStock"
 export interface TagProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   color?: "red" | "green" | "blue" | "yellow";
@@ -34,8 +34,9 @@ export interface FabProps {
 }
 export interface FebItemsProps {
   text: string;
-  href: keyof RootStackParamList;
   icon: ComponentType<IconProps>;
+  href?: keyof RootStackParamList;
+  onPress?: () => void;
 }
 
 // export interface ChipProps {
@@ -137,7 +138,21 @@ export interface workAssignedMultiple {
 const DetailsPropsSchema = z.object({
   name: z.string(),
   value: z.union([z.string(), z.number()]),
-  icon: z.any(),
+  iconKey: z
+    .enum([
+      "cash",
+      "database",
+      "box",
+      "phone",
+      "warehouse",
+      "store",
+      "user",
+      "truck",
+      "male",
+      "female",
+      "calendar",
+    ])
+    .optional(),
 });
 
 export type DetailsProps = z.infer<typeof DetailsPropsSchema>;
@@ -149,7 +164,21 @@ export const BottomSheetSchemaKeyEnum = z.enum(
 const SupervisorCardDetailsSchema = z.object({
   name: z.string().optional(),
   value: z.union([z.string(), z.number()]),
-  icon: z.any(),
+  iconKey: z
+    .enum([
+      "cash",
+      "database",
+      "box",
+      "phone",
+      "warehouse",
+      "store",
+      "user",
+      "truck",
+      "male",
+      "female",
+      "calendar",
+    ])
+    .optional(),
 });
 
 export type SupervisorCardDetailsProps = z.infer<
@@ -238,6 +267,19 @@ export interface SearchActivityProps {
 //     icon: ReactNode;
 // }
 
+export type IconKey =
+  | "cash"
+  | "database"
+  | "box"
+  | "phone"
+  | "warehouse"
+  | "store"
+  | "user"
+  | "truck"
+  | "male"
+  | "female"
+  | "calendar";
+
 export interface OrderProps {
   id?: string;
   title: string;
@@ -254,7 +296,7 @@ export interface OrderProps {
   helperDetails?: SupervisorCardDetailsProps[];
   dispatchDetails?: SupervisorCardDetailsProps[];
   identifier?: BottomSheetSchemaKey | undefined;
-  sideIcon?: ReactNode;
+  sideIconKey?: IconKey;
 }
 
 export interface OrderReceiverFlatListProps {

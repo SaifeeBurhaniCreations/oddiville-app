@@ -12,8 +12,8 @@ export type AllowedMainSelection =
       | "user:overview";
 
 export type BottomSheetMeta = {
-  id?: string;
-  type?: any;
+  id: string;
+  type: any;
   mode?: string;
   mainSelection?: string;
   subSelection?: string;
@@ -23,7 +23,7 @@ export type BottomSheetMeta = {
 export interface BottomSheetState {
   isVisible: boolean;
   config: BottomSheetConfig | null;
-  meta?: BottomSheetMeta;
+  meta: BottomSheetMeta;
 }
 
 export interface FilterState {

@@ -11,8 +11,17 @@
     "jsx": "react-native",
     "strict": true,
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "**/*.d.ts"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.d.ts",
+    "nativewind-env.d.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
 }

@@ -136,6 +136,8 @@ export type RootStackParamList = {
 
   login: undefined;
 
+  "export-data": undefined;
+
   packaging: undefined;
   "packaging-details": { id: string; name: string };
 

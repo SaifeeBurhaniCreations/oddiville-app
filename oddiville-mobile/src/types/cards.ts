@@ -115,6 +115,10 @@ export type ItemCardMode =
   | "production-completed"
   | "packing"
   | "default";
+export type PackingFilterMode =
+  | "event"
+  | "sku"
+  | "product";
 
 export interface ItemCardData {
   id?: string;
@@ -131,9 +135,14 @@ export interface ItemCardData {
   meta?: {
     product: string;
     sku: string;
+    mode: PackingFilterMode;
+    totalBags: number;
+    totalPackets: number;
+    events: number;
   };
   onActionPress?: () => void;
 }
+
 
 export interface ItemCardListProps {
   items: ItemCardData[];
@@ -147,6 +156,7 @@ export interface SupervisorOrderCardProps {
   bgSvg?: ComponentType<any>;
   isEdit?: boolean;
 }
+
 export interface TruckCardProps {
   truck: OrderProps;
   color?: "red" | "green" | "blue" | "yellow";
