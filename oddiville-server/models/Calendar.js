@@ -14,7 +14,15 @@ module.exports = (sequelize, Sequelize) => {
         end_time: { type: Sequelize.STRING, allowNull: false },
         reminder_24h_job_id: { type: Sequelize.STRING, allowNull: true },
       },
-      { timestamps: true }
+      {
+        timestamps: true,
+
+        indexes: [
+          { fields: ["scheduled_date"] },        
+          { fields: ["scheduled_date", "work_area"] }
+        ]
+      }
+
     );
 
     return Calendar;

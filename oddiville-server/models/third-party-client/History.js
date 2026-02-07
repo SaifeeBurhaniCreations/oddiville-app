@@ -6,7 +6,15 @@ module.exports = (sequelize, Sequelize) => {
         deduct_quantity: { type: Sequelize.DECIMAL, allowNull: false },
         add_quantity: { type: Sequelize.DECIMAL, allowNull: false },
         remaining_quantity: { type: Sequelize.DECIMAL, allowNull: false }
-    }, { timestamps: true });
+    }, {
+        timestamps: true,
+
+        indexes: [
+            { fields: ["product_id", "createdAt"] },
+            { fields: ["chamber_id", "createdAt"] }
+        ]
+    }
+);
 
     return OtherClientHistory;
 }

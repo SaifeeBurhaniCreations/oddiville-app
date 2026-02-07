@@ -114,7 +114,7 @@ router.post("/authentication/signup", async (req, res) => {
         email: "admin@oddiville.com",
         phone: "1234567890",
         policies: null,
-        profilepic: "https://5ce38766bf86.ngrok-free.app/profilepic/K7b1A9xGmEwZ3uYJqPTFhV20cdNsXoQnMBiRKe5L8tzrCJHgWvUpafSODl9y6Bk4EN.png",
+      profilepic: "https://ac14c0a9075d.ngrok-free.app/profilepic/K7b1A9xGmEwZ3uYJqPTFhV20cdNsXoQnMBiRKe5L8tzrCJHgWvUpafSODl9y6Bk4EN.png",
         createdAt: Date.now(),
         updatedAt: Date.now(),
     }

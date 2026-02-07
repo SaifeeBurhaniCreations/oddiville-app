@@ -506,10 +506,9 @@ router.patch("/complete/:id", async (req, res) => {
       packaging_type,
       packaging_size,
       end_time,
-      wastage_quantity,
       recovery,
       { tx }
-    );
+    )
 
     const updatedStock = await updateChamberStocks(
       newProduction,

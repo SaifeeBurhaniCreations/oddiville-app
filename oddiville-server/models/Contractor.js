@@ -5,11 +5,18 @@ module.exports = (sequelize, Sequelize) => {
         male_count: { type: Sequelize.INTEGER, defaultValue: 0 },
         female_count: { type: Sequelize.INTEGER, defaultValue: 0 },
         work_location: {
-            type: Sequelize.JSON, 
+            type: Sequelize.JSONB, 
             allowNull: false,
             defaultValue: []
         }
-    }, { timestamps: true });
+    }, {
+        timestamps: true,
+
+        indexes: [
+            { fields: ["name"], unique: true },
+        ]
+    }
+    );
 
     return Contractor;
 };

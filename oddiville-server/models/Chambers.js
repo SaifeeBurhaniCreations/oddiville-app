@@ -20,7 +20,15 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.ENUM("frozen", "dry"),
       defaultValue: "frozen"
     }
-  }, { timestamps: true });
+  }, {
+    timestamps: true,
+
+    indexes: [
+      { fields: ["chamber_name"] },    
+      { fields: ["tag"] },             // dry/frozen filter
+    ]
+  }
+);
 
   Chamber.associate = (db) => {
     Chamber.hasMany(db.DryWarehouse, {

@@ -1,116 +1,71 @@
-const { getFillerSchema } =  require("../schemas/fillerSchema");
-const {
-  fillRawMaterialSchema,
-  fillRawMaterialAddSchema,
-  fillWorkerMultipleSchema,
-  fillWorkerSingleSchema,
-  fillPackageComesToEndSchema,
-  fillOrderReadySchema,
-  fillVendorSchema,
-  fillChamberListSchema,
-  fillCountrySchema,
-  fillStateSchema,
-  fillCitySchema,
-  fillProductAddSchema,
-  fillMultipleChamberListSchema,
-  fillLaneOccupiedSchema,
-  fillProductionStartedSchema,
-  fillProductionCompletedSchema,
-  fillOrderShippedSchema,
-  fillOrderReachedSchema,
-  fillCalendarEventSchema,
-  fillScheduledDateEventSchema,
-  fillPackingSummarySchema,
-} = require("../utils/fillers");
-const { schemaMap } = require('../constants/constants');
+  const { getFillerSchema } =  require("../schemas/fillerSchema");
+  const {
+    fillRawMaterialSchema,
+    fillRawMaterialAddSchema,
+    fillWorkerMultipleSchema,
+    fillWorkerSingleSchema,
+    fillPackageComesToEndSchema,
+    fillOrderReadySchema,
+    fillVendorSchema,
+    fillChamberListSchema,
+    fillCountrySchema,
+    fillStateSchema,
+    fillCitySchema,
+    fillProductAddSchema,
+    fillMultipleChamberListSchema,
+    fillLaneOccupiedSchema,
+    fillProductionStartedSchema,
+    fillProductionCompletedSchema,
+    fillOrderShippedSchema,
+    fillOrderReachedSchema,
+    fillCalendarEventSchema,
+    fillScheduledDateEventSchema,
+    fillPackingSummarySchema,
+    fillMultipleProductCardSchema,
+  } = require("../utils/fillers");
+  const { schemaMap } = require('../constants/constants');
 
-function getBottomSheet({
-  type,
-  RawMaterials,
-  Vendors,
-  RawMaterialOrderById,
-  Chambers,
-  countries,
-  states,
-  cities,
-  DispatchOrder,
-  Products,
-  ProductionById,
-  LaneById,
-  Contractors,
-  VendorById,
-  CalendarEvent,
-  authenticatedUser,
-  packingSummary,
-}) {
-  const fillerSchema = getFillerSchema({
-    RawMaterials,
-    Vendors,
-    Chambers,
-    RawMaterialOrderById,
-    countries,
-    states,
-    cities,
-    DispatchOrder,
-    Products,
-    ProductionById,
-    LaneById,
-    Contractors,
-    VendorById,
-    CalendarEvent,
-    authenticatedUser,
-    packingSummary,
-  });
+const bottomSheetFillers = {
+  "order-ready": fillOrderReadySchema,
+  "order-shipped": fillOrderShippedSchema,
+  "order-reached": fillOrderReachedSchema,
+  "raw-material-reached": fillRawMaterialSchema,
+  "raw-material-ordered": fillRawMaterialSchema,
+  "package-comes-to-end": fillPackageComesToEndSchema,
+  "worker-multiple": fillWorkerMultipleSchema,
+  "worker-single": fillWorkerSingleSchema,
+  "add-raw-material": fillRawMaterialAddSchema,
+  "add-product": fillProductAddSchema,
+  "choose-product": fillRawMaterialAddSchema,
+  "add-vendor": fillVendorSchema,
+  "chamber-list": fillChamberListSchema,
+  "multiple-chamber-list": fillMultipleChamberListSchema,
+  "country": fillCountrySchema,
+  "state": fillStateSchema,
+  "city": fillCitySchema,
+  "lane-occupied": fillLaneOccupiedSchema,
+  "production-start": fillProductionStartedSchema,
+  "production-completed": fillProductionCompletedSchema,
+  "calendar-event-scheduled": fillCalendarEventSchema,
+  "calendar-event-reminder": fillScheduledDateEventSchema,
+  "packing-summary": fillPackingSummarySchema,
+  "multiple-product-card": fillMultipleProductCardSchema,
+};
 
-  if (type === "order-ready") {
-    return fillOrderReadySchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "order-shipped") {
-    return fillOrderShippedSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "order-reached") {
-    return fillOrderReachedSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "raw-material-reached") {
-    return fillRawMaterialSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "raw-material-ordered") {
-    return fillRawMaterialSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "package-comes-to-end") {
-    return fillPackageComesToEndSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "worker-multiple") {
-    return fillWorkerMultipleSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "worker-single") {
-    return fillWorkerSingleSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "add-raw-material") {
-    return fillRawMaterialAddSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "add-product") {
-    return fillProductAddSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "choose-product") {
-    return fillRawMaterialAddSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "add-vendor") {
-    return fillVendorSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "chamber-list") {
-    return fillChamberListSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "multiple-chamber-list") {
-    return fillMultipleChamberListSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "country") {
-    return fillCountrySchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "state") {
-    return fillStateSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "city") {
-    return fillCitySchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "lane-occupied") {
-    return fillLaneOccupiedSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "production-start") {
-    return fillProductionStartedSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "production-completed") {
-    return fillProductionCompletedSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "calendar-event-scheduled") {
-    return fillCalendarEventSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "calendar-event-reminder") {
-    return fillScheduledDateEventSchema(schemaMap[type], fillerSchema[type]);
-  } else if (type === "packing-summary") {
-    return fillPackingSummarySchema(schemaMap[type], fillerSchema[type]);
-  } else {
+function getBottomSheet(ctx) {
+  const fillerSchema = getFillerSchema(ctx);
+
+  const fillFn = bottomSheetFillers[ctx.type];
+
+  if (!fillFn) {
     return [{ error: "Invalid type" }];
   }
+
+  if (ctx.type === "packing-summary") {
+    return fillFn(schemaMap[ctx.type], fillerSchema[ctx.type] || {}, ctx.meta);
+  }
+
+  return fillFn(schemaMap[ctx.type], fillerSchema[ctx.type] || {});
 }
 
-module.exports = { getBottomSheet }
+module.exports = { getBottomSheet };

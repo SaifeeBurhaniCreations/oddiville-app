@@ -79,7 +79,7 @@ router.get("/", async (req, res) => {
         await redisClient.set(cacheKey, data);
       }
 
-      results.push(...JSON.parse(data));
+      results.push(...JSONB.parse(data));
     }
 
     res.status(200).json(results);

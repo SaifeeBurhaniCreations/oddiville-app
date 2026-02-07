@@ -23,10 +23,12 @@ module.exports = (sequelize, Sequelize) => {
         allowNull: false,
       },
       packaging: {
-        type: Sequelize.JSON,
-        allowNull: false,
+        type: Sequelize.JSONB,
+        allowNull: true,
         validate: {
           isValidPackaging(value) {
+            if (this.category === "other") return;
+
             if (value == null) {
               throw new Error("Packaging is required.");
             }
@@ -42,59 +44,31 @@ module.exports = (sequelize, Sequelize) => {
               const keys = Object.keys(pkg);
 
               const extra = keys.filter(k => !allowedKeys.includes(k));
-              if (extra.length > 0) {
-                throw new Error(
-                  `${prefix} has invalid fields: ${extra.join(", ")}`
-                );
+              if (extra.length) {
+                throw new Error(`${prefix} has invalid fields: ${extra.join(", ")}`);
               }
 
-              // size validation (ALWAYS OBJECT)
-              if (
-                !pkg.size ||
-                typeof pkg.size !== "object" ||
-                Array.isArray(pkg.size)
-              ) {
+              if (!pkg.size || typeof pkg.size !== "object") {
                 throw new Error(`${prefix}.size must be an object.`);
-              }
-
-              const sizeKeys = Object.keys(pkg.size);
-              const allowedSizeKeys = ["value", "unit"];
-
-              const extraSize = sizeKeys.filter(
-                k => !allowedSizeKeys.includes(k)
-              );
-              if (extraSize.length > 0) {
-                throw new Error(
-                  `${prefix}.size has invalid fields: ${extraSize.join(", ")}`
-                );
               }
 
               if (isNaN(Number(pkg.size.value))) {
                 throw new Error(`${prefix}.size.value must be numeric.`);
               }
 
-              if (
-                typeof pkg.size.unit !== "string" ||
-                pkg.size.unit.trim() === ""
-              ) {
-                throw new Error(`${prefix}.size.unit must be a non-empty string.`);
+              if (!pkg.size.unit?.trim()) {
+                throw new Error(`${prefix}.size.unit must be string.`);
               }
 
-              // type
-              if (
-                typeof pkg.type !== "string" ||
-                pkg.type.trim() === ""
-              ) {
-                throw new Error(`${prefix}.type must be a non-empty string.`);
+              if (!pkg.type?.trim()) {
+                throw new Error(`${prefix}.type required`);
               }
 
-              // count
               if (isNaN(Number(pkg.count))) {
-                throw new Error(`${prefix}.count must be numeric.`);
+                throw new Error(`${prefix}.count must be numeric`);
               }
             };
 
-            // packed → array
             if (this.category === "packed") {
               if (!Array.isArray(value)) {
                 throw new Error("Packaging must be an array for packed items.");
@@ -102,18 +76,18 @@ module.exports = (sequelize, Sequelize) => {
               value.forEach((pkg, i) => validateOne(pkg, i));
             }
 
-            // loose → single object
             if (this.category === "material") {
               if (Array.isArray(value)) {
-                throw new Error("Packaging must be an object for loose items.");
+                throw new Error("Packaging must be an object for material items.");
               }
               validateOne(value);
             }
-          },
+          }
+
         },
       },
       chamber: {
-        type: Sequelize.JSON,
+        type: Sequelize.JSONB,
         allowNull: false,
         validate: {
           isValidChamberArray(value) {
@@ -159,7 +133,7 @@ module.exports = (sequelize, Sequelize) => {
         },
       },
       packages: {
-        type: Sequelize.JSON,
+        type: Sequelize.JSONB,
         allowNull: true,
         validate: {
           isValidPackages(value) {
@@ -188,7 +162,7 @@ module.exports = (sequelize, Sequelize) => {
         },
       },
       packed_ref: {
-        type: Sequelize.JSON,
+        type: Sequelize.JSONB,
         allowNull: true,
         validate: {
           isValidPackedRef(value) {
@@ -222,6 +196,10 @@ module.exports = (sequelize, Sequelize) => {
     },
     {
       timestamps: true,
+      indexes: [
+        { fields: ["product_name"] },
+        { fields: ["category", "createdAt"] },
+      ],
       validate: {
         packagesOnlyForPacked() {
           if (this.category !== "packed" && this.packages != null) {

@@ -27,7 +27,7 @@ module.exports = (sequelize, Sequelize) => {
             default: 'pending'
         },
         truck_details: {
-            type: Sequelize.JSON,
+            type: Sequelize.JSONB,
             allowNull: true,
             validate: {
                 isValidTruckDetails(value) {
@@ -55,7 +55,7 @@ module.exports = (sequelize, Sequelize) => {
                 }
             }
         },
-        sample_image: Sequelize.JSON,
+        sample_image: Sequelize.JSONB,
         sample_quantity: Sequelize.DECIMAL,
         bags: Sequelize.INTEGER,
         quantity_ordered: Sequelize.DECIMAL,
@@ -68,7 +68,16 @@ module.exports = (sequelize, Sequelize) => {
         est_arrival_date: { type: Sequelize.DATE, allowNull: true },
         arrival_date: Sequelize.DATE,
     }, {
-        timestamps: true
+        timestamps: true,
+
+        indexes: [
+            { fields: ["raw_material_name"] },   // JOIN RawMaterial
+            { fields: ["vendor"] },              // vendor lookup
+            { fields: ["status"] },            
+
+            { fields: ["status", "order_date"] },
+            { fields: ["vendor", "status"] },
+        ]
     });
 
     RawMaterialOrder.associate = (models) => {

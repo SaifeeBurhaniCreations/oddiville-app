@@ -16,6 +16,7 @@ const {
   DispatchOrder: DispatchOrdersClient,
   Chambers: ChambersClient,
   Packages: PackagesClient,
+  PackingEvent: PackingEventClient,
 } = require("../models");
 
 const {
@@ -277,12 +278,26 @@ function validateRMOs(rmos = []) {
             path: `raw_material_orders[${i}].truck_details.${k}`,
             error: "is required",
           });
-      // if (td.challan == null || typeof td.challan !== "object") {
-      //   issues.push({
-      //     path: `raw_material_orders[${i}].truck_details.challan`,
-      //     error: "must be object with url,key",
-      //   });
-      // }
+          
+      if (td.challan != null) {
+        if (typeof td.challan !== "object") {
+          issues.push({
+            path: `raw_material_orders[${i}].truck_details.challan`,
+            error: "must be object with url/key",
+          });
+        } else {
+          const hasUrl = typeof td.challan.url === "string" && td.challan.url.trim();
+          const hasKey = typeof td.challan.key === "string" && td.challan.key.trim();
+
+          if (!hasUrl && !hasKey) {
+            issues.push({
+              path: `raw_material_orders[${i}].truck_details.challan`,
+              error: "must contain at least url or key",
+            });
+          }
+        }
+      }
+
     }
 
     ["order_date", "warehoused_date", "store_date", "arrival_date"].forEach(
@@ -509,7 +524,27 @@ function validateDispatch(orders = []) {
             });
           }
         }
+
+        if (td.challan != null) {
+          if (typeof td.challan !== "object") {
+            issues.push({
+              path: `dispatch_orders[${i}].truck_details.challan`,
+              error: "must be object with url/key",
+            });
+          } else {
+            const hasUrl = typeof td.challan.url === "string" && td.challan.url.trim();
+            const hasKey = typeof td.challan.key === "string" && td.challan.key.trim();
+
+            if (!hasUrl && !hasKey) {
+              issues.push({
+                path: `dispatch_orders[${i}].truck_details.challan`,
+                error: "must contain at least url or key",
+              });
+            }
+          }
+        }
       }
+
     }
   }
 
@@ -537,20 +572,6 @@ const ensureNumber = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
-function mapChallanArrayToObj(challanArr) {
-  if (!Array.isArray(challanArr) || !challanArr.length) return null;
-  const first = challanArr[0];
-  if (typeof first === "string") {
-    return { url: first, key: null };
-  }
-  if (first && typeof first === "object") {
-    return {
-      url: first.preview || first.url || null,
-      key: first.key || null,
-    };
-  }
-  return null;
-}
 function normalizeRmoRow(row, topLevelRawMaterialChallan) {
   row = row && typeof row === "object" ? row : {};
 
@@ -654,7 +675,7 @@ function normalizeRmoRow(row, topLevelRawMaterialChallan) {
     ),
     vendor: ensureString(row.vendor || row.supplier || ""),
     quantity_ordered: ensureStringOrNull(
-      row.quantity_ordered ?? row.quantity ?? row.quantity ?? ""
+      row.quantity_ordered ?? row.quantity ?? ""
     ),
     unit: ensureStringOrNull(row.unit ?? ""),
     order_date:
@@ -687,7 +708,7 @@ function normalizeProductionRow(row) {
     quantity:
       typeof row.quantity === "number"
         ? String(row.quantity)
-        : ensureStringOrNull(row.quantity ?? row.quantity ?? ""),
+        : ensureStringOrNull(row.quantity ?? ""),
     unit: ensureStringOrNull(row.unit ?? ""),
     status: ensureStringOrNull(row.status ?? ""),
     start_time: toIsoIfDateLike(row.start_time) || null,
@@ -1262,11 +1283,43 @@ if (productions.length > 0 && raw_material_orders.length > 0) {
   for (const p of productions) {
     const id = uuid();
 
-    let rawId =
-      p.raw_material_order_id ??
-      (p.raw_material_orderRef
-        ? mapRmo.get(p.raw_material_orderRef)
-        : undefined);
+    let rawId = p.raw_material_order_id;
+
+    // AUTO-ATTACH LOT IF NOT PROVIDED
+    if (!rawId) {
+      const materialName = trimStr(
+        p.raw_material_name || p.rawMaterialName || ""
+      );
+
+      if (!materialName) {
+        throw new Error(`Production ${p.clientId ?? ""} missing raw material name`);
+      }
+
+      const lot = await RawMaterialOrderClient.findOne({
+        where: {
+          raw_material_name: materialName,
+          quantity_received: { [Op.gt]: 0 },
+          status: "completed"
+        },
+        order: [["arrival_date", "ASC"]],
+        transaction: t,
+        lock: t.LOCK.UPDATE
+      });
+
+      if (!lot) {
+        throw new Error(`No available stock for ${materialName}`);
+      }
+
+      rawId = lot.id;
+
+      await lot.update(
+        {
+          quantity_received: "0",
+          status: "consumed"
+        },
+        { transaction: t }
+      );
+    }
 
     if (!rawId) {
       const prodStartIso = toIsoIfDateLike(p.start_time) || null;
@@ -1328,36 +1381,10 @@ if (productions.length > 0 && raw_material_orders.length > 0) {
   }
 }
 
-    // 5) Create Chamber Stock
-    // const createdChamber = [];
-    // const mapCs = new Map();
-    // for (const c of chamber_stock) {
-    //   const id = uuid();
-    //   const payload = { ...c, id };
-    //   delete payload.clientId;
-    //   const row = await ChamberStockClient.create(payload, { transaction: t });
-    //   createdChamber.push(row.toJSON());
-    //   if (c.clientId) mapCs.set(c.clientId, id);
-    // }
-
     // 5) Create-or-update Chamber Stock (only allow products that exist in DB; merge chambers)
     const createdChamber = [];
     const mapCs = new Map();
     const chamberErrors = [];
-
-    async function productExistsInDb(productName, t) {
-      if (!productName) return false;
-      const cs = await ChamberStockClient.findOne({
-        where: { product_name: productName },
-        transaction: t,
-      });
-      if (cs) return true;
-      const prod = await ProductionClient.findOne({
-        where: { product_name: productName },
-        transaction: t,
-      });
-      return !!prod;
-    }
 
     for (const [idx, c] of chamber_stock.entries()) {
       const productName = trimStr(c.product_name || "");
@@ -1368,57 +1395,6 @@ if (productions.length > 0 && raw_material_orders.length > 0) {
         });
         continue;
       }
-
-      // const exists = await productExistsInDb(productName, t);
-      // if (!exists) {
-      //   chamberErrors.push({
-      //     path: `chamber_stock[${idx}].product_name`,
-      //     error: `product '${productName}' not found in DB (not allowed to create new product)`,
-      //   });
-      //   continue;
-      // }
-
-      // const existing = await ChamberStockClient.findOne({
-      //   where: { product_name: productName },
-      //   transaction: t,
-      //   lock: t.LOCK.UPDATE,
-      // });
-
-      //   const incomingChambers = Array.isArray(c.chamber)
-      //   ? c.chamber.map((it) => ({
-      //       id: ensureString(
-      //         it.id || it.chamber_name || it._id || it.name
-      //       ).trim(),
-      //       quantity: ensureString(it.quantity ?? it.quantity ?? "").trim(),
-      //       rating: ensureString(it.rating ?? "").trim(),
-      //     }))
-      //   : [];
-
-      // if (!existing) {
-      //   const newId = uuid();
-      //   const payload = {
-      //     ...c,
-      //     id: newId,
-      //     product_name: productName,
-      //     chamber: incomingChambers,
-      //     category: ensureString(c.category ?? ""),
-      //     unit: ensureString(c.unit ?? ""),
-      //   };
-      //   delete payload.clientId;
-
-      //   const row = await ChamberStockClient.create(payload, {
-      //     transaction: t,
-      //   });
-      //   const asJson = row.toJSON();
-      //   createdChamber.push(asJson);
-      //   if (c.clientId) mapCs.set(c.clientId, asJson.id);
-      //   continue;
-      // }
-
-      // const existingJson = existing.toJSON();
-      // const existingChambers = Array.isArray(existingJson.chamber)
-      //   ? existingJson.chamber
-      //   : [];
 
       let existing = await ChamberStockClient.findOne({
         where: { product_name: productName },
@@ -1546,8 +1522,42 @@ if (productions.length > 0 && raw_material_orders.length > 0) {
         transaction: t,
       });
       createdChamber.push(refreshed.toJSON());
+      
+      if (c.category === "packed") {
+        const totalBags = incomingChambers.reduce(
+          (s, ch) => s + Number(ch.quantity || 0),
+          0
+        );
+  
+        await PackingEventClient.create(
+          {
+            product_name: productName,
+            sku_id: uuid(),
+            sku_label: productName,
+  
+            packet: {
+              size: c.packaging?.size?.value || 1,
+              unit: c.packaging?.size?.unit || "bag",
+              packetsPerBag: 1
+            },
+  
+            bags_produced: totalBags,
+            total_packets: totalBags,
+  
+            storage: incomingChambers.map((ch) => ({
+              chamberId: ch.id,
+              bagsStored: Number(ch.quantity || 0)
+            })),
+  
+            rm_consumption: [] 
+          },
+          { transaction: t }
+        );
+      }
+
       if (c.clientId) mapCs.set(c.clientId, refreshed.id);
     }
+
 
     if (chamberErrors.length) {
       await t.rollback();

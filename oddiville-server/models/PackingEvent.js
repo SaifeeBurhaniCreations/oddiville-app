@@ -24,7 +24,7 @@ module.exports = (sequelize, Sequelize) => {
             },
 
             packet: {
-                type: Sequelize.JSON,
+                type: Sequelize.JSONB,
                 allowNull: false,
                 // { size, unit, packetsPerBag }
             },
@@ -40,19 +40,23 @@ module.exports = (sequelize, Sequelize) => {
             },
 
             storage: {
-                type: Sequelize.JSON,
+                type: Sequelize.JSONB,
                 allowNull: false,
                 // [{ chamberId, bagsStored }]
             },
 
             rm_consumption: {
-                type: Sequelize.JSON,
+                type: Sequelize.JSONB,
                 allowNull: false,
             },
         },
         {
             timestamps: true,
             tableName: "packing_events",
+
+            indexes: [
+                { fields: ["product_name"] },
+            ]
         }
     );
 

@@ -81,55 +81,64 @@ router.post(
     try {
       let { product_name, raw_materials, types, chamber_name } = req.body;
 
-      if (typeof raw_materials === "string")
-        raw_materials = JSON.parse(raw_materials);
+      if (typeof raw_materials === "string") raw_materials = JSON.parse(raw_materials);
       if (typeof types === "string") types = JSON.parse(types);
 
-      if (!product_name || !chamber_name) {
-        return res
-          .status(400)
-          .json({ error: "product_name and chamber_name are required" });
-      }
+      if (!product_name || !chamber_name)
+        return res.status(400).json({ error: "product_name and chamber_name are required" });
 
-      if (!Array.isArray(raw_materials) || !raw_materials.length) {
+      if (!Array.isArray(raw_materials) || !raw_materials.length)
         return res.status(400).json({ error: "raw_materials must be array" });
-      }
 
-      if (!Array.isArray(types) || !types.length) {
+      if (!Array.isArray(types) || !types.length)
         return res.status(400).json({ error: "types must be array" });
-      }
 
       product_name = product_name.trim();
       chamber_name = chamber_name.trim();
 
-      // -------- Upload files FIRST ----------
       if (req.files?.image?.[0]) {
-        uploadedImage = await uploadToS3({file: req.files.image[0], folder: "packages"});
+        uploadedImage = await uploadToS3({
+          file: req.files.image[0],
+          folder: "packages",
+        });
       }
 
       if (req.files?.package_image?.[0]) {
-        uploadedPackageImage = await uploadToS3({file: req.files.package_image[0], folder: "packages"});
+        uploadedPackageImage = await uploadToS3({
+          file: req.files.package_image[0],
+          folder: "packages",
+        });
       }
 
-      // -------- DB TRANSACTION ----------
       const result = await sequelize.transaction(async (t) => {
-        const pkg = await Packages.create(
-          {
-            product_name,
-            raw_materials,
-            types,
-            chamber_name,
-            image: uploadedImage && {
-              url: uploadedImage.url,
-              key: uploadedImage.key,
+        let pkg;
+
+        try {
+          pkg = await Packages.create(
+            {
+              product_name,
+              raw_materials,
+              types,
+              chamber_name,
+              image: uploadedImage && {
+                url: uploadedImage.url,
+                key: uploadedImage.key,
+              },
+              package_image: uploadedPackageImage && {
+                url: uploadedPackageImage.url,
+                key: uploadedPackageImage.key,
+              },
             },
-            package_image: uploadedPackageImage && {
-              url: uploadedPackageImage.url,
-              key: uploadedPackageImage.key,
-            },
-          },
-          { transaction: t }
-        );
+            { transaction: t }
+          );
+        } catch (err) {
+          if (err.name === "SequelizeUniqueConstraintError") {
+            const e = new Error("Package already exists for this chamber");
+            e.status = 409;
+            throw e;
+          }
+          throw err;
+        }
 
         const chamber = await ChambersClient.findOne({
           where: { chamber_name },
@@ -137,47 +146,41 @@ router.post(
         });
 
         if (!chamber) {
-          const err = new Error("Chamber not found");
-          err.status = 400;
-          throw err;
+          const e = new Error("Chamber not found");
+          e.status = 400;
+          throw e;
         }
 
         const firstType = types[0];
         const item_name = `${product_name}:${firstType.size}`;
         const quantityNum = parseFloat(firstType.quantity) || 0;
 
-        const existingItem = await DryWarehouseClient.findOne({
+        await DryWarehouseClient.findOrCreate({
           where: { item_name },
+          defaults: {
+            warehoused_date: new Date(),
+            description: `${product_name} Packaging`,
+            chamber_id: chamber.id,
+            quantity_unit: quantityNum,
+            unit: "kg",
+            sample_image: uploadedImage
+              ? { url: uploadedImage.url, key: uploadedImage.key }
+              : null,
+          },
           transaction: t,
         });
-
-        if (!existingItem) {
-          await DryWarehouseClient.create(
-            {
-              item_name,
-              warehoused_date: new Date(),
-              description: `${product_name} Packaging`,
-              chamber_id: chamber.id,
-              quantity_unit: quantityNum,
-              unit: "kg",
-              sample_image: uploadedImage
-                ? { url: uploadedImage.url, key: uploadedImage.key }
-                : null,
-            },
-            { transaction: t }
-          );
-        }
 
         return pkg;
       });
 
       return res.status(201).json(result);
+
     } catch (error) {
       if (uploadedImage?.key) await deleteFromS3(uploadedImage.key);
-      if (uploadedPackageImage?.key)
-        await deleteFromS3(uploadedPackageImage.key);
+      if (uploadedPackageImage?.key) await deleteFromS3(uploadedPackageImage.key);
 
-      console.error("Error creating package:", error);
+      console.error(error);
+
       return res.status(error.status || 500).json({
         error: error.message || "Internal server error",
       });
@@ -426,3 +429,14 @@ router.patch("/delete/type/:id", async (req, res) => {
 });
 
 module.exports = router;
+
+
+// await Packages.destroy({
+//   where: {},
+//   individualHooks: true,
+// });
+
+// await DryWarehouseClient.destroy({
+//   where: {},
+//   individualHooks: true,
+// });

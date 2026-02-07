@@ -57,7 +57,14 @@ module.exports = (sequelize, Sequelize) => {
         defaultValue: Sequelize.NOW,
       },
     },
-    { timestamps: true }
+    {
+      timestamps: true,
+
+      indexes: [
+        { fields: ["email"], unique: true },
+      ]
+    }
+
   );
 
   return Admin;

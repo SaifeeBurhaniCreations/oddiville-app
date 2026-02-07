@@ -182,27 +182,26 @@ async function updateProductionCompletion(
   packaging_type,
   packaging_size,
   endTime,
-  wastage_quantity,
   recovery,
   opts = {}
 ) {
   const qty = Number(production.quantity) || 0;
-  const parseSize = Number(packaging_size);
   const rec = Number(recovery) || 0;
-  const wastage = Number(wastage_quantity) || 0;
 
-  production.wastage_quantity =
-    wastage === 0 ? String(qty - rec) : String(wastage);
+  const wastage = qty - rec;
+
+  production.recovery = rec;
+  production.wastage_quantity = String(wastage);
   production.end_time = endTime || new Date();
   production.status = "completed";
-  production.recovery = recovery;
+
   production.packaging = {
     type: packaging_type,
     size: packaging_size,
-    count: parseSize > 0 ? Math.floor(rec / parseSize) : 0,
+    count: packaging_size > 0 ? Math.floor(rec / packaging_size) : 0,
   };
-  const saved = await production.save({ transaction: opts.tx });
-  return saved;
+
+  return await production.save({ transaction: opts.tx });
 }
 
 async function updateChamberStocks(

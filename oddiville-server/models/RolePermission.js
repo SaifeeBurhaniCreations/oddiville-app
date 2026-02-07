@@ -1,24 +1,29 @@
 const { Sequelize } = require('sequelize');
 const sequelize = require("../../oddiville-server/config/database");
 
-const Role = sequelize.define('roles', {
-    role_name: {
-        type: Sequelize.STRING,
-        allowNull: false,
-        unique: true,
-        primaryKey: true,
+const Role = sequelize.define(
+    'roles',
+    {
+        role_name: {
+            type: Sequelize.STRING,
+            allowNull: false,
+            unique: true,
+            primaryKey: true,
+        },
     },
-});
+);
 
-const Permission = sequelize.define('permissions', {
-    permission_name: {
-        type: Sequelize.STRING,
-        allowNull: false,
-        unique: true,
-        primaryKey: true,
+const Permission = sequelize.define(
+    'permissions',
+    {
+        permission_name: {
+            type: Sequelize.STRING,
+            allowNull: false,
+            unique: true,
+            primaryKey: true,
+        },
     },
-});
-
+);
 const RolePermissions = sequelize.define(
     'rolePermissions',
     {
@@ -31,6 +36,7 @@ const RolePermissions = sequelize.define(
             onUpdate: 'CASCADE',
             onDelete: 'CASCADE',
         },
+
         permission_name: {
             type: Sequelize.STRING,
             references: {
@@ -41,7 +47,15 @@ const RolePermissions = sequelize.define(
             onDelete: 'CASCADE',
         },
     },
-    { timestamps: true }
+    {
+        timestamps: true,
+
+        indexes: [
+            { fields: ["role_name"] },
+            { fields: ["permission_name"] },
+            { fields: ["role_name", "permission_name"], unique: true }
+        ]
+    }
 );
 
 Role.belongsToMany(Permission, {

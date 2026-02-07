@@ -17,7 +17,7 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.TEXT
     },
     sample_image: {
-      type: Sequelize.JSON,
+      type: Sequelize.JSONB,
       allowNull: true
     },
     chamber_id: {
@@ -29,7 +29,21 @@ module.exports = (sequelize, Sequelize) => {
     unit: {
       type: Sequelize.STRING
     }
-  }, { timestamps: true });
+  }, {
+    timestamps: true,
+
+    indexes: [
+      { fields: ["chamber_id", "warehoused_date"] },
+    ],
+    hooks: {
+      async beforeDestroy(item) {
+        const { deleteFromS3 } = require("../services/s3Service");
+
+        if (item.sample_image?.key) await deleteFromS3(item.sample_image.key);
+      }
+    }
+  }
+  );
 
   DryWarehouse.associate = (db) => {
     DryWarehouse.belongsTo(db.Chambers, {

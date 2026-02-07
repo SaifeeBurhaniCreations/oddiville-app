@@ -1,5 +1,7 @@
-const uuidv4 = require("../sbc/utils/uuid/uuid")
+const { PACKING_MODES } = require("../lookups/packing-summary")
+
 function fillRawMaterialSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -48,6 +50,7 @@ function fillRawMaterialSchema(schema, filler) {
 }
 
 function fillRawMaterialAddSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -72,6 +75,7 @@ function fillRawMaterialAddSchema(schema, filler) {
 }
 
 function fillProductAddSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -93,6 +97,7 @@ function fillProductAddSchema(schema, filler) {
 }
 
 function fillWorkerMultipleSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -130,6 +135,7 @@ function fillWorkerMultipleSchema(schema, filler) {
 }
 
 function fillWorkerSingleSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -177,6 +183,7 @@ function fillWorkerSingleSchema(schema, filler) {
 }
 
 function fillPackageComesToEndSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -191,6 +198,7 @@ function fillPackageComesToEndSchema(schema, filler) {
 }
 
 function fillOrderReadySchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
     let { buttons } = updatedSchema;
 
@@ -300,6 +308,7 @@ function fillOrderReadySchema(schema, filler) {
 }
 
 function fillProductionStartedSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     const fillerKeysMap = Object.fromEntries(
@@ -363,6 +372,7 @@ function fillProductionStartedSchema(schema, filler) {
 }
 
 function fillVendorSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -386,6 +396,7 @@ function fillVendorSchema(schema, filler) {
 }
 
 function fillChamberListSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -399,6 +410,7 @@ function fillChamberListSchema(schema, filler) {
 }
 
 function fillMultipleChamberListSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -423,6 +435,7 @@ function fillMultipleChamberListSchema(schema, filler) {
 }
 
 function fillCountrySchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -442,6 +455,7 @@ function fillCountrySchema(schema, filler) {
 }
 
 function fillStateSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -462,6 +476,7 @@ function fillStateSchema(schema, filler) {
 }
 
 function fillCitySchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -482,6 +497,7 @@ function fillCitySchema(schema, filler) {
 }
 
 function fillLaneOccupiedSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -527,6 +543,7 @@ function fillLaneOccupiedSchema(schema, filler) {
 }
 
 function fillOrderShippedSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
     let { buttons } = updatedSchema
 
@@ -627,6 +644,7 @@ function fillOrderShippedSchema(schema, filler) {
 }
 
 function fillOrderReachedSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
     let { buttons } = updatedSchema
 
@@ -722,6 +740,7 @@ function fillOrderReachedSchema(schema, filler) {
 }
 
 function fillProductionCompletedSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -734,7 +753,7 @@ function fillProductionCompletedSchema(schema, filler) {
         // 🟦 DATA (Vendor detail rows)
         if (section.type === "data" && Array.isArray(section.data)) {
             for (const dataGroup of section.data) {
-                const fillerDetails = filler['data']['Production detail'];
+                const fillerDetails = filler?.data?.['Production detail'] || [];
 
                 if (!Array.isArray(fillerDetails)) continue;
 
@@ -766,79 +785,102 @@ function fillProductionCompletedSchema(schema, filler) {
 }
 
 function fillPackingSummarySchema(schema, filler, meta) {
-    const updatedSchema = JSON.parse(JSON.stringify(schema));
 
+    const updatedSchema = JSON.parse(JSON.stringify(schema));
+    const mode = meta?.mode ?? PACKING_MODES.EVENT;
+    const summary = filler?.summary ?? {
+        totalBags: 0,
+        totalPackets: 0,
+
+        eventsCount: 0,
+        lastEventAt: null,
+    };
     for (const section of updatedSchema.sections) {
 
         // 🟦 HEADER
         if (section.type === "header") {
-            section.data.title = `${filler?.product ?? ""} ${filler?.sku ?? ""}`.trim();
-            section.data.value = filler?.summary?.lastEventAt ?? "";
-            section.data.description = Array.isArray(filler?.rawMaterials)
-                ? filler.rawMaterials.join(", ")
-                : "";
+            section.data.title = `${filler.product ?? ""} ${filler.sku ?? ""}`.trim();
+            section.data.value = summary?.lastEventAt ?? "";
+            section.data.description = filler.rawMaterials?.join(", ") ?? "";
         }
 
         // 🟦 PACKING SUMMARY
         if (section.type === "packing-summary") {
-            section.data.rating = filler?.summary?.eventsCount ?? 0;
+            section.data.rating = summary?.eventsCount ?? 0;
 
-            // 🟢 EVENT MODE (default)
-            if (meta?.mode === "event" || !meta?.mode) {
-                section.data.title = "Packing activity";
-
+            // 🟥 EMPTY STATE
+            if ((summary?.eventsCount ?? 0) === 0) {
+                section.data.title = "No packing activity";
                 section.data.metrics = [
                     {
-                        id: "total-bags",
-                        label: "Total bags: ",
-                        value: filler?.summary?.totalBags ?? 0,
-                        unit: "bags",
-                        icon: "box",
-                    },
-                    {
-                        id: "total-packets",
-                        label: "Total packets: ",
-                        value: filler?.summary?.totalPackets ?? 0,
-                        unit: "packets",
-                        icon: "roll",
-                    },
-                ];
-            }
-
-            // 🟡 SKU MODE
-            if (meta?.mode === "sku") {
-                section.data.title = "Storage by chamber";
-
-                section.data.metrics = (filler?.chambers ?? []).map(c => ({
-                    id: c.id,
-                    label: c.name || "Chamber",
-                    value: c.bagsStored ?? 0,
-                    unit: "bags",
-                    icon: "box",
-                }));
-            }
-
-            // 🔵 PRODUCT MODE
-            if (meta?.mode === "product") {
-                section.data.title = "Product summary";
-
-                section.data.metrics = [
-                    {
-                        id: "events",
-                        label: "Packing events",
-                        value: filler?.summary?.eventsCount ?? 0,
-                        unit: "events",
+                        id: "empty",
+                        label: "No events today",
+                        value: 0,
                         icon: "clock",
                     },
                 ];
+                continue;
+            }
+            // console.log("filler", JSON.stringify(filler));
+
+            // 🟢 MODE HANDLING
+            switch (mode) {
+                case PACKING_MODES.EVENT:
+                    section.data.title = "Packing activity";
+                    section.data.metrics = [
+                        { id: "bags", label: "Total bags", value: summary.totalBags, unit: "bags", icon: "box" },
+                        { id: "packets", label: "Total packets", value: summary.totalPackets, unit: "packets", icon: "roll" },
+                    ];
+                    break;
+
+                case PACKING_MODES.SKU:
+                    console.log("filler.chambers", filler.chambers);
+                    
+                    section.data.title = "Storage by chamber";
+
+                    section.data.metrics = (filler.chambers || []).map((c, index) => ({
+                        id: String(c.id ?? index),
+                        label: `${c.chamberName} :`,
+                        type: "sku-summary",
+                        bags: c.totalBags,
+                        packets: c.totalPackets,
+                    }));
+                    break;
+
+                case PACKING_MODES.PRODUCT:
+                    section.data.title = "Product summary";
+
+                    section.data.metrics = [
+                        // 🔹 NORMAL METRIC (events)
+                        {
+                            id: "events",
+                            label: "Packing events",
+                            value: summary.eventsCount,
+                            unit: "events",
+                            icon: "clock",
+                        },
+
+                        // 🔹 SKU SUMMARY METRICS
+                        ...(filler.skuSummary || []).map((sku) => ({
+                            id: sku.sku,              
+                            label: sku.sku,        
+                            type: "sku-summary",      
+                            bags: sku.totalBags,     
+                            packets: sku.totalPackets
+                        })),
+                    ];
+                    break;
             }
         }
     }
 
+    console.log("updatedSchema", JSON.stringify(updatedSchema));
+    
     return updatedSchema;
 }
 
 function fillCalendarEventSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -872,6 +914,7 @@ function fillCalendarEventSchema(schema, filler) {
 }
 
 function fillScheduledDateEventSchema(schema, filler) {
+    filler = filler || {};
     const updatedSchema = JSON.parse(JSON.stringify(schema));
 
     for (const section of updatedSchema.sections) {
@@ -904,6 +947,66 @@ function fillScheduledDateEventSchema(schema, filler) {
     return updatedSchema;
 }
 
+function fillMultipleProductCardSchema(schema, filler) {
+    const updatedSchema = JSON.parse(JSON.stringify(schema));
+
+    const { packingEvents = [], chamberStocks = [] } = filler;
+
+    for (const section of updatedSchema.sections) {
+
+        // 🟦 HEADER
+        if (section.type === "title-with-details-cross") {
+            section.data.title = filler.title || "Choose products";
+        }
+        console.log("yes----", section.type);
+
+        // 🟦 MULTIPLE PRODUCT CARD
+        if (section.type === "multiple-product-card") {
+            const productMap = new Map();
+
+            for (const event of packingEvents) {
+                const key = `${event.product_name}::${event.sku_id}`;
+
+                if (!productMap.has(key)) {
+                    productMap.set(key, {
+                        id: key,
+                        product_name: event.product_name,
+                        rating: 5,
+                        image: null,
+                        description: "",
+                        isChecked: false,
+                        packages: [],
+                        chambers: [],
+                    });
+                }
+
+                const product = productMap.get(key);
+
+                product.packages.push({
+                    rawSize: `${event.packet.size}${event.packet.unit}`,
+                    size: Number(event.packet.size),
+                    unit: event.packet.unit,
+                    quantity: String(event.bags_produced),
+                });
+
+                event.storage?.forEach(s => {
+                    product.chambers.push({
+                        id: s.chamberId,
+                        quantity: String(s.bagsStored ?? 0),
+                        rating: "5",
+                    });
+                });
+            }
+
+            console.log("Array.from(productMap.values())", Array.from(productMap.values()));
+            
+
+            section.data = Array.from(productMap.values());
+        }
+    }
+
+    return updatedSchema;
+}
 
 module.exports = {
     fillRawMaterialSchema,
@@ -913,7 +1016,6 @@ module.exports = {
     fillWorkerSingleSchema,
     fillPackageComesToEndSchema,
     fillOrderReadySchema,
-    fillProductionStartedSchema,
     fillVendorSchema,
     fillChamberListSchema,
     fillMultipleChamberListSchema,
@@ -922,9 +1024,11 @@ module.exports = {
     fillOrderShippedSchema,
     fillStateSchema,
     fillCitySchema,
+    fillProductionStartedSchema,
     fillProductionCompletedSchema,
     fillOrderReachedSchema,
     fillCalendarEventSchema,
     fillScheduledDateEventSchema,
     fillPackingSummarySchema,
+    fillMultipleProductCardSchema,
 };

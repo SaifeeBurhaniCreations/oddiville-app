@@ -14,6 +14,7 @@ require("dotenv").config();
 const { uploadToS3, deleteFromS3 } = require("../services/s3Service");
 const upload = require("../middlewares/upload");
 const { extractKeyFromUrl } = require("../utils/fileUtils");
+const { linkStockToChambers } = require("../utils/stockUtils");
 
 router.get("/", async (req, res) => {
   try {
@@ -54,6 +55,17 @@ router.get("/item/:id", async (req, res) => {
   try {
     const item = await otherItemClient.findOne({
       where: { product_id: req.params.id },
+    });
+    if (!item) return res.status(404).json({ error: "Item not found" });
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.get("/stock/:id", async (req, res) => {
+  try {
+    const item = await stockClient.findOne({
+      where: { id: req.params.id },
     });
     if (!item) return res.status(404).json({ error: "Item not found" });
     res.json(item);
@@ -114,7 +126,10 @@ router.post("/", upload.any({ limits: { files: 10 } }), async (req, res) => {
       if (!match) continue;
 
       const index = Number(match[1]);
-      const uploaded = await uploadToS3({file, folder: "third-party-products"});
+      const uploaded = await uploadToS3({
+        file,
+        folder: "third-party-products",
+      });
 
       productImageMap[index] = uploaded.url;
     }
@@ -123,7 +138,7 @@ router.post("/", upload.any({ limits: { files: 10 } }), async (req, res) => {
     await sequelize.transaction(async (t) => {
       const client = await thirdPartyClient.create(
         { name, company, address, phone, products: [] },
-        { transaction: t }
+        { transaction: t },
       );
 
       const clientProductsArray = [];
@@ -164,7 +179,7 @@ router.post("/", upload.any({ limits: { files: 10 } }), async (req, res) => {
         });
 
         const chamberMap = new Map(
-          chamberInstances.map((c) => [String(c.id), c])
+          chamberInstances.map((c) => [String(c.id), c]),
         );
 
         /* ------------------ CAPACITY CHECK ------------------ */
@@ -209,14 +224,16 @@ router.post("/", upload.any({ limits: { files: 10 } }), async (req, res) => {
                 rating: c.rating,
               })),
             },
-            { transaction: t }
+            { transaction: t },
           );
         }
 
         const stored_quantity = normalizedIncoming.reduce(
           (s, c) => s + Math.max(0, c.add - c.sub),
-          0
+          0,
         );
+
+        await linkStockToChambers(stock.id, chamberIds, t, chamberClient);
 
         /* ------------------ SAVE CLIENT PRODUCT ------------------ */
         await otherItemClient.create(
@@ -231,7 +248,7 @@ router.post("/", upload.any({ limits: { files: 10 } }), async (req, res) => {
             sample_image: sampleImage,
             history: [],
           },
-          { transaction: t }
+          { transaction: t },
         );
 
         const freshStock = await stockClient.findByPk(stock.id, {
@@ -244,7 +261,7 @@ router.post("/", upload.any({ limits: { files: 10 } }), async (req, res) => {
 
       await client.update(
         { products: clientProductsArray.map((p) => p.id) },
-        { transaction: t }
+        { transaction: t },
       );
 
       clientPlainResult = {
@@ -271,8 +288,6 @@ router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
   let { chambers = [], add_quantity = 0, sub_quantity = 0 } = req.body;
 
   try {
-    // Parse chambers array from request body
-    // Expected format: chambers = [{ id: 'uuid', add_quantity: 500, sub_quantity: 0 }, ...]
     chambers = Array.isArray(chambers) ? chambers : [];
 
     await sequelize.transaction(async (t) => {
@@ -307,7 +322,7 @@ router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
       if (chamberIdsFromRequest.length === 0) {
         throw Object.assign(
           new Error("At least one chamber must be specified"),
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -319,7 +334,7 @@ router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
       });
 
       const chamberMap = new Map(
-        lockedChamberInstances.map((c) => [String(c.id), c])
+        lockedChamberInstances.map((c) => [String(c.id), c]),
       );
 
       // Validate capacity for additions
@@ -342,7 +357,7 @@ router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
 
         const capacity = Number(chamberInstance.capacity ?? 0);
         const currentStock = Number(
-          chamberInstance.current_stock ?? chamberInstance.stored_quantity ?? 0
+          chamberInstance.current_stock ?? chamberInstance.stored_quantity ?? 0,
         );
         const available = Math.max(0, capacity - currentStock);
 
@@ -360,16 +375,18 @@ router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
 
       if (insufficient.length > 0) {
         const err = new Error(
-          "Insufficient chamber capacity for requested quantities"
+          "Insufficient chamber capacity for requested quantities",
         );
         err.details = insufficient;
         throw err;
       }
 
-      // Update chamber quantities in stock
+
+      const requestMap = new Map(chambers.map(c => [c.id, c]));
+
       const updatedChambers = currentChambers.map((stockChamber) => {
         // Find matching chamber from request
-        const requestChamber = chambers.find((c) => c.id === stockChamber.id);
+        const requestChamber = requestMap.get(stockChamber.id);
 
         if (!requestChamber) return stockChamber;
 
@@ -377,9 +394,15 @@ router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
         const addQty = Number(requestChamber.add_quantity || 0);
         const subQty = Number(requestChamber.sub_quantity || 0);
 
+        if (subQty > quantity) {
+          throw Object.assign(
+            new Error("Insufficient stock to deduct from chamber"),
+            { status: 400 }
+          );
+        }
+
         quantity += addQty;
         quantity -= subQty;
-        quantity = Math.max(0, quantity);
 
         return {
           ...stockChamber,
@@ -390,17 +413,17 @@ router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
       // Update stock with new chamber quantities
       await stockClient.update(
         { chamber: updatedChambers },
-        { where: { id: stockRow.id }, transaction: t }
+        { where: { id: stockRow.id }, transaction: t },
       );
 
       // Calculate total add/sub quantities across all chambers
       const totalAddQuantity = chambers.reduce(
         (sum, c) => sum + Number(c.add_quantity || 0),
-        0
+        0,
       );
       const totalSubQuantity = chambers.reduce(
         (sum, c) => sum + Number(c.sub_quantity || 0),
-        0
+        0,
       );
 
       // Update item stored quantity
@@ -411,7 +434,7 @@ router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
 
       await otherItemClient.update(
         { stored_quantity },
-        { where: { id: othersItemId }, transaction: t }
+        { where: { id: othersItemId }, transaction: t },
       );
 
       // Create history entries for each chamber with activity
@@ -431,7 +454,7 @@ router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
               add_quantity: addQty, // Include add_quantity if your schema supports it
               remaining_quantity: stored_quantity,
             },
-            { transaction: t }
+            { transaction: t },
           );
         }
       }
@@ -441,14 +464,18 @@ router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
     const updatedStock = await stockClient.findByPk(stockIdParam, {
       raw: true,
     });
-    return res.status(200).json({
+    const updatedItem = await otherItemClient.findByPk(othersItemId, { raw: true });
+
+    return res.json({
       success: true,
-      data: updatedStock,
+      stock: updatedStock,
+      item: updatedItem,
     });
+
   } catch (error) {
     console.error(
       "Error during update chamberStock by id:",
-      error?.message || error
+      error?.message || error,
     );
 
     if (error && error.details) {
@@ -465,139 +492,90 @@ router.patch("/update-quantity/:othersItemId/:id", async (req, res) => {
   }
 });
 
-router.patch(
-  "/:id",
-  upload.any(), // 👈 supports 0, 1, or many files
-  async (req, res) => {
-    const { id } = req.params;
-    const t = await sequelize.transaction();
+router.patch("/:id", upload.any(), async (req, res) => {
+  const { id } = req.params;
+  const t = await sequelize.transaction();
 
-    try {
-      const client = await thirdPartyClient.findByPk(id, {
-        transaction: t,
-        lock: t.LOCK.UPDATE,
-      });
+  try {
+    const client = await thirdPartyClient.findByPk(id, {
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
 
-      if (!client) {
-        await t.rollback();
-        return res.status(404).json({ error: "Client not found" });
-      }
+    if (!client) {
+      await t.rollback();
+      return res.status(404).json({ error: "Client not found" });
+    }
 
-      /* =====================
+    /* =====================
          1️⃣ UPDATE BASIC DATA
          ===================== */
-      const { name, company, address, phone } = req.body;
+    const { name, company, address, phone } = req.body;
 
-      await client.update(
-        { name, company, address, phone },
-        { transaction: t }
-      );
+    await client.update({ name, company, address, phone }, { transaction: t });
 
-      /* =====================
+    /* =====================
          2️⃣ UPDATE PRODUCTS
          ===================== */
-      let products = [];
-      if (req.body.products) {
-        products = JSON.parse(req.body.products);
-      }
+    let products = [];
 
-      /* =====================
+    try {
+      if (req.body.products) {
+        products =
+          typeof req.body.products === "string"
+            ? JSON.parse(req.body.products)
+            : req.body.products;
+      }
+    } catch (e) {
+      return res.status(400).json({ error: "Invalid products payload" });
+    }
+    console.log("products", products);
+
+    /* =====================
          3️⃣ HANDLE IMAGES (OPTIONAL)
          ===================== */
-      if (req.files?.length) {
-        for (const file of req.files) {
-          const match = file.fieldname.match(
-            /^products\[(\d+)\]\[sample_image\]$/
-          );
-          if (!match) continue;
+    if (req.files?.length) {
+      for (const file of req.files) {
+        const match = file.fieldname.match(/^products\[(\d+)\]\[sample_image\]$/);
+        if (!match) continue;
 
-          const index = Number(match[1]);
+        const index = Number(match[1]);
+        const productId = products[index]?.id;
+        if (!productId) continue;
 
-          const existingItem = await otherItemClient.findOne({
-            where: { client_id: client.id },
-            transaction: t,
-            lock: t.LOCK.UPDATE,
-          });
+        const existingItem = await otherItemClient.findOne({
+          where: {
+            client_id: client.id,
+            product_id: productId,
+          },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
 
-          if (!existingItem) continue;
+        if (!existingItem) continue;
 
-          // delete old image
-          if (existingItem.sample_image) {
-            const oldKey = extractKeyFromUrl(existingItem.sample_image);
-            if (oldKey) await deleteFromS3(oldKey);
-          }
+        const uploaded = await uploadToS3({
+          file,
+          folder: "third-party-products",
+        });
 
-          const uploaded = await uploadToS3({file, folder: "third-party-products"});
-
-          await existingItem.update(
-            { sample_image: uploaded.url },
-            { transaction: t }
-          );
-        }
+        await existingItem.update(
+          { sample_image: uploaded.url },
+          { transaction: t }
+        );
       }
-
-      await t.commit();
-
-      return res.status(200).json({ message: "Updated successfully" });
-    } catch (err) {
-      await t.rollback();
-      console.error("PATCH error:", err);
-      return res.status(500).json({ error: err.message });
     }
+
+
+    await t.commit();
+
+    return res.status(200).json({ message: "Updated successfully" });
+  } catch (err) {
+    await t.rollback();
+    console.error("PATCH error:", err);
+    return res.status(500).json({ error: err.message });
   }
-);
-
-// router.patch(
-//   "/:id",
-//   async (req, res) => {
-//     const { id } = req.params;
-
-// if (!id || id === "undefined") {
-//   return res.status(400).json({
-//     error: "Client ID is required for update",
-//   });
-// }
-//     const t = await sequelize.transaction();
-//     try {
-//       const client = await thirdPartyClient.findByPk(id, {
-//         transaction: t,
-//         lock: t.LOCK.UPDATE,
-//       });
-
-//       if (!client) {
-//         await t.rollback();
-//         return res.status(404).json({ error: "Client not found" });
-//       }
-
-//       const { name, company, address, phone } = req.body;
-//       await client.update(
-//         { name, company, address, phone },
-//         { transaction: t }
-//       );
-
-//       let products;
-//       try {
-//         products = JSON.parse(req.body.products || "[]");
-//       } catch {
-//         await t.rollback();
-//         return res.status(400).json({ error: "Invalid products payload" });
-//       }
-
-//       if (!products.length) {
-//         await t.rollback();
-//         return res.status(400).json({ error: "No products provided" });
-//       }
-
-//       await t.commit();
-//       const freshClient = await thirdPartyClient.findByPk(client.id);
-//       return res.status(200).json(freshClient);
-//     } catch (err) {
-//       await t.rollback();
-//       console.error("DATA PATCH error:", err);
-//       return res.status(500).json({ error: err.message });
-//     }
-//   }
-// );
+});
 
 router.patch("/:id/image", upload.single("sample_image"), async (req, res) => {
   const t = await sequelize.transaction();
@@ -631,11 +609,14 @@ router.patch("/:id/image", upload.single("sample_image"), async (req, res) => {
 
     const oldImageUrl = existingItem.sample_image;
 
-    const uploaded = await uploadToS3({file: req.file, folder: "third-party-products"});
+    const uploaded = await uploadToS3({
+      file: req.file,
+      folder: "third-party-products",
+    });
 
     await existingItem.update(
       { sample_image: uploaded.url },
-      { transaction: t }
+      { transaction: t },
     );
 
     await t.commit();
@@ -727,7 +708,7 @@ router.delete("/:id", async (req, res) => {
               : [];
 
             const filteredItems = itemsArray.filter(
-              (pid) => pid !== String(stock.id)
+              (pid) => pid !== String(stock.id),
             );
 
             // If chamber has no more items, you can optionally clear its chamber stock,

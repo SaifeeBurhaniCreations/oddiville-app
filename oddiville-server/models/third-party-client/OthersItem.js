@@ -17,7 +17,14 @@ module.exports = (sequelize, Sequelize) => {
       sample_image: { type: Sequelize.STRING, allowNull: true },
       history: { type: Sequelize.ARRAY(Sequelize.UUID) },
     },
-    { timestamps: true }
+    {
+      timestamps: true,
+
+      indexes: [
+        { fields: ["client_id", "stored_date"] },
+        { fields: ["client_id", "dispatched_date"] },
+      ]
+    }
   );
 
   return OthersItem;

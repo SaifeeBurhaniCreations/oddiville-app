@@ -24,13 +24,21 @@ module.exports = (sequelize, Sequelize) => {
       description: { type: Sequelize.ARRAY(Sequelize.STRING), allowNull: true },
       category: Sequelize.ENUM("actionable", "informative", "today"),
       read: { type: Sequelize.BOOLEAN, defaultValue: false },
-      extraData: { type: Sequelize.JSON, allowNull: true },
+      extraData: { type: Sequelize.JSONB, allowNull: true },
       color: {
         type: Sequelize.ENUM("red", "yellow", "green"),
         allowNull: true,
       },
     },
-    { timestamps: true }
+    {
+      timestamps: true,
+
+      indexes: [
+        { fields: ["type"] },
+        { fields: ["identifier"] },
+        { fields: ["read", "createdAt"] },
+      ]
+    }
   );
 
   return Notifications;

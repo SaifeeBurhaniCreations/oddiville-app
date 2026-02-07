@@ -11,11 +11,18 @@ module.exports = (sequelize, Sequelize) => {
       description: { type: Sequelize.TEXT },
       production_id: { type: Sequelize.STRING },
       sample_image: {
-        type: Sequelize.JSON,
+        type: Sequelize.JSONB,
         allowNull: true,
       },
     },
-    { timestamps: true }
+    {
+      timestamps: true,
+
+      indexes: [
+        { fields: ["name"], unique: true },
+      ]
+    }
+
   );
 
   return Lanes;

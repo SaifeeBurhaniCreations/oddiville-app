@@ -59,7 +59,7 @@ module.exports = (sequelize, Sequelize) => {
       defaultValue: "pending"
     },
     packaging: {
-      type: Sequelize.JSON, 
+      type: Sequelize.JSONB, 
       allowNull: true
     },
     batch_code: {
@@ -72,23 +72,29 @@ module.exports = (sequelize, Sequelize) => {
       allowNull: true
     },
     sample_images: {
-      type: Sequelize.JSON, 
+      type: Sequelize.JSONB, 
       allowNull: true
     },
   }, {
     timestamps: true,
-  });
+
+    indexes: [
+      { fields: ["raw_material_order_id"] }, // FK join
+      { fields: ["status"] },
+      { fields: ["product_name"] },
+
+      { fields: ["status", "start_time"] }, // active dashboard
+
+      { fields: ["batch_code"], unique: true },
+    ]
+  }
+  );
 
   Production.associate = (models) => {
     models.Production.belongsTo(models.RawMaterialOrder, {
       foreignKey: "raw_material_order_id",
       targetKey: "id", 
     });
-
-    // Production.hasOne(models.Warehouse, {
-    //   foreignKey: 'production_id',
-    //   as: 'warehouse'
-    // });
   };
 
   return Production;

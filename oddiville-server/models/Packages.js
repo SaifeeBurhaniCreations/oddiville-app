@@ -3,15 +3,15 @@ module.exports = (sequelize, Sequelize) => {
         id: { type: Sequelize.UUID, defaultValue: Sequelize.UUIDV4, primaryKey: true },
         product_name: { type: Sequelize.STRING, allowNull: false },
         image: {
-      type: Sequelize.JSON,
-      allowNull: true
-    },
+            type: Sequelize.JSONB,
+            allowNull: true,
+        },
         package_image: {
-      type: Sequelize.JSON,
-      allowNull: true
-    },
+            type: Sequelize.JSONB,
+            allowNull: true,
+        },
         types: {
-            type: Sequelize.JSON,
+            type: Sequelize.JSONB,
             allowNull: true,
             validate: {
                 isValidTypeDetails(value) {
@@ -37,14 +37,34 @@ module.exports = (sequelize, Sequelize) => {
                     }
                 }
             }
-            
+
         },
         raw_materials: {
             type: Sequelize.ARRAY(Sequelize.STRING),
             allowNull: false,
         },
         chamber_name: { type: Sequelize.STRING, allowNull: false },
-    }, { timestamps: true });
+    },
+        {
+            timestamps: true,
+
+            indexes: [
+                { fields: ["product_name"] },
+                { fields: ["chamber_name"] },
+                {
+                    unique: true,
+                    fields: ["product_name", "chamber_name"],
+                },
+            ],
+            hooks: {
+                async beforeDestroy(pkg) {
+                    const { deleteFromS3 } = require("../services/s3Service");
+
+                    if (pkg.image?.key) await deleteFromS3(pkg.image.key);
+                    if (pkg.package_image?.key) await deleteFromS3(pkg.package_image.key);
+                }
+            }
+        });
 
     return Packages;
 }

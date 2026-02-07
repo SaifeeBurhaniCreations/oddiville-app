@@ -15,10 +15,6 @@ module.exports = (sequelize, Sequelize) => {
         type: Sequelize.STRING,
         allowNull: true,
       },
-      // postal_code: {
-      //   type: Sequelize.INTEGER,
-      //   allowNull: true,
-      // },
       state: {
         type: Sequelize.STRING,
         allowNull: true,
@@ -48,27 +44,20 @@ module.exports = (sequelize, Sequelize) => {
         allowNull: true,
       },
       products: {
-        type: Sequelize.JSON,
+        type: Sequelize.JSONB,
         allowNull: false,
       },
-      // packages: {
-      //   type: Sequelize.JSON,
-      //   allowNull: false,
-      // },
       sample_images: {
         type: Sequelize.ARRAY(Sequelize.STRING),
         allowNull: true,
       },
-      // product_name: { type: Sequelize.STRING,
-      //   allowNull: false,
-      // },
       amount: {
         type: Sequelize.FLOAT,
         allowNull: true,
         defaultValue: 0,
       },
       truck_details: {
-        type: Sequelize.JSON,
+        type: Sequelize.JSONB,
         allowNull: true,
         validate: {
           isValidTruckDetails(value) {
@@ -106,7 +95,14 @@ module.exports = (sequelize, Sequelize) => {
     },
     {
       timestamps: true,
+
+      indexes: [
+        { fields: ["createdAt"] },
+        { fields: ["status", "dispatch_date"] },
+        { fields: ["city", "status"] },
+      ]
     }
+
   );
 
   return DispatchOrder;

@@ -6,7 +6,10 @@ module.exports = (sequelize, Sequelize) => {
         address: { type: Sequelize.STRING, allowNull: true },
         phone: { type: Sequelize.STRING, allowNull: false },
         products: { type: Sequelize.ARRAY(Sequelize.UUID) },
-    }, { timestamps: true });
+    }, {
+        timestamps: true,
+    }
+);
 
     return ThirdPartyClient;
 }

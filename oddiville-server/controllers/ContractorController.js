@@ -1,13 +1,24 @@
 const router = require("express").Router();
 const { Contractor } = require("../models");
 const {dispatchAndSendNotification} = require("../utils/dispatchAndSendNotification");
-const { Op, fn, col, json } = require("sequelize");
+const { Op, fn, col } = require("sequelize");
+const { isValidUUID } = require("../utils/auth");
+
+const normalize = s => s.trim().toLowerCase();
+
+router.get("/all", async (req, res) => {
+  try {
+    const contractors = await Contractor.findAll();
+    return res.status(200).json(contractors);
+  } catch (error) {
+    console.error("Error fetching contractors:", error.message);
+    return res.status(500).json({ error: "Internal server error." });
+  }
+});
 
 router.post("/create", async (req, res) => {
   try {
     const contractors = req.body;
-
-    // ============ BASIC TOP-LEVEL VALIDATION ============
     if (!Array.isArray(contractors) || contractors.length === 0) {
       return res.status(400).json({
         error: "Contractors array is required and cannot be empty."
@@ -31,7 +42,7 @@ router.post("/create", async (req, res) => {
         });
       }
 
-      normalizedNames.push(contractor.name.trim().toLowerCase());
+      normalizedNames.push(normalize(contractor.name));
 
       if (!Array.isArray(contractor.work_location)) {
         return res.status(400).json({
@@ -66,7 +77,10 @@ router.post("/create", async (req, res) => {
 
     if (uniqueNames.length > 0) {
       const existing = await Contractor.findAll({
-        where: sequelize.where(fn("lower", col("name")), { [Op.in]: uniqueNames })
+        where: sequelize.where(
+          fn("lower", fn("trim", col("name"))),
+          { [Op.in]: uniqueNames }
+        )
       });
 
       if (existing.length > 0) {
@@ -170,27 +184,18 @@ router.post("/create", async (req, res) => {
   }
 });
 
-
-router.get("/", async (req, res) => {
-    try {
-        const contractors = await Contractor.findAll();
-        return res.status(200).json(contractors);
-    } catch (error) {
-        console.error("Error fetching contractors:", error.message);
-        return res.status(500).json({ error: "Internal server error." });
-    }
-});
-
 // GET contractor by ID
 router.get("/:id", async (req, res) => {
-    try {
-        const contractor = await Contractor.findByPk(req.params.id);
-        if (!contractor) return res.status(404).json({ error: "Contractor not found." });
-        return res.status(200).json(contractor);
-    } catch (error) {
-        console.error("Error fetching contractor:", error.message);
-        return res.status(500).json({ error: "Internal server error." });
-    }
+  console.log("req.params.id", req.params.id);
+  
+  if (!isValidUUID(req.params.id)) {
+    return res.status(404).json({ error: "Invalid contractor id" });
+  }
+
+  const contractor = await Contractor.findByPk(req.params.id);
+  if (!contractor) return res.status(404).json({ error: "Contractor not found." });
+
+  return res.json(contractor);
 });
 
 // UPDATE contractor by ID
@@ -202,7 +207,7 @@ router.put("/:id", async (req, res) => {
 
         // Only update provided fields
         const { name, male_count, female_count, work_location } = req.body;
-        if (name !== undefined) contractor.name = name.trim();
+        if (name !== undefined) contractor.name = normalize(name);
         if (male_count !== undefined) contractor.male_count = male_count;
         if (female_count !== undefined) contractor.female_count = female_count;
         if (work_location !== undefined) contractor.work_location = work_location;
