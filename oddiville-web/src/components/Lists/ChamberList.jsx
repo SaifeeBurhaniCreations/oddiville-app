@@ -12,13 +12,14 @@ const ChamberList = () => {
     setChamberToDelete,
     handleDelete,
   } = useChamberManagement();
-  if (isInitialLoading) {
+  if (isInitialLoading && !categories.length === 0) {
     return (
       <div className="text-center py-5">
         <Spinner />
         <p className="mt-2 text-secondary">Loading existing chambers...</p>
       </div>
     );
+    
   }
 
   if (!categories || categories.length === 0) {

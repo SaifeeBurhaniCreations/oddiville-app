@@ -10,9 +10,8 @@ export function useThirdPartyProducts(options = {}) {
   const defaults = {
     enabled: true,
     staleTime: 1000 * 60 * 5, // 5 minutes
-    cacheTime: 1000 * 60 * 10, // 10 minutes
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
     retry: 1,
   };
   const merged = { ...defaults, ...options };
