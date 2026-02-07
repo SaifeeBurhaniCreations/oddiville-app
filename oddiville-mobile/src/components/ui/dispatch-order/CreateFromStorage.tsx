@@ -38,12 +38,13 @@ import {
   setCitySearched,
   setStateSearched,
 } from "@/src/redux/slices/bottomsheet/location.slice";
-import { usePackedItems } from "@/src/hooks/packedItem";
 import AddProductsForSell from "../AddProductsForSell";
 import { useAuth } from "@/src/context/AuthContext";
 import { resolveAccess } from "@/src/utils/policiesUtils";
 import { removeProduct } from "@/src/redux/slices/multiple-product.slice";
-import imageFallback from "@/src/assets/images/fallback/chamber-stock-fallback.png";
+import { usePackedItems } from "@/src/hooks/packing/getPackedItemsEvent";
+import { useToast } from "@/src/context/ToastContext";
+import { UIPackingItem } from "@/src/types/domain/packing/packing.types";
 
 type ControlledFormProps<T> = {
   values: T;
@@ -55,6 +56,46 @@ export interface SelectedRawMaterial {
   name: string;
 }
 
+type PackingStorageItem = {
+  chamberId: string;
+  chamberName?: string;
+  bagsStored?: number;
+};
+
+
+const normalizePackingEvents = (events: any[]): UIPackingItem[] => {
+  if (!Array.isArray(events)) return [];
+
+  return events.map((e) => {
+    const totalBagsAvailable = (e.storage as PackingStorageItem[]).reduce(
+      (sum: number, s: PackingStorageItem) =>
+        sum + Number(s.bagsStored || 0),
+      0
+    );
+
+    const rm = Object.values(e.rm_consumption ?? {})[0] as any;
+    const rating =
+      rm && typeof rm === "object"
+        ? rm[Object.keys(rm)[0]]?.rating ?? 5
+        : 5;
+
+    return {
+      productName: e.product_name,
+      rating,
+      size: Number(e.packet.size),
+      unit: e.packet.unit,
+      totalBagsAvailable,
+      chambers: (e.storage as PackingStorageItem[]).map(
+        (s: PackingStorageItem) => ({
+          chamberId: s.chamberId,
+          chamberName: s.chamberName,
+          bagsAvailable: Number(s.bagsStored || 0),
+        })
+      ),
+    };
+  });
+};
+
 const CreateFromStorage = ({
   handleGetStep,
   controlledForm,
@@ -63,6 +104,7 @@ const CreateFromStorage = ({
   controlledForm: ControlledFormProps<OrderStorageForm>;
 }) => {
   const dispatch = useDispatch();
+  const toast = useToast();
   const {
     countries: selectedCountry,
     states: selectedState,
@@ -70,114 +112,37 @@ const CreateFromStorage = ({
   } = useSelector((state: RootState) => state.location);
 
   const selectedProducts = useSelector(
-    (state: RootState) => state.multipleProduct.selectedProducts
+    (state: RootState) => state.multipleProduct.selectedProducts,
   );
 
-  const { data: packedItemsData, isFetching: packedItemsLoading } =
+  const { data: packedItemsDataNew, isFetching: packedItemsLoadingNew } =
     usePackedItems();
-
-  const filteredPackedItemsData = useMemo(() => {
-    // console.log("packedItemsData", JSON.stringify(packedItemsData));
-
-    return packedItemsData?.map((item) => ({
-      ...item,
-      chamber: item.chamber.filter(
-        (chamber) => !chamber.id.toLowerCase().includes("dry")
-      ),
-    }));
-  }, [packedItemsData]);
 
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const [openTab, setOpenTab] = useState<string | null>(null);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastType, setToastType] = useState<"success" | "error" | "info">(
-    "info"
-  );
-  const [toastMessage, setToastMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const { values, setField, errors } = controlledForm;
 
-  const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setToastVisible(true);
-  };
-useEffect(() => {
-  if (values.products?.length && openTab === null) {
-    const last = values.products[values.products.length - 1];
-    setOpenTab(last.id);
-  }
-}, [values.products]);
+  const packingItems = useMemo(() => {
+    return normalizePackingEvents(packedItemsDataNew || []);
+  }, [packedItemsDataNew]);
+
+  useEffect(() => {
+    if (values.products?.length && openTab === null) {
+      const last = values.products[values.products.length - 1];
+      setOpenTab(last.id);
+    }
+  }, [values.products]);
 
   const handleToggleToast = () => {
-    showToast(
-      "error",
-      "Entered quantity exceeds available quantity in chamber!"
-    );
+    toast.error("Entered quantity exceeds available quantity in chamber!");
   };
-  // console.log("filteredPackedItemsData", JSON.stringify(filteredPackedItemsData));
 
- async function handleToggleProductBottomSheet() {
-    const updatedPackedItemsData = filteredPackedItemsData?.map((item) => ({
-      ...item,
-      packages: item.packages?.map((pkg) => ({
-        ...pkg,
-        quantity: String(pkg.quantity),
-        size: Number(pkg.size),
-        chambers: item.chamber,
-      })),
-    }));
-
-    // const ADD_PRODUCTS = {
-    //   sections: [
-    //     {
-    //       type: "title-with-details-cross",
-    //       data: {
-    //         title: "Choose Products",
-    //       },
-    //     },
-    //     {
-    //       type: "search",
-    //       data: {
-    //         searchTerm: "",
-    //         placeholder: "Search Product",
-    //         searchType: "add-product",
-    //       },
-    //     },
-    //     {
-    //       type: "multiple-product-card",
-    //       data: updatedPackedItemsData?.map((item) => {
-
-    //             return {
-    //               product_name: item.product_name,
-    //               id: item.id,
-    //               rating: 5,
-    //               image:
-    //                 typeof item.image === "string" && item.image.length > 0 && item.image !== null
-    //                   ? item.image
-    //                   : imageFallback,
-    //               description: "",
-    //               isChecked: false,
-    //               packages: item.packages,
-    //               chambers: item.chamber,
-    //             };
-    //           }),
-    //     },
-    //   ],
-    //   buttons: [
-    //     { text: 'Cancel', variant: 'outline', color: 'green', alignment: "half", disabled: false, actionKey: 'cancel' },
-    //     { text: 'Add', variant: 'fill', color: 'green', alignment: "half", disabled: false, actionKey: 'add-dispatch-product' },
-    // ],
-    // };
-
-    // setIsLoading(true);
-    // await validateAndSetData("Abc1", "multiple-product-card", ADD_PRODUCTS);
-    // setIsLoading(false);
-   setIsLoading(true);
-   await validateAndSetData("Abc1", "multiple-product-card");
-   setIsLoading(false);
-
+  async function handleToggleProductBottomSheet() {
+    setIsLoading(true);
+    await validateAndSetData("Abc1", "multiple-product-card");
+    setIsLoading(false);
   }
 
   async function handleToggleCountryBottomSheet() {
@@ -201,14 +166,14 @@ useEffect(() => {
     dispatch(setStateSearched(""));
     await validateAndSetData(
       `${selectedState.isoCode}:${selectedCountry.isoCode}`,
-      "city"
+      "city",
     );
     setIsLoading(false);
   }
 
-const handleRemoveProduct = (productId: string) => {
-  dispatch(removeProduct(productId));
-};
+  const handleRemoveProduct = (productId: string) => {
+    dispatch(removeProduct(productId));
+  };
 
   const { role, policies } = useAuth();
   const safeRole = role ?? "guest";
@@ -358,23 +323,27 @@ const handleRemoveProduct = (productId: string) => {
   />
 ))} */}
 
-            {values.products?.length > 0 ?
-            values.products?.map((value, index) => {
-              
-              return (
-                <AddProductsForSell
-                  key={value.id ?? index}
-                  isOpen={openTab === value.id}
-                  onPress={() => setOpenTab(value.id)}
-                  isFirst={index === 0}
-                  setToast={handleToggleToast}
-                  product={value}
-                  controlledForm={{ values, setField, errors }}
-                  onRemove={() => handleRemoveProduct(value.id)} 
-                />
-              )
-            })
-             : (
+            {values.products?.length > 0 ? (
+              values.products?.map((value, index) => {
+                const productPackingItems = packingItems.filter(
+                  (p) => p.productName === value.product_name
+                );
+
+                return (
+                  <AddProductsForSell
+                    key={value.id ?? index}
+                    isOpen={openTab === value.id}
+                    onPress={() => setOpenTab(value.id)}
+                    isFirst={index === 0}
+                    setToast={handleToggleToast}
+                    product={value}
+                    packingItems={productPackingItems}
+                    controlledForm={{ values, setField, errors }}
+                    onRemove={() => handleRemoveProduct(value.id)}
+                  />
+                );
+              })
+            ) : (
               <View
                 style={[
                   styles.Vstack,
@@ -387,8 +356,7 @@ const handleRemoveProduct = (productId: string) => {
                   image={noProductImage}
                 />
               </View>
-            )
-            }
+            )}
           </View>
         </View>
       );
@@ -404,15 +372,9 @@ const handleRemoveProduct = (productId: string) => {
           </View>
           {renderComponent()}
         </View>
-        <DetailsToast
-          type={toastType}
-          message={toastMessage}
-          visible={toastVisible}
-          onHide={() => setToastVisible(false)}
-        />
         <BottomSheet color="green" />
       </ScrollView>
-      {(isLoading || packedItemsLoading || packedItemsLoading) && (
+      {(isLoading || packedItemsLoadingNew) && (
         <View style={styles.overlay}>
           <View style={styles.loaderContainer}>
             <Loader />

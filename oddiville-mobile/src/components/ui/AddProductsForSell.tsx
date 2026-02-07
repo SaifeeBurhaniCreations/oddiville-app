@@ -4,7 +4,6 @@ import {
 } from "@/src/redux/slices/multiple-product.slice";
 import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
 import { useDispatch, useSelector } from "react-redux";
-import { useCallback, useState } from "react";
 import { RootState } from "@/src/redux/store";
 import { DataAccordianEnum, IconRatingProps } from "@/src/types";
 import EmptyState from "./EmptyState";
@@ -27,13 +26,12 @@ import FormField from "@/src/sbc/form/FormField";
 
 import noProductImage from "@/src/assets/images/fallback/raw-material-fallback.png";
 import { mapPackageIcon } from "@/src/utils/common";
-import DetailsToast from "./DetailsToast";
 import Select from "./Select";
 import { useChamber } from "@/src/hooks/useChambers";
 import {
-  setPacketsPerBag,
   setUsedBags,
 } from "@/src/redux/slices/used-dispatch.slice";
+import { PackingEvent, PackingStorageItem } from "@/src/types/domain/packing/packing.types";
 
 type ControlledFormProps<T> = {
   values: T;
@@ -51,18 +49,10 @@ type UIPackage = {
   unit: "kg" | "gm" | "qn" | null;
 };
 
-type PacketsPerLooseBagState = {
-  [productId: string]: {
-    [packageKey: string]: number;
-  };
-};
-
 const getPackageKey = (pkg: { size: number; unit: string | null }) =>
   `${pkg.size}-${pkg.unit}`;
 
 const normalizeRating = (r: any) => Number(r);
-
-const normalizeQty = (q: any) => Number(q) || 0;
 
 const AddProductsForSell = ({
   product,
@@ -85,13 +75,6 @@ const AddProductsForSell = ({
 }) => {
   const dispatch = useDispatch();
   const { data: globalChambers } = useChamber();
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastType, setToastType] = useState<"success" | "error" | "info">(
-    "info"
-  );
-  const [toastMessage, setToastMessage] = useState("");
-  const [packetsByProduct, setPacketsByProduct] =
-    useState<PacketsPerLooseBagState>({});
   const usedStock = useSelector((s: RootState) => s.usedDispatchPkg);
 
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
@@ -111,29 +94,48 @@ const AddProductsForSell = ({
 
   const selectedRating = ratingForThisRM.rating;
 
-  const packagesWithChambers = selectedPackages.map((pkg) => {
-    const chambersForPkg = product.chambers.filter((ch) => {
-      return (
-        normalizeRating(ch.rating) === normalizeRating(selectedRating) &&
-        normalizeQty(ch.quantity) > 0
-      );
-    });
+  const packingEvents =
+  (product as MultipleProductType & {
+    packingEvents?: PackingEvent[];
+  }).packingEvents ?? [];
 
-    return {
-      ...pkg,
-      chambers: chambersForPkg,
-    };
-  });
+console.log("selectedPackages", selectedPackages);
+
+const packagesWithChambers = selectedPackages.map((pkg) => {
+const packingForPkg = packingEvents.filter(
+  (e: PackingEvent) =>
+    Number(e.packet.size) === Number(pkg.size) &&
+    e.packet.unit === pkg.unit &&
+    normalizeRating(
+      Object.values(e.rm_consumption ?? {})[0]?.[
+        Object.keys(Object.values(e.rm_consumption ?? {})[0] ?? {})[0]
+      ]?.rating
+    ) === normalizeRating(selectedRating)
+);
+
+const chambersForPkg = packingForPkg.flatMap(
+  (e: PackingEvent) =>
+    e.storage
+      .filter((s: PackingStorageItem) => Number(s.bagsStored) > 0)
+      .map((s: PackingStorageItem) => ({
+        id: s.chamberId,
+        quantity: s.bagsStored,
+      }))
+);
+
+  return {
+    ...pkg,
+    chambers: chambersForPkg,
+   count: chambersForPkg.reduce(
+  (sum: number, c: { quantity: number }) => sum + c.quantity,
+  0
+),
+  };
+});
 
   const shouldShowEmptyState = packagesWithChambers.every(
     (pkg) => pkg.chambers.length === 0
   );
-
-  const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setToastVisible(true);
-  };
 
   const RatingIconMap: Record<number, React.FC<IconRatingProps>> = {
     5: FiveStarIcon,
@@ -164,38 +166,14 @@ const AddProductsForSell = ({
       {
         type: "package-size-choose-list",
         data: {
-          list: product.packages?.map((pack) => {
-            const unit = pack.unit?.toLowerCase();
-            const packWeight = Number(pack.size);
-            let grams = Number(packWeight);
-
-            switch (unit) {
-              case "kg":
-                grams = Number(packWeight) * 1000;
-                break;
-              case "gm":
-                grams = Number(packWeight);
-                break;
-              default:
-                return null;
-            }
-
-            let icon = "paper-roll";
-
-            if (grams <= 250) {
-              icon = "paper-roll";
-            } else if (grams <= 500) {
-              icon = "bag";
-            } else {
-              icon = "big-bag";
-            }
-            return {
-              name: `${packWeight} ${unit}`,
-              icon: icon,
-              count: Number(pack.quantity),
-              isChecked: false,
-            };
-          }),
+          list: packagesWithChambers
+                .filter((p) => p.chambers.length > 0)
+                .map((p) => ({
+                  name: p.rawSize,
+                  icon: p.icon,
+                  count: p.count,
+                  isChecked: false,
+                })),
           source: "dispatch",
           productId: product.id,
         },
@@ -212,37 +190,6 @@ const AddProductsForSell = ({
       },
     ],
   };
-
-  const handleRemovePackage = (pkg: UIPackage) => {
-    const pkgKey = getPackageKey(pkg);
-
-    setPacketsByProduct((prev) => {
-      const next = { ...(prev[product.id] ?? {}) };
-      delete next[pkgKey];
-
-      return {
-        ...prev,
-        [product.id]: next,
-      };
-    });
-  };
-
-  const handlePackageQuantityChange = useCallback(
-    (pkgKey: string, text: string) => {
-      const numeric = Number(text.replace(/[^0-9]/g, ""));
-
-      setPacketsByProduct((prev) => ({
-        ...prev,
-        [product.id]: {
-          ...(prev[product.id] ?? {}),
-          [pkgKey]: numeric,
-        },
-      }));
-    },
-    [product.id]
-  );
-
-  // console.log("packagesWithChambers", JSON.stringify(packagesWithChambers));
 
   return (
     <ScrollView key={product?.product_name}>
@@ -366,40 +313,7 @@ const AddProductsForSell = ({
                           </B1>
                         </View>
 
-                        <View style={{ flex: 1 }}>
-                          <FormField
-                            name={`packages.${pkgIndex}.quantity`}
-                            form={{ values, setField, errors }}
-                          >
-                            {({ value, onChange, error }) => (
-                              <Input
-                                placeholder="Per loose bag"
-                                keyboardType="numeric"
-                                mask="addon"
-                                addonText="Packets"
-                                post
-                                value={String(
-                                  usedStock[product.id]?.[pkgKey]
-                                    ?.packetsPerBag ?? ""
-                                )}
-                                onChangeText={(text: string) => {
-                                  dispatch(
-                                    setPacketsPerBag({
-                                      productId: product.id,
-                                      packageKey: pkgKey,
-                                      packetsPerBag: Number(text) || 0,
-                                    })
-                                  );
-                                  handlePackageQuantityChange(pkgKey, text);
-                                  onChange(text);
-                                }}
-                                error={error}
-                              />
-                            )}
-                          </FormField>
-                        </View>
-
-                        <Pressable onPress={() => handleRemovePackage(pkg)}>
+                        <Pressable>
                           <TrashIcon color={getColor("green")} />
                         </Pressable>
                       </View>
@@ -508,12 +422,6 @@ const AddProductsForSell = ({
             </View>
           </View>
         )}
-        <DetailsToast
-          type={toastType}
-          message={toastMessage}
-          visible={toastVisible}
-          onHide={() => setToastVisible(false)}
-        />
       </View>
     </ScrollView>
   );

@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useMemoizedStyle } from "@/src/hooks/useMemoizedStyle";
 import Loader from "./Loader";
-import defaultFallbackImg from "@/src/assets/images/fallback//raw-material-fallback.png";
+import defaultFallbackImg from "@/src/assets/images/fallback/colourful/product.png";
 
 export type CustomImageProps = {
   src?: ImageSourcePropType | string | null;

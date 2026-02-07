@@ -14,7 +14,7 @@ import {
   multipleProductCardDataProps,
   multipleProductCardProps,
 } from "@/src/types";
-import PackedItemFallbackImg from "@/src/assets/images/fallback//raw-material-fallback.png";
+import PackedItemFallbackImg from "@/src/assets/images/fallback/colourful/product.png";
 
 const ChooseProductCardComponent: React.FC<multipleProductCardProps> = ({
   data,
@@ -48,6 +48,7 @@ const ChooseProductCardComponent: React.FC<multipleProductCardProps> = ({
   return (
     <View style={styles.listContainer}>
       {data.map((item) => {
+        
         const { image, isCustomImage } = getImageSource({
           image: item.image,
           options: {

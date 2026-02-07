@@ -515,28 +515,33 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
         // goTo("Packaging", { id: meta.id });
       }
     },
-
- "export-open": async () => {
-  const uri = metaBottomSheet?.data?.fileUri;
-  if (!uri) return;
-
-  try {
-    const contentUri = await FileSystem.getContentUriAsync(uri);
-
-    await IntentLauncher.startActivityAsync(
-      "android.intent.action.VIEW",
-      {
-        data: contentUri,
-        flags: 1,
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "add-package-by-product": () => {
+      if (meta?.id) {
       }
-    );
-  } catch (e) {
-    toast.info("Install Google Sheets or Excel to preview files directly");
+      
+    },
 
-    await Sharing.shareAsync(uri);
-  }
-},
+    "export-open": async () => {
+      const uri = metaBottomSheet?.data?.fileUri;
+      if (!uri) return;
+
+      try {
+        const contentUri = await FileSystem.getContentUriAsync(uri);
+
+        await IntentLauncher.startActivityAsync(
+          "android.intent.action.VIEW",
+          {
+            data: contentUri,
+            flags: 1,
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          }
+        );
+      } catch (e) {
+        toast.info("Install Google Sheets or Excel to preview files directly");
+
+        await Sharing.shareAsync(uri);
+      }
+    },
 
     "export-share": async () => {
       const uri = metaBottomSheet?.data?.fileUri;

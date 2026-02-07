@@ -183,3 +183,37 @@ export type ApiPackedItem = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type UIPackingItem = {
+  productName: string;
+  rating: number;
+  size: number;
+  unit: "gm" | "kg";
+  totalBagsAvailable: number;
+  chambers: {
+    chamberId: string;
+    chamberName?: string;
+    bagsAvailable: number;
+  }[];
+};
+
+export type PackingStorageItem = {
+  chamberId: string;
+  bagsStored: number;
+};
+
+type PackingRMUsage = {
+  rating: number;
+};
+
+export type PackingEvent = {
+  packet: {
+    size: number;
+    unit: string;
+  };
+  storage: PackingStorageItem[];
+  rm_consumption: Record<
+    string,
+    Record<string, PackingRMUsage>
+  >;
+};

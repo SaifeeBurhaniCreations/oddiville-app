@@ -104,30 +104,34 @@ export const formatTimeDifference = (startDate: Date, endDate: Date): string => 
 
 export type PackageIconInput = {
   size: number | string;
-  unit?: "kg" | "gm" | "unit";
+  unit?: "kg" | "gm" | "qn" | "unit";
 };
 
 export const mapPackageIcon = (item: PackageIconInput) => {
-    const size = Number(item.size);
-    if (Number.isNaN(size)) return null;
+  const size = Number(item.size);
+  if (Number.isNaN(size)) return null;
 
-    let grams = size;
+  let grams = size;
 
-    switch (item.unit) {
-        case "kg":
-            grams = size * 1000;
-            break;
-        case "gm":
-            grams = size;
-            break;
-        default:
-            return null;
-    }
+  switch (item.unit) {
+    case "kg":
+      grams = size * 1000;
+      break;
+    case "gm":
+      grams = size;
+      break;
+    case "qn":
+      grams = size * 100_000; // 1 quintal = 100kg
+      break;
+    default:
+      return null;
+  }
 
-    if (grams <= 250) return PaperRollIcon;
-    if (grams <= 500) return BagIcon;
-    return BigBagIcon;
+  if (grams <= 250) return PaperRollIcon;
+  if (grams <= 500) return BagIcon;
+  return BigBagIcon;
 };
+
 
 export const toPackageIconInput = (
   pkg: Pick<PackageItem, "size" | "unit">,

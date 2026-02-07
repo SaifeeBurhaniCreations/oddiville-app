@@ -8,7 +8,7 @@ import FarmhouseBg from '@/src/components/icons/card-bg/Farmhouse-bg';
 import { BottomSheetSchemaKey } from '../schemas/BottomSheetSchema';
 import chamberDefaultImg from "@/src/assets/images/warehouse/chamber-default.png"
 import productionDefaultImg from "@/src/assets/images/fallback/colourful/product.png"
-import packedDefaultImg from "@/src/assets/images/fallback/raw-material-fallback.png"
+import packedDefaultImg from "@/src/assets/images/fallback/colourful/product.png"
 
 export function chunkArray<T,>(array: T[], size: number): T[][] {
   const result = [];

@@ -4,7 +4,7 @@ import { getColor } from "@/src/constants/colors";
 import { B2, H5 } from "../typography/Typography";
 import { formatWeight } from "@/src/utils/common";
 import CustomImage from "./CustomImage";
-import noProductImage from '@/src/assets/images/fallback/raw-material-fallback.png';
+import noProductImage from '@/src/assets/images/fallback/colourful/product.png';
 
 const ItemsRepeater = ({
   description,

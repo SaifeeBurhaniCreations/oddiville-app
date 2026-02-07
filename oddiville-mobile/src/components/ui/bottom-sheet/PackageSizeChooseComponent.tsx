@@ -7,7 +7,7 @@ import { SubHeading } from "../../typography/Typography";
 import Checkbox from "../Checkbox";
 import { RootState } from "@/src/redux/store";
 import {
-  packageSize,
+  PackageSize,
   togglePackageSize,
 } from "@/src/redux/slices/bottomsheet/package-size.slice";
 import { PackageSizeChooseComponentProps } from "@/src/types";
@@ -94,15 +94,16 @@ const PackageSizeChooseComponent = ({
                   size: parsed.size,
                   rawSize: parsed.rawSize,
                   unit: parsed.unit,
-                } as packageSize);
+                } as PackageSize);
+console.log("data.source", data.source);
 
           const isSelected =
             data.source === "dispatch"
               ? (selected as DispatchPackageSize[]).some(
                   (s) => s.key === (packageData as DispatchPackageSize).key
                 )
-              : (selected as packageSize[]).some(
-                  (s) => s.rawSize === (packageData as packageSize).rawSize
+              : (selected as PackageSize[]).some(
+                  (s) => s.rawSize === (packageData as PackageSize).rawSize
                 );
 
           return (
@@ -140,7 +141,7 @@ const PackageSizeChooseComponent = ({
                   return;
                 }
 
-                const pkg: packageSize = {
+                const pkg: PackageSize = {
                   ...item,
                   size: parsed.size,
                   rawSize: parsed.rawSize,
