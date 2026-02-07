@@ -28,7 +28,6 @@ type Props = {
 };
 
 const ProductContextSection = ({ setIsLoading, form, setIsCurrentProduct }: Props) => {
-  console.count("🔁 ProductContextSection render");
 
   const dispatch = useDispatch();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
@@ -68,9 +67,7 @@ const ProductContextSection = ({ setIsLoading, form, setIsCurrentProduct }: Prop
     form.setField("product.productName", selectedProductName);
   }, [selectedProductName, form.setField, dispatch]);
 
-  /* -------------------------------
-      🔑 Sync PRODUCT RATING
-  -------------------------------- */
+      // Sync PRODUCT RATING
   useEffect(() => {
     if (!productRating?.rating) return;
 
@@ -78,9 +75,7 @@ const ProductContextSection = ({ setIsLoading, form, setIsCurrentProduct }: Prop
     form.setField("product.finalRating", productRating.rating);
   }, [productRating.rating, form.setField]);
 
-  /* -------------------------------
-      Raw materials (unchanged)
-  -------------------------------- */
+  // Raw materials (unchanged)
   useEffect(() => {
     if (!rawMaterials || rawMaterials.length === 0) return;
     dispatch(setRawMaterials(rawMaterials));

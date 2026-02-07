@@ -31,6 +31,9 @@ import { PACKET_ITEMS } from "@/src/constants/Packets";
 // 7. Project utilities
 import { getEmptyStateData } from "@/src/utils/common";
 import { sortBy } from "@/src/utils/numberUtils";
+import OverlayLoader from "../OverlayLoader";
+import { useSelector } from "react-redux";
+import { RootState } from "@/src/redux/store";
 
 const PackingListingSection = ({
   searchText,
@@ -43,7 +46,7 @@ const PackingListingSection = ({
 }) => {
   // custom hooks start
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
-
+  const { isProductLoading } = useSelector((state: RootState) => state.product);
   const productPackageForm = useGlobalFormValidator<AddProductPackageForm>(
     "add-product-package"
   );
@@ -237,6 +240,8 @@ const PackingListingSection = ({
                   </View>
                 }
               />
+      {(isProductLoading) && <OverlayLoader />}
+              
             </View>
   )
 }

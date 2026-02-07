@@ -23,7 +23,7 @@ import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomS
 import { useLanes } from "@/src/hooks/useFetchData";
 import { useParams } from "@/src/hooks/useParams";
 import { useProductionById, useUpdateProduction } from "@/src/hooks/production";
-import { useRawMaterialOrderById } from "@/src/hooks/rawMaterialOrders";
+import { useRawMaterialOrderById } from "@/src/hooks/useRawMaterialOrders";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 
 // 5. Project constants/utilities
@@ -136,7 +136,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
                 rawMaterialOrderData.unit ?? ""
               }`
             : "--",
-          icon: <DatabaseIcon color={getColor("green", 700)} size={16} />,
+          iconKey: "database",
         },
       ],
       helperDetails: [
@@ -148,7 +148,6 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
                 "MMM d, yyyy"
               )
             : "--",
-          icon: null,
         },
         {
           name: "Arrival",
@@ -158,7 +157,6 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
                 "MMM d, yyyy"
               )
             : "--",
-          icon: null,
         },
       ],
     };
@@ -217,7 +215,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
             details: {
               label: "Quantity",
               value: `${productionData?.quantity} ${rawMaterialOrderData?.unit}`,
-              icon: "database",
+              iconKey: "database",
             },
           },
         },

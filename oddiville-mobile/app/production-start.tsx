@@ -21,7 +21,7 @@ import Loader from '@/src/components/ui/Loader';
 // 4. Project hooks
 import { useParams } from '@/src/hooks/useParams';
 import { useProductionById, useStartProduction } from '@/src/hooks/production';
-import { useRawMaterialOrderById } from '@/src/hooks/rawMaterialOrders';
+import { useRawMaterialOrderById } from '@/src/hooks/useRawMaterialOrders';
 import { useAppNavigation } from '@/src/hooks/useAppNavigation';
 import { useAdmin } from '@/src/hooks/useAdmin';
 
@@ -187,19 +187,17 @@ const ProductionStartScreen = () => {
                 {
                     name: "Quantity",
                     value: quantityText,
-                    icon: <DatabaseIcon color={getColor("green", 700)} size={16} />,
+                    iconKey: "database",
                 },
             ],
             helperDetails: [
                 {
                     name: "Order",
                     value: formatDateSafely(orderDate),
-                    icon: null,
                 },
                 {
                     name: "Arrival",
                     value: formatDateSafely(arrivalDate),
-                    icon: null,
                 },
             ],
         };

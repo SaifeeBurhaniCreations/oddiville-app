@@ -1,43 +1,91 @@
 import { StyleSheet, View } from 'react-native'
 import React, { useMemo, useState } from 'react'
 import { B3 } from '@/src/components/typography/Typography'
-import { useGetPackedItemsToday } from '@/src/hooks/packing/useGetPackedItemsToday'
-import ItemCardList from '../ItemCardList';
+import { useGetPackingSummary } from '@/src/hooks/packing/useGetPackedItemsToday'
 import EmptyState from '../EmptyState';
 import RefreshableContent from '../RefreshableContent';
 import { getColor } from '@/src/constants/colors';
 import SearchWithFilter from '../Inputs/SearchWithFilter';
 import noPackageImage from "@/src/assets/images/illustrations/no-packaging.png";
-import { mapPackingSummaryToItemCards } from '@/src/utils/mappers/mappers.utils';
+import { mapPackingRows } from '@/src/utils/mappers/mappers.utils';
 import { runFilter } from "@/src/utils/bottomSheetUtils";
 import { filterItems, flattenFilters } from "@/src/utils/filterUtils";
 import { filterHandlers } from "@/src/lookups/filters";
 import { FilterEnum } from "@/src/schemas/BottomSheetSchema";
 import { useSelector } from 'react-redux';
 import { RootState } from '@/src/redux/store';
+import useValidateAndOpenBottomSheet from '@/src/hooks/useValidateAndOpenBottomSheet';
+import { splitFilters } from '@/src/utils/filters/split.filters';
+import ItemCardSectionList from '../ItemCardSectionList';
+import OverlayLoader from '../OverlayLoader';
+
+type PackingSummarySection = {
+    product: string;
+    rows: any[];
+};
 
 const PackingSummarySection = () => {
+    // selectors
     const nestedFilters = useSelector((state: RootState) => state.filter.filters);
 
-    // custom hooks
-    const { data: packingSummary = [], isLoading, refetch } = useGetPackedItemsToday();
-    
+    const { validateAndSetData } = useValidateAndOpenBottomSheet();
+
     // memo
     const filters = useMemo(
         () => flattenFilters(nestedFilters) as Record<FilterEnum, string[]>,
         [nestedFilters]
     );
 
+    const { projectionFilters, booleanFilters } = useMemo(
+        () => splitFilters(filters),
+        [filters]
+    );
+
+    const mode = useMemo(() => {
+        if (projectionFilters?.mode?.[0] === "SKU") return "sku";
+        if (projectionFilters?.mode?.[0] === "Product") return "product";
+        return "event";
+    }, [projectionFilters]);
+
+    // custom hooks
+    const {
+        data: packingSummary = [],
+        isLoading: packingLoading,
+        refetch,
+    } = useGetPackingSummary({
+        mode,
+    });
+
+    const sections = useMemo(() => {
+        if (!packingSummary?.length) return [];
+        return (packingSummary as PackingSummarySection[])
+            .map((section) => ({
+                title: mode !== "product" ? section.product : "",
+                data: filterItems(
+                    mapPackingRows(section.rows, section.product, mode),
+                    booleanFilters,
+                    filterHandlers
+                ),
+            }))
+            .filter(section => section.data.length > 0);
+    }, [packingSummary, booleanFilters, mode]);
+
     // states
     const [searchText, setSearchText] = useState<string>("");
+    const [isLoading, setIsLoading] = useState(false);
 
-    const filteredItems = useMemo(() => {
-    if (!packingSummary) return [];
-    return filterItems(packingSummary, filters, filterHandlers);
-    }, [packingSummary, filters]);
+    // functions
+    const handleSearchFilter = () => {
+        setIsLoading(true);
+        runFilter({
+            key: "packing:summary",
+            validateAndSetData,
+            mode: "select-main",
+        });
+        setIsLoading(false);
+    };
 
-    
-    if (isLoading) return <B3>Loading summary...</B3>;
+    if (packingLoading) return <OverlayLoader />;
 
     return (
         <View style={styles.flexGrow}>
@@ -46,42 +94,36 @@ const PackingSummarySection = () => {
                     value={searchText}
                     onChangeText={(text: string) => setSearchText(text)}
                     placeholder={"Search by product name"}
-                    onFilterPress={() => { }}
+                    onFilterPress={handleSearchFilter}
                 />
-                {/* <SearchInput
-                  border
-                  value={searchText}
-                  cross={true}
-                  onChangeText={(text: string) => setSearchText(text)}
-                  onClear={() => setSearchText("")}
-                  returnKeyType="search"
-                  placeholder={"Search by product name"}
-                /> */}
             </View>
             <RefreshableContent
-                isEmpty={filteredItems.length === 0}
-                refreshing={isLoading}
+                isEmpty={!packingLoading && sections.length === 0}
+                refreshing={packingLoading}
                 onRefresh={refetch}
                 emptyComponent={
                     <View style={styles.emptyStateWrapper}>
                         <EmptyState
                             image={noPackageImage}
                             stateData={{
-                                title: "No packages",
-                                description: "Packages will appear here.",
+                                title: "No summary",
+                                description: "Packages summary will appear here.",
                             }}
                         />
                     </View>
                 }
             >
-                <ItemCardList items={mapPackingSummaryToItemCards(filteredItems)} />
+                <ItemCardSectionList
+                    sections={sections}
+                    refreshing={packingLoading}
+                    onRefresh={refetch}
+                />
             </RefreshableContent>
         </View>
     );
 };
 
 export default PackingSummarySection
-
 
 const styles = StyleSheet.create({
     pageContainer: {
@@ -107,7 +149,6 @@ const styles = StyleSheet.create({
     },
     packagesRow: {
         flexDirection: "row",
-        // flexWrap: "wrap",
         justifyContent: "space-between",
         gap: 8,
         paddingHorizontal: 16,

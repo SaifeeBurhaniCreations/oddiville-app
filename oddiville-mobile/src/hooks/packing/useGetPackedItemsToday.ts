@@ -1,9 +1,20 @@
-import { QueryKey, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createPackedItem, getPackingSummaryToday } from "@/src/services/packing.service";
+import {
+  QueryKey,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  createPackedItem,
+  getPackingSummary,
+} from "@/src/services/packing.service";
 import { CreatePackingEventDTO } from "./usePackingForm";
-import { PackageItem } from "../useChamberStock";
+import { PackageItemLocal } from "../useChamberStock";
 
-export const PACKING_TODAY_KEY: QueryKey = ["packing-summary", "today"];
+export const PACKING_SUMMARY_KEY = (
+  mode: "event" | "sku" | "product",
+  sku?: string,
+) => ["packing-summary", "today", mode, sku ?? "ALL"];
 const CHAMBER_STOCK_KEY: QueryKey = ["chamber-stock"];
 const DRY_CHAMBER_QUERY_KEY: QueryKey = ["dry", "chamber", "summary"];
 
@@ -15,7 +26,7 @@ export type PackedItem = {
   image: string | null;
   category: string;
   chamber: { id: string; quantity: string }[];
-  packages?: PackageItem[];
+  packages?: PackageItemLocal[];
   __optimistic?: boolean;
 };
 
@@ -41,7 +52,7 @@ export const useCreatePacking = () => {
     onSettled() {
       queryClient.invalidateQueries({ queryKey: CHAMBER_STOCK_KEY });
       queryClient.invalidateQueries({ queryKey: DRY_CHAMBER_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: PACKING_TODAY_KEY });
+      queryClient.invalidateQueries({ queryKey: ["packing-summary"] });
     },
   });
 };
@@ -55,14 +66,23 @@ export type PackingTodayRow = {
   events: number;
 };
 
-export function useGetPackedItemsToday() {
-  return useQuery<PackingTodayRow[]>({
-    queryKey: PACKING_TODAY_KEY,
+type UsePackingSummaryParams = {
+  mode: "event" | "sku" | "product";
+  sku?: string;
+};
+
+export function useGetPackingSummary({ mode, sku }: UsePackingSummaryParams) {
+  return useQuery({
+    queryKey: PACKING_SUMMARY_KEY(mode, sku),
     queryFn: async () => {
-      const res = await getPackingSummaryToday();
+      const res = await getPackingSummary({
+        mode,
+        sku,
+        date: "today",
+      });
       return res.data ?? [];
     },
-    staleTime: 1000 * 60 * 5, // 5 min cache
+    staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
   });
 }

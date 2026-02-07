@@ -1,14 +1,15 @@
 const router = require("express").Router();
 const PackingService = require("../../services/packing.service");
+const safeRoute = require("../../sbc/utils/safeRoute/index");
 
-router.post("/", async (req, res) => {
-    try {
+router.post(
+    "/",
+    safeRoute(async (req, res) => {
+        // throw new Error("Debug stop here");
+
         const result = await PackingService.execute(req.body);
         res.status(201).json(result);
-    } catch (err) {
-        console.error("PACKING ERROR:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
+    })
+);
 
 module.exports = router;

@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { useFrozenChambers } from "@/src/hooks/useChambers";
 import { useChamberStockByName } from "@/src/hooks/useChamberStock";
 import { PackingPackages } from "@/src/types/domain/packing/packing.types";
-import { Packaging } from "@/src/hooks/useChamberStock";
 
 export type PackingChamberOption = {
     chamberId: string;
@@ -17,13 +16,6 @@ type UsePackingChambersForSKUInput = {
     sku: PackingPackages;
     packetsPerBag: number;
 };
-
-function normalizePackaging(
-    packaging: Packaging | Packaging[] | undefined
-): Packaging[] {
-    if (!packaging) return [];
-    return Array.isArray(packaging) ? packaging : [packaging];
-}
 
 export function usePackingChambersForSKU({
     productName,

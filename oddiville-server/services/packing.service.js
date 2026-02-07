@@ -10,6 +10,18 @@ const { getTareWeight } = require("../constants/tareWeight");
 const { pushPackingSummary } = require("../utils/packing/redisSummary");
 
 class PackingService {
+    static packetKg(packet) {
+        return packet.unit === "gm" ? packet.size / 1000 : packet.size;
+    }
+
+    static kgPerBag(packet) {
+        return this.packetKg(packet) * packet.packetsPerBag;
+    }
+
+    static bagsToKg(packet, bags) {
+        return this.kgPerBag(packet) * bags;
+    }
+
     static async execute(payload) {
         const t = await sequelize.transaction();
 
@@ -37,8 +49,12 @@ class PackingService {
                 await this.applyChamberStockDelta(product.productName, sku, t);
             }
 
+            /* ---------- Deduct materials ---------- */
             await this.deductRawMaterials(rmConsumption, t);
+
+            /* ---------- Deduct packaging ---------- */
             await this.deductPackaging(packagingPlan, product.productName, t);
+
             await pushPackingSummary(events);
 
             await t.commit();
@@ -56,31 +72,40 @@ class PackingService {
             lock: t.LOCK.UPDATE,
         });
 
+        const kgPerBag = this.kgPerBag(sku.packet);
+
         if (!stock) {
-            stock = await ChamberStock.create({
-                product_name: productName,
-                category: "packed",
-                unit: "kg",
-                chamber: sku.storage.map(s => ({
-                    id: s.chamberId,
-                    quantity: String(s.bagsStored),
-                    rating: "5",
-                })),
-                packaging: [],
-                packages: [],
-            }, 
+            stock = await ChamberStock.create(
+                {
+                    product_name: productName,
+                    category: "packed",
+                    unit: "kg", 
+                    chamber: sku.storage.map((s) => ({
+                        id: s.chamberId,
+                        quantity: String(kgPerBag * s.bagsStored),
+                        rating: "5",
+                    })),
+                    packaging: [],
+                    packages: [],
+                },
                 { transaction: t }
             );
+
+            return; // first insert done
         }
 
+        /* ---------- update existing ---------- */
         for (const s of sku.storage) {
-            const found = stock.chamber.find(c => c.id === s.chamberId);
+            const addedKg = kgPerBag * s.bagsStored;
+
+            const found = stock.chamber.find((c) => c.id === s.chamberId);
+
             if (found) {
-                found.quantity = String(Number(found.quantity) + s.bagsStored);
+                found.quantity = String(Number(found.quantity) + addedKg);
             } else {
                 stock.chamber.push({
                     id: s.chamberId,
-                    quantity: String(s.bagsStored),
+                    quantity: String(addedKg),
                     rating: "5",
                 });
             }
@@ -88,12 +113,7 @@ class PackingService {
 
         stock.packed_ref = {
             lastPackedAt: new Date().toISOString(),
-            skus: Array.from(
-                new Set([
-                    ...(stock.packed_ref?.skus || []),
-                    sku.skuId,
-                ])
-            ),
+            skus: Array.from(new Set([...(stock.packed_ref?.skus || []), sku.skuId])),
             eventCount: (stock.packed_ref?.eventCount || 0) + 1,
         };
 
@@ -110,9 +130,10 @@ class PackingService {
 
             if (!stock) continue;
 
-            stock.chamber = stock.chamber.map(c => {
+            stock.chamber = stock.chamber.map((c) => {
                 const used = chambers[c.id];
                 if (!used) return c;
+
                 return {
                     ...c,
                     quantity: String(
@@ -133,9 +154,9 @@ class PackingService {
                 unit: sku.packet.unit,
             });
 
-            const usedKg =
-                (sku.totalPacketsProduced * tare) / 1000;
+            const usedKg = (sku.totalPacketsProduced * tare) / 1000;
 
+            /* ---------- Dry Warehouse ---------- */
             const dry = await DryWarehouse.findOne({
                 where: {
                     item_name: `${productName}:${sku.packet.size}`,
@@ -149,25 +170,21 @@ class PackingService {
                 throw new Error("Insufficient packaging stock");
             }
 
-            dry.quantity_unit = String(
-                Number(dry.quantity_unit) - usedKg
-            );
-
+            dry.quantity_unit = String(Number(dry.quantity_unit) - usedKg);
             await dry.save({ transaction: t });
 
+            /* ---------- Packages table ---------- */
             const pkgRow = await Packages.findOne({
                 where: { product_name: productName },
                 transaction: t,
                 lock: t.LOCK.UPDATE,
             });
 
-            if (!pkgRow) throw new Error("Package master not found");
-            if (!Array.isArray(pkgRow.types)) {
-                throw new Error("Package types not configured");
+            if (!pkgRow || !Array.isArray(pkgRow.types)) {
+                throw new Error("Package master not configured");
             }
 
-
-            pkgRow.types = pkgRow.types.map(tp => {
+            pkgRow.types = pkgRow.types.map((tp) => {
                 if (String(tp.size) !== String(sku.packet.size)) return tp;
 
                 const tare = getTareWeight({
@@ -180,7 +197,9 @@ class PackingService {
                 const available = Number(tp.quantity);
 
                 if (available < usedKg) {
-                    throw new Error(`Insufficient package stock for ${tp.size}${tp.unit}`);
+                    throw new Error(
+                        `Insufficient package stock for ${tp.size}${tp.unit}`
+                    );
                 }
 
                 return {

@@ -21,9 +21,10 @@ import { usePackageInputs } from "@/src/hooks/packing/usePackageInputs";
         setIsLoading: (v: boolean) => void;
         isCurrentProduct: boolean;
         form: PackingFormController;
+        onOverPackChange: (key: string, value: boolean) => void;
     };
 
-    const PackingSKUSection = ({ setIsLoading, isCurrentProduct, form }: Props) => {
+const PackingSKUSection = ({ setIsLoading, isCurrentProduct, form, onOverPackChange }: Props) => {
         const dispatch = useDispatch();
 
         const rawSelectedPackages = useSelector(
@@ -240,6 +241,7 @@ import { usePackageInputs } from "@/src/hooks/packing/usePackageInputs";
                                         handleRemovePackage={handleRemovePackage}
                                         productName={selectedProductName}
                                         packageErrors={packageErrors}
+                                        onOverPackChange={onOverPackChange}
                                     />
                                 );
                             }}

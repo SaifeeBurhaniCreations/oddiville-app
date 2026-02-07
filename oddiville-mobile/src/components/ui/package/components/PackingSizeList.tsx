@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from "react-native";
-import React, { memo, useCallback, useMemo } from "react";
+import React, { memo, useCallback, useEffect, useMemo } from "react";
 import {
     PackageInputsByKey,
     PackageInputState,
@@ -85,12 +85,13 @@ const PackingSizeList = ({
     pkg,
     isLastItem,
     isFirstItem,
-    inputs,
+    inputs, 
     onChangeInput,
     handleRemovePackage,
     Icon,
     productName,
     packageErrors,
+    onOverPackChange,
 }: {
     pkg: PackingPackages;
     isLastItem: boolean;
@@ -105,18 +106,27 @@ const PackingSizeList = ({
     handleRemovePackage: (packageKey: string) => void;
     Icon: React.FC<IconProps> | null;
     productName: string;
+    onOverPackChange: (key: string, value: boolean) => void;
+
 }) => {
-    const packageKey = useMemo(
-        () => `${pkg.size}-${pkg.unit}`,
-        [pkg.size, pkg.unit]
-    );
+    const packageKey = `${pkg.size}-${pkg.unit}`;
 
     const skuError = packageErrors[packageKey];
 
     const bagCount = inputs[packageKey]?.bagCount ?? 0;
     const packetsPerBag = inputs[packageKey]?.packetsPerBag ?? 0;
-    const usedPackets = bagCount * packetsPerBag;
-    const totalPackets = Math.max(pkg.count + usedPackets, 0);
+    // const usedPackets = bagCount * packetsPerBag;
+    const usedPackets = useMemo(
+        () => bagCount * packetsPerBag,
+        [bagCount, packetsPerBag]
+    );
+
+    const remainingPackets = useMemo(
+        () => Math.max(pkg.count - usedPackets, 0),
+        [pkg.count, usedPackets]
+    );
+
+    // const totalPackets = Math.max(pkg.count - usedPackets, 0);
 
     const chamberPackage = toChamberPackage(pkg);
 
@@ -125,6 +135,8 @@ const PackingSizeList = ({
         sku: pkg,
         packetsPerBag,
     });
+
+    const overPacked = usedPackets > pkg.count;
 
     const updateChamberBags = useCallback(
         (chamberId: string, value: string) => {
@@ -137,6 +149,10 @@ const PackingSizeList = ({
         },
         [onChangeInput, packageKey]
     );
+    useEffect(() => {
+        onOverPackChange(packageKey, overPacked);
+    }, [overPacked]);
+
 
     return (
         <View
@@ -158,7 +174,7 @@ const PackingSizeList = ({
                     <B1>
                         {pkg.size}
                         {pkg.unit}
-                        {` (${totalPackets})`}
+                        {` (${remainingPackets})`}
                     </B1>
                 </View>
 
