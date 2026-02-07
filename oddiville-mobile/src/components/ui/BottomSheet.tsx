@@ -73,6 +73,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
   const selectedChambers = useSelector(
     (state: RootState) => state.rawMaterial.selectedChambers
   );
+  const { isProductLoading } = useSelector((state: RootState) => state.product);
   const { slectedUnit } = useSelector((state: RootState) => state.selectUnit);
   const { product } = useSelector((state: RootState) => state.storeProduct);
 
@@ -625,7 +626,7 @@ if (meta?.type === "choose-package" && section.type === "package-size-choose-lis
           color={btn.color}
           variant={btn.variant}
           disabled={
-            btn.disabled || !isBottomSheetFormValid || isOrderAlreadyShipped
+            btn.disabled || !isBottomSheetFormValid || isOrderAlreadyShipped || isProductLoading
           }
           onPress={() => {
             if (btn.actionKey) {

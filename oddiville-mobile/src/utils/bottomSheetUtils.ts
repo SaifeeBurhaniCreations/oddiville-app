@@ -14,6 +14,11 @@ const filterDataMap: Record<FilterEnum, CheckboxData[]> = {
         { text: "Others", isChecked: false },
         { text: "Packed", isChecked: false },
     ],
+    "packing:summary": [
+        { text: "Event", isChecked: false },
+        { text: "SKU", isChecked: false },
+        { text: "Product", isChecked: false },
+    ],
     "home:activities": [
         { text: "Last 6 hours", isChecked: false },
         { text: "Today", isChecked: false },
@@ -74,6 +79,7 @@ const filterDataDetailMap: Record<FilterEnum, string[]> = {
     "user:overview": ["Name", "quantity"],
     "chamber:detailed": ["Name", "quantity"],
     "home:activities": ["Name", "quantity"],
+    "packing:summary": ["Name", "quantity"],
 };
 
 function buildSection(

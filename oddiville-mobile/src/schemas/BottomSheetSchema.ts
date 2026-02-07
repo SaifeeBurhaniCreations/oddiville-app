@@ -5,6 +5,7 @@ import { z } from "zod";
 export const filterEnum = z.enum([
   "chamber:detailed",
   "home:activities",
+  "packing:summary",
   "order:upcoming",
   "order:inprogress",
   "order:completed",
@@ -40,6 +41,7 @@ const detailItem = z.object({
     "trash",
     "star",
     "calendar-year",
+    "file",
   ]),
 });
 
@@ -426,7 +428,7 @@ const MultipleProductSection = z.object({
       product_name: z.string(),
       rating: z.number(),
       description: z.string().optional(),
-      image: z.string().optional(),
+      image: z.string().nullish().optional(),
       isChecked: z.boolean(),
       packages: z.array(PackageItemSchema),
       chambers: z.array(ChamberSchema),
@@ -594,20 +596,43 @@ const FileUploadSection = z.object({
 //   }),
 // });
 
+const SkuSummaryMetric = z.object({
+  id: z.string(),
+  label: z.string(),
+  type: z.literal("sku-summary"),
+  bags: z.number(),
+  packets: z.number(),
+});
+
+const NormalMetric = z.object({
+  id: z.string(),
+  label: z.string(),
+  value: z.number(),
+  unit: z.string().optional(),
+  icon: z.enum(["box", "roll", "clock"]).optional(),
+});
+
 export const PackageSummarySection = z.object({
   type: z.literal("packing-summary"),
   data: z.object({
     title: z.string(),
     rating: z.number(),
-    metrics: z.array(
-      z.object({
-        id: z.string(),
-        label: z.string(),
-        value: z.number(),
-        unit: z.string().optional(),
-        icon: z.enum(["box", "roll", "clock"]).optional(),
-      }),
-    ),
+    metrics: z.array(z.union([NormalMetric, SkuSummaryMetric])),
+
+    breakdown: z
+      .array(
+        z.object({
+          label: z.string(),
+          metrics: z.array(
+            z.object({
+              label: z.string(),
+              value: z.number(),
+              unit: z.string().optional(),
+            }),
+          ),
+        }),
+      )
+      .optional(),
   }),
 });
 
@@ -1026,6 +1051,29 @@ export const MultipleProductBottomSheetConfigSchema = z.object({
   buttons: z.array(ButtonSchema).optional(),
 });
 
+export const ChooseExportTypeBottomSheetConfigSchema = z.object({
+  sections: z.array(
+    z.discriminatedUnion("type", [
+      TitleWithDetailsCrossSection,
+      OptionListSection,
+    ]),
+  ),
+});
+
+export const ChooseExportFormatBottomSheetConfigSchema = z.object({
+  sections: z.array(
+    z.discriminatedUnion("type", [
+      TitleWithDetailsCrossSection,
+      OptionListSection,
+    ]),
+  ),
+});
+
+export const ExportDataOptionsBottomSheetConfigSchema = z.object({
+  sections: z.array(z.discriminatedUnion("type", [HeaderSection, DataSection])),
+  buttons: z.array(ButtonSchema).optional(),
+});
+
 // ------------------- Type Inference ------------------- //
 
 export type OrderReadyBottomSheetConfig = z.infer<
@@ -1148,6 +1196,15 @@ export type PackingSummaryBottomSheetConfig = z.infer<
 export type MultipleProductBottomSheetConfig = z.infer<
   typeof MultipleProductBottomSheetConfigSchema
 >;
+export type ChooseExportTypeBottomSheetConfig = z.infer<
+  typeof ChooseExportTypeBottomSheetConfigSchema
+>;
+export type ChooseExportFormatBottomSheetConfig = z.infer<
+  typeof ChooseExportFormatBottomSheetConfigSchema
+>;
+export type ExportDataOptionsBottomSheetConfig = z.infer<
+  typeof ExportDataOptionsBottomSheetConfigSchema
+>;
 
 // ------------------- Central Schema Registry ------------------- //
 export const bottomSheetSchemas = {
@@ -1195,6 +1252,9 @@ export const bottomSheetSchemas = {
   "select-package-type": PackageTypeBottomSheetConfigSchema,
   "packing-summary": PackingSummaryBottomSheetConfigSchema,
   "multiple-product-card": MultipleProductBottomSheetConfigSchema,
+  "choose-export-type": ChooseExportTypeBottomSheetConfigSchema,
+  "choose-export-format": ChooseExportFormatBottomSheetConfigSchema,
+  "export-data-options": ExportDataOptionsBottomSheetConfigSchema,
 } as const;
 
 export type BottomSheetSchemaKey = keyof typeof bottomSheetSchemas;

@@ -58,6 +58,19 @@ const filterSlice = createSlice({
         state.filters[mainKey] = { children: {} };
       }
 
+      if (mainKey === "packing:summary") {
+        state.filters[mainKey] = {};
+
+        if (rest.length === 0) {
+          state.filters[mainKey].value = value;
+        } else {
+          state.filters[mainKey].children = {};
+          setFilterNode(state.filters[mainKey].children!, rest, value);
+        }
+
+        return;
+      } 
+
       const newFilters = structuredClone(state.filters);
       setFilterNode(newFilters, path, value);
       state.filters = newFilters;

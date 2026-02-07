@@ -25,18 +25,20 @@ import { useDeleteVendor } from "@/src/hooks/vendor";
 import { FilterEnum } from "@/src/schemas/BottomSheetSchema";
 import { ChamberQty } from "@/src/redux/slices/bottomsheet/chamber-ratings.slice";
 import { selectPackageType } from "@/src/redux/slices/bottomsheet/package-type-production.slice";
+import { setType } from "@/src/redux/slices/export/exportFilters.slice";
+import { EXPORT_LABEL_MAP, EXPORT_TYPES, ExportType } from "@/src/constants/exportFilterComponents";
 
 const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
-  
+
   const meta = useSelector((state: RootState) => state.bottomSheet.meta);
   const id = useSelector((state: RootState) => state.idStore.id);
   const isChoosingChambers = useSelector(
     (state: RootState) => state.productPackageChamber.isChoosingChambers
   );
-    const showVendorDeletePopup = useSelector(
-      (state: RootState) => state.deletePopup.showVendorDeletePopup
-    );
-    const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
+  const showVendorDeletePopup = useSelector(
+    (state: RootState) => state.deletePopup.showVendorDeletePopup
+  );
+  const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
 
   const dispatch = useDispatch();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
@@ -45,32 +47,32 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
     "add-product-package"
   );
   const { setField } = productPackageForm;
-    const selectedChambers = useSelector(
-      (state: RootState) => state.rawMaterial.selectedChambers
-    );
-      const chamberQuantity = useSelector(
-        (state: RootState) => state.chamberRatings.chamberQty
-      );
-      const { data: DryChambersRaw } = useDryChambers();
+  const selectedChambers = useSelector(
+    (state: RootState) => state.rawMaterial.selectedChambers
+  );
+  const chamberQuantity = useSelector(
+    (state: RootState) => state.chamberRatings.chamberQty
+  );
+  const { data: DryChambersRaw } = useDryChambers();
   const DryChambers = DryChambersRaw || [];
   const username = useSelector(
     (state: RootState) => state.bottomSheet.meta?.id
   );
-    const { product } = useSelector((state: RootState) => state.storeProduct);
+  const { product } = useSelector((state: RootState) => state.storeProduct);
 
   const { goTo } = useAppNavigation();
   const deleteVendorMutation = useDeleteVendor();
 
-   const handlePress = useCallback(
+  const handlePress = useCallback(
     async (
       route: validRouteOptionList | undefined,
       item: string | { name: string; isoCode: string },
-      key?: "user-action" | "vendor-action" | "supervisor-production" | "product-package" | "select-package-type" | string
+      key?: "user-action" | "vendor-action" | "supervisor-production" | "product-package" | "select-package-type" | "choose-export-type" | string
     ) => {
       const value = typeof item === "object" ? item.name : item;
 
       if (meta?.type === "filter") {
-        const filterKey = meta.id as FilterEnum; 
+        const filterKey = meta.id as FilterEnum;
 
         dispatch(
           applyFilter({
@@ -83,106 +85,112 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
         return;
       }
 
+      if (key === "choose-export-type") {
+        dispatch(setType(EXPORT_LABEL_MAP[value]));
+        dispatch(closeBottomSheet());
+        return;
+      }
+
       if (key === "select-package-type") {
         dispatch(selectPackageType(item));
-         const supervisorProduction = {
-            sections: [
-              {
-                type: "title-with-details-cross",
-                data: {
-                  title: "Store material",
-                  description: "Pick chambers to store your materials in",
-                  details: {
-                    label: "Quantity",
-                    value: `${product?.quantity} ${product?.unit}`,
-                    icon: "database",
-                  },
+        const supervisorProduction = {
+          sections: [
+            {
+              type: "title-with-details-cross",
+              data: {
+                title: "Store material",
+                description: "Pick chambers to store your materials in",
+                details: {
+                  label: "Quantity",
+                  value: `${product?.quantity} ${product?.unit}`,
+                  icon: "database",
                 },
               },
-              {
-                type: "select",
-                data: {
-                  placeholder: "Select chambers",
-                  label: "Select chambers",
-                },
+            },
+            {
+              type: "select",
+              data: {
+                placeholder: "Select chambers",
+                label: "Select chambers",
               },
-              ...selectedChambers.map((chamberName) => {
-                const quantityValue =
-                  chamberQuantity[chamberName]?.find(
-                    (chamber: ChamberQty) => chamber.name === chamberName
-                  )?.quantity ?? "";
-      
-                return {
-                  type: "input-with-select",
-                  conditionKey: "hideUntilChamberSelected",
-                  hasUniqueProp: {
-                    identifier: "addonInputQuantity",
-                    key: "label",
-                  },
-                  data: {
-                    placeholder: "Qty.",
-                    label: chamberName,
-                    label_second: "Rating",
-                    value: quantityValue,
-                    addonText: "Kg",
-                    key: "supervisor-production",
-                    formField_1: chamberName,
-                    source: "supervisor-production",
-                  },
-                };
-              }),
-              {
-          type: "input-with-select",
-          data: {
-            placeholder: "Enter Size in kg",
-            label: "Size (Kg)",
-            placeholder_second: "Choose type",
-            label_second: "Type",
-            alignment: "half",
-            value: packageTypeProduction ?? "pouch",
-            // value: item ?? "pouch",
-            key: "select-package-type",
-            formField_1: "product_name",
-            source: "add-product-package",
-            source2: "product-package",
-          },
-        },
-              {
-                type: "addonInput",
-                conditionKey: "hideUntilChamberSelected",
-                data: {
-                  placeholder: "Enter quantity",
-                  label: "Discard quantity",
-                  value: "0",
-                  addonText: "Kg",
-                  formField: "discard_quantity",
-                },
-              },
-            ],
-            buttons: [
-              {
-                text: "Cancel",
-                variant: "outline",
-                color: "green",
-                alignment: "half",
-                disabled: false,
-              },
-              {
-                text: "Store",
-                variant: "fill",
-                color: "green",
-                alignment: "half",
-                disabled: false,
-                actionKey: "store-product",
-              },
-            ],
-          };
+            },
+            ...selectedChambers.map((chamberName) => {
+              const quantityValue =
+                chamberQuantity[chamberName]?.find(
+                  (chamber: ChamberQty) => chamber.name === chamberName
+                )?.quantity ?? "";
 
-          validateAndSetData(
-                product?.id,
-                "supervisor-production",
-                supervisorProduction
-              );
+              return {
+                type: "input-with-select",
+                conditionKey: "hideUntilChamberSelected",
+                hasUniqueProp: {
+                  identifier: "addonInputQuantity",
+                  key: "label",
+                },
+                data: {
+                  placeholder: "Qty.",
+                  label: chamberName,
+                  label_second: "Rating",
+                  value: quantityValue,
+                  addonText: "Kg",
+                  key: "supervisor-production",
+                  formField_1: chamberName,
+                  source: "supervisor-production",
+                },
+              };
+            }),
+            {
+              type: "input-with-select",
+              data: {
+                placeholder: "Enter Size in kg",
+                label: "Size (Kg)",
+                placeholder_second: "Choose type",
+                label_second: "Type",
+                alignment: "half",
+                value: packageTypeProduction ?? "pouch",
+                // value: item ?? "pouch",
+                key: "select-package-type",
+                formField_1: "product_name",
+                source: "add-product-package",
+                source2: "product-package",
+              },
+            },
+            {
+              type: "addonInput",
+              conditionKey: "hideUntilChamberSelected",
+              data: {
+                placeholder: "Enter quantity",
+                label: "Discard quantity",
+                value: "0",
+                addonText: "Kg",
+                formField: "discard_quantity",
+              },
+            },
+          ],
+          buttons: [
+            {
+              text: "Cancel",
+              variant: "outline",
+              color: "green",
+              alignment: "half",
+              disabled: false,
+            },
+            {
+              text: "Store",
+              variant: "fill",
+              color: "green",
+              alignment: "half",
+              disabled: false,
+              actionKey: "store-product",
+            },
+          ],
+        };
+
+        validateAndSetData(
+          product?.id,
+          "supervisor-production",
+          supervisorProduction
+        );
         return;
       }
 
@@ -197,7 +205,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
       } else {
         dispatch(selectChamber(value));
       }
-      
+
       if (key && key === "user-action") {
         if (item === "Edit User") {
           goTo("user-form", { username: username });
@@ -273,24 +281,24 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
                 key: "product-package",
               },
             },
-          {
-          type: "file-upload",
-          data: {
-            label: "Upload pouch image",
-            uploadedTitle: "Uploaded pouch image",
-            title: "Upload pouch image",
-            key: "package-image",
-          },
-        },
-        {
-          type: "file-upload",
-          data: {
-            label: "Upload packed image",
-            uploadedTitle: "Uploaded packed image",
-            title: "Upload packed image",
-            key: "image",
-          },
-        },
+            {
+              type: "file-upload",
+              data: {
+                label: "Upload pouch image",
+                uploadedTitle: "Uploaded pouch image",
+                title: "Upload pouch image",
+                key: "package-image",
+              },
+            },
+            {
+              type: "file-upload",
+              data: {
+                label: "Upload packed image",
+                uploadedTitle: "Uploaded packed image",
+                title: "Upload packed image",
+                key: "image",
+              },
+            },
           ],
           buttons: [
             {
@@ -346,22 +354,22 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
           </View>
         );
       })}
-           <Modal
-              showPopup={showVendorDeletePopup}
-              setShowPopup={(visible) => dispatch(setVendorDeletePopup(visible))}
-              modalData={{  
-                title: "Remove Vendor",
-                description: `You are deleting Vendor "${username}"  parmanently, are you sure?`,
-                type: "danger",
-                buttons: [
-                  {
-                    variant: "fill",
-                    label: "Delete",
-                    action: () => typeof username === "string" && deleteVendorMutation.mutate({ id: username })
-                  },
-                ],
-              }}
-            />
+      <Modal
+        showPopup={showVendorDeletePopup}
+        setShowPopup={(visible) => dispatch(setVendorDeletePopup(visible))}
+        modalData={{
+          title: "Remove Vendor",
+          description: `You are deleting Vendor "${username}"  parmanently, are you sure?`,
+          type: "danger",
+          buttons: [
+            {
+              variant: "fill",
+              label: "Delete",
+              action: () => typeof username === "string" && deleteVendorMutation.mutate({ id: username })
+            },
+          ],
+        }}
+      />
     </View>
   );
 });

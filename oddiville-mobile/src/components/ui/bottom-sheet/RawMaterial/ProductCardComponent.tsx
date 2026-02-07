@@ -33,6 +33,8 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ data }) => {
   const isSelected = (name: string) => {
     if (source === "chamber") {
       return selectedChambers?.some((item) => item === name);
+    } else if (source === "export-chamber") {
+      return selectedChambers?.some((item) => item === name);
     } else if (source === "product-chamber") {
       return selectedChambers?.some((item) => item === name);
     } else {
@@ -46,19 +48,14 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ data }) => {
       any
     >
   ) => {
-    // if (source === "chamber") {
-    //     dispatch(toggleChambers(item.name));
-    // } else {
-    //     const rawMaterial = toRawMaterial(item);
-    //     dispatch(toggleRawMaterial(rawMaterial));
-    //     dispatch(setSource("add"));
-    // }
     if (source === "chamber") {
       dispatch(toggleChambers(item.name));
     } else if (source === "packaging") {
       const rawMaterial = toRawMaterial(item);
       dispatch(toggleRawMaterial(rawMaterial));
-    }else if (source === "product-chamber") {
+    } else if (source === "export-chamber") {
+      dispatch(toggleChambers(item.name));
+    } else if (source === "product-chamber") {
       dispatch(toggleChambers(item.name));
     } else {
       const rawMaterial = toRawMaterial(item);
