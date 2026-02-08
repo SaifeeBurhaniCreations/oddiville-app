@@ -81,7 +81,7 @@ export const store = configureStore({
     productSearch: productSearchReducer,
     packageSizeSearch: packageSizeSearchReducer,
     deletePopup: deleteUserPopupReducer,
-    StorageRMRating: storageReducer,
+    storageRating: storageReducer,
     DispatchRating: dispatchRatingReducer,
     policies: policiesReducer,
     packageTypeProduction: packageTypeProductionReducer,
