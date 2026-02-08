@@ -107,11 +107,11 @@ async function handlePackingSummary(ctx) {
     const chamberMap = new Map();
 
     const chambersList = await ChamberClient.findAll({
-      attributes: ["id", "name"],
+      attributes: ["id", "chamber_name"],
     });
 
     const chamberNameMap = new Map(
-      chambersList.map(c => [c.id, c.name])
+      chambersList.map(c => [c.id, c.chamber_name])
     );
     for (const e of events) {
       e.storage?.forEach(s => {

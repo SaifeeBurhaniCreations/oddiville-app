@@ -312,15 +312,17 @@ export type SectionConfig =
   | {
       type: "package-size-choose-list";
       data: {
-        list: {
-          name: string;
-          count: number;
-          icon: DataAccordianEnum;
-          isChecked: boolean;
-        }[];
-        source: "package" | "dispatch";
-        productId?: string;
-      };
+    list: {
+      name: string;
+      size: number;
+      unit: "gm" | "kg";
+      icon: DataAccordianEnum;
+      count: number;
+      isChecked: boolean;
+      }[];
+    source: "package" | "dispatch";
+    productId?: string;
+  };
     }
   | {
       type: "title-with-details-cross";
@@ -724,10 +726,12 @@ export interface PackageSizeChooseComponentProps {
   data: {
     list: {
       name: string;
-      count: number;
+      size: number;
+      unit: "gm" | "kg";
       icon: DataAccordianEnum;
+      count: number;
       isChecked: boolean;
-    }[];
+      }[];
     source: "package" | "dispatch";
     productId?: string;
   };

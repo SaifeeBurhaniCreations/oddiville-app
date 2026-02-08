@@ -389,14 +389,14 @@ const manageActionSection = z.object({
     })
   ),
 });
-
-// Section: Icon title Heading
 const PackagingSizeSection = z.object({
   type: z.literal("package-size-choose-list"),
   data: z.object({
     list: z.array(
       z.object({
         name: z.string(),
+        size: z.number(),
+        unit: z.enum(["gm", "kg"]),
         count: z.number(),
         icon: z.enum(["paper-roll", "bag", "big-bag"]),
         isChecked: z.boolean(),

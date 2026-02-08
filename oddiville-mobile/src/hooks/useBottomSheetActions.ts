@@ -130,10 +130,8 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
     for (const key in data) {
       const valueObj = data[key];
 
-      // skip non-chamber fields
       if (!valueObj || typeof valueObj !== "object") continue;
 
-      // find matching chamber by name
       const matched = (chambers ?? []).find(
         (c: any) =>
           c.chamber_name.trim().toLowerCase() === key.trim().toLowerCase(),
@@ -514,11 +512,6 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
       if (meta?.id) {
         // goTo("Packaging", { id: meta.id });
       }
-    },
-    "add-package-by-product": () => {
-      if (meta?.id) {
-      }
-      
     },
 
     "export-open": async () => {
