@@ -132,19 +132,14 @@ export const mapPackageIcon = (item: PackageIconInput) => {
   return BigBagIcon;
 };
 
-
+type PackageUnit = "kg" | "gm" | "unit" | "qn" | null;
 export const toPackageIconInput = (
-  pkg: Pick<PackageItem, "size" | "unit">,
+  pkg: { size: number | string; unit: PackageUnit }
 ): PackageIconInput => ({
   size: Number(pkg.size),
-  unit: (pkg.unit ?? "unit") as "kg" | "gm" | "unit",
+  unit: pkg.unit ?? "unit",
 });
 
-
-// export const toPackageIconInput = (pkg: PackageItem): PackageIconInput => ({
-//   size: Number(pkg.size),
-//   unit: pkg.unit as "kg" | "gm" | "qn",
-// });
 
 export function kConverter(num: number): string {
     if (num >= 1000) {
@@ -154,9 +149,9 @@ export function kConverter(num: number): string {
 }
 
 export function generateImageFileName(extension: string) {
-    const prefix = Math.random().toString(36).substring(2, 8); // random string
-    const mid = Math.random().toString(36).substring(2, 5);    // shorter random
-    const suffix = Math.floor(Math.random() * 100000000);    // 10-digit number
+    const prefix = Math.random().toString(36).substring(2, 8); 
+    const mid = Math.random().toString(36).substring(2, 5);  
+    const suffix = Math.floor(Math.random() * 100000000);   
     return `${prefix}-${mid}-${suffix}.${extension}`;
 }
 

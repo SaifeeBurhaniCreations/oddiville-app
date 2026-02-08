@@ -44,7 +44,9 @@ import { resolveAccess } from "@/src/utils/policiesUtils";
 import { removeProduct } from "@/src/redux/slices/multiple-product.slice";
 import { usePackedItems } from "@/src/hooks/packing/getPackedItemsEvent";
 import { useToast } from "@/src/context/ToastContext";
-import { UIPackingItem } from "@/src/types/domain/packing/packing.types";
+import { PackedChamberRow, PackedItemEvent, RMConsumption, UIPackingItem } from "@/src/types/domain/packing/packing.types";
+import Chip from "../Chip";
+import BoxIcon from "../../icons/common/BoxIcon";
 
 type ControlledFormProps<T> = {
   values: T;
@@ -56,44 +58,65 @@ export interface SelectedRawMaterial {
   name: string;
 }
 
-type PackingStorageItem = {
-  chamberId: string;
-  chamberName?: string;
-  bagsStored?: number;
+const getRatingForChamber = (
+  rm: RMConsumption | undefined,
+  chamberId: string
+): number | null => {
+  if (!rm) return null;
+
+  for (const rmEntry of Object.values(rm)) {
+    const chamber = rmEntry[chamberId];
+    if (chamber?.rating != null) {
+      return chamber.rating;
+    }
+  }
+
+  return null;
+};
+
+export const normalizePackedItemsToUI = (
+  items: PackedItemEvent[]
+): UIPackingItem[] => {
+  if (!Array.isArray(items)) return [];
+
+  return items.flatMap((e) => {
+    const packetKg =
+      e.packet.unit === "gm"
+        ? e.packet.size / 1000
+        : e.packet.size;
+
+    return (e.storage ?? [])
+      .filter(s => Number(s.bagsStored) > 0)
+      .map((s) => {
+        const bags = Number(s.bagsStored);
+
+        return {
+          productName: e.product_name,
+          size: e.packet.size,
+          unit: e.packet.unit === "gm" ? "gm" : "kg",
+          chamberId: s.chamberId,
+          bags,
+          kg: bags * packetKg,
+
+          // ⛔ rating is NOT known here
+          rating: 0, // placeholder
+        };
+      });
+  });
 };
 
 
-const normalizePackingEvents = (events: any[]): UIPackingItem[] => {
-  if (!Array.isArray(events)) return [];
-
-  return events.map((e) => {
-    const totalBagsAvailable = (e.storage as PackingStorageItem[]).reduce(
-      (sum: number, s: PackingStorageItem) =>
-        sum + Number(s.bagsStored || 0),
-      0
-    );
-
-    const rm = Object.values(e.rm_consumption ?? {})[0] as any;
-    const rating =
-      rm && typeof rm === "object"
-        ? rm[Object.keys(rm)[0]]?.rating ?? 5
-        : 5;
-
-    return {
-      productName: e.product_name,
-      rating,
-      size: Number(e.packet.size),
-      unit: e.packet.unit,
-      totalBagsAvailable,
-      chambers: (e.storage as PackingStorageItem[]).map(
-        (s: PackingStorageItem) => ({
-          chamberId: s.chamberId,
-          chamberName: s.chamberName,
-          bagsAvailable: Number(s.bagsStored || 0),
-        })
-      ),
-    };
-  });
+const buildPackedChamberRows = (
+  items: UIPackingItem[] = []
+): PackedChamberRow[] => {
+  return items.map(item => ({
+    size: item.size,
+    unit: item.unit,
+    rating: item.rating,       
+    chamberId: item.chamberId,
+    bags: Number(item.bags || 0),
+    kg: Number(item.kg || 0),
+  }));
 };
 
 const CreateFromStorage = ({
@@ -124,9 +147,9 @@ const CreateFromStorage = ({
 
   const { values, setField, errors } = controlledForm;
 
-  const packingItems = useMemo(() => {
-    return normalizePackingEvents(packedItemsDataNew || []);
-  }, [packedItemsDataNew]);
+const packingItems = useMemo(() => {
+  return normalizePackedItemsToUI(packedItemsDataNew ?? []);
+}, [packedItemsDataNew]);
 
   useEffect(() => {
     if (values.products?.length && openTab === null) {
@@ -310,24 +333,36 @@ const CreateFromStorage = ({
               >
                 Products
               </Select>
-            </View>
 
-            {/* {selectedProducts.map((product, index) => (
-  <AddProductsForSell
-    key={product.id}
-    product={product}
-    isOpen={openTab === Number(product.id)}
-    onPress={() => setOpenTab(Number(product.id))}
-    onRemove={() => dispatch(removeProduct(product.id))}
-    controlledForm={{ values, setField, errors }}
-  />
-))} */}
+                            {/* <View
+                              style={[
+                                styles.centeredChips,
+                                {
+                                  borderBottomWidth: 1,
+                                  paddingBottom: 24,
+                                },
+                              ]}
+                            >
+                              {
+                                selectedProducts?.map((product) => (
+                              <Chip key={product.id}
+                                   icon={< BoxIcon />} onPress={() => {}}>
+                                    {product.product_name} - {size} - bag
+                                  </Chip>
+                                ))
+                              }
+                            </View> */}
+              
+            </View>
 
             {values.products?.length > 0 ? (
               values.products?.map((value, index) => {
-                const productPackingItems = packingItems.filter(
-                  (p) => p.productName === value.product_name
-                );
+                
+              const productPackingItems = packingItems.filter(
+                p => p.productName === value.product_name
+              );
+
+              const chamberRows = buildPackedChamberRows(productPackingItems);
 
                 return (
                   <AddProductsForSell
@@ -337,7 +372,7 @@ const CreateFromStorage = ({
                     isFirst={index === 0}
                     setToast={handleToggleToast}
                     product={value}
-                    packingItems={productPackingItems}
+                    packingItems={chamberRows}
                     controlledForm={{ values, setField, errors }}
                     onRemove={() => handleRemoveProduct(value.id)}
                   />
@@ -468,4 +503,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     gap: 8,
   },
+    centeredChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: getColor("green", 100),
+    paddingBottom: 24,
+  },
+
 });

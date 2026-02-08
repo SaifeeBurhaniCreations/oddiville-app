@@ -111,10 +111,20 @@ const StockDetail = () => {
     const chamberBags =
       bagSizeKg > 0 ? Math.floor(chamberKg / bagSizeKg) : 0;
 
-    const materialIcon = mapPackageIcon({
-      size: materialPackaging.size.value,
-      unit: materialPackaging.size.unit,
-    });
+      const allowedUnits = ["kg", "gm", "qn", "unit"] as const;
+
+      type Unit = typeof allowedUnits[number];
+
+      const unit = allowedUnits.includes(
+        materialPackaging.size.unit as Unit
+      )
+        ? (materialPackaging.size.unit as Unit)
+        : undefined;
+
+      const materialIcon = mapPackageIcon({
+        size: materialPackaging.size.value,
+        unit,
+      });
 
     materialBlock = (
       <View style={{ gap: 8, marginBottom: 16 }}>
@@ -161,6 +171,7 @@ const StockDetail = () => {
             return {
               key: `${item.id}-${item.skuId}-${s.chamberId}`,
               sizeLabel: item.skuLabel,
+              bags: s.bagsStored,
               packets: totalPackets,
               totalKg: totalPackets * packetKg,
               icon: mapPackageIcon({
@@ -188,7 +199,7 @@ const StockDetail = () => {
             id={pkg.key}
             name={pkg.sizeLabel}
             category="packed"
-            description={`${pkg.packets} packets | ${pkg.totalKg} kg`}
+            description={`${pkg.bags} bags | ${pkg.packets} packs | ${pkg.totalKg} kg`}
             plainDescription
             onPressOverride={() => { }}
             leadingIcon={pkg.icon}

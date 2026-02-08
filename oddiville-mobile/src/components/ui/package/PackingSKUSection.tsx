@@ -159,6 +159,8 @@ const PackingSKUSection = ({ setIsLoading, isCurrentProduct, form, onOverPackCha
                                 }
                                 return {
                                     name: `${pack?.rawSize} ${pack?.unit}`,
+                                    size: pack.size,
+                                    unit: pack.unit,
                                     icon: icon,
                                     count: Number(pack?.quantity),
                                     isChecked: false,

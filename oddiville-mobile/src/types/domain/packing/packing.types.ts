@@ -160,12 +160,20 @@ export interface DispatchPackagingChambers {
   packages: PackingPackages[];
 }
 
+export type RMConsumption = Record<
+  string,
+  Record<string, { rating: number }>
+>;
+
 export interface PackedItemEvent extends PackagingPlanItem {
   id: UUID;
   product_name: string;
   createdAt: ISODate;
   updatedAt: ISODate;
+
+  rm_consumption?: RMConsumption; 
 }
+
 
 export type ApiPackedItem = {
   id: string;
@@ -186,16 +194,13 @@ export type ApiPackedItem = {
 
 export type UIPackingItem = {
   productName: string;
-  rating: number;
   size: number;
   unit: "gm" | "kg";
-  totalBagsAvailable: number;
-  chambers: {
-    chamberId: string;
-    chamberName?: string;
-    bagsAvailable: number;
-  }[];
-};
+  chamberId: string;
+  bags: number;
+  kg: number;
+  rating: number; 
+}
 
 export type PackingStorageItem = {
   chamberId: string;
@@ -207,13 +212,25 @@ type PackingRMUsage = {
 };
 
 export type PackingEvent = {
+  product_name: string;
+
   packet: {
     size: number;
-    unit: string;
+    unit: "gm" | "kg";
+    packetsPerBag: number;
   };
   storage: PackingStorageItem[];
   rm_consumption: Record<
     string,
     Record<string, PackingRMUsage>
   >;
+};
+
+export type PackedChamberRow = {
+  size: number;
+  unit: "gm" | "kg";
+  chamberId: string;
+  bags: number;
+  kg: number;
+  rating: number; 
 };
