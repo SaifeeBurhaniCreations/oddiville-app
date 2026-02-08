@@ -77,6 +77,7 @@ const getRatingForChamber = (
 export const normalizePackedItemsToUI = (
   items: PackedItemEvent[]
 ): UIPackingItem[] => {
+
   if (!Array.isArray(items)) return [];
 
   return items.flatMap((e) => {
@@ -98,8 +99,8 @@ export const normalizePackedItemsToUI = (
           bags,
           kg: bags * packetKg,
 
-          // ⛔ rating is NOT known here
-          rating: 0, // placeholder
+       
+          rating: 0,
         };
       });
   });

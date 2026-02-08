@@ -13,9 +13,10 @@ import Tag from "../Tag";
 import StarIcon from "../../icons/page/StarIcon";
 import { closeBottomSheet } from "@/src/redux/slices/bottomsheet.slice";
 import { RootState } from "@/src/redux/store";
-import {
-  setRatingForProductSize,
-} from "@/src/redux/slices/bottomsheet/storage.slice";
+import { setRatingForProductSize } from "@/src/redux/slices/bottomsheet/dispatch-rating.slice";
+import { setRatingForRM } from "@/src/redux/slices/bottomsheet/storage.slice";
+
+type RatingMode = "dispatch-rating" | "storage-rating";
 
 const StorageRMRatingComponent = ({
   data,
@@ -24,15 +25,11 @@ const StorageRMRatingComponent = ({
 }) => {
   const dispatch = useDispatch();
   const meta = useSelector((state: RootState) => state.bottomSheet.meta);
+  console.log("data", data);
 
-  /**
-   * meta.id format:
-   * productId|size|unit
-   * example: "edcf2f98|500|gm"
-   */
-  const [productId, sizeStr, unit] =
-    meta?.id?.split("|") ?? [];
+  const mode = meta?.mode as RatingMode | undefined;
 
+  const [productId, sizeStr, unit] = meta?.id?.split("|") ?? [];
   const size = Number(sizeStr);
 
   const ratingToMessageMap: Record<number, string> = {
@@ -41,6 +38,45 @@ const StorageRMRatingComponent = ({
     3: "Average",
     2: "Poor",
     1: "Very Poor",
+  };
+
+  const handleSelect = (selectedRating: number) => {
+    const rating = {
+      rating: selectedRating,
+      message: ratingToMessageMap[selectedRating],
+    };
+
+    if (mode === "dispatch-rating") {
+      if (!productId || !size || !unit) {
+        console.warn("Invalid dispatch rating meta:", meta);
+        return;
+      }
+
+      dispatch(
+        setRatingForProductSize({
+          productId,
+          size,
+          unit: unit as "gm" | "kg",
+          rating,
+        })
+      );
+    }
+
+    if (mode === "storage-rating") {
+      if (!meta?.id) {
+        console.warn("Invalid storage rating meta:", meta);
+        return;
+      }
+
+      dispatch(
+        setRatingForRM({
+          rawMaterial: meta.id,
+          rating,
+        })
+      );
+    }
+
+    dispatch(closeBottomSheet());
   };
 
   return (
@@ -59,28 +95,7 @@ const StorageRMRatingComponent = ({
             key={item.rating}
             activeOpacity={0.7}
             style={styles.card}
-            onPress={() => {
-              const selectedRating = Number(item.rating);
-
-              if (!productId || !size || !unit) {
-                console.warn("Invalid rating meta id", meta?.id);
-                return;
-              }
-
-              dispatch(
-                setRatingForProductSize({
-                  productId,
-                  size,
-                  unit: unit as "gm" | "kg",
-                  rating: {
-                    rating: selectedRating,
-                    message: ratingToMessageMap[selectedRating],
-                  },
-                })
-              );
-
-              dispatch(closeBottomSheet());
-            }}
+            onPress={() => handleSelect(Number(item.rating))}
           >
             <View style={[styles.row, styles.justifyBetween]}>
               <View style={[styles.row, styles.gap12]}>

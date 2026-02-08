@@ -31,7 +31,7 @@ import { useMemo } from "react";
 import { setUsedBags } from "@/src/redux/slices/used-dispatch.slice";
 import Input from "./Inputs/Input";
 import { mapPackageIcon } from "@/src/utils/common";
-import { PackageKey, RatingFilter } from "@/src/redux/slices/bottomsheet/storage.slice";
+import { PackageKey, RatingFilter } from "@/src/redux/slices/bottomsheet/dispatch-rating.slice";
 import { DispatchPackageSize } from "@/src/redux/slices/bottomsheet/dispatch-package-size.slice";
 
 type ControlledFormProps<T> = {
@@ -80,7 +80,7 @@ const AddProductsForSell = ({
 
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
 const ratingByProductSize = useSelector(
-  (state: RootState) => state.storageRating.ratingByProductSize
+  (state: RootState) => state.dispatchRating.ratingByProductSize
 );
 
 const packedRows = packingItems;
@@ -181,51 +181,63 @@ const choosePackaging = {
     },
   ],
 };
-const groupedPackages = useMemo(() => {
-  const map = new Map<string, {
-    size: number;
-    unit: "gm" | "kg";
-    chambers: PackedChamberRow[];
-    totalBags: number;
-  }>();
 
-  packedRows.forEach(row => {
-    const sizeKey = `${row.size}-${row.unit}`;
+  const groupedPackages = useMemo(() => {
+    const map = new Map<string, {
+      size: number;
+      unit: "gm" | "kg";
+      rating: number;
+      chambers: PackedChamberRow[];
+      totalBags: number;
+    }>();
 
-    if (selectedSizeKeys.size > 0 && !selectedSizeKeys.has(sizeKey)) {
-      return; 
-    }
+    packedRows.forEach(row => {
+      const sizeKey = `${row.size}-${row.unit}`;
 
-    if (!map.has(sizeKey)) {
-      map.set(sizeKey, {
-        size: row.size,
-        unit: row.unit,
-        chambers: [],
-        totalBags: 0,
-      });
-    }
+      if (selectedSizeKeys.size === 0) return;
+      if (!selectedSizeKeys.has(sizeKey)) return;
 
-    const pkg = map.get(sizeKey)!;
+      const ratingForPackage = getRatingForPackage(
+        product.id,
+        row.size,
+        row.unit
+      );
 
-    const existingChamber = pkg.chambers.find(
-      ch => ch.chamberId === row.chamberId
-    );
+      const selectedRating = ratingForPackage.rating;
+      const packageKey = `${row.size}-${row.unit}-${selectedRating}`;
 
-    if (existingChamber) {
-      existingChamber.bags += row.bags;
-      existingChamber.kg += row.kg;
-    } else {
-      pkg.chambers.push({ ...row });
-    }
+      if (!map.has(packageKey)) {
+        map.set(packageKey, {
+          size: row.size,
+          unit: row.unit,
+          rating: selectedRating,
+          chambers: [],
+          totalBags: 0,
+        });
+      }
 
-    pkg.totalBags += row.bags;
-  });
+      const pkg = map.get(packageKey)!;
 
-  return Array.from(map.values());
-}, [packedRows, selectedSizeKeys]);
+      const existingChamber = pkg.chambers.find(
+        ch => ch.chamberId === row.chamberId
+      );
+
+      if (existingChamber) {
+        existingChamber.bags += row.bags;
+        existingChamber.kg += row.kg;
+      } else {
+        pkg.chambers.push({ ...row });
+      }
+
+      pkg.totalBags += row.bags;
+    });
+
+    return Array.from(map.values());
+  }, [packedRows, selectedSizeKeys, ratingByProductSize]);
 
 return (
-  <ScrollView key={product?.product_name}>
+  <ScrollView key={product?.product_name} contentContainerStyle={{ flexGrow: 1 }}
+    keyboardShouldPersistTaps="handled">
     <View style={[styles.card, isFirst && styles.firstCard]} {...props}>
       <Pressable style={styles.cardHeader} onPress={onPress}>
         <View style={styles.Hstack}>
@@ -286,110 +298,111 @@ return (
           <View style={[styles.Vstack, { gap: 12 }]}>
             <H3>Select Bags</H3>
 
-{groupedPackages.length === 0 ? (
-  <EmptyState
-    stateData={{
-      title: "No package found",
-      description: "Select size and rating",
-    }}
-    compact
-  />
-) : (
- groupedPackages.map((pkg) => {
-  const ratingForPackage = getRatingForPackage(
-    product.id,
-    pkg.size,
-    pkg.unit
-  );
-
-  const selectedRating = ratingForPackage.rating;
-  const RatingIcon =
-    RatingIconMap[selectedRating] ?? FiveStarIcon;
-
-  const packageKey = `${pkg.size}-${pkg.unit}-${selectedRating}`;
-    const Icon = mapPackageIcon(pkg);
-
-    return (
-      <View key={packageKey} style={{ gap: 12 }}>
-
-        {/* PACKAGE HEADER */}
-        <View style={styles.packageRow}>
-          <View style={styles.row}>
-            <View style={styles.iconWrapper}>
-              {Icon && <Icon size={28} color={getColor("green")} />}
+            {groupedPackages.length === 0 ? (
+              <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                <EmptyState
+                  stateData={{
+                    title: "No package found",
+                    description: "Select sizes",
+                  }}
+                  compact
+                />
             </View>
-            <B1>
-              {pkg.size}{pkg.unit} ({pkg.totalBags})
-            </B1>
-          </View>
+            ) : (
+            groupedPackages.map((pkg) => {
+              const ratingForPackage = getRatingForPackage(
+                product.id,
+                pkg.size,
+                pkg.unit
+              );
 
-         <Select
-        value={ratingForPackage.message}
-        showOptions={false}
-        preIcon={RatingIcon}
-        onPress={() => {
-          validateAndSetData(
-            `${product.id}|${pkg.size}|${pkg.unit}`,
-            "storage-rm-rating"
-          );
-        }}
-        legacy
-      />
-        </View>
+              const selectedRating = ratingForPackage.rating;
+              const RatingIcon =
+                RatingIconMap[selectedRating] ?? FiveStarIcon;
 
-        {/* CHAMBERS */}
-        {pkg.chambers.map((row) => {
-          const globalChamber = globalChambers?.find(
-            ch => ch.id === row.chamberId
-          );
+              const packageKey = `${pkg.size}-${pkg.unit}-${selectedRating}`;
+                const Icon = mapPackageIcon(pkg);
 
-          const usedBags =
-            usedStock[product.id]?.[packageKey]?.usedBagsByChamber?.[row.chamberId] ?? 0;
+                return (
+                  <View key={packageKey} style={{ gap: 12 }}>
 
-          const remaining = Math.max(row.bags - usedBags, 0);
+                    {/* PACKAGE HEADER */}
+                    <View style={styles.packageRow}>
+                      <View style={styles.row}>
+                        <View style={styles.iconWrapper}>
+                          {Icon && <Icon size={28} color={getColor("green")} />}
+                        </View>
+                        <B1>
+                          {pkg.size}{pkg.unit} ({pkg.totalBags})
+                        </B1>
+                      </View>
 
-          return (
-            <View
-              key={`${packageKey}-${row.chamberId}`}
-              style={[styles.chamberCard, styles.borderBottom]}
-            >
-              <View style={styles.Hstack}>
-                <View style={styles.iconWrapper}>
-                  <ChamberIcon size={32} color={getColor("green")} />
-                </View>
+                    <Select
+                    value={ratingForPackage.message}
+                    showOptions={false}
+                    preIcon={RatingIcon}
+                    onPress={() => {
+                      validateAndSetData(
+                        `${product.id}|${pkg.size}|${pkg.unit}`,
+                        "storage-rm-rating"
+                      );
+                    }}
+                    legacy
+                  />
+                    </View>
 
-                <View>
-                  <B1>
-                    {(globalChamber?.chamber_name ?? "Chamber").slice(0, 15)}…
-                  </B1>
-                  <B4>{row.kg} kg | {remaining} bags</B4>
-                </View>
-              </View>
+                    {/* CHAMBERS */}
+                    {pkg.chambers.map((row) => {
+                      const globalChamber = globalChambers?.find(
+                        ch => ch.id === row.chamberId
+                      );
 
-              <Input
-                placeholder="Count"
-                addonText="Bags"
-                keyboardType="numeric"
-                mask="addon"
-                post
-                value={String(usedBags)}
-                onChangeText={(text: string) =>
-                  dispatch(setUsedBags({
-                    productId: product.id,
-                    packageKey,
-                    chamberId: row.chamberId,
-                    bags: Number(text) || 0,
-                  }))
-                }
-              />
-            </View>
-          );
-        })}
-      </View>
-    );
-  })
-)}
+                      const usedBags =
+                        usedStock[product.id]?.[packageKey]?.usedBagsByChamber?.[row.chamberId] ?? 0;
 
+                      const remaining = Math.max(row.bags - usedBags, 0);
+
+                      return (
+                        <View
+                          key={`${packageKey}-${row.chamberId}`}
+                          style={[styles.chamberCard, styles.borderBottom]}
+                        >
+                          <View style={styles.Hstack}>
+                            <View style={styles.iconWrapper}>
+                              <ChamberIcon size={32} color={getColor("green")} />
+                            </View>
+
+                            <View>
+                              <B1>
+                                {(globalChamber?.chamber_name ?? "Chamber").slice(0, 15)}…
+                              </B1>
+                              <B4>{row.kg} kg | {remaining} bags</B4>
+                            </View>
+                          </View>
+
+                          <Input
+                            placeholder="Count"
+                            addonText="Bags"
+                            keyboardType="numeric"
+                            mask="addon"
+                            post
+                            value={String(usedBags)}
+                            onChangeText={(text: string) =>
+                              dispatch(setUsedBags({
+                                productId: product.id,
+                                packageKey,
+                                chamberId: row.chamberId,
+                                bags: Number(text) || 0,
+                              }))
+                            }
+                          />
+                        </View>
+                      );
+                    })}
+                  </View>
+                );
+              })
+            )}
           </View>
         </View>
       )}

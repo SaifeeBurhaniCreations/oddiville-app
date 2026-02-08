@@ -2,34 +2,38 @@ const ExcelJS = require("exceljs");
 const { Op } = require("sequelize");
 const getDateRange = require("../utils/dateRange");
 const db = require("../models");
-
+const { sanitizeRow, applyColumnOrder } = require("../utils/export/sanitizeExportRows")
 const parseIds = (ids) =>
-    ids ? ids.split(",").map(Number).filter(Boolean) : [];
+    ids ? ids.split(",").map((id) => id.trim()).filter(Boolean) : [];
 
-const buildWhere = (query, includeChamber = true) => {
+const buildWhere = (query, options = {}) => {
     const range = getDateRange(query.range, query.from, query.to);
     const chamberIds = parseIds(query.chamberIds);
 
     return {
         ...(range && { createdAt: { [Op.between]: range } }),
-        ...(includeChamber && chamberIds.length && {
+        ...(options.withChamber && chamberIds.length && {
             chamber_id: { [Op.in]: chamberIds },
         }),
     };
 };
 
-const addSheet = (workbook, name, rows) => {
+const addSheet = (workbook, name, rows, extraRemove = []) => {
     const ws = workbook.addWorksheet(name);
 
     if (!rows.length) return;
 
-    ws.columns = Object.keys(rows[0].toJSON()).map((k) => ({
-        header: k,
+    const cleanRows = rows.map((r) => sanitizeRow(r, extraRemove));
+
+    const orderedRows = applyColumnOrder(cleanRows, name);
+
+    ws.columns = Object.keys(orderedRows[0]).map((k) => ({
+        header: k.replace(/_/g, " ").toUpperCase(),
         key: k,
         width: 20,
     }));
 
-    ws.addRows(rows.map((r) => r.toJSON()));
+    ws.addRows(orderedRows);
 };
 
 async function exportDashboard(query) {
@@ -65,11 +69,17 @@ async function exportDashboard(query) {
         ["Third Party Items", others.length],
     ]);
 
-    addSheet(workbook, "Raw Materials", raws);
-    addSheet(workbook, "Production", productions);
+    addSheet(workbook, "Raw Materials", raws, [
+        "vendor",
+    ]);
+    addSheet(workbook, "Production", productions, [
+        "raw_material_order_id",
+    ]);
     addSheet(workbook, "Packing", packing);
     addSheet(workbook, "Dispatch", dispatch);
-    addSheet(workbook, "Stock", stocks);
+    addSheet(workbook, "Stock", stocks, [
+        "packed_ref",
+    ]);
     addSheet(workbook, "Third Party", others);
 
     return workbook;
@@ -101,13 +111,15 @@ async function exportChamber(query) {
         ]);
 
         if (stocks.length) {
-            ws.columns = Object.keys(stocks[0].toJSON()).map((k) => ({
-                header: k,
+            const cleanStocks = stocks.map((s) => sanitizeRow(s));
+
+            ws.columns = Object.keys(cleanStocks[0]).map((k) => ({
+                header: k.replace(/_/g, " ").toUpperCase(),
                 key: k,
                 width: 20,
             }));
 
-            ws.addRows(stocks.map((s) => s.toJSON()));
+            ws.addRows(cleanStocks);
         }
     }
 
@@ -175,7 +187,7 @@ async function countChamber(query) {
     if (!ids.length) return 0;
 
     return db.ChamberStock.count({
-        where: { chamber_id: { [Op.in]: ids } },
+        where: buildWhere(query, { withChamber: true }),
     });
 }
 

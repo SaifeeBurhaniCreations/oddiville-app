@@ -39,7 +39,6 @@ import { clearProduct, setRawMaterials } from "@/src/redux/slices/product.slice"
 import { resetPackageSizes } from "@/src/redux/slices/bottomsheet/package-size.slice";
 import { clearChambers } from "@/src/redux/slices/bottomsheet/raw-material.slice";
 import { clearRatings } from "@/src/redux/slices/bottomsheet/storage.slice";
-import { clearDispatchRatings } from "@/src/redux/slices/bottomsheet/dispatch-rating.slice";
 import PackingSummarySection from "@/src/components/ui/package/PackingSummarySection";
 import { useCreatePacking } from "@/src/hooks/packing/useGetPackedItemsToday";
 
@@ -127,7 +126,6 @@ const PackageScreen = () => {
         dispatch(resetPackageSizes());
         dispatch(clearChambers());
         dispatch(clearRatings());
-        dispatch(clearDispatchRatings());
 
         toast.success("Packed item created!");
       },

@@ -5,39 +5,80 @@ export type RatingFilter = {
   message: string;
 };
 
-export type RatingFilterByRM = {
-  [product_name: string]: RatingFilter;
+export type RatingBySize = {
+  [sizeUnit: string]: RatingFilter; // "500-gm", "250-kg"
 };
 
-interface DispatchRatingState {
-  ratingByRM: RatingFilterByRM;
+export type RatingByProductSize = {
+  [productId: string]: RatingBySize;
+};
+
+export interface DispatchRatingState {
+  ratingByProductSize: RatingByProductSize;
 }
 
+export type PackageKey = `${number}-gm` | `${number}-kg`;
+
 const initialState: DispatchRatingState = {
-  ratingByRM: {},
+  ratingByProductSize: {},
 };
 
-const dispatchRatingSlice = createSlice({
-  name: "dispatchRating",
+export const getProductSizeKey = (
+  productId: string,
+  size: number,
+  unit: "gm" | "kg",
+) => `${productId}|${size}|${unit}`;
+
+const DispatchRatingSlice = createSlice({
+  name: "DispatchRating",
   initialState,
   reducers: {
-    setDispatchRatingForRM: (
+    setRatingForProductSize: (
       state,
       action: PayloadAction<{
-        product_name: string;
+        productId: string;
+        size: number;
+        unit: "gm" | "kg";
         rating: RatingFilter;
-      }>
+      }>,
     ) => {
-      state.ratingByRM[action.payload.product_name] =
-        action.payload.rating;
+      const { productId, size, unit, rating } = action.payload;
+      const key = `${size}-${unit}`;
+
+      if (!state.ratingByProductSize[productId]) {
+        state.ratingByProductSize[productId] = {};
+      }
+
+      state.ratingByProductSize[productId][key] = rating;
     },
 
-    clearDispatchRatings: (state) => {
-      state.ratingByRM = {};
+    clearRatingForProductSize: (
+      state,
+      action: PayloadAction<{
+        productId: string;
+        size: number;
+        unit: "gm" | "kg";
+      }>,
+    ) => {
+      const key = getProductSizeKey(
+        action.payload.productId,
+        action.payload.size,
+        action.payload.unit,
+      );
+
+      delete state.ratingByProductSize[key];
+    },
+
+    clearAllRatings: (state) => {
+      state.ratingByProductSize = {};
     },
   },
 });
 
-export const { setDispatchRatingForRM, clearDispatchRatings } =
-  dispatchRatingSlice.actions;
-export default dispatchRatingSlice.reducer;
+export const {
+  setRatingForProductSize,
+  clearRatingForProductSize,
+  clearAllRatings,
+} = DispatchRatingSlice.actions;
+
+export default DispatchRatingSlice.reducer;

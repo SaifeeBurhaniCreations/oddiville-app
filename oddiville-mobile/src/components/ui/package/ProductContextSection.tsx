@@ -110,11 +110,16 @@ const ProductContextSection = ({ setIsLoading, form, setIsCurrentProduct }: Prop
         showOptions={false}
         preIcon={ProductRatingIcon}
         selectStyle={{ paddingHorizontal: 8 }}
-        onPress={() =>
+        onPress={() => {
+          console.log("productRating", productRating);
+          
           validateAndSetData(
             `product:${productRating.rating}`,
-            "storage-rm-rating"
+            "storage-rm-rating",
+            { mode: "storage-rating" }
           )
+        }
+       
         }
         hasError={form.hasError("product.finalRating")}
         errorMessage={form.getError("product.finalRating")}

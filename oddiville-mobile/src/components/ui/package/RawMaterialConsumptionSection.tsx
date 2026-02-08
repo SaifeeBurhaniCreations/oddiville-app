@@ -267,7 +267,8 @@ const RawMaterialConsumptionSection = ({
                         setEditingRM(rm.product_name);
                         validateAndSetData(
                           `${rm.product_name}:${ratingForThisRM.rating}`,
-                          "storage-rm-rating"
+                          "storage-rm-rating",
+                          { mode: "storage-rating" }
                         )
                       }}
                     />
