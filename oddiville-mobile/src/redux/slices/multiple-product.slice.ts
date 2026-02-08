@@ -1,5 +1,5 @@
 
-import { PackageItem } from "@/src/hooks/useChamberStock";
+import { PackageItemLocal } from "@/src/hooks/useChamberStock";
 import { ChamberProduct } from "@/src/types";
 import { createSlice } from "@reduxjs/toolkit";
 
@@ -8,7 +8,7 @@ export type MultipleProductType = {
   product_name: string;
   image: string;
   rating: number;
-  packages: PackageItem[]; 
+  packages: PackageItemLocal[]; 
   chambers: ChamberProduct[];
 }
 
