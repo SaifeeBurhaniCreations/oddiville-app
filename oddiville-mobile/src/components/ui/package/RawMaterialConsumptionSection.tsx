@@ -30,7 +30,7 @@ import { IconRatingProps } from "@/src/types";
 import ActionButton from "@/src/components/ui/Buttons/ActionButton";
 import PencilIcon from "@/src/components/icons/common/PencilIcon";
 import CrossIcon from "@/src/components/icons/page/CrossIcon";
-import { RawMaterialConsumptionSetter, useRawMaterialConsumption } from "@/src/hooks/packing/useRawMaterialConsumption";
+import { RawMaterialConsumptionSetter } from "@/src/hooks/packing/useRawMaterialConsumption";
 import { PackingFormController } from "@/src/hooks/packing/usePackingForm";
 
 /* Types */
@@ -77,7 +77,7 @@ function useChambersByRM(
           id: String(ch.id),
           name: chamberNameMap.get(String(ch.id)) ?? "Unknown Chamber",
           quantity: Number(ch.quantity) || 0,
-          rating: Number(ch.rating) || 5,
+          rating: Number(ch.rating),
         }));
 
         byRM.set(stock.product_name, chambers);
@@ -105,10 +105,10 @@ const ChamberRow = memo(({
   }: {
     chamber: StockChamber;
     rmPackaging: Packaging;
-      value: number | undefined;
-      onChange: (chamberId: string, value: number) => void;
+    value: number | undefined;
+    onChange: (chamberId: string, value: number) => void;
     error?: string;
-    }) => {
+  }) => {
 
     return (
       <View style={[styles.chamberCard, styles.borderBottom]}>
@@ -268,7 +268,42 @@ const RawMaterialConsumptionSection = ({
                         validateAndSetData(
                           `${rm.product_name}:${ratingForThisRM.rating}`,
                           "storage-rm-rating",
-                          { mode: "storage-rating" }
+                          {
+              sections: [
+                {
+                  type: 'title-with-details-cross',
+                  data: {
+                    title: 'Select rating'
+                  },
+                },
+                {
+                  type: 'storage-rm-rating',
+                  data: [
+                    {
+                    rating: "5",
+                    message: "Excellent",
+                  },
+                  {
+                    rating: "4",
+                    message: "Good",
+                  },
+                  {
+                    rating: "3",
+                    message: "Neutral",
+                  },
+                  {
+                    rating: "2",
+                    message: "Poor",
+                  },
+                  {
+                    rating: "1",
+                    message: "Very poor",
+                  },
+                  ]
+                },
+              ],
+                intent: "PACKING_RM_FILTER_RATING",
+            }
                         )
                       }}
                     />
@@ -326,10 +361,10 @@ const RawMaterialConsumptionSection = ({
                         key={`${rm.product_name}-${chamber.id}`}
                         chamber={chamber}
                         rmPackaging={rmPackaging}
-                        value={containerInputByChamber[chamber.id]}
+                        value={containerInputByChamber[rm.product_name]?.[chamber.id]}
                         onChange={(chamberId, value) => {
-                          setChamberInput(chamberId, value); 
-                          form.setRMInput(chamberId, value); 
+                          setChamberInput(rm.product_name, chamberId, value);
+                          form.setRMInput(rm.product_name, chamberId, value);
 
                           if (value > 0) {
                             form.clearError("rm");

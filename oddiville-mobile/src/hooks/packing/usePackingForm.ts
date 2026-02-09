@@ -16,9 +16,12 @@ type PackingForm = {
     productName: string;
     finalRating: number;
   };
-  rmInputs: {
-    [chamberId: string]: number;
+ rmInputs: {
+    [rmName: string]: {
+      [chamberId: string]: number;
+    };
   };
+  
   rmMeta: rmMeta[]
 
   rmConsumption: {
@@ -69,9 +72,12 @@ type InternalPackingForm = {
     productName: string;
     finalRating: number;
   };
-  rmInputs: {
+rmInputs: {
+  [rmName: string]: {
     [chamberId: string]: number;
   };
+};
+
   rmMeta: rmMeta[];
   outputs: CreatePackingEventDTO["outputs"];
   packagingPlan: PackagingPlanItem[];
@@ -92,7 +98,7 @@ export type PackingFormController = {
   hasError: (path: string) => boolean;
   getError: (path: string) => string | undefined;
   setField: (path: string, value: any) => void;
-  setRMInput: (id: string, value: number) => void;
+  setRMInput: (rmName: string, chamberId: string, value: number) => void;
   setRMMeta: (meta: rmMeta[]) => void;
   validateForm: () => ValidationResult;
   resetForm: () => void;
@@ -101,6 +107,8 @@ export type PackingFormController = {
   setPackagingPlan: (plan: PackagingPlanItem[]) => void;
   getErrors: () => Record<string, string>;
 };
+
+export type PackingSubmitPayload = CreatePackingEventDTO;
 
 /* ======================================================
    Constants
@@ -176,15 +184,12 @@ export function usePackingForm(options: PackingFormOptions = {}) {
       newErrors["product.finalRating"] = "Invalid product rating";
     }
 
-    // 🟢 Build RM consumption ONLY HERE
     const rmConsumption = buildRMConsumption(values.rmMeta, values.rmInputs);
 
-    // ❌ No RM entered
     if (Object.keys(rmConsumption).length === 0) {
       newErrors["rm"] = "Raw material consumption is required";
     }
 
-    // ❌ RM exists but no qty
     Object.entries(rmConsumption).forEach(([rmName, chambers]) => {
       const total = Object.values(chambers).reduce((s, c) => s + c.outer_used, 0);
 
@@ -219,10 +224,6 @@ export function usePackingForm(options: PackingFormOptions = {}) {
      data: finalPayload,
    };
   }, [values]);
-
-  /* ======================================================
-     UI Helpers
-  ====================================================== */
 
   const hasError = useCallback(
     (path: string) =>
@@ -269,15 +270,21 @@ export function usePackingForm(options: PackingFormOptions = {}) {
     });
   }, []);
 
-  const setRMInput = useCallback((chamberId: string, value: number) => {
-    setValues((prev) => ({
+const setRMInput = useCallback(
+  (rmName: string, chamberId: string, value: number) => {
+    setValues(prev => ({
       ...prev,
       rmInputs: {
         ...prev.rmInputs,
-        [chamberId]: value,
+        [rmName]: {
+          ...(prev.rmInputs?.[rmName] || {}),
+          [chamberId]: value,
+        },
       },
     }));
-  }, []);
+  },
+  []
+);
 
   const setRMMeta = useCallback((meta: rmMeta[]) => {
     setValues((prev) => ({
@@ -381,16 +388,22 @@ function buildRMConsumption(
   const result: PackingForm["rmConsumption"] = {};
 
   rmMeta.forEach((rm) => {
-    const chambers: any = {};
+    const rmInputForRM = rmInputs[rm.rmName];
+    if (!rmInputForRM) return;
+
+    const chambers: Record<
+      string,
+      { outer_used: number; rating: number }
+    > = {};
 
     rm.chambers.forEach((ch) => {
-      const used = Number(rmInputs[ch.chamberId] || 0);
-      if (used > 0) {
-        chambers[ch.chamberId] = {
-          outer_used: used,
-          rating: ch.rating,
-        };
-      }
+      const value = rmInputForRM[ch.chamberId];
+      if (!value || value <= 0) return;
+
+      chambers[ch.chamberId] = {
+        outer_used: Number(value),
+        rating: ch.rating,
+      };
     });
 
     if (Object.keys(chambers).length > 0) {
