@@ -13,6 +13,11 @@ module.exports = (sequelize, Sequelize) => {
                 allowNull: false,
             },
 
+            rating: {
+                type: Sequelize.INTEGER,
+                allowNull: false,
+            },
+
             sku_id: {
                 type: Sequelize.STRING,
                 allowNull: false,

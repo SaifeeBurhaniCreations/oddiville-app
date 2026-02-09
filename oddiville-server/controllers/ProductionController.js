@@ -440,6 +440,10 @@ router.patch("/complete/:id", async (req, res) => {
     packaging_size = 0,
   } = req.body;
 
+  if (!Array.isArray(chambers) || chambers.length === 0) {
+  throwHttpError("At least one chamber is required", 400);
+}
+
   let tx;
   try {
     tx = await sequelize.transaction();

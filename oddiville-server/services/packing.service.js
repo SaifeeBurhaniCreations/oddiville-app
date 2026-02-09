@@ -28,11 +28,15 @@ class PackingService {
         try {
             const { product, rmConsumption, packagingPlan } = payload;
             const events = [];
+console.log("RM CONSUMPTION PAYLOAD", JSON.stringify(rmConsumption, null, 2));
+
+        // throw new Error("Debug stop here");
 
             for (const sku of packagingPlan) {
                 const event = await PackingEvent.create(
                     {
                         product_name: product.productName,
+                        rating: product.finalRating,
                         sku_id: sku.skuId,
                         sku_label: sku.skuLabel,
                         packet: sku.packet,
@@ -46,18 +50,18 @@ class PackingService {
 
                 events.push(event);
 
-                await this.applyChamberStockDelta(product.productName, sku, t);
+                await this.applyChamberStockDelta(product.productName, product.finalRating, sku, t);
             }
 
             /* ---------- Deduct materials ---------- */
-            await this.deductRawMaterials(rmConsumption, t);
+            await this.deductRawMaterialStock(rmConsumption, t);
 
             /* ---------- Deduct packaging ---------- */
             await this.deductPackaging(packagingPlan, product.productName, t);
 
-            await pushPackingSummary(events);
-
+            
             await t.commit();
+            await pushPackingSummary(events);
             return events;
         } catch (err) {
             await t.rollback();
@@ -65,7 +69,8 @@ class PackingService {
         }
     }
 
-    static async applyChamberStockDelta(productName, sku, t) {
+    static async applyChamberStockDelta(productName, finalRating, sku, t) {
+        
         let stock = await ChamberStock.findOne({
             where: { product_name: productName, category: "packed" },
             transaction: t,
@@ -81,9 +86,9 @@ class PackingService {
                     category: "packed",
                     unit: "kg", 
                     chamber: sku.storage.map((s) => ({
-                        id: s.chamberId,
+                        id: String(s.chamberId),
                         quantity: String(kgPerBag * s.bagsStored),
-                        rating: "5",
+                        rating: String(finalRating),
                     })),
                     packaging: [],
                     packages: [],
@@ -91,25 +96,31 @@ class PackingService {
                 { transaction: t }
             );
 
-            return; // first insert done
+            return; 
         }
+
+            console.log("BEFORE SAVE", JSON.stringify(stock.chamber, null, 2));
 
         /* ---------- update existing ---------- */
         for (const s of sku.storage) {
-            const addedKg = kgPerBag * s.bagsStored;
+        const addedKg = kgPerBag * s.bagsStored;
 
-            const found = stock.chamber.find((c) => c.id === s.chamberId);
+        const chamberId = String(s.chamberId);
 
-            if (found) {
-                found.quantity = String(Number(found.quantity) + addedKg);
-            } else {
-                stock.chamber.push({
-                    id: s.chamberId,
-                    quantity: String(addedKg),
-                    rating: "5",
-                });
-            }
+        let target = stock.chamber.find(c => String(c.id) === chamberId);
+
+        if (!target) {
+            target = {
+            id: chamberId,
+            quantity: "0",
+            rating: String(finalRating),
+            };
+            stock.chamber.push(target);
         }
+
+        target.quantity = String(Number(target.quantity) + addedKg);
+        }
+
 
         stock.packed_ref = {
             lastPackedAt: new Date().toISOString(),
@@ -120,31 +131,33 @@ class PackingService {
         await stock.save({ transaction: t });
     }
 
-    static async deductRawMaterials(rmConsumption, transaction) {
-        for (const [rmName, chambers] of Object.entries(rmConsumption)) {
-            const stock = await ChamberStock.findOne({
-                where: { product_name: rmName, category: "material" },
-                transaction,
-                lock: transaction.LOCK.UPDATE,
-            });
+    static async deductRawMaterialStock(rmConsumption, transaction) {
+    for (const [rmName, chambers] of Object.entries(rmConsumption)) {
+        const stock = await ChamberStock.findOne({
+        where: { product_name: rmName, category: "material" },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+        });
 
-            if (!stock) continue;
+        if (!stock) continue;
 
-            stock.chamber = stock.chamber.map((c) => {
-                const used = chambers[c.id];
-                if (!used) return c;
+        stock.chamber = stock.chamber.map((c) => {
+        const used = chambers[c.id];
 
-                return {
-                    ...c,
-                    quantity: String(
-                        Math.max(0, Number(c.quantity) - Number(used.outer_used))
-                    ),
-                };
-            });
+        if (!used || used.outer_used <= 0) return c;
 
-            await stock.save({ transaction });
-        }
+        return {
+            ...c,
+            quantity: String(
+            Math.max(0, Number(c.quantity) - Number(used.outer_used))
+            ),
+        };
+        });
+
+        await stock.save({ transaction });
     }
+    }
+
 
     static async deductPackaging(packagingPlan, productName, t) {
         for (const sku of packagingPlan) {
