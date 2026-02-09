@@ -466,7 +466,8 @@ const useValidateAndOpenBottomSheet = () => {
           addonText: "Kg",
           key: "supervisor-production",
           formField_1: chamberName,
-          source: "supervisor-production"
+          source: "supervisor-production",
+          keyboardType: "default",
         },
       })),
       {
@@ -477,11 +478,13 @@ const useValidateAndOpenBottomSheet = () => {
             placeholder_second: "Choose type",
             label_second: "Type",
             alignment: "half",
-            value: packageTypeProduction ?? "pouch",
+            value: packageTypeProduction ?? "bag",
             key: "select-package-type",
-            formField_1: "product_name",
-            source: "add-product-package",
+            formField_1: "packaging_size",
+            source: "supervisor-production",
             source2: "product-package",
+            keyboardType: "number-pad",
+
           },
         },
       {
@@ -492,7 +495,9 @@ const useValidateAndOpenBottomSheet = () => {
           label: "Discard quantity",
           value: "",
           addonText: "Kg",
-          formField: "discard_quantity"
+          formField: "discard_quantity",
+            keyboardType: "number-pad",
+
         },
       }
     ],
@@ -542,6 +547,7 @@ const useValidateAndOpenBottomSheet = () => {
             formField_1: "product_name",
             source: "add-product-package",
             source2: "product-package",
+            keyboardType: "default",
           },
         },
         {
@@ -609,7 +615,9 @@ const useValidateAndOpenBottomSheet = () => {
       {
         type: 'input-with-select',
         data: {
-          placeholder: 'Enter title', label: 'Package title', key: "package-weight", formField_1: "size", label_second: 'Unit', source: "add-package"
+          placeholder: 'Enter title', label: 'Package title', key: "package-weight", formField_1: "size", label_second: 'Unit', source: "add-package",
+            keyboardType: 'default',
+
         },
       },
       {
@@ -1085,6 +1093,7 @@ const useValidateAndOpenBottomSheet = () => {
         meta: {
           id,
           type,
+          intent: overrideConfig?.intent,
           mode: overrideConfig?.mode,
           mainSelection: overrideConfig?.mainSelection,
           subSelection: overrideConfig?.subSelection,

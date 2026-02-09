@@ -15,6 +15,7 @@ import { closeBottomSheet } from "@/src/redux/slices/bottomsheet.slice";
 import { RootState } from "@/src/redux/store";
 import { setRatingForProductSize } from "@/src/redux/slices/bottomsheet/dispatch-rating.slice";
 import { setRatingForRM } from "@/src/redux/slices/bottomsheet/storage.slice";
+import { setPackageProductRating } from "@/src/redux/slices/bottomsheet/package-product-rating.slice";
 
 type RatingMode = "dispatch-rating" | "storage-rating";
 
@@ -25,12 +26,52 @@ const StorageRMRatingComponent = ({
 }) => {
   const dispatch = useDispatch();
   const meta = useSelector((state: RootState) => state.bottomSheet.meta);
-  console.log("data", data);
 
   const mode = meta?.mode as RatingMode | undefined;
 
-  const [productId, sizeStr, unit] = meta?.id?.split("|") ?? [];
-  const size = Number(sizeStr);
+const intent = meta?.intent;
+
+const handleSelect = (selectedRating: number) => {
+  const rating = {
+    rating: selectedRating,
+    message: ratingToMessageMap[selectedRating],
+  };
+
+  switch (intent) {
+    case "PACKED_PRODUCT_RATING":
+      dispatch(
+        setPackageProductRating(rating)
+      );
+      break;
+
+    case "PACKING_RM_FILTER_RATING":
+      dispatch(
+        setRatingForRM({
+          rawMaterial: meta?.id!.split(":")[0],
+          rating,
+        })
+      );
+      break;
+
+    case "DISPATCH_PACKAGE_RATING": {
+      const { productId, size, unit } = meta?.data!;
+      dispatch(
+        setRatingForProductSize({
+          productId,
+          size,
+          unit,
+          rating,
+        })
+      );
+      break;
+    }
+
+    default:
+      console.warn("Unknown rating intent", meta);
+  }
+
+  dispatch(closeBottomSheet());
+};
 
   const ratingToMessageMap: Record<number, string> = {
     5: "Excellent",
@@ -38,45 +79,6 @@ const StorageRMRatingComponent = ({
     3: "Average",
     2: "Poor",
     1: "Very Poor",
-  };
-
-  const handleSelect = (selectedRating: number) => {
-    const rating = {
-      rating: selectedRating,
-      message: ratingToMessageMap[selectedRating],
-    };
-
-    if (mode === "dispatch-rating") {
-      if (!productId || !size || !unit) {
-        console.warn("Invalid dispatch rating meta:", meta);
-        return;
-      }
-
-      dispatch(
-        setRatingForProductSize({
-          productId,
-          size,
-          unit: unit as "gm" | "kg",
-          rating,
-        })
-      );
-    }
-
-    if (mode === "storage-rating") {
-      if (!meta?.id) {
-        console.warn("Invalid storage rating meta:", meta);
-        return;
-      }
-
-      dispatch(
-        setRatingForRM({
-          rawMaterial: meta.id,
-          rating,
-        })
-      );
-    }
-
-    dispatch(closeBottomSheet());
   };
 
   return (

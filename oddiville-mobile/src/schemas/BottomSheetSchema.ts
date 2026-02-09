@@ -367,6 +367,7 @@ const InputWithSelectSection = z.object({
     source: z
       .enum(["add-product-package", "add-package", "supervisor-production"])
       .optional(),
+    keyboardType: z.enum(["default", "number-pad", "numeric", "email-address"]).optional(),
   }),
 });
 

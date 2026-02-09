@@ -32,6 +32,10 @@ export const getBottomSheetActions = (type: BottomSheetSchemaKey): BottomSheetAc
         return ["cancel-policies", "select-policies"];
       case "export-data-options":
         return ["export-open", "export-share"];
+      case "choose-package":
+        return ["add-dispatch-product"];
+      case "add-vendor":
+        return ["add-vendor"];
       default:
         return [];
     }
