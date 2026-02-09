@@ -1,4 +1,4 @@
-    import { FlatList, StyleSheet, View } from "react-native";
+    import { FlatList, StyleSheet, useWindowDimensions, View } from "react-native";
     import React, { useCallback, useEffect, useMemo, useState } from "react";
     import { B4, H6 } from "../../typography/Typography";
     import { getColor } from "@/src/constants/colors";
@@ -26,7 +26,8 @@ import { usePackageInputs } from "@/src/hooks/packing/usePackageInputs";
 
 const PackingSKUSection = ({ setIsLoading, isCurrentProduct, form, onOverPackChange }: Props) => {
         const dispatch = useDispatch();
-
+const { width } = useWindowDimensions();
+const isCompact = width < 390;
         const rawSelectedPackages = useSelector(
             (state: RootState) => state.packageSize.selectedSizes
         );
@@ -74,12 +75,11 @@ const PackingSKUSection = ({ setIsLoading, isCurrentProduct, form, onOverPackCha
             );
         }, [form.values.packagingPlan]);
 
-        const rmUsedBags = useMemo(() => {
-            return Object.values(form.values.rmInputs || {}).reduce(
-                (sum, v) => sum + (Number(v) || 0),
-                0
-            );
-        }, [form.values.rmInputs]);
+const rmUsedBags = useMemo(() => {
+  return Object.values(form.values.rmInputs || {})
+    .flatMap(rm => Object.values(rm))
+    .reduce((sum, v) => sum + Number(v || 0), 0);
+}, [form.values.rmInputs]);
 
         const rmMatchStatus = useMemo(() => {
             if (rmUsedBags === 0) return "neutral";
@@ -203,6 +203,7 @@ const PackingSKUSection = ({ setIsLoading, isCurrentProduct, form, onOverPackCha
                             <View
                                 style={[
                                     styles.quantityCard,
+                                    isCompact && styles.quantityCardVertical,
                                     {
                                         borderColor: isAllGood
                                             ? getColor("green", 500)
@@ -216,7 +217,7 @@ const PackingSKUSection = ({ setIsLoading, isCurrentProduct, form, onOverPackCha
                                         {packedBags} bags · {packedPackets} packets
                                     </B4>
                                 </View>
-
+{isCompact && <View style={styles.divider} />}
                                 <View style={{ alignItems: "center" }}>
                                     <H6>RM Used</H6>
                                     <B4 style={{ color: rmColor }}>
@@ -290,4 +291,15 @@ const PackingSKUSection = ({ setIsLoading, isCurrentProduct, form, onOverPackCha
             flex: 1,
             gap: 16,
         },
+        quantityCardVertical: {
+  flexDirection: "column",
+  gap: 12,
+},
+
+divider: {
+  height: 1,
+  width: "100%",
+  backgroundColor: getColor("green", 100),
+},
+
     });
