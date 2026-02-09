@@ -75,25 +75,26 @@ const PackageScreen = () => {
   const disableButton = Object.values(overPackMap).some(Boolean);
 
 //  memo 
-  const submitDisabledReason = useMemo(() => {
-    if (isPending) return "Packing in progress";
+const submitDisabledReason = useMemo(() => {
+  if (isPending) return "Packing in progress";
 
-    if (!form.canSubmit) {
-      const errors = form.getErrors?.();
+  const errors = form.getErrors?.();
+  if (!errors || Object.keys(errors).length === 0) return null;
 
-      if (!errors) return "Form is incomplete";
+  if (errors["product.productName"])
+    return "Please select a product";
 
-      if (errors.rmConsumption)
-        return "Raw material consumption is invalid";
+  if (errors["rm"])
+    return "Raw material consumption is required";
 
-      if (errors.packagingPlan)
-        return "Packaging quantities do not match";
+  if (errors["cross"])
+    return errors["cross"];
 
-      return "Please complete all required fields";
-    }
+  if (errors["packaging"])
+    return "Packaging quantity is required";
 
-    return null;
-  }, [form.canSubmit, isPending]);
+  return "Please fix the highlighted fields";
+}, [form.getErrors, isPending]);
 
   // effect
   useEffect(() => {
@@ -102,47 +103,63 @@ const PackageScreen = () => {
     return () => clearTimeout(t);
   }, [showTooltip]);
 
-  useEffect(() => {
-    if (disableButton) {
-      toast.error("Not enough packets in stock");
-    }
-  }, [disableButton]);
-
-
   // functions
-  const onSubmit = async () => {
-    const result = form.validateForm();
-    if (!result.success) return;
+const onSubmit = async (data: any) => {
+  dispatch(setFinalDraft(data));
+  setIsLoading(true);
 
-    dispatch(setFinalDraft(result.data));
-    setIsLoading(true);
-
-    createPacked(result.data, {
-      onSuccess: () => {
-        form.resetForm();
-
-        dispatch(clearProduct());
-        dispatch(setRawMaterials([]));
-        dispatch(resetPackageSizes());
-        dispatch(clearChambers());
-        dispatch(clearRatings());
-
-        toast.success("Packed item created!");
-      },
-      onError: (err: any) => {
-        toast.error(err?.message || "Packing failed");
-      },
-      onSettled: () => {
-        setIsLoading(false);
-      },
-    });
-  };
+  createPacked(data, {
+    onSuccess: () => {
+      form.resetForm();
+      dispatch(clearProduct());
+      dispatch(setRawMaterials([]));
+      dispatch(resetPackageSizes());
+      dispatch(clearChambers());
+      dispatch(clearRatings());
+      toast.success("Packed item created!");
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Packing failed");
+    },
+    onSettled: () => {
+      setIsLoading(false);
+    },
+  });
+};
 
   const handleOverPackChange = (key: string, value: boolean) => {
     setOverPackMap(prev => ({ ...prev, [key]: value }));
   };
 
   const emptyStateData = getEmptyStateData("products")
+
+const isFormStructurallyValid = useMemo(() => {
+  if (!form.values.product.productName) return false;
+
+const rmTotal = Object.values(form.values.rmInputs || {})
+  .flatMap(rm => Object.values(rm))
+  .reduce((s, v) => s + Number(v || 0), 0);
+
+const packedBags = form.values.packagingPlan
+  .reduce((s, p) => s + (p.bagsProduced || 0), 0);
+
+if (rmTotal === 0) return false;
+if (packedBags === 0) return false;
+
+const isRMMatchingPackaging = rmTotal === packedBags;
+if (!isRMMatchingPackaging) return false;
+
+return true;
+}, [
+  form.values.product.productName,
+  form.values.rmInputs,
+  form.values.packagingPlan,
+]);
+
+const isSubmitDisabled =
+  isPending ||
+  disableButton ||
+  !isFormStructurallyValid;
 
   return (
     <KeyboardAvoidingView
@@ -174,19 +191,30 @@ const PackageScreen = () => {
               <View style={{ paddingHorizontal: 16 }}>
                 <View>
                   <Pressable
-                    onPress={() => {
-                      if (!form.canSubmit) {
-                        setShowTooltip(true);
-                        return;
-                      }
-                      onSubmit();
-                    }}
+onPress={() => {
+  if (disableButton) {
+    setShowTooltip(true);
+    toast.error("Not enough packets in stock");
+    return;
+  }
+
+  const result = form.validateForm();
+
+  if (!result.success) {
+    setShowTooltip(true);
+    const firstError = Object.values(result.errors)[0];
+    toast.error(firstError);
+    return;
+  }
+
+  onSubmit(result.data);
+}}
                     disabled={isPending}
                   >
                     <Button
                       variant="fill"
                       interactive={false}
-                      disableUi={!form.canSubmit}
+                      disableUi={isSubmitDisabled}
                       disabled={isPending || disableButton}
                     >
                       Pack product
