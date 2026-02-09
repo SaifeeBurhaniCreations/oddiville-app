@@ -56,6 +56,8 @@ import { queryClient } from "@/src/lib/react-query";
 import { useAuth } from '@/src/context/AuthContext';
 import { resolveAccess } from '@/src/utils/policiesUtils';
 import { PURCHASE_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
+import { useToast } from "@/src/context/ToastContext";
 
 type RawMaterialReceived = {
   arrival_date: string;
@@ -112,7 +114,7 @@ const formatOrder = (order: any): OrderProps => ({
 
 const SupervisorRawMaterialDetailsScreen = () => {
       const { role, policies } = useAuth();
-  
+      const toast = useToast();
       const safeRole = role ?? "guest";
       const safePolicies = policies ?? [];
       const access = resolveAccess(safeRole, safePolicies);
@@ -121,11 +123,6 @@ const SupervisorRawMaterialDetailsScreen = () => {
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastType, setToastType] = useState<"success" | "error" | "info">(
-    "info"
-  );
-  const [toastMessage, setToastMessage] = useState("");
 
   const isInitialized = useRef(false);
 
@@ -146,12 +143,6 @@ const SupervisorRawMaterialDetailsScreen = () => {
   const formattedOrder = useMemo(() => {
     return orderData ? formatOrder(orderData) : null;
   }, [orderData]);
-
-  const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setToastVisible(true);
-  };
 
   const updateRawMaterialOrder = useUpdateRawMaterialOrder();
 
@@ -228,21 +219,18 @@ const SupervisorRawMaterialDetailsScreen = () => {
 
   const finalQuantityKg = useMemo(() => {
     const productWeight = netWeightKg;
-    const bagsCount = parseWeight(values.bags || "0"); // pouch as number, 1 pouch = 1 kg
-    const bagsWeight = bagsCount; // 1 pouch = 1 kg
+    const bagsCount = parseWeight(values.bags || "0");
+    const bagsWeight = bagsCount;
     const final = productWeight - bagsWeight;
     return final > 0 ? final : 0;
   }, [netWeightKg, values.bags]);
 
   useEffect(() => {
-    // only update when we have at least truck & tare
     if (!values.truck_weight || !values.tare_weight) return;
     const final = finalQuantityKg;
-    // keep it as string in form
+
     setField("quantity_received", final > 0 ? final.toString() : "0");
   }, [finalQuantityKg, values.truck_weight, values.tare_weight, values.bags]);
-
-
 
   const isWeightLogicValid = useMemo(() => {
     const truckWeight = parseWeight(values.truck_weight);
@@ -348,17 +336,13 @@ const SupervisorRawMaterialDetailsScreen = () => {
     const quantityReceived = parseWeight(values.quantity_received);
 
     if (truckWeight <= tareWeight) {
-      showToast(
-        "error",
-        "Truck gross weight must be greater than tare weight!"
-      );
+      toast.error("Truck gross weight must be greater than tare weight!");
       return false;
     }
 
     const netWeight = truckWeight - tareWeight;
     if (Math.abs(netWeight - quantityReceived) > quantityReceived * 0.1) {
-      showToast(
-        "error",
+      toast.error(
         `Net weight (${netWeight.toFixed(
           2
         )} kg) differs significantly from quantity received (${quantityReceived} kg). Please verify the weights.`
@@ -380,7 +364,7 @@ const SupervisorRawMaterialDetailsScreen = () => {
 
     const result = validateForm();
     if (!result.success) {
-      showToast("error", "Please fill in all required fields correctly!");
+      toast.error("Please fill in all required fields correctly!");
       return;
     }
 
@@ -458,7 +442,7 @@ const SupervisorRawMaterialDetailsScreen = () => {
         { id: safeRmId, data: formData },
         {
           onSuccess: (updated) => {
-            showToast("success", "Raw material order updated successfully!");
+            toast.success("Raw material order updated successfully!");
 
             queryClient.setQueryData<RawMaterialOrderProps[]>(
               PENDING_KEY,
@@ -489,8 +473,7 @@ const SupervisorRawMaterialDetailsScreen = () => {
           },
           onError: (error: any) => {
             console.error("Update error:", error);
-            showToast(
-              "error",
+            toast.error(
               error?.message ||
                 "Failed to update raw material order. Please try again!"
             );
@@ -499,7 +482,7 @@ const SupervisorRawMaterialDetailsScreen = () => {
       );
     } catch (err) {
       console.error("Submit error:", err);
-      showToast("error", "An unexpected error occurred. Please try again!");
+      toast.error("An unexpected error occurred. Please try again!");
     } finally {
       setLoading(false);
     }
@@ -859,12 +842,7 @@ const SupervisorRawMaterialDetailsScreen = () => {
         </KeyboardAvoidingView>
       </View>
 
-      <DetailsToast
-        type={toastType}
-        message={toastMessage}
-        visible={toastVisible}
-        onHide={() => setToastVisible(false)}
-      />
+      {(loading || updateRawMaterialOrder.isPending) && <OverlayLoader />}
 
       <Modal
         showPopup={showDiscardModal}

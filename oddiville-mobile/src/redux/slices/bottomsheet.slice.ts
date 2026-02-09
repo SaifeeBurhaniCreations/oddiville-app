@@ -6,6 +6,7 @@ const initialState: BottomSheetState = {
   config: null,
   meta: {
     id: "",
+    intent: undefined,
     type: undefined,
     mode: "select-main",
     mainSelection: undefined,

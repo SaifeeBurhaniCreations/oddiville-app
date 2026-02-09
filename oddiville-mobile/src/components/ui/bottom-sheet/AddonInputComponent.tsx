@@ -4,14 +4,20 @@ import { AddonInputComponentProps } from '@/src/types';
 import { B4, H4 } from '../../typography/Typography';
 import { useState } from 'react';
 import { useGlobalFormValidator } from '@/src/sbc/form/globalFormInstance';
+
 export type StoreMaterialForm = {
-    id: string;
-    unit: string;
-    size: string;
-    quantity: string;
-    packaging_size: string;
-    packaging_type: string;
+  discard_quantity: number;
+  packaging_type: string | number;
+  packaging_quantity?: number;
 };
+
+export type ChamberValue = {
+  quantity: number;
+  rating: number;
+};
+
+export type StoreChambersForm = Record<string, ChamberValue>;
+
 
 const AddonInputComponent = ({ data, conditionKey }: AddonInputComponentProps) => {
 

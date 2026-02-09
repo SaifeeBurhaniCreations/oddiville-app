@@ -101,27 +101,38 @@ const ItemCard = ({
       }
     }
 
-    if (isActive) {
-      return (
-        <View style={styles.detailsContainer}>
-          {weight && (
-            <View style={styles.ratingContainer}>
-              <DatabaseIcon color={getColor("green", 700)} size={12} />
-              <C1 color={getColor("green", 700)}>{weight}</C1>
-            </View>
-          )}
-          {rating && (
-            <>
-              <View style={styles.separator} />
-              <View style={styles.ratingContainer}>
-                <StarIcon color={getColor("green", 700)} size={12} />
-                <C1 color={getColor("green", 700)}>{rating}</C1>
-              </View>
-            </>
-          )}
+if (isActive) {
+  return (
+    <View style={styles.detailsContainer}>
+      {weight && (
+        <View style={styles.ratingContainer}>
+          <DatabaseIcon color={getColor("green", 700)} size={12} />
+          <C1 color={getColor("green", 700)}>{weight}</C1>
         </View>
-      );
-    }
+      )}
+
+      {lane && (
+        <>
+          <View style={styles.separator} />
+          <View style={styles.ratingContainer}>
+            <LaneIcon />
+            <C1 color={getColor("green", 700)}>{lane}</C1>
+          </View>
+        </>
+      )}
+
+      {rating && (
+        <>
+          <View style={styles.separator} />
+          <View style={styles.ratingContainer}>
+            <StarIcon color={getColor("green", 700)} size={12} />
+            <C1 color={getColor("green", 700)}>{rating}</C1>
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
 
     if (!weight) return null;
 
@@ -201,7 +212,7 @@ const styles = StyleSheet.create({
   },
   detailsContainer: {
     flexDirection: "row",
-    gap: 14,
+    gap: 4,
     alignItems: "center",
   },
   backgroundIcon: {

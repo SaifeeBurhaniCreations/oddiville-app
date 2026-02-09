@@ -937,6 +937,7 @@ const ADD_VENDOR = {
             variant: "fill",
             color: "green",
             alignment: "full",
+            actionKey: "add-vendor",
             disabled: false,
         },
     ],

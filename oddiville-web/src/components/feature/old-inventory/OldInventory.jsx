@@ -469,6 +469,10 @@
     </div>
   </div>
 
+<small className="text-muted">
+  Rating must be between 1 (lowest) and 5 (highest)
+</small>
+
           <div className="row">
             {/* Left column: steps 1 & 2 */}
             <div className="col-md-6">

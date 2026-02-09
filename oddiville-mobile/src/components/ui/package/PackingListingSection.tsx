@@ -99,6 +99,7 @@ const PackingListingSection = ({
             formField_1: "product_name",
             source: "add-product-package",
             source2: "product-package",
+            keyboardType: "default",
           },
         },
         {
@@ -111,6 +112,7 @@ const PackingListingSection = ({
             label_second: "Unit",
             keyboardType: "number-pad",
             source: "add-product-package",
+            
           },
         },
         {

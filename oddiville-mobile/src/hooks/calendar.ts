@@ -16,32 +16,41 @@ export interface CalendarCreated {
 }
 
 export function useCalendar() {
-    const socket = useSocket();
-    const queryClient = useQueryClient();
-    useEffect(() => {
-        const onCreated = (data: CalendarCreated) => {
-            const updated = data.calendarEventDetails;
-            if (!updated?.id) return;
+  const socket = useSocket();
+  const queryClient = useQueryClient();
 
-            queryClient.setQueryData<CalendarEventResponse>(['calendar-by-id', updated.id], updated);
-            queryClient.setQueryData<CalendarEventResponse[]>(['calendar'], (old) => {
-                if (!old) return [updated];
-                if (old.some(o => o.id === updated.id)) return old;
-                return [updated, ...old];
-            });
-        };
+  useEffect(() => {
+    if (!socket) return;
 
-        socket.on('calendar:created', onCreated);
-        return () => {
-            socket.off('calendar:created', onCreated);
-        };
-    }, [queryClient]);
+    const onCreated = (updated: CalendarEventResponse) => {
+      if (!updated?.id) return;
 
-    return useQuery<CalendarEventResponse[]>({
-        queryKey: ['calendar'],
-        queryFn: rejectEmptyOrNull(async () => {
-            const response = await getAllCalendarEvent();
-            return response.data;
-        }),
-    });
+      queryClient.setQueryData(
+        ['calendar-by-id', updated.id],
+        updated
+      );
+
+      queryClient.setQueryData<CalendarEventResponse[]>(
+        ['calendar'],
+        (old = []) => {
+          if (old.some(e => e.id === updated.id)) return old;
+          return [updated, ...old];
+        }
+      );
+    };
+
+    socket.on('calendar:created', onCreated);
+
+    return () => {
+      socket.off('calendar:created', onCreated);
+    };
+  }, [socket, queryClient]);
+
+  return useQuery<CalendarEventResponse[]>({
+    queryKey: ['calendar'],
+    queryFn: rejectEmptyOrNull(async () => {
+      const response = await getAllCalendarEvent();
+      return response.data;
+    }),
+  });
 }

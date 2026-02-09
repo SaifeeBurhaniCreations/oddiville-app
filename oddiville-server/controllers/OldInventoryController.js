@@ -377,7 +377,24 @@ function validateChamberStock(items = [], allowedChambers) {
         continue;
       }
 
-      const allowedKeys = new Set(["id", "quantity", "rating"]);
+      if (
+        !it.packets_per_bag ||
+        !Number.isInteger(Number(it.packets_per_bag)) ||
+        Number(it.packets_per_bag) <= 0
+      ) {
+        issues.push({
+          path: `chamber_stock[${i}].chamber[${j}].packets_per_bag`,
+          error: "packets_per_bag must be a positive integer",
+        });
+      }
+
+      const allowedKeys = new Set([
+  "id",
+  "bags",       
+  "rating",
+  "packets_per_bag" 
+]);
+
       const extra = Object.keys(it).filter((k) => !allowedKeys.has(k));
       if (extra.length) {
         issues.push({
@@ -386,7 +403,7 @@ function validateChamberStock(items = [], allowedChambers) {
         });
       }
 
-      ["id", "quantity", "rating"].forEach((k) => {
+      ["id", "bags", "rating", "packets_per_bag"].forEach((k) => {
         if (typeof it[k] !== "string" || !it[k].trim()) {
           issues.push({
             path: `chamber_stock[${i}].chamber[${j}].${k}`,
@@ -729,14 +746,16 @@ function normalizeChamberStockRow(row) {
     Array.isArray(row.chamber) && row.chamber.length
       ? row.chamber.map((it) => ({
           id: ensureString(it.id || it.chamber_name || it._id || it.name),
-          quantity: ensureString(it.quantity ?? it.quantity ?? ""),
+          quantity: ensureString(it.bags ?? ""),
+          packets_per_bag: Number(it.packets_per_bag ?? 1),
           rating: ensureString(it.rating ?? ""),
         }))
       : row.chamber_name
       ? [
           {
             id: ensureString(row.chamber_name),
-            quantity: ensureString(row.quantity ?? ""),
+            quantity: ensureString(row.bags ?? row.quantity ?? ""),
+            packets_per_bag: Number(row.packets_per_bag ?? 1),
             rating: ensureString(row.rating ?? ""),
           },
         ]
@@ -767,7 +786,10 @@ function normalizeDispatchRow(row) {
           name: ensureString(row.product_name),
           quantity:
             ensureNumber(
-              row.product_quantity ?? row.productQuantity ?? row.quantity
+              row.product_bags ??
+                row.product_quantity ??
+                  row.productQuantity ??
+                    row.quantity
             ) || 0,
         },
       ]
@@ -1395,6 +1417,14 @@ if (productions.length > 0 && raw_material_orders.length > 0) {
         });
         continue;
       }
+      const rating = trimStr(c.rating || "");
+      if (!rating) {
+        chamberErrors.push({
+          path: `chamber_stock[${idx}].rating`,
+          error: "is required",
+        });
+        continue;
+      }
 
       let existing = await ChamberStockClient.findOne({
         where: { product_name: productName },
@@ -1402,15 +1432,14 @@ if (productions.length > 0 && raw_material_orders.length > 0) {
         lock: t.LOCK.UPDATE,
       });
 
-      const incomingChambers = Array.isArray(c.chamber)
-        ? c.chamber.map((it) => ({
-            id: ensureString(
-              it.id || it.chamber_name || it._id || it.name
-            ).trim(),
-            quantity: ensureString(it.quantity ?? it.quantity ?? "").trim(),
-            rating: ensureString(it.rating ?? "").trim(),
-          }))
-        : [];
+const incomingChambers = Array.isArray(c.chamber)
+  ? c.chamber.map((it) => ({
+      id: ensureString(it.id || it.chamber_name || it._id || it.name).trim(),
+      quantity: ensureString(it.quantity ?? "").trim(), // bags
+      packets_per_bag: Number(it.packets_per_bag ?? 1),
+      rating: ensureString(it.rating ?? "").trim(),
+    }))
+  : [];
 
       if (!existing) {
         const newId = uuid();
@@ -1418,7 +1447,12 @@ if (productions.length > 0 && raw_material_orders.length > 0) {
           ...c,
           id: newId,
           product_name: productName,
-          chamber: incomingChambers,
+          chamber: incomingChambers.map(ch => ({
+          id: ch.id,
+          quantity: ch.quantity,        // bags
+          packets_per_bag: ch.packets_per_bag,
+          rating: ch.rating
+        })),
           category: ensureString(c.category ?? ""),
           unit: ensureString(c.unit ?? ""),
         };
@@ -1475,11 +1509,15 @@ if (productions.length > 0 && raw_material_orders.length > 0) {
           }
 
           cur.rating = inc.rating || cur.rating || "";
+          cur.packets_per_bag =
+  inc.packets_per_bag ?? cur.packets_per_bag ?? 1;
+
           existingById.set(incId, cur);
         } else {
           existingById.set(incId, {
             id: incId,
             quantity: inc.quantity || "",
+            packets_per_bag: inc.packets_per_bag ?? 1,
             rating: inc.rating || "",
           });
         }
@@ -1529,20 +1567,24 @@ if (productions.length > 0 && raw_material_orders.length > 0) {
           0
         );
   
+        const packetsPerBag =
+  incomingChambers[0]?.packets_per_bag ?? 1;
+
         await PackingEventClient.create(
           {
             product_name: productName,
+            rating,
             sku_id: uuid(),
             sku_label: productName,
   
             packet: {
               size: c.packaging?.size?.value || 1,
-              unit: c.packaging?.size?.unit || "bag",
-              packetsPerBag: 1
+              unit: c.packaging?.size?.unit || "kg",
+              packetsPerBag
             },
   
             bags_produced: totalBags,
-            total_packets: totalBags,
+            total_packets: totalBags * packetsPerBag,
   
             storage: incomingChambers.map((ch) => ({
               chamberId: ch.id,
@@ -1785,7 +1827,10 @@ if (productions.length > 0 && raw_material_orders.length > 0) {
         return productSum + (Number.isFinite(quantity) ? quantity : 0);
       }, 0);
 
-      const description = [dj.product_name, `${totalWeight} Kg`];
+const description = [
+  dj.product_name,
+  `${totalWeight} Bags`
+];
 
       notificationJobs.push(() =>
         dispatchAndSendNotification({

@@ -11,7 +11,7 @@ import { useCreatePackage, useAddPackageType, useIncreasePackageQuantity } from 
 import { useUpdateOrder } from "./dispatchOrder";
 import { AddPackageQuantityForm } from "../components/ui/bottom-sheet/InputComponent";
 import { resetChamber, setIsChamberSelected } from "../redux/slices/chamber.slice";
-import { StoreMaterialForm } from "../components/ui/bottom-sheet/AddonInputComponent";
+import { StoreChambersForm, StoreMaterialForm } from "../components/ui/bottom-sheet/AddonInputComponent";
 import { useChamber } from "./useChambers";
 import {
   clearChambers,
@@ -40,6 +40,9 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as IntentLauncher from "expo-intent-launcher";
 import { useToast } from "@/src/context/ToastContext";
 
+type BottomSheetActionResult = boolean | void;
+type BottomSheetAction = () => BottomSheetActionResult | Promise<BottomSheetActionResult>;
+
 export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const toast = useToast();
 
@@ -55,7 +58,6 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const metaBottomSheet = useSelector(
     (state: RootState) => state.bottomSheet.meta
   );
-  const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
 
   const dispatch = useDispatch<AppDispatch>();
   const { goTo } = useAppNavigation();
@@ -65,9 +67,10 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const updateOrder = useUpdateOrder();
   const completeProduction = useCompleteProduction();
   const { data: chambers } = useChamber();
-  const chamberRatingsById = useSelector(
-    (state: RootState) => state.chamberRatings.byId
-  );
+
+const { product } = useSelector(
+  (state: RootState) => state.storeProduct
+);
 
   const { data: chambersY } = useChamber();
   const { data: stocksY } = useChamberStock();
@@ -116,38 +119,26 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const packageQuantityForm = useGlobalFormValidator<AddPackageQuantityForm>(
     "add-package-quantity"
   );
+const {
+  errors: storeErrors,
+} = useGlobalFormValidator<StoreChambersForm>("store-chambers");
 
-  const storeQuantityForm =
-    useGlobalFormValidator<StoreMaterialForm>("store-product");
+  // const storeQuantityForm =
+  //   useGlobalFormValidator<StoreMaterialForm>("store-product");
 
-  function formatStoreProduct(data: any) {
-    const finalData: StoreProductProps = {
-      wastage_quantity: Number(data.wastage_quantity || 0),
-      end_time: new Date(),
-      chambers: [],
-    };
+type SupervisorProductionForm = {
+  packaging_size: string;
+  packaging_type: string;
+  discard_quantity?: number;
+};
 
-    for (const key in data) {
-      const valueObj = data[key];
+const supervisorProductionForm =
+  useGlobalFormValidator<SupervisorProductionForm>(
+    "supervisor-production"
+  );
 
-      if (!valueObj || typeof valueObj !== "object") continue;
-
-      const matched = (chambers ?? []).find(
-        (c: any) =>
-          c.chamber_name.trim().toLowerCase() === key.trim().toLowerCase(),
-      );
-
-      if (!matched) continue;
-
-      finalData.chambers.push({
-        id: matched.id,
-        quantity: Number(valueObj.value || 0),
-        rating: valueObj.rating || "0",
-      });
-    }
-
-    return finalData;
-  }
+const storeChambersForm =
+  useGlobalFormValidator<StoreChambersForm>("store-chambers");
 
   const chamberSummaries = getRemainingChamberQuantities(chambersY, stocksY);
 
@@ -169,7 +160,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
       ? "No chamber data available"
       : undefined;
 
-  const actions: Record<string, () => void | Promise<void>> = {
+const actions: Record<string, BottomSheetAction> = {
     "add-raw-material": () => {
       if (!meta?.id) {
         console.warn("No ID for this action");
@@ -390,63 +381,82 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
       }
     },
 
-    "store-product": async () => {
-      if (!meta?.id) {
-        console.warn("No ID for this action");
-        return;
-      }
-      try {
-        const updatedValues: typeof storeQuantityForm.values = {
-          ...storeQuantityForm.values,
-        };
+   "store-product": async () => {
+  if (!meta?.id) {
+    console.warn("No ID for this action");
+    return false;
+  }
 
-        Object.keys(updatedValues).forEach((chamber) => {
-          if (chamber === "discard_quantity") return;
+  // 🔹 validate chambers
+  const chamberResult = storeChambersForm.validateForm();
+  if (!chamberResult.success) {
+    toast.error("Please fill chamber quantity and rating");
+    return false;
+  }
 
-          const prevValue = updatedValues[chamber];
-          const rating = chamberRatingsById[chamber]?.rating ?? 0;
+  // 🔹 validate ratings explicitly
+  const invalidRating = Object.values(chamberResult.data).some(
+    (c: any) => c.quantity > 0 && c.rating === 0
+  );
+  if (invalidRating) {
+    toast.error("Please select rating for all chambers");
+    return false;
+  }
 
-          updatedValues[chamber] = {
-            value: prevValue,
-            rating,
-          };
-        });
-        const result_store_quantity_form =
-          storeQuantityForm?.validateForm(updatedValues);
+  // 🔹 validate packaging
+  const productionResult = supervisorProductionForm.validateForm();
+  if (!productionResult.success) {
+    toast.error("Please fill packaging size");
+    return false;
+  }
 
-        if (result_store_quantity_form.success) {
-          dispatch(setProductionLoading(true));
+  const producedTotal = Number(product?.quantity ?? 0);
+  const storedTotal = Object.values(chamberResult.data).reduce(
+    (sum, c) => sum + Number(c.quantity || 0),
+    0
+  );
 
-          const formData = formatStoreProduct(result_store_quantity_form?.data);
+  const payload = {
+    packaging_size: Number(productionResult.data.packaging_size),
+    packaging_type: productionResult.data.packaging_type,
+    wastage_quantity: Math.max(producedTotal - storedTotal, 0),
+    end_time: new Date(),
+    chambers: Object.entries(chamberResult.data)
+      .map(([name, value]) => {
+        const chamber = chambers?.find(c => c.chamber_name === name);
+        return chamber
+          ? { id: chamber.id, quantity: value.quantity, rating: value.rating }
+          : null;
+      })
+      .filter(Boolean),
+  };
 
-          const newFormData = {
-            ...formData,
-            packaging_type: packageTypeProduction,
-            packaging_size: Number(updatedValues.product_name.value),
-            // future rename product_name to packaging_size in updatedValues
-          };
+  try {
+    dispatch(setProductionLoading(true));
 
-          try {
-            await completeProduction.mutateAsync({
-              id: meta.id,
-              data: newFormData,
-            });
+    await completeProduction.mutateAsync({
+      id: meta.id,
+      data: payload,
+    });
 
-            dispatch(clearChambers());
-            dispatch(setProductionLoading(false));
-            dispatch(resetProductStore());
-            dispatch(chamberRatingReset());
-            dispatch(chamberReset());
-            storeQuantityForm.resetForm();
-            goTo("production");
-          } catch (e) {
-            dispatch(setProductionLoading(false));
-          }
-        }
-      } catch (error: any) {
-        console.log("error in add-raw-material", error.message);
-      }
-    },
+    // ✅ cleanup only after success
+    dispatch(clearChambers());
+    dispatch(resetProductStore());
+    dispatch(chamberRatingReset());
+    dispatch(chamberReset());
+
+    storeChambersForm.resetForm();
+    supervisorProductionForm.resetForm();
+
+    goTo("production");
+    return true;
+  } catch (err) {
+    toast.error("Failed to complete production. Please try again.");
+    return false;
+  } finally {
+    dispatch(setProductionLoading(false));
+  }
+},
 
     "ship-order": () => {
       if (!meta?.id) {
@@ -543,6 +553,16 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
       await Sharing.shareAsync(uri);
     },
 
+    "add-dispatch-product": () => {
+      if (meta?.id) {}
+      dispatch(closeBottomSheet());
+    },
+
+    "add-vendor": () => {
+      if (meta?.id) {}
+      dispatch(closeBottomSheet());
+    },
+
     "cancel-order": () => {
       dispatch(closeBottomSheet());
     },
@@ -552,13 +572,15 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
     },
   };
 
-  const runAction = (key?: string) => {
-    if (!key || !actions[key]) {
-      console.warn("No bottom sheet action found for:", key);
-      return;
-    }
-    actions[key]();
-  };
+const runAction = async (key?: string): Promise<boolean> => {
+  if (!key || !actions[key]) return true;
+
+  const result = await actions[key]();
+
+  if (result === false) return false;
+
+  return true;
+};
 
   return { runAction };
 };

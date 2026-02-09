@@ -195,6 +195,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     setToastMessage(message);
     setToastVisible(true);
   };
+
   useEffect(() => {
     if (!productionData) return;
     setField("lane", productionData.lane || "");
@@ -245,6 +246,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
             key: "supervisor-production",
             formField_1: chamberName,
             source: "supervisor-production",
+            keyboardType: "default",
           },
         })),
           {
@@ -255,11 +257,13 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
             placeholder_second: "Choose type",
             label_second: "Type",
             alignment: "half",
-            value: packageTypeProduction ?? "pouch",
+            value: packageTypeProduction ?? "bag",
             key: "select-package-type",
-            formField_1: "product_name",
-            source: "add-product-package",
+            formField_1: "packaging_size",
+            // source: "add-product-package",
+            source: "supervisor-production",
             source2: "product-package",
+            keyboardType: "number-pad",
           },
         },
         {
@@ -271,6 +275,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
             value: "0",
             addonText: "Kg",
             formField: "discard_quantity",
+            keyboardType: "number-pad",
           },
         },
       ],
@@ -350,6 +355,9 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
           onError: (error) => {
             showToast("error", "Failed to update production");
           },
+           onSettled: () => {
+        setIsLoading(false); 
+      },
         }
       );
     } catch (err) {

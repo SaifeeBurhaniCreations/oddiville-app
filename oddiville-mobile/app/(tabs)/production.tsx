@@ -1,16 +1,14 @@
-import React, { useMemo, useState } from "react";
-import { StyleSheet, View, useWindowDimensions } from "react-native";
+import React, { useMemo } from "react";
+import { StyleSheet, View } from "react-native";
 
 import BottomSheet from "@/src/components/ui/BottomSheet";
 import PageHeader from "@/src/components/ui/PageHeader";
 import Tabs from "@/src/components/ui/Tabs";
-import ItemsFlatList from "@/src/components/ui/ItemCardList";
 import EmptyState from "@/src/components/ui/EmptyState";
 import SearchWithFilter from "@/src/components/ui/Inputs/SearchWithFilter";
 import Loader from "@/src/components/ui/Loader";
 
 import { useProduction } from "@/src/hooks/production";
-import { useLanes } from "@/src/hooks/useFetchData";
 import { getColor } from "@/src/constants/colors";
 import { ItemCardData } from "@/src/types";
 
@@ -22,20 +20,18 @@ import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import RefreshableContent from "@/src/components/ui/RefreshableContent";
 import { mapProductionToItemCards } from "@/src/utils/mappers/mappers.utils";
 import ItemCardList from "@/src/components/ui/ItemCardList";
+import { useLanes } from "@/src/hooks/useFetchData";
 
 const ProductionScreen = () => {
   const { goTo } = useAppNavigation();
-  const { height: screenHeight } = useWindowDimensions();
 
   const { data: productionData, isFetching, refetch } = useProduction();
-  const { data: lanes } = useLanes();
+const { data: lanes } = useLanes();
 
-  const getLaneNameById = (id: string) =>
-    lanes?.find((l: any) => l.id === id)?.name;
-
-  const productionCards: ItemCardData[] = useMemo(() => {
-    return productionData ? mapProductionToItemCards(productionData) : [];
-  }, [productionData]);
+const productionCards: ItemCardData[] = useMemo(() => {
+  if (!productionData || !lanes) return [];
+  return mapProductionToItemCards(productionData, lanes);
+}, [productionData, lanes]);
 
   const pendingAndQueue = productionCards.filter(
     (c) => c.mode === "default" || c.isActive

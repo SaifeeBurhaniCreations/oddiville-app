@@ -238,7 +238,7 @@ const choosePackaging = {
 return (
   <ScrollView key={product?.product_name} contentContainerStyle={{ flexGrow: 1 }}
     keyboardShouldPersistTaps="handled">
-    <View style={[styles.card, isFirst && styles.firstCard]} {...props}>
+    <View style={[styles.card, isFirst && styles.firstCard]}>
       <Pressable style={styles.cardHeader} onPress={onPress}>
         <View style={styles.Hstack}>
           <CustomImage
@@ -322,7 +322,6 @@ return (
 
               const packageKey = `${pkg.size}-${pkg.unit}-${selectedRating}`;
                 const Icon = mapPackageIcon(pkg);
-
                 return (
                   <View key={packageKey} style={{ gap: 12 }}>
 
@@ -333,14 +332,16 @@ return (
                           {Icon && <Icon size={28} color={getColor("green")} />}
                         </View>
                         <B1>
-                          {pkg.size}{pkg.unit} ({pkg.totalBags})
-                        </B1>
+              {`${pkg.size}${pkg.unit} (${pkg.totalBags})`}
+            </B1>
+
                       </View>
 
+<View style={styles.ratingRow}>
                     <Select
                     value={ratingForPackage.message}
                     showOptions={false}
-                    preIcon={RatingIcon}
+                    preIcon={RatingIcon}  
                     onPress={() => {
                       validateAndSetData(
                         `${product.id}|${pkg.size}|${pkg.unit}`,
@@ -349,6 +350,15 @@ return (
                     }}
                     legacy
                   />
+                    <Pressable
+            style={styles.dropdownIcon}
+            onPress={(e) => {
+              e.stopPropagation?.();
+            }}
+          >
+            <TrashIcon color={getColor("green")} />
+          </Pressable>
+          </View>
                     </View>
 
                     {/* CHAMBERS */}
@@ -403,8 +413,7 @@ return (
                 );
               })
             )}
-          </View>
-        </View>
+          </View> </View>
       )}
     </View>
   </ScrollView>
@@ -433,7 +442,7 @@ const styles = StyleSheet.create({
   dropdownIcon: {
     padding: 8,
     backgroundColor: getColor("light"),
-    borderRadius: "50%",
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -489,6 +498,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     flexDirection: "row",
+  },
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   row: {
     flexDirection: "row",

@@ -142,6 +142,8 @@ const CreateFromStorage = ({
   const { data: packedItemsDataNew, isFetching: packedItemsLoadingNew } =
     usePackedItems();
 
+    console.log("packedItemsDataNew", JSON.stringify(packedItemsDataNew, null, 2));
+    
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const [openTab, setOpenTab] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);

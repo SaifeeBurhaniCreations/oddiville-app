@@ -20,6 +20,7 @@ import { setRawMaterials } from "@/src/redux/slices/product.slice";
 import { useRawMaterialByProduct } from "@/src/hooks/productItems";
 import { IconRatingProps } from "@/src/types";
 import { PackingFormController } from "@/src/hooks/packing/usePackingForm";
+import { updateBottomSheetMeta } from "@/src/redux/slices/bottomsheet.slice";
 
 type Props = {
   setIsLoading: (v: boolean) => void;
@@ -111,13 +112,46 @@ const ProductContextSection = ({ setIsLoading, form, setIsCurrentProduct }: Prop
         preIcon={ProductRatingIcon}
         selectStyle={{ paddingHorizontal: 8 }}
         onPress={() => {
-          console.log("productRating", productRating);
-          
           validateAndSetData(
             `product:${productRating.rating}`,
             "storage-rm-rating",
-            { mode: "storage-rating" }
-          )
+            {
+              sections: [
+                {
+                  type: 'title-with-details-cross',
+                  data: {
+                    title: 'Select rating'
+                  },
+                },
+                {
+                  type: 'storage-rm-rating',
+                  data: [
+                    {
+                    rating: "5",
+                    message: "Excellent",
+                  },
+                  {
+                    rating: "4",
+                    message: "Good",
+                  },
+                  {
+                    rating: "3",
+                    message: "Neutral",
+                  },
+                  {
+                    rating: "2",
+                    message: "Poor",
+                  },
+                  {
+                    rating: "1",
+                    message: "Very poor",
+                  },
+                  ]
+                },
+              ],
+                intent: "PACKED_PRODUCT_RATING",
+            }
+          );
         }
        
         }

@@ -15,7 +15,7 @@ import type {
   OptionListComponentProps,
   validRouteOptionList,
 } from "@/src/types";
-import { AddProductPackageForm } from "./InputWithSelectComponent";
+import { AddProductPackageForm, SupervisorProductionForm } from "./InputWithSelectComponent";
 import { useGlobalFormValidator } from "@/src/sbc/form/globalFormInstance";
 import { Chamber, useDryChambers } from "@/src/hooks/useChambers";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
@@ -46,6 +46,8 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
   const productPackageForm = useGlobalFormValidator<AddProductPackageForm>(
     "add-product-package"
   );
+  const supervisorForm =
+  useGlobalFormValidator<SupervisorProductionForm>("supervisor-production");
   const { setField } = productPackageForm;
   const selectedChambers = useSelector(
     (state: RootState) => state.rawMaterial.selectedChambers
@@ -92,7 +94,10 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
       }
 
       if (key === "select-package-type") {
+          const value = typeof item === "object" ? item.name : item;
+
         dispatch(selectPackageType(item));
+          supervisorForm.setField("packaging_type", value);
         const supervisorProduction = {
           sections: [
             {
@@ -136,6 +141,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
                   key: "supervisor-production",
                   formField_1: chamberName,
                   source: "supervisor-production",
+                  keyboardType: "default",
                 },
               };
             }),
@@ -147,12 +153,14 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
                 placeholder_second: "Choose type",
                 label_second: "Type",
                 alignment: "half",
-                value: packageTypeProduction ?? "pouch",
+                value: packageTypeProduction ?? "bag",
                 // value: item ?? "pouch",
                 key: "select-package-type",
-                formField_1: "product_name",
-                source: "add-product-package",
+                formField_1: "packaging_size",
+                // source: "add-product-package",
+                source: "supervisor-production",
                 source2: "product-package",
+            keyboardType: "number-pad",
               },
             },
             {
@@ -164,6 +172,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
                 value: "0",
                 addonText: "Kg",
                 formField: "discard_quantity",
+            keyboardType: "number-pad",
               },
             },
           ],
@@ -246,6 +255,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
                 formField_1: "product_name",
                 source: "add-product-package",
                 source2: "product-package",
+                keyboardType: "default",
               },
             },
             {

@@ -1,6 +1,5 @@
 import * as Crypto from 'expo-crypto';
 import { PackingDraft } from "@/src/types/domain/packing/packing.types";
-import { createRMChamberSource } from '../utils/packing/factories';
 
 export const createEmptyPackingDraft = (): PackingDraft => ({
   meta: {

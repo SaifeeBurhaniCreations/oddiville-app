@@ -48,7 +48,6 @@ export function usePackedItems() {
     });
 }
 
-
 export const normalizePackingEvents = (events: PackingEvent[]): UIPackingItem[] => {
   if (!Array.isArray(events)) return [];
 

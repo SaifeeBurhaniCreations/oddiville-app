@@ -45,6 +45,8 @@ import {
   useVendorById,
 } from "@/src/hooks/vendor";
 import { queryClient } from "@/src/lib/react-query";
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
+import { useToast } from "@/src/context/ToastContext";
 
 interface buttonProps {
   variant: "fill" | "outline";
@@ -62,6 +64,7 @@ type VendorCreation = {
 
 const VendorCreateScreen = () => {
   const dispatch = useDispatch();
+  const toast = useToast();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const updateVendor = useUpdateVendor();
   const selected = useSelector(
@@ -80,20 +83,7 @@ const VendorCreateScreen = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastType, setToastType] = useState<"success" | "error" | "info">(
-    "info"
-  );
-
-  const [toastMessage, setToastMessage] = useState("");
-
   const { goTo } = useAppNavigation();
-
-  const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setToastVisible(true);
-  };
 
   const [deactivate, setDeactivate] = useState(false);
   const [modalContent, setModalContent] = useState<{
@@ -248,6 +238,7 @@ const VendorCreateScreen = () => {
 
 
 const onSubmit = async (userId: string | null) => {
+  setIsLoading(true);
   const updatedValues = {
     ...values,
     state: selectedState.name,
@@ -272,7 +263,7 @@ const onSubmit = async (userId: string | null) => {
         },
       });
 
-      showToast("info", "Vendor Updated");
+      toast.info("Vendor Updated");
       resetForm();
       dispatch(clearRawMaterials());
       dispatch(clearLocations());
@@ -291,20 +282,21 @@ const onSubmit = async (userId: string | null) => {
 
       // if mutateAsync didn't throw, it succeeded
       if (createdVendor) {
-        showToast("info", "New Vendor Added");
+        toast.info("New Vendor Added");
         resetForm();
         dispatch(clearRawMaterials());
         dispatch(clearLocations());
         goTo("vendors");
       } else {
-        showToast("error", "Failed to add vendor");
+        toast.error("Failed to add vendor");
       }
     }
   } catch (err) {
     console.error("vendor create/update failed", err);
-    showToast("error", "Failed to update vendor");
+    toast.error("Failed to update vendor");
   } finally {
     setIsSubmitting(false);
+    setIsLoading(false);
   }
 };
 
@@ -560,19 +552,7 @@ const onSubmit = async (userId: string | null) => {
         />
       )}
       <BottomSheet color="green" />
-      {(isLoading || isFetchingVendor) && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <Loader />
-          </View>
-        </View>
-      )}
-      <DetailsToast
-        type={toastType}
-        message={toastMessage}
-        visible={toastVisible}
-        onHide={() => setToastVisible(false)}
-      />
+      {(isLoading || isFetchingVendor) && <OverlayLoader /> }
     </View>
   );
 };

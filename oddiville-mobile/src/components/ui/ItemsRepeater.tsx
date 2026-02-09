@@ -24,7 +24,7 @@ const ItemsRepeater = ({
     <View style={styles.card} {...props}>
       <View style={styles.cardHeader}>
         <View style={styles.Hstack}>
-                        <CustomImage borderRadius={8} width={36} height={36} src={noProductImage} />
+                        <CustomImage borderRadius={8} width={32} height={32} src={noProductImage} />
         <H5 color={getColor("light")}>{title}</H5>
 
                     </View>

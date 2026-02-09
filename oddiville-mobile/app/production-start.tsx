@@ -36,6 +36,8 @@ import DetailsToast from '@/src/components/ui/DetailsToast';
 import { useAuth } from '@/src/context/AuthContext';
 import { resolveAccess } from '@/src/utils/policiesUtils';
 import { PRODUCTION_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
+import { useToast } from '@/src/context/ToastContext';
+import OverlayLoader from '@/src/components/ui/OverlayLoader';
 
 type RNImageFile = {
     uri: string;
@@ -58,15 +60,12 @@ const DATE_FORMAT = "MMM d, yyyy";
 
 const ProductionStartScreen = () => {
     const { role, policies } = useAuth();
-
+    const toast = useToast();
     const safeRole = role ?? "guest";
     const safePolicies = policies ?? [];
     const access = resolveAccess(safeRole, safePolicies);
 
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [toastVisible, setToastVisible] = useState(false);
-    const [toastType, setToastType] = useState<"success" | "error" | "info">("info");
-    const [toastMessage, setToastMessage] = useState("");
 
     // Hooks
     const { rmId: id } = useParams('raw-material-receive', 'rmId');
@@ -90,20 +89,14 @@ const ProductionStartScreen = () => {
 
     const startProduction = useStartProduction();
 
-    const showToast = (type: "success" | "error" | "info", message: string) => {
-        setToastType(type);
-        setToastMessage(message);
-        setToastVisible(true);
-    };
-
     useEffect(() => {
         if (isProductionError && productionError) {
-            showToast("error", "Failed to load production data. Please try again!");
+            toast.error("Failed to load production data. Please try again!");
 
             goTo('production')
         }
         if (isRawMaterialError && rawMaterialError) {
-            showToast("error", "Failed to load raw material order data!");
+            toast.error("Failed to load raw material order data!");
         }
     }, [isProductionError, productionError, isRawMaterialError, rawMaterialError, goTo]);
 
@@ -292,7 +285,7 @@ const ProductionStartScreen = () => {
                 }
             } catch (error) {
                 console.error("Error processing sample image:", error);
-                showToast("error", "Failed to process the selected image file!");
+                toast.error("Failed to process the selected image file!");
             }
         }
 
@@ -305,12 +298,12 @@ const ProductionStartScreen = () => {
         }
 
         if (!id) {
-            showToast("error", "Production ID is missing!");
+            toast.error("Production ID is missing!");
             return;
         }
 
         if (!adminData?.name && status === 'in-progress') {
-            showToast("error", "Supervisor information is missing!");
+            toast.error("Supervisor information is missing!");
             return;
         }
 
@@ -318,7 +311,7 @@ const ProductionStartScreen = () => {
         if (!result.success) {
             const firstError = Object.values(result.errors)[0];
             if (firstError) {
-                showToast("error", firstError);
+                toast.error(firstError);
             }
             return;
         }
@@ -358,7 +351,7 @@ const ProductionStartScreen = () => {
                                     errorMessage = "Invalid data provided. Please check your inputs.";
                                 }
                             }
-                            showToast("error", errorMessage);
+                            toast.error(errorMessage);
                             reject(error);
                         }
                     }
@@ -371,7 +364,7 @@ const ProductionStartScreen = () => {
             if (error instanceof Error && error.message === "File processing failed") {
                 return;
             }
-            showToast("error", "An unexpected error occurred. Please try again!");
+            toast.error("An unexpected error occurred. Please try again!");
         } finally {
             setIsSubmitting(false);
         }
@@ -474,21 +467,10 @@ const ProductionStartScreen = () => {
                     </View>
                 </View>
             </ScrollView>
-            <DetailsToast
-                type={toastType}
-                message={toastMessage}
-                visible={toastVisible}
-                onHide={() => setToastVisible(false)}
-            />
+   
 
             {/* Loading overlay */}
-            {isLoading && (
-                <View style={styles.overlay}>
-                    <View style={styles.loaderContainer}>
-                        <Loader />
-                    </View>
-                </View>
-            )}
+            {isLoading && <OverlayLoader />}
         </View>
     );
 };

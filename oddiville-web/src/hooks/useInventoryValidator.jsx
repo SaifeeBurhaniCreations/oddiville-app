@@ -87,17 +87,31 @@ export default function useInventoryValidator() {
         "category",
         "unit",
         "chamber_name",
-        "quantity",
+        "bags",
+        "packets_per_bag",
         "rating",
       ],
-      validators: {
-        Quantity: (v) =>
-          v === "" || v == null
-            ? "Quantity is required"
-            : isFinite(Number(v))
-            ? null
-            : "Quantity must be a number",
-      },
+ validators: {
+    Quantity: (v) =>
+      v === "" || v == null
+        ? "Quantity is required"
+        : isFinite(Number(v))
+        ? null
+        : "Quantity must be a number",
+
+    rating: (v) => {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return "Rating must be a number";
+      if (n < 1 || n > 5) return "Rating must be between 1 and 5";
+      return null;
+    },
+      packets_per_bag: (v) => {
+      const n = Number(v);
+      if (!Number.isInteger(n)) return "Packets per bag must be an integer";
+      if (n <= 0) return "Packets per bag must be greater than 0";
+      return null;
+    }
+  },
     },
     4: {
       name: "Dispatch",
@@ -109,7 +123,7 @@ export default function useInventoryValidator() {
         // "delivered_date",
         "amount",
         "product_name",
-        "product_quantity",
+        "product_bags",
         "product_chamber",
         "package_size",
         "package_quantity",
@@ -122,15 +136,15 @@ export default function useInventoryValidator() {
         "truck_driver",
         "truck_phone",
       ],
-      validators: {
+    validators: {
         Quantity: (v) =>
           v === "" || v == null
             ? "Quantity is required"
             : isFinite(Number(v))
             ? null
-            : "Quantity must be a number",
-      },
-    },
+                : "Quantity must be a number",
+          },
+        },
   };
 
   const normalize = (s) => (s == null ? "" : String(s).trim().toLowerCase());

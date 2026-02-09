@@ -29,6 +29,7 @@ import { ItemCardData } from "@/src/types";
           mode: "sku",
         },
       }));
+
 const mapPackingProductRows = (rows: any[], product: string): ItemCardData[] =>
   rows.map((row, i) => ({
     id: `${product}-product-${i}`,
@@ -63,18 +64,25 @@ const mapPackingProductRows = (rows: any[], product: string): ItemCardData[] =>
         };
 
 
-export const mapProductionToItemCards = (items: any[]): ItemCardData[] =>
-  items.map((item) => ({
-    id: item.id,
-    name: item.product_name,
-    weight: `${item.quantity} ${item.unit || "kg"}`,
-    rating: item.rating || "0",
-    lane: item.laneName ?? null,
-    isActive: item.status === "in-queue",
-    mode:
-      item.status === "completed"
-        ? "production-completed"
-        : item.status === "in-progress"
+export const mapProductionToItemCards = (
+  items: any[],
+  lanes: any[]
+): ItemCardData[] => {
+  return items.map((item) => {
+    const laneObj = lanes.find(l => l.id === item.lane);
+
+    return {
+      id: item.id,
+      name: item.product_name,
+      weight: `${item.status !== "completed" ? item.quantity : item.recovery} ${item.unit || "kg"}`,
+      rating: item.rating ? String(item.rating) : undefined,
+      lane: laneObj?.name ?? null,  
+      mode:
+        item.status === "completed"
+          ? "production-completed"
+          : item.status === "in-progress"
           ? "production"
           : "default",
-  }));
+    };
+  });
+};

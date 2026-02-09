@@ -4,36 +4,32 @@ import { typographyEnum } from "@/src/types/typography";
 import { Text, TextProps } from "react-native";
 
 function createTypographyComponent(variant: typographyEnum) {
-    return function TypographyComponent({
-        children,
-        style,
-        color = getColor("green", 700),
-        ...props
-    }: React.PropsWithChildren<TextProps & { color?: string }>) {
-        const { size, line_height, font_family } = BASE_FONT_SIZE[variant];
-        return (
-            <Text
-                style={[
-                    { fontSize: size, lineHeight: line_height, fontFamily: font_family, color },
-                    style
-                ]}
-                {...props}
-            >
-                {typeof children === "string" || typeof children === "number"
-                    ? children
-                    : Array.isArray(children)
-                        ? children.map((child, idx) =>
-                            (typeof child === "string" || typeof child === "number")
-                                ? child
-                                : null
-                        )
-                        : null
-                }
-            </Text>
-        );
-    };
-}
+  return function TypographyComponent({
+    children,
+    style,
+    color = getColor("green", 700),
+    ...props
+  }: React.PropsWithChildren<TextProps & { color?: string }>) {
+    const { size, line_height, font_family } = BASE_FONT_SIZE[variant];
 
+    return (
+      <Text
+        {...props}
+        style={[
+          {
+            fontSize: size,
+            lineHeight: line_height,
+            fontFamily: font_family,
+            color,
+          },
+          style,
+        ]}
+      >
+        {children}
+      </Text>
+    );
+  };
+}
 
 export const H1 = createTypographyComponent(typographyEnum.H1);
 export const H2 = createTypographyComponent(typographyEnum.H2);
