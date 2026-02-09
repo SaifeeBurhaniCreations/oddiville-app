@@ -213,6 +213,7 @@ type PackingRMUsage = {
 
 export type PackingEvent = {
   product_name: string;
+  rating: number;
 
   packet: {
     size: number;

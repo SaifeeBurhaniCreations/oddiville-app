@@ -1,0 +1,4 @@
+export type RatingIntent =
+  | "PACKED_PRODUCT_RATING"
+  | "PACKING_RM_FILTER_RATING"
+  | "DISPATCH_PACKAGE_RATING";

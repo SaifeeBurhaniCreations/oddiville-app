@@ -1,4 +1,5 @@
 import { BottomSheetConfig } from "@/src/types";
+import { RatingIntent } from "./rating";
 
 export type AllowedMainSelection =
       | "chamber:detailed"
@@ -13,6 +14,7 @@ export type AllowedMainSelection =
 
 export type BottomSheetMeta = {
   id: string;
+  intent?: RatingIntent;
   type: any;
   mode?: string;
   mainSelection?: string;

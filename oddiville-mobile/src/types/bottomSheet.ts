@@ -63,9 +63,10 @@ export type BottomSheetActionKey =
   | "select-policies"
   | "cancel-policies"
   | "add-dispatch-product"
+  | "add-vendor"
   | "export-open"
   | "export-share";
-
+  
 // ButtonConfig interface
 export interface ButtonConfig {
   text: string;
@@ -379,6 +380,7 @@ export type SectionConfig =
         formField_2?: string;
         source?: sourceEnum;
         source2?: rmSourceEnum;
+        keyboardType?: "default" | "number-pad" | "numeric" | "email-address";
       };
     }
   | {
@@ -757,6 +759,7 @@ export interface InputWithSelectComponentProps {
     formField_2?: string;
     source?: sourceEnum;
     source2?: rmSourceEnum;
+     keyboardType?: "default" | "number-pad" | "numeric" | "email-address";
   };
 }
 

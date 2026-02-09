@@ -115,10 +115,34 @@ export type ItemCardMode =
   | "production-completed"
   | "packing"
   | "default";
+
 export type PackingFilterMode =
   | "event"
   | "sku"
   | "product";
+
+/* ---------------- META UNION ---------------- */
+
+type PackingMetaBase = {
+  product: string;
+  sku: string;
+};
+
+export type PackingMeta =
+  | (PackingMetaBase & {
+      mode: "product";
+      totalBags: number;
+      totalPackets: number;
+      events: number;
+    })
+  | (PackingMetaBase & {
+      mode: "sku";
+    })
+  | (PackingMetaBase & {
+      mode: "event";
+    });
+
+/* ---------------- CARD ---------------- */
 
 export interface ItemCardData {
   id?: string;
@@ -132,17 +156,9 @@ export interface ItemCardData {
   isActive?: boolean;
   style?: ViewStyle;
   mode?: ItemCardMode;
-  meta?: {
-    product: string;
-    sku: string;
-    mode: PackingFilterMode;
-    totalBags: number;
-    totalPackets: number;
-    events: number;
-  };
+  meta?: PackingMeta;
   onActionPress?: () => void;
 }
-
 
 export interface ItemCardListProps {
   items: ItemCardData[];
