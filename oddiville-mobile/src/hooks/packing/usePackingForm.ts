@@ -171,59 +171,43 @@ export function usePackingForm(options: PackingFormOptions = {}) {
   /* ======================================================
      Submit Validation (FINAL)
   ====================================================== */
-  const validateForm = useCallback((): ValidationResult => {
-    setHasSubmitted(true);
+const validateForm = useCallback((): ValidationResult => {
+  setHasSubmitted(true);
 
-    const newErrors: Record<string, string> = {};
+  const newErrors: Record<string, string> = {};
 
-    if (!values.product.productName) {
-      newErrors["product.productName"] = "Product is required";
-    }
+  if (!values.product.productName) {
+    newErrors["product.productName"] = "Product is required";
+  }
 
-    if (values.product.finalRating < 1 || values.product.finalRating > 5) {
-      newErrors["product.finalRating"] = "Invalid product rating";
-    }
+  if (values.product.finalRating < 1 || values.product.finalRating > 5) {
+    newErrors["product.finalRating"] = "Invalid product rating";
+  }
 
-    const rmConsumption = buildRMConsumption(values.rmMeta, values.rmInputs);
+  const rmConsumption = buildRMConsumption(
+    values.rmMeta,
+    values.rmInputs
+  );
 
-    if (Object.keys(rmConsumption).length === 0) {
-      newErrors["rm"] = "Raw material consumption is required";
-    }
+  if (Object.keys(rmConsumption).length === 0) {
+    newErrors["rm"] = "Raw material consumption is required";
+  }
 
-    Object.entries(rmConsumption).forEach(([rmName, chambers]) => {
-      const total = Object.values(chambers).reduce((s, c) => s + c.outer_used, 0);
+  if (values.packagingPlan.length === 0) {
+    newErrors["packaging"] = "Packaging quantity is required";
+  }
 
-      if (total === 0) {
-        newErrors[`rm.${rmName}`] = "Quantity must be greater than 0";
-      }
-    });
+  setErrors(newErrors);
 
-    const totalProduced = sumProducedBags(values.packagingPlan);
-    const totalConsumed = sumOuterUsed(rmConsumption);
+  if (Object.keys(newErrors).length > 0) {
+    return { success: false, errors: newErrors };
+  }
 
-    if (totalProduced === 0) {
-      newErrors["packaging"] = "Packaging quantity is required";
-    }
-
-    if (totalProduced !== totalConsumed) {
-      newErrors[
-        "cross"
-      ] = `Consumed (${totalConsumed}) must equal produced (${totalProduced})`;
-    }
-
-    setErrors(newErrors);
-
-    if (Object.keys(newErrors).length > 0) {
-      return { success: false, errors: newErrors };
-    }
-
-   const finalPayload = buildFinalPayload(values);
-
-   return {
-     success: true,
-     data: finalPayload,
-   };
-  }, [values]);
+  return {
+    success: true,
+    data: buildFinalPayload(values),
+  };
+}, [values]);
 
   const hasError = useCallback(
     (path: string) =>
@@ -241,12 +225,18 @@ export function usePackingForm(options: PackingFormOptions = {}) {
     [errors]
   );
 
-  const canSubmit = useMemo(() => {
-    if (!values.product.productName) return false;
+const canSubmit = useMemo(() => {
+  const rmConsumption = buildRMConsumption(
+    values.rmMeta,
+    values.rmInputs
+  );
 
-    return true;
-  }, [values.product.productName]);
+if (!values.product.productName) return false;
+if (values.packagingPlan.length === 0) return false;
+if (Object.keys(rmConsumption).length === 0) return false;
 
+return true;
+}, [values]);
 
   const resetForm = useCallback(() => {
     setValues({
@@ -365,21 +355,36 @@ function validateField(path: string, value: any): string | null {
    Helpers
 ====================================================== */
 
-function sumOuterUsed(rmConsumption: PackingForm["rmConsumption"]) {
-  return Object.values(rmConsumption).reduce(
-    (rmSum, chambers) =>
-      rmSum +
-      Object.values(chambers).reduce(
-        (sum, c) => sum + (Number(c.outer_used) || 0),
-        0
-      ),
-    0
-  );
+function sumConsumedKg(
+  rmConsumption: PackingForm["rmConsumption"],
+  rmMeta: rmMeta[]
+) {
+  let totalKg = 0;
+
+  rmMeta.forEach((rm) => {
+    const chambers = rmConsumption[rm.rmName];
+    if (!chambers) return;
+
+    Object.values(chambers).forEach((c) => {
+      totalKg += Number(c.outer_used || 0); 
+    });
+  });
+
+  return totalKg;
 }
 
-function sumProducedBags(plan: PackagingPlanItem[]) {
-  return plan.reduce((sum, p) => sum + p.bagsProduced, 0);
+function sumProducedKg(plan: PackagingPlanItem[]) {
+  return plan.reduce((sum, p) => {
+    const packetKg =
+      p.packet.unit === "gm"
+        ? p.packet.size / 1000
+        : p.packet.size;
+
+    const kgPerBag = packetKg * p.packet.packetsPerBag;
+    return sum + kgPerBag * p.bagsProduced;
+  }, 0);
 }
+
 
 function buildRMConsumption(
   rmMeta: rmMeta[],

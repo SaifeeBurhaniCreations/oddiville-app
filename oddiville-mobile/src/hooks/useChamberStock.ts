@@ -29,6 +29,14 @@ export interface Packaging {
   count: number;
 }
 
+export interface OutputBagPackaging {
+  size: {
+    value: number;
+    unit: "gm" | "kg";
+  };
+  packetsPerBag: number;
+}
+
 export interface PackageItemLocal {
   size: string;
   unit?: string;

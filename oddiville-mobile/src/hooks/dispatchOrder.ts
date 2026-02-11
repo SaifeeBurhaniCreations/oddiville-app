@@ -6,57 +6,57 @@ import { rejectEmptyOrNull } from "../utils/authUtils";
 import { OrderStorageForm } from "@/app/create-orders";
 
 export interface DispatchOrderPackage {
-    quantity: string;        
-    size: number;           
+    quantity: string;
+    size: number;
     stored_quantity: number;
-    unit: string;            
-  }
-  
-  export interface DispatchOrderProduct {
-    name: string;           
+    unit: string;
+}
+
+export interface DispatchOrderProduct {
+    name: string;
     chambers: {
         id: string;
         name: string;
         stored_quantity: number | string;
         quantity: number | string;
-    }[];        
-  }
-  
-  export interface DispatchTruckDetails {
-    agency_name: string;   
-    driver_name: string;    
-    number: string;      
-    phone: string;       
-    type: string;            
-  }
-  
-  export interface DispatchOrderData {
-    id: string;                       
+    }[];
+}
+
+export interface DispatchTruckDetails {
+    agency_name: string;
+    driver_name: string;
+    number: string;
+    phone: string;
+    type: string;
+}
+
+export interface DispatchOrderData {
+    id: string;
     status: "pending" | "dispatched" | "completed" | "in-progress" | string;
-    customer_name: string;           
-    address: string;                  
-    city: string;                   
-    state: string;                  
-    country: string;                  
-    phone: string;                  
-    amount: number;                    
-    amountLabel?: string;                    
-    createdAt: string | Date;  
+    customer_name: string;
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+    phone: string;
+    amount: number;
+    amountLabel?: string;
+    createdAt: string | Date;
     updatedAt: string | Date;
-    dispatch_date: string | Date;      
-    est_delivered_date: string | Date;  
+    dispatch_date: string | Date;
+    est_delivered_date: string | Date;
     delivered_date: string | Date | null;
     products: DispatchOrderProduct[];
-    sample_images: string[];          
+    sample_images: string[];
     truck_details: DispatchTruckDetails | null;
 
     total_quantity: number;
     unit: string;
-    package: any; 
-  }
+    package: any;
+}
 
 const CHAMBER_STOCK_KEY = ["chamber-stock"];
-  
+
 export function useOrders() {
     const queryClient = useQueryClient();
 
@@ -72,9 +72,9 @@ export function useOrders() {
                 return [];
             }
         }),
-        staleTime: 1000 * 60 * 10, 
+        staleTime: 1000 * 60 * 10,
         refetchOnWindowFocus: false,
-        refetchOnMount: true, 
+        refetchOnMount: true,
         retry: 3,
         retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
     });
@@ -92,7 +92,7 @@ export function useOrders() {
                 }
 
                 const index = oldData.findIndex(item => item?.id === updatedOrder.id);
-                
+
                 if (index !== -1) {
                     const newData = [...oldData];
                     newData[index] = { ...newData[index], ...updatedOrder };
@@ -118,7 +118,7 @@ export function useOrders() {
 
                 const exists = oldData.some(order => order?.id === newOrder.id);
                 if (exists) {
-                    return oldData; 
+                    return oldData;
                 }
 
                 return [newOrder, ...oldData];
@@ -129,7 +129,7 @@ export function useOrders() {
 
         socket.on('dispatchOrder:update', handleOrderUpdate);
         socket.on('dispatchOrder:receive', handleOrderReceive);
-        socket.on('dispatchOrder:created', handleOrderReceive); 
+        socket.on('dispatchOrder:created', handleOrderReceive);
 
         return () => {
             socket.off('dispatchOrder:update', handleOrderUpdate);
@@ -155,8 +155,8 @@ export function useUpdateOrderStatus() {
             queryClient.setQueryData(['dispatchOrders'], (oldData: DispatchOrderData[] | undefined) => {
                 if (!oldData || !Array.isArray(oldData)) return oldData;
 
-                return oldData.map(order => 
-                    order?.id === updatedOrder.id 
+                return oldData.map(order =>
+                    order?.id === updatedOrder.id
                         ? { ...order, ...updatedOrder }
                         : order
                 );
@@ -216,7 +216,7 @@ export function useOrderById(id: string | null) {
 //     mutationFn: async (data: OrderStorageForm) => {
 //       const response = await dispatchOrder(data);
 //       console.log("response.data", response.data);
-      
+
 //       return response.data;
 //     },
 //     onSuccess: () => {
@@ -233,7 +233,17 @@ export function useDispatchOrder() {
 
     return useMutation({
         mutationFn: async (data: OrderStorageForm) => {
-            const response = await dispatchOrder(data);
+            const payload: OrderStorageForm = {
+                ...data,
+                products: data.products.map(p => ({
+                    id: p.id,
+                    product_name: p.product_name,
+                    image: p.image,
+                    rating: p.rating,
+                })),
+            };
+
+            const response = await dispatchOrder(payload);
             return response.data;
         },
         onSuccess: (newOrder) => {
@@ -246,7 +256,7 @@ export function useDispatchOrder() {
 
                 const exists = oldData.some(order => order.id === newOrder.id);
                 if (exists) {
-                    return oldData.map(order => 
+                    return oldData.map(order =>
                         order.id === newOrder.id ? { ...order, ...newOrder } : order
                     );
                 }
@@ -256,9 +266,9 @@ export function useDispatchOrder() {
 
             queryClient.setQueryData(['dispatchOrder', newOrder.id], newOrder);
 
-            queryClient.invalidateQueries({ 
+            queryClient.invalidateQueries({
                 queryKey: ['dispatchOrders'],
-                exact: true 
+                exact: true
             });
         },
         onError: (error) => {
@@ -266,7 +276,7 @@ export function useDispatchOrder() {
             queryClient.invalidateQueries({ queryKey: ['dispatchOrders'] });
         },
         onSettled() {
-          queryClient.invalidateQueries({ queryKey: ['dispatchOrders'] });
+            queryClient.invalidateQueries({ queryKey: ['dispatchOrders'] });
         },
     });
 }

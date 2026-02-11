@@ -55,10 +55,7 @@ const chamberRatingsSlice = createSlice({
             state.order = state.order.filter((n) => !toRemove.has(n));
             for (const n of toRemove) delete state.byId[n];
         },
-        reset(state) {
-            state.byId = {};
-            state.order = [];
-        },
+       reset: () => initialState,
     },
 });
 

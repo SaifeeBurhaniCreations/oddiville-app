@@ -21,6 +21,7 @@ const normalizePackedItem = (apiItem: ApiPackedItem): PackedItemEvent => ({
 
   bagsProduced: apiItem.bags_produced,
   totalPacketsProduced: apiItem.total_packets,
+    rating: apiItem.rating ?? 5,
 
   storage: (apiItem.storage ?? []).filter(isValidStorage).map((s) => ({
     chamberId: s.chamberId,
@@ -41,6 +42,7 @@ export function usePackedItems() {
         queryFn: async () => {
             const res = await getPackedItems();
             const items = res.data ?? [];
+            
             return items.map(normalizePackedItem);
         },
         staleTime: 1000 * 60 * 5,
@@ -49,6 +51,7 @@ export function usePackedItems() {
 }
 
 export const normalizePackingEvents = (events: PackingEvent[]): UIPackingItem[] => {
+
   if (!Array.isArray(events)) return [];
 
   return events.flatMap((e) => {
@@ -61,9 +64,6 @@ export const normalizePackingEvents = (events: PackingEvent[]): UIPackingItem[] 
       const bags = Number(s.bagsStored || 0);
       const packets = bags * e.packet.packetsPerBag;
 
-      const rating =
-        Object.values(e.rm_consumption ?? {})[0]?.[s.chamberId]?.rating ?? 5;
-
       return {
         productName: e.product_name,
         size: e.packet.size,
@@ -72,7 +72,7 @@ export const normalizePackingEvents = (events: PackingEvent[]): UIPackingItem[] 
 
         bags,
         kg: packets * packetKg,
-        rating,
+         rating: e.rating,
       };
     });
   });
@@ -84,6 +84,7 @@ export function usePackedItemsData() {
     queryFn: async () => {
       const res = await getPackedItems();
       const items = res.data ?? [];
+      
       return normalizePackingEvents(items); 
     },
     staleTime: 1000 * 60 * 5,

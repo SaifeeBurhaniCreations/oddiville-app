@@ -110,6 +110,7 @@ export interface ProductionCardProps {
   image: string;
 }
 
+
 export type ItemCardMode =
   | "production"
   | "production-completed"

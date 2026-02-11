@@ -86,7 +86,12 @@ export function useRawMaterialConsumption(rmUsed: ChamberStock[]) {
         if (!chamber) return null;
 
         const quantityUsedKg =
-          (containersUsed * rmPackaging.size.value) / 1000;
+          rmPackaging.size.unit === "kg"
+            ? containersUsed * rmPackaging.size.value
+            : rmPackaging.size.unit === "gm"
+              ? (containersUsed * rmPackaging.size.value) / 1000
+              : 0;
+
 
         return createRMChamberSource({
           chamberId,

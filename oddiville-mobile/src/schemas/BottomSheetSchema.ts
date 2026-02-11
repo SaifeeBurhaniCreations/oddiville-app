@@ -54,7 +54,7 @@ const HeaderSection = z.object({
     title: z.string().optional(),
     description: z.string().optional(),
     headerdetails: z.array(detailItem).default([]),
-    color: z.enum(["green", "red", "blue", "yellow"]),
+    color: z.enum(["green", "red", "blue", "yellow"]).optional().default("red"),
     icon: z.enum([
       "calendar",
       "calendarCheck",
@@ -147,6 +147,9 @@ const TableSection = z.object({
         z.object({
           label: z.string(),
           key: z.string(),
+          align: z.enum(["left", "center", "right"]).optional(),
+          flex: z.number().optional(),
+          width: z.number().optional(),
         })
       ),
       tableBody: z.array(
@@ -154,6 +157,13 @@ const TableSection = z.object({
       ),
     })
   ),
+});
+
+const ProductSkuSchema = z.object({
+  skuId: z.string().optional(),
+  size: z.number(),
+  unit: z.enum(["kg", "gm", "qn", "unit"]),
+  totalBags: z.number(),
 });
 
 const ProductListSection = z.object({
@@ -167,26 +177,14 @@ const ProductListSection = z.object({
     products: z.array(
       z.object({
         title: z.string(),
-        image: z.string(),
-        description: z.string(),
-        packagesSentence: z.string(),
-        weight: z.string(),
-        price: z.string(),
-        packages: z.array(
-          z.object({
-            size: z.union([z.string(), z.number()]),
-            unit: z.enum(["kg", "gm"]),
-            quantity: z.string(),
-          })
-        ),
-        chambers: z.array(
-          z.object({
-            id: z.string(),
-            name: z.string(),
-            quantity: z.string(),
-            unit: z.enum(["kg", "gm", "qn"]),
-          })
-        ),
+        image: z.string().optional().default(""),
+        description: z.string().optional().default(""),
+        weight: z.string().optional().default(""),
+
+        productId: z.string().optional(),
+        name: z.string().optional(),
+        rating: z.number().optional(),
+        skus: z.array(ProductSkuSchema).optional().default([]),
       })
     ),
   }),
@@ -229,25 +227,14 @@ const ProductListAccoridanSection = z.object({
     products: z.array(
       z.object({
         title: z.string(),
-        image: z.string(),
-        description: z.string(),
-        packagesSentence: z.string(),
-        weight: z.string(),
-        price: z.string(),
-        chambers: z.array(
-          z.object({
-            name: z.string(),
-            quantity: z.string(),
-            id: z.string(),
-          })
-        ),
-        packages: z.array(
-          z.object({
-            size: z.union([z.number(), z.string()]),
-            quantity: z.union([z.string(), z.number()]),
-            unit: z.string(),
-          })
-        ),
+        image: z.string().optional().default(""),
+        description: z.string().optional().default(""),
+        weight: z.string().optional().default(""),
+
+        productId: z.string().optional(),
+        name: z.string().optional(),
+        rating: z.number().optional(),
+        skus: z.array(ProductSkuSchema).optional().default([]),
       })
     ),
   }),

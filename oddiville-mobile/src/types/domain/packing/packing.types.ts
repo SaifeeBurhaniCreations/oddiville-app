@@ -168,6 +168,7 @@ export type RMConsumption = Record<
 export interface PackedItemEvent extends PackagingPlanItem {
   id: UUID;
   product_name: string;
+  rating?: number; 
   createdAt: ISODate;
   updatedAt: ISODate;
 
@@ -178,6 +179,7 @@ export interface PackedItemEvent extends PackagingPlanItem {
 export type ApiPackedItem = {
   id: string;
   product_name: string;
+  rating?: number; 
   sku_id: string;
   sku_label: string;
   packet: {

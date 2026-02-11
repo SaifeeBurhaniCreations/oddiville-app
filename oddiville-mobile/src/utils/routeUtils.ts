@@ -2,7 +2,7 @@ import { AppDispatch } from '@/src/redux/store';
 import { validRouteOptionList } from "../types";
 import { setCity, setCitySearched, setState, setStateSearched } from '../redux/slices/bottomsheet/location.slice';
 import { closeBottomSheet } from '../redux/slices/bottomsheet.slice';
-import { selectProduct } from '../redux/slices/product.slice';
+import { setProductName } from '../redux/slices/product.slice';
 import { selectChamber } from '../redux/slices/chamber.slice';
 
 export function setReduxRoute(
@@ -33,7 +33,7 @@ export function setReduxRoute(
       break;
 
     case "product":
-      dispatch(selectProduct(item));
+      dispatch(setProductName(item));
       dispatch(closeBottomSheet());
       break;
 

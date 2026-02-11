@@ -191,17 +191,25 @@ type UseProductPackageResult = {
   refetch: () => void;
 };
 
-export function useProductPackage(): UseProductPackageResult {
-  const { product: selectedProduct } = useSelector(
+export function useProductPackage(): UseProductPackageResult { 
+  const { productName: selectedProductName } = useSelector(
     (state: RootState) => state.product
   );
+
+const isValidProduct =
+  !!selectedProductName &&
+  selectedProductName !== "Select product";
+
+const productName = isValidProduct
+  ? selectedProductName
+  : null;
 
   const {
     data: packageData = { types: [] },
     isLoading,
     refetch,
     isFetching,
-  } = usePackageByName(selectedProduct) as {
+  } = usePackageByName(isValidProduct ? productName : null) as {
     data: PackageData;
     isLoading: boolean;
     isFetching: boolean;
@@ -237,12 +245,13 @@ export function useProductPackage(): UseProductPackageResult {
         rawUnit: pkg.unit ?? null,
       };
     });
-  }, [packageData, selectedProduct]);
+  }, [packageData, selectedProductName]);
 
   return { productPackages, isLoading, isFetching, refetch };
 }
 
 export function useRawMaterialByProduct(name: string | null) {
+  
   const {
     data,
     refetch,

@@ -467,7 +467,7 @@ const useValidateAndOpenBottomSheet = () => {
           key: "supervisor-production",
           formField_1: chamberName,
           source: "supervisor-production",
-          keyboardType: "default",
+          keyboardType: "number-pad",
         },
       })),
       {
@@ -1097,7 +1097,7 @@ const useValidateAndOpenBottomSheet = () => {
           mode: overrideConfig?.mode,
           mainSelection: overrideConfig?.mainSelection,
           subSelection: overrideConfig?.subSelection,
-          data: overrideConfig?.metaData,
+          data: overrideConfig?.data,
         },
       }),
     );

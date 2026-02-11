@@ -18,6 +18,7 @@ export const usePackingPackages = (
 
     const data: PackingPackages[] = useMemo(() => {
         if (!types) return [];
+// console.log("selectedPackages", JSON.stringify(selectedPackages, null, 2));
 
         return selectedPackages.map((sel) => {
             const type = types.find(

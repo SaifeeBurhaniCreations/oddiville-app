@@ -11,7 +11,7 @@ import { useCreatePackage, useAddPackageType, useIncreasePackageQuantity } from 
 import { useUpdateOrder } from "./dispatchOrder";
 import { AddPackageQuantityForm } from "../components/ui/bottom-sheet/InputComponent";
 import { resetChamber, setIsChamberSelected } from "../redux/slices/chamber.slice";
-import { StoreChambersForm, StoreMaterialForm } from "../components/ui/bottom-sheet/AddonInputComponent";
+import { StoreChambersForm } from "../components/ui/bottom-sheet/AddonInputComponent";
 import { useChamber } from "./useChambers";
 import {
   clearChambers,
@@ -22,7 +22,6 @@ import { resetProductStore } from "../redux/slices/store-product.slice";
 import { splitValueAndUnit } from "../utils/common";
 import { reset as chamberRatingReset } from "../redux/slices/bottomsheet/chamber-ratings.slice";
 import { reset as chamberReset } from "../redux/slices/chamber.slice";
-import { StoreProductProps } from "../types";
 import { setIsLoadingPackage } from "../redux/slices/fill-package.slice";
 import { setIsLoadingPackageSize } from "../redux/slices/package-size.slice";
 import { clearUnit } from "../redux/slices/unit-select.slice";
@@ -439,7 +438,6 @@ const actions: Record<string, BottomSheetAction> = {
       data: payload,
     });
 
-    // ✅ cleanup only after success
     dispatch(clearChambers());
     dispatch(resetProductStore());
     dispatch(chamberRatingReset());

@@ -40,6 +40,12 @@ export type UpdatePackageDTO = {
     unit: "kg" | "gm" | null;
 };
 
+function normalizeProductName(name: string | null) {
+  if (!name) return null;
+  if (name === "Select product") return null;
+  return name;
+}
+
 function useDebounce(value: string, delay: number) {
     const [debounced, setDebounced] = useState(value);
     useEffect(() => {
@@ -149,45 +155,54 @@ export function usePackageById(id: string | null) {
     staleTime: 0, 
   });
 }
-
 export function usePackageByName(name: string | null) {
-    const queryClient = useQueryClient();
-    
-    useEffect(() => {
-        if (!name) return;
-        const listener = (data: Package | null) => {
+  const queryClient = useQueryClient();
+  const safeName = normalizeProductName(name);
 
-            if (data?.id) {
-                queryClient.setQueryData(['packageName', name], data);
-            }
-        };
-        socket.on('package-name:receive', listener);
-        return () => {
-            socket.off('package-name:receive', listener);
-        };
-    }, [queryClient, name]);
+  if (name === "Select product") {
+  console.warn("🚨 Invalid product name passed to usePackageByName");
+}
 
 
-    return useQuery<Package | null>({
-        queryKey: ['packageName', name],
-        queryFn: rejectEmptyOrNull(async () => {
-            if (!name) return null;
+  useEffect(() => {
+    if (!safeName) return;
 
-            const cachedPackages = queryClient.getQueryData<Package[]>(['packages']);
+    const listener = (data: Package | null) => {
+      if (data?.id) {
+        queryClient.setQueryData(['packageName', safeName], data);
+      }
+    };
 
-            if (cachedPackages) {
-                const cachedPackage = cachedPackages.find(p => p.product_name === name);
-                if (cachedPackage) return cachedPackage;
-            }
+    socket.on('package-name:receive', listener);
+    return () => {
+      socket.off('package-name:receive', listener);
+    };
+  }, [queryClient, safeName]);
 
-            const response = await fetchPackageByName(name);
-            return response?.data ?? null;
-        }),
-        enabled: !!name,
-        staleTime: 1000 * 60 * 60,
-        refetchOnWindowFocus: false,
-        refetchOnMount: false,
-    });
+  return useQuery<Package | null>({
+    queryKey: ['packageName', safeName],
+    queryFn: async () => {
+      if (!safeName) return null;
+
+      const cachedPackages =
+        queryClient.getQueryData<Package[]>(['packages']);
+
+      if (cachedPackages) {
+        const cachedPackage = cachedPackages.find(
+          p => p.product_name === safeName
+        );
+        if (cachedPackage) return cachedPackage;
+      }
+
+      const response = await fetchPackageByName(safeName);
+      
+      return response?.data ?? null;
+    },
+    enabled: !!safeName,
+    staleTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 }
 
 export function useCreatePackage() {

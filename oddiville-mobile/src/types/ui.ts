@@ -232,7 +232,7 @@ export interface ActivityProps {
   href?: keyof RootStackParamList;
   identifier: BottomSheetSchemaKey | null;
   dispatchDetails?: SupervisorCardDetailsProps[];
-  metaData?: any;
+  data?: any;
   params?: any;
   category?: "informative" | "actionable" | "today";
   color?: "red" | "yellow" | "green" | null;
@@ -580,20 +580,29 @@ export interface FileUploadGalleryProps {
   maxImage?: number;
 }
 
-export type TableRow = Record<string, any>;
+export type TableRow<T> = T;
 
-export interface TableColumn {
-  label: string;
-  key: string;
+export type WorkerLike = {
+  countMale?: number
+  countFemale?: number
 }
 
-export interface TableProps {
-  columns: TableColumn[];
-  content: TableRow[];
+export interface TableColumn<T> {
+  label: string;
+  key: keyof T;
+  align?: "left" | "center" | "right";
+  flex?: number;
+  width?: number;
+}
+
+export interface TableProps<T> {
+  columns: TableColumn<T>[];
+  content: TableRow<T>[];
   mergableRows?: [number, number][];
   children?: ReactNode;
   color?: "red" | "blue" | "green" | "yellow";
   style?: ViewStyle;
+  getRowTotal?: (row: T) => number; 
   onRadioChange?: (rowIndex: number, field: "enterCount" | "notNeeded") => void;
   onInputChange?: (
     rowIndex: number,

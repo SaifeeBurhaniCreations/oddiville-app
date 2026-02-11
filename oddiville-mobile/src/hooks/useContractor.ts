@@ -1,12 +1,13 @@
 import { useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createContractor, fetchContractor, fetchContractorById } from '@/src/services/contractor.service';
+import { createContractor, fetchContractors, fetchContractorById } from '@/src/services/contractor.service';
 import { rejectEmptyOrNull } from '../utils/authUtils';
 
 // --- Interfaces ---
-export interface WorkLocation {
-    name: string;
-    count: string;
+export type WorkLocation = {
+  name: string
+  maleCount: number
+  femaleCount: number
 }
 
 interface ContractorData {
@@ -89,7 +90,6 @@ type RawContractorPayload = Array<{
     work_location: WorkLocation[] | any[];
   }>;
   
-// --- Query Keys ---
 const contractorQueryKeys = {
     all: ['contractors'] as const,
     lists: () => [...contractorQueryKeys.all, 'list'] as const,
@@ -98,12 +98,11 @@ const contractorQueryKeys = {
     detail: (id: string) => [...contractorQueryKeys.details(), id] as const,
 };
 
-// --- Main Hook ---
-export function useContractor() {
+export function useContractors() {
     const { data: contractorData = [], isLoading, error, refetch } = useQuery({
         queryKey: contractorQueryKeys.lists(),
         queryFn: rejectEmptyOrNull(async () => {
-            const response = await fetchContractor();
+            const response = await fetchContractors();
             return response.data as ContractorData[];
         }),
         staleTime: 5 * 60 * 1000, // 5 minutes
@@ -233,7 +232,7 @@ export function useCreateContractor() {
 
 // --- Hook for Formatted Contractors ---
 export function useFormattedContractors() {
-    const { data: contractorData = [], isLoading, error, refetch } = useContractor();
+    const { data: contractorData = [], isLoading, error, refetch } = useContractors();
     
     const formattedContractors: FormattedContractor[] = useMemo(() => {
         if (!contractorData?.length) return [];
@@ -243,11 +242,9 @@ export function useFormattedContractors() {
             
 const formattedWorkLocations: FormattedWorkLocation[] =
   contractor.work_location?.map((location) => {
-    const total = Number(location.count) || 0
-
-    // simple even split (can be changed later)
-    const male = Math.floor(total / 2)
-    const female = total - male
+    const male = Number(location.maleCount || 0)
+    const female = Number(location.femaleCount || 0)
+    const total = male + female
 
     return {
       name: location.name || 'Unknown Location',
@@ -257,6 +254,7 @@ const formattedWorkLocations: FormattedWorkLocation[] =
       displayCount: `${male} Male / ${female} Female`,
     }
   }) || [];
+
 
             return {
                 id: contractor.id,
@@ -284,7 +282,7 @@ const formattedWorkLocations: FormattedWorkLocation[] =
 
 // --- Hook for Contractor Summary/Statistics ---
 export function useContractorSummary(): ContractorSummary & { isLoading: boolean; refetch: () => void } {
-    const { data: contractorData = [], isLoading, refetch } = useContractor();
+    const { data: contractorData = [], isLoading, refetch } = useContractors();
 
     const summary = useMemo((): ContractorSummary => {
         if (!contractorData?.length) {
@@ -326,7 +324,7 @@ export function useContractorSummary(): ContractorSummary & { isLoading: boolean
 
 // --- Hook for Contractors by Work Location ---
 export function useContractorsByLocation() {
-    const { data: contractorData = [], isLoading, refetch } = useContractor();
+    const { data: contractorData = [], isLoading, refetch } = useContractors();
 
     const contractorsByLocation = useMemo(() => {
         if (!contractorData?.length) return new Map();
@@ -344,9 +342,10 @@ export function useContractorsByLocation() {
                 totalCount,
                 workLocations:
                 contractor.work_location?.map((location) => {
-                    const total = Number(location.count) || 0
-                    const male = Math.floor(total / 2)
-                    const female = total - male
+                   const male = Number(location.maleCount || 0)
+                    const female = Number(location.femaleCount || 0)
+                    const total = male + female
+
 
                     return {
                     name: location.name || 'Unknown Location',
@@ -394,9 +393,9 @@ export function useContractorWorkLocations(contractorId: string) {
         if (!contractor?.work_location) return [];
 
 return contractor.work_location.map((location): FormattedWorkLocation => {
-    const total = Number(location.count) || 0
-    const male = Math.floor(total / 2)
-    const female = total - male
+const male = Number(location.maleCount || 0)
+const female = Number(location.femaleCount || 0)
+const total = male + female
 
     return {
         name: location.name || 'Unknown Location',

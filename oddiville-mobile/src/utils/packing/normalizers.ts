@@ -1,5 +1,6 @@
 import { PackingPackages } from "@/src/types/domain/packing/packing.types";
 import { PackageSize } from "@/src/redux/slices/bottomsheet/package-size.slice";
+import { OutputBagPackaging } from "@/src/hooks/useChamberStock";
 
 export const normalizeToPackingPackages = (data: any[]): PackingPackages[] => {
     return data.map((item) => ({
@@ -29,15 +30,23 @@ export const normalizeSelectedPackages = (
 };
 
 // ----------------------------------------------------------------------------
-export function toChamberPackage(pkg: PackingPackages) {
-    return {
-        size: {
-            value: pkg.size,
-            unit: pkg.unit,
-        },
-        type: "bag",
-        count: pkg.count,
-    };
+export function toChamberPackage(
+  pkg: PackingPackages,
+  packetsPerBag: number
+): OutputBagPackaging {
+  if (pkg.unit !== "gm" && pkg.unit !== "kg") {
+    throw new Error(
+      `Invalid unit for output bag packaging: ${pkg.unit}`
+    );
+  }
+
+  return {
+    size: {
+      value: pkg.size,
+      unit: pkg.unit,
+    },
+    packetsPerBag,
+  };
 }
 
 // ----------------------------------------------------------------------------

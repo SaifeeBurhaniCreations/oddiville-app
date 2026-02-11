@@ -199,15 +199,14 @@ export type SectionConfig =
       }[];
     }
   | {
-      type: "table";
-      data: {
-        label?: string;
-        count?: number;
-        tableHeader: TableColumn[];
-        tableBody: TableRow[];
-      }[];
-    }
-  | {
+  type: "table";
+  data: {
+    label?: string;
+    count?: number;
+    tableHeader: TableColumn<any>[];
+    tableBody: Record<string, string | number>[];
+  }[];
+} | {
       type: "product-list";
       data: {
         label?: string;
@@ -630,10 +629,17 @@ export interface TableComponentProps {
   data: {
     label?: string;
     count?: number;
-    tableHeader: TableColumn[];
-    tableBody: TableRow[];
+    tableHeader: TableColumn<any>[];
+    tableBody: Record<string, string | number>[];
   }[];
   color: "red" | "green" | "blue" | "yellow";
+}
+
+export interface ProductSku {
+  skuId?: string;
+  size: number;
+  unit: "kg" | "gm" | "qn" | "unit";
+  totalBags: number;
 }
 
 export interface productDetails {
@@ -641,12 +647,13 @@ export interface productDetails {
   description: string;
   image: string;
   weight: string;
-  amount?: string;
-  price?: string;
-  packagesSentence?: string;
-  packages?: PackageItemLocal[];
-  chambers?: Chamber[];
+
+  productId?: string;
+  name?: string;
+  rating?: number;
+  skus?: ProductSku[];
 }
+
 
 export interface ProductListComponentProps {
   data: {

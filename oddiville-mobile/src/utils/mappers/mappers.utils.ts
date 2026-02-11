@@ -69,7 +69,8 @@ export const mapProductionToItemCards = (
   lanes: any[]
 ): ItemCardData[] => {
   return items.map((item) => {
-    const laneObj = lanes.find(l => l.id === item.lane);
+        const laneObj = lanes.find(l => l.id === item.lane_id); 
+
 
     return {
       id: item.id,
