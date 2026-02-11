@@ -1,12 +1,10 @@
-// 1. React and React Native core
-import React, { useState, useMemo, useCallback, useEffect } from "react";
 
-import {
-  ScrollView,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from "react-native";
+
+// 1. React and React Native core
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+
+import { ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 
 // 2. Third-party dependencies
 import { formatDate } from "date-fns";
@@ -22,11 +20,7 @@ import DatabaseIcon from "@/src/components/icons/page/DatabaseIcon";
 
 // 4. Project hooks
 import { useAdmin } from "@/src/hooks/useAdmin";
-import { useRawMaterialOrders } from "@/src/hooks/useRawMaterialOrders";
-import {
-  CompletedOrdersPage,
-  useCompletedRawMaterialOrders,
-} from "@/src/hooks/useRawMaterialOrders";
+import { CompletedOrdersPage, useRawMaterialOrders } from "@/src/hooks/useRawMaterialOrders";
 import { useAllVendors } from "@/src/hooks/vendor";
 
 // 5. Project constants/utilities
@@ -36,7 +30,8 @@ import { getColor } from "@/src/constants/colors";
 import { OrderProps, RawMaterialOrderProps } from "@/src/types";
 
 // 7. Schemas
-import EmptyState from "@/src/components/ui/EmptyState";
+import { BottomSheetSchemaKey } from "@/src/schemas/BottomSheetSchema";
+import EmptyState, { EmptyStateStyles } from "@/src/components/ui/EmptyState";
 import { getEmptyStateData } from "@/src/utils/common";
 import { InfiniteData } from "@tanstack/query-core";
 import Button from "@/src/components/ui/Buttons/Button";
@@ -45,14 +40,14 @@ import { H3 } from "@/src/components/typography/Typography";
 import { RefreshControl } from "react-native-gesture-handler";
 import { useAuth } from "@/src/context/AuthContext";
 import { resolveAccess } from "@/src/utils/policiesUtils";
+import NoAccess from "@/src/components/ui/NoAccess";
 
 // 8. Assets
 // No items of this type
 
-import NoAccess from "@/src/components/ui/NoAccess";
 const PurchaseScreen = () => {
   const { goTo } = useAppNavigation();
-  const { height: screenHeight } = useWindowDimensions();
+  const { height: screenHeight } = useWindowDimensions()
   const { role, policies } = useAuth();
 
   const safeRole = role ?? "guest";
@@ -68,12 +63,9 @@ const PurchaseScreen = () => {
     data: pendingData = [],
     isFetching: pendingLoading,
     refetch: refetchRM,
-  } = useRawMaterialOrders();
-  const {
-    data: vendorData = [],
-    isFetching: vendorLoading,
-    refetch: refetchVendor,
-  } = useAllVendors();
+  } = useRawMaterialOrders("pending");
+
+  const { data: vendorData = [], isFetching: vendorLoading, refetch: refetchVendor } = useAllVendors();
 
   const formatOrder = useCallback(
     (order: RawMaterialOrderProps): OrderProps => {
@@ -87,32 +79,30 @@ const PurchaseScreen = () => {
             name: "Order date",
             value:
               order.order_date &&
-              !isNaN(new Date(order.order_date as string).getTime())
+                !isNaN(new Date(order.order_date as string).getTime())
                 ? formatDate(
-                    new Date(order.order_date as string),
-                    "MMM d, yyyy"
-                  )
+                  new Date(order.order_date as string),
+                  "MMM d, yyyy"
+                )
                 : "--",
-            icon: null,
           },
           {
             name: order.arrival_date ? "Arrival date" : "Est. Arrival date",
             value:
               (order.arrival_date &&
-              !isNaN(new Date(order.arrival_date as string).getTime())
+                !isNaN(new Date(order.arrival_date as string).getTime())
                 ? formatDate(
-                    new Date(order.arrival_date as string),
-                    "MMM d, yyyy"
-                  )
+                  new Date(order.arrival_date as string),
+                  "MMM d, yyyy"
+                )
                 : undefined) ??
               (order.est_arrival_date &&
-              !isNaN(new Date(order.est_arrival_date as string).getTime())
+                !isNaN(new Date(order.est_arrival_date as string).getTime())
                 ? formatDate(
-                    new Date(order.est_arrival_date as string),
-                    "MMM d, yyyy"
-                  )
+                  new Date(order.est_arrival_date as string),
+                  "MMM d, yyyy"
+                )
                 : "--"),
-            icon: null,
           },
         ],
         address: vendor?.address ?? "N/A",
@@ -120,7 +110,7 @@ const PurchaseScreen = () => {
           {
             name: "Order quantity",
             value: `${order.quantity_ordered ?? "--"} ${order.unit ?? ""}`,
-            icon: <DatabaseIcon size={16} color={getColor("green", 700)} />,
+            iconKey: 'database',
           },
         ],
         href: "raw-material-receive",
@@ -130,6 +120,8 @@ const PurchaseScreen = () => {
     [vendorData]
   );
 
+  const completedQuery = useRawMaterialOrders("completed");
+
   const {
     data: completedData,
     fetchNextPage,
@@ -138,12 +130,13 @@ const PurchaseScreen = () => {
     isFetching: completedFetching,
     isLoading: completedInitialLoading,
     refetch: refetchCompleted,
-  } = useCompletedRawMaterialOrders();
+  } = completedQuery;
+
 
   const completedItems: RawMaterialOrderProps[] =
     (
       completedData as InfiniteData<CompletedOrdersPage> | undefined
-    )?.pages.flatMap((p) => p.data) ?? [];
+    )?.pages?.flatMap((p) => p.data ?? []) ?? [];
 
   const completedUnique = useMemo(
     () => Array.from(new Map(completedItems.map((i) => [i.id, i])).values()),
@@ -160,12 +153,22 @@ const PurchaseScreen = () => {
     [completedUnique, formatOrder]
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      refetchRM();
+      refetchCompleted();
+      refetchVendor();
+    }, [])
+  );
+
+
   const emptyStateData = getEmptyStateData("no-order-pending");
+
 
   const canView = access.purchase.view;
   const canEdit = access.purchase.edit;
 
-  const redirectedRef = React.useRef(false);
+  const redirectedRef = useRef(false);
 
   useEffect(() => {
     if (!redirectedRef.current && !canView && canEdit) {
@@ -173,6 +176,7 @@ const PurchaseScreen = () => {
       goTo("raw-material-order");
     }
   }, [canView, canEdit]);
+
 
   const PurchaseHeader = ({ canEdit }: { canEdit: boolean }) => (
     <View
@@ -203,7 +207,6 @@ const PurchaseScreen = () => {
   if (!canView && canEdit) {
     return <Loader />;
   }
-
   return (
     <View style={styles.pageContainer}>
       <PageHeader page={"Purchase"} />
@@ -215,89 +218,104 @@ const PurchaseScreen = () => {
         >
           <View style={styles.flexGrow}>
             <PurchaseHeader canEdit={canEdit} />
-            {canView && (
-              <>
-                <View style={styles.searchinputWrapper}>
-                  <SearchInput
-                    style={{ borderWidth: 1 }}
-                    value={pendingSearch}
-                    onChangeText={setPendingSearch}
-                    returnKeyType="search"
-                    placeholder="Search by raw material & vendor name"
-                  />
-                </View>
-                {pendingOrders?.length === 0 && (
-                  <View style={{ alignItems: "center" }}>
-                    <ScrollView
-                      contentContainerStyle={{ alignItems: "center", flex: 1 }}
-                      refreshControl={
-                        <RefreshControl
-                          refreshing={pendingLoading}
-                          onRefresh={() => {
-                            refetchRM();
-                            refetchVendor();
-                          }}
-                        />
-                      }
-                    >
-                      <EmptyState
-                        stateData={emptyStateData}
-                        style={{ marginTop: -(screenHeight / 7) }}
-                      />
-                    </ScrollView>
+            {canView && <>
+                        <View
+              style={[
+                styles.HStack,
+                styles.justifyBetween,
+                styles.alignCenter,
+                { paddingTop: 16 },
+              ]}
+            >
+              <H3>Order raw material</H3>
+              <Button
+                variant="outline"
+                size="md"
+                onPress={() => goTo("raw-material-order")}
+              >
+                Add material
+              </Button>
+            </View>
+            <View style={styles.searchinputWrapper}>
+              <SearchInput
+                style={{ borderWidth: 1 }}
+                value={pendingSearch}
+                onChangeText={setPendingSearch}
+                returnKeyType="search"
+                placeholder="Search by raw material & vendor name"
+              />
+            </View>
+            {pendingOrders?.length === 0 && (
+              <View style={{ alignItems: "center" }}>
+                <ScrollView contentContainerStyle={{ alignItems: "center", flex: 1 }} refreshControl={<RefreshControl refreshing={pendingLoading} onRefresh={() => {
+                  refetchRM()
+                  refetchVendor()
+                }} />}>
+                  <View style={EmptyStateStyles.center}>
+                    <EmptyState stateData={emptyStateData} compact />
                   </View>
-                )}
-                <SupervisorFlatlist
-                  data={pendingOrders}
-                  reFetchers={[refetchRM, refetchVendor]}
-                />
-              </>
+                </ScrollView>
+              </View>
             )}
+            <SupervisorFlatlist data={pendingOrders} reFetchers={[refetchRM, refetchVendor]} />
+            </>}
+
           </View>
           <View style={styles.flexGrow}>
-            <PurchaseHeader canEdit={canEdit} />
-            {canView && (
-              <>
-                <View style={styles.searchinputWrapper}>
-                  <SearchInput
-                    style={{ borderWidth: 1 }}
-                    value={completedSearch}
-                    onChangeText={setCompletedSearch}
-                    returnKeyType="search"
-                    placeholder="Search by raw material & vendor name"
-                  />
-                </View>
-                {completedOrders?.length === 0 && (
-                  <View style={{ alignItems: "center" }}>
-                    <ScrollView
-                      contentContainerStyle={{ alignItems: "center", flex: 1 }}
-                      refreshControl={
-                        <RefreshControl
-                          refreshing={completedFetching}
-                          onRefresh={() => {
-                            refetchCompleted();
-                            refetchRM();
-                          }}
-                        />
-                      }
-                    >
-                      <EmptyState
-                        stateData={emptyStateData}
-                        style={{ marginTop: -(screenHeight / 7) }}
-                      />
-                    </ScrollView>
+              <PurchaseHeader canEdit={canEdit} />
+            {
+              canView && <>
+              
+
+            <View
+              style={[
+                styles.HStack,
+                styles.justifyBetween,
+                styles.alignCenter,
+                { paddingTop: 16 },
+              ]}
+            >
+              <H3>Order raw material</H3>
+              <Button
+                variant="outline"
+                size="md"
+                onPress={() => goTo("raw-material-order")}
+              >
+                Add material
+              </Button>
+            </View>
+            <View style={styles.searchinputWrapper}>
+              <SearchInput
+                style={{ borderWidth: 1 }}
+                value={completedSearch}
+                onChangeText={setCompletedSearch}
+                returnKeyType="search"
+                placeholder="Search by raw material & vendor name"
+              />
+            </View>
+            {completedOrders?.length === 0 && (
+              <View style={{ alignItems: "center" }}>
+                <ScrollView contentContainerStyle={{ alignItems: "center", flex: 1 }} refreshControl={<RefreshControl refreshing={completedFetching} onRefresh={() => {
+                  refetchCompleted()
+                  refetchRM()
+                }} />}>
+                  <View style={EmptyStateStyles.center}>
+                    <EmptyState stateData={emptyStateData} compact />
                   </View>
-                )}
-                <SupervisorFlatlist
-                  data={completedOrders}
-                  isEdit
-                  fetchNext={fetchNextPage}
-                  hasNext={hasNextPage}
-                  isFetchingNext={isFetchingNextPage}
-                  reFetchers={[refetchCompleted, refetchRM]}
-                />
-              </>
+
+                </ScrollView>
+              </View>
             )}
+            <SupervisorFlatlist
+              data={completedOrders}
+              isEdit
+              fetchNext={fetchNextPage}
+              hasNext={hasNextPage}
+              isFetchingNext={isFetchingNextPage}
+              reFetchers={[refetchCompleted, refetchRM]}
+            />
+                          </>
+            }
           </View>
         </Tabs>
       </View>
@@ -308,12 +326,12 @@ const PurchaseScreen = () => {
         pendingLoading ||
         vendorLoading ||
         completedInitialLoading) && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <Loader />
+          <View style={styles.overlay}>
+            <View style={styles.loaderContainer}>
+              <Loader />
+            </View>
           </View>
-        </View>
-      )}
+        )}
     </View>
   );
 };

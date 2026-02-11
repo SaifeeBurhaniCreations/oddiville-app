@@ -227,7 +227,7 @@ const PackageScreen = () => {
   const selectedPackage = useSelector(
     (state: RootState) => state.packageSize.selectedSizes
   );
-  const { product: selectedProduct, rawMaterials: selectedRawMaterials } =
+  const { productName: selectedProduct, rawMaterials: selectedRawMaterials } =
     useSelector((state: RootState) => state.product);
   const storeRawMaterials = useSelector(
     (state: RootState) => state.product.rawMaterials

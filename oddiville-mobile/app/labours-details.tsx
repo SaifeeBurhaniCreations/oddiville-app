@@ -1,21 +1,16 @@
 // src/screens/SupervisorWorkerDetailsScreen.tsx
-import React, { useMemo, useState, useCallback } from 'react'
+import React, { useMemo, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 
 import PageHeader from '@/src/components/ui/PageHeader'
 import BottomSheet from '@/src/components/ui/BottomSheet'
 import BackButton from '@/src/components/ui/Buttons/BackButton'
 import SupervisorOrderDetailsCard from '@/src/components/ui/Supervisor/SupervisorOrderDetailsCard'
-import Table from '@/src/components/ui/Table'
+import Table from '@/src/components/ui/Table2'
 import Loader from '@/src/components/ui/Loader'
 import DetailsToast from '@/src/components/ui/DetailsToast'
 
 import DatabaseIcon from '@/src/components/icons/page/DatabaseIcon'
-import MaleIcon from '@/src/components/icons/common/MaleIcon'
-import FemaleIcon from '@/src/components/icons/common/FemaleIcon'
-import UserIcon from '@/src/components/icons/page/UserIcon'
-import Calendar12Icon from '@/src/components/icons/page/Calendar12Icon'
-
 import { useParams } from '@/src/hooks/useParams'
 import {
   useFormattedContractors,
@@ -28,49 +23,6 @@ import { TableColumn } from '@/src/components/ui/Table'
 import { getColor } from '@/src/constants/colors'
 import { OrderProps } from '@/src/types'
 
-function parseDisplayCount(display?: string | null): {
-  male: number
-  female: number
-} {
-  if (!display || typeof display !== 'string') {
-    return { male: 0, female: 0 }
-  }
-
-  const value = display.toLowerCase()
-
-  const maleWord = value.match(/male\s*[:\-]?\s*(\d+)/)
-  const femaleWord = value.match(/female\s*[:\-]?\s*(\d+)/)
-
-  if (maleWord || femaleWord) {
-    return {
-      male: maleWord ? Number(maleWord[1]) : 0,
-      female: femaleWord ? Number(femaleWord[1]) : 0,
-    }
-  }
-
-  const maleShort = value.match(/(\d+)\s*m\b/)
-  const femaleShort = value.match(/(\d+)\s*f\b/)
-
-  if (maleShort || femaleShort) {
-    return {
-      male: maleShort ? Number(maleShort[1]) : 0,
-      female: femaleShort ? Number(femaleShort[1]) : 0,
-    }
-  }
-
-  const numericPair = value.match(/(\d+)\s*[\/,\-]\s*(\d+)/)
-
-  if (numericPair) {
-    return {
-      male: Number(numericPair[1]),
-      female: Number(numericPair[2]),
-    }
-  }
-
-  // fallback
-  return { male: 0, female: 0 }
-}
-
 type WorkerRow = {
   label: string
   countMale: number
@@ -78,7 +30,7 @@ type WorkerRow = {
 }
 
 const columns: TableColumn<WorkerRow>[] = [
-  { key: 'label', label: 'Type', flex: 2 },
+  { key: 'label', label: 'Type', flex: 3 },
   { key: 'countMale', label: 'Male', flex: 1 },
   { key: 'countFemale', label: 'Female', flex: 1 },
 ]
@@ -160,16 +112,12 @@ const SupervisorWorkerDetailsScreen = () => {
 const singleTableData: WorkerRow[] = useMemo(() => {
   if (!workLocations) return []
 
-  return workLocations.map(loc => {
-
-    return {
-  label: loc.name,
-  countMale: loc.maleCount,
-  countFemale: loc.femaleCount,
-}
-  })
+  return workLocations.map(loc => ({
+    label: loc.name,
+    countMale: loc.maleCount,
+    countFemale: loc.femaleCount,
+  }))
 }, [workLocations])
-
 
 const multipleTables = useMemo(() => {
   if (!contractors) return []
@@ -186,7 +134,6 @@ const multipleTables = useMemo(() => {
     }),
   }))
 }, [contractors])
-
 
   const isLoading =
     mode === 'single'
@@ -221,7 +168,7 @@ const multipleTables = useMemo(() => {
                 color="green"
                 bgSvg={DatabaseIcon}
               />
-              <Table columns={columns} content={singleTableData} />
+              <Table<WorkerRow> columns={columns}  getRowTotal={(row) => row.countMale + row.countFemale} content={singleTableData} />
             </>
           )}
 
@@ -247,6 +194,7 @@ const multipleTables = useMemo(() => {
                     key={`${t.name}-${i}`}
                     columns={columns}
                     content={t.data}
+                      getRowTotal={(row) => row.countMale + row.countFemale}
                   >
                     {t.name}
                   </Table>

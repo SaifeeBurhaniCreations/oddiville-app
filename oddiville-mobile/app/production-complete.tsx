@@ -99,6 +99,7 @@ const ProductionCompleteScreen = () => {
   const [toastType, setToastType] = useState<"success" | "error" | "info">(
     "info"
   );
+  
   const [toastMessage, setToastMessage] = useState("");
   const [existingImage, setExistingImage] = useState<string[]>([]);
 const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -246,7 +247,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
             key: "supervisor-production",
             formField_1: chamberName,
             source: "supervisor-production",
-            keyboardType: "default",
+            keyboardType: "number-pad",
           },
         })),
           {
@@ -536,4 +537,3 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 });
-

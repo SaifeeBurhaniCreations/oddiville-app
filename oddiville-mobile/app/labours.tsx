@@ -30,6 +30,7 @@
     useCreateContractor,
     WorkLocation,
     FormattedContractor,
+    useContractors,
   } from "@/src/hooks/useContractor";
 
   // 5. Project constants/utilities
@@ -165,7 +166,7 @@ import { useAuth } from "@/src/context/AuthContext";
       }
     }, [refetch, handleError]);
 
-    const activities = useMemo((): ActivityProps[] => {
+    const contractorsHistory = useMemo((): ActivityProps[] => {
       if (contractorsLoading || !contractors?.length) return [];
 
       return contractors.map((contractor: FormattedContractor) => ({
@@ -305,12 +306,12 @@ import { useAuth } from "@/src/context/AuthContext";
                 <View style={styles.loaderContainer}>
                   <Loader />
                 </View>
-              ) : activities?.length > 0 ? (
+              ) : contractorsHistory?.length > 0 ? (
                 <ActivitesFlatList
                   style={{paddingHorizontal: 16}}
                   onPress={handleContractorPress}
                   isVirtualised={false}
-                  activities={activities}
+                  activities={contractorsHistory}
                 />
               ) : (
                 <View style={styles.emptyState}>

@@ -54,6 +54,7 @@ const ShippingDetailsForm = () => {
     const { height: screenHeight } = useWindowDimensions();
     const { goTo } = useAppNavigation();
     const { orderId } = useParams('shipping-details', 'orderId');
+
     const { data: truckData, isFetching: truckLoading } = useTrucks();
     const { data: orderData, isFetching: isFetching } = useOrderById(orderId ?? null);
     const updateOrder = useUpdateOrder();
@@ -71,30 +72,36 @@ const ShippingDetailsForm = () => {
     };
 
     const handleTruckSelection = (truck: any) => {
-        // If the same truck is already selected, deselect it
+        const truckCapacity = Number(truck.size);
+        const orderWeight = Number(totalProductWeight);
+
+        if (orderWeight > truckCapacity) {
+            showToast(
+                "error",
+                `Order weight (${orderWeight} kg) exceeds truck capacity (${truckCapacity} kg)`
+            );
+            return;
+        }
+
         if (selectedTruckId === truck.id) {
             setSelectedTruckId(null);
-            // Clear form fields when deselecting
             setFields({
-                agency_name: '',
-                driver_name: '',
-                phone: '',
-                type: '',
-                number: '',
-                status: 'in-progress',
+                agency_name: "",
+                driver_name: "",
+                phone: "",
+                type: "",
+                number: "",
+                status: "in-progress",
             });
         } else {
-            // Select the new truck
             setSelectedTruckId(truck.id);
-
-            // Update form fields with truck data
             setFields({
-                agency_name: truck.agency_name || '',
-                driver_name: truck.driver_name || '',
-                phone: truck.phone || '',
-                type: truck.type || '',
-                number: truck.number || '',
-                status: 'in-progress',
+                agency_name: truck.agency_name || "",
+                driver_name: truck.driver_name || "",
+                phone: truck.phone || "",
+                type: truck.type || "",
+                number: truck.number || "",
+                status: "in-progress",
             });
         }
     };
@@ -187,23 +194,36 @@ const ShippingDetailsForm = () => {
             onError: (error) => { showToast('error', 'Failed to update shipping details'); }
         });
     };
-  const emptyStateData = getEmptyStateData("truck_details");
+    const emptyStateData = getEmptyStateData("truck_details");
 
-const totalProductWeight =
-  orderData?.products?.reduce(
-    (total: number, product: DispatchOrderProduct) => {
-      const productTotal = (product.chambers ?? []).reduce(
-        (sum: number, chamber) => {
-          const qty = Number(chamber.quantity);
-          return sum + (isNaN(qty) ? 0 : qty);
-        },
-        0
-      );
+    const totalProductWeight =
+        orderData?.dispatched_items
+            ? Object.values(orderData.dispatched_items).reduce(
+                (productTotal: number, skuObj: any) => {
+                    return (
+                        productTotal +
+                        Object.values(skuObj).reduce((skuTotal: number, skuData: any) => {
+                            const { packet, totalBags } = skuData;
 
-      return total + productTotal;
-    },
-    0
-  ) ?? 0;
+                            if (!packet || !totalBags) return skuTotal;
+
+                            const { size, unit, packetsPerBag } = packet;
+
+                            const weightInGrams =
+                                Number(totalBags) *
+                                Number(packetsPerBag) *
+                                Number(size);
+
+                            const weightInKg =
+                                unit === "gm" ? weightInGrams / 1000 : weightInGrams;
+
+                            return skuTotal + weightInKg;
+                        }, 0)
+                    );
+                },
+                0
+            )
+            : 0;
 
     return (
         <View style={styles.pageContainer}>
@@ -229,44 +249,58 @@ const totalProductWeight =
                         }
                     </FormField>
 
-                        <View style={{ flexDirection: 'column', flex: 1, gap: 16 }}>
-                            {
-                                !truckLoading && truckData && truckData?.length > 0 ? truckData?.map((truck, index: number) => {
-                                    return (
-                                        <TouchableOpacity
-                                            style={styles.container}
-                                            onPress={() => truck.active && handleTruckSelection(truck)}
-                                            key={index}
-                                            activeOpacity={0.8}
-                                            disabled={!truck.active}
+                    <View style={{ flexDirection: 'column', flex: 1, gap: 16 }}>
+                        {
+                            !truckLoading && truckData && truckData?.length > 0 ? truckData?.map((truck, index: number) => {
+                                const truckCapacity = Number(truck.size);
+                               const rawRemaining = truckCapacity - totalProductWeight;
+                            const remaining = Math.max(0, rawRemaining);
+                            const isOverWeight = rawRemaining < 0;
+
+                                return (
+                                    <TouchableOpacity
+                                        activeOpacity={0.8}
+                                        style={[
+                                            styles.container,
+                                            isOverWeight && { opacity: 0.5 }
+                                        ]}
+
+                                        onPress={() => truck.active && !isOverWeight && handleTruckSelection(truck)}
+                                        disabled={!truck.active || isOverWeight}
                                         >
-                                            <View style={styles.card}>
-                                                <View style={styles.headerRow}>
-                                                    <View style={styles.leftRow}>
-                                                        {truck?.challan && <CustomImage style={styles.avatar} src={truck?.challan} width={40} height={40} />}
-                                                        <View style={styles.nameSection}>
-                                                            <View style={styles.nameRow}>
-                                                                <H3 color={getColor('green', 700)}>{truck.number}</H3>
-                                                            </View>
-                                                            <C1 color={getColor('green', 400)}>{truck.agency_name || "Unknown Agency"} | Capacity: {truck.size} kg | Remaining: {Number(truck.size)- Number(totalProductWeight)} kg</C1>
+                                        <View style={styles.card}>
+                                            <View style={styles.headerRow}>
+                                                <View style={styles.leftRow}>
+                                                    {truck?.challan && <CustomImage style={styles.avatar} src={truck?.challan} width={40} height={40} />}
+                                                    <View style={styles.nameSection}>
+                                                        <View style={styles.nameRow}>
+                                                            <H3 color={getColor('green', 700)}>{truck.number}</H3>
                                                         </View>
-                                                    </View>
-                                                    <View style={styles.headerRow}>
-                                                        {
-                                                            selectedTruckId === truck?.id && <Tag color={'yellow'} size="md">Selected</Tag>
-                                                        }
+                                                      <C1 color={isOverWeight ? "red" : getColor("green", 400)}>
+                                                        {truck.agency_name || "Unknown Agency"} | 
+                                                        Capacity: {truck.size} kg | 
+                                                        Remaining: {remaining} kg
+                                                        {isOverWeight && " (Over Capacity)"}
+                                                        </C1>
+
                                                     </View>
                                                 </View>
+                                                <View style={styles.headerRow}>
+                                                    {
+                                                        selectedTruckId === truck?.id && <Tag color={'yellow'} size="md">Selected</Tag>
+                                                    }
+                                                </View>
                                             </View>
-                                        </TouchableOpacity>
-                                    )
-                                }) :  <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-                                    <EmptyState stateData={emptyStateData} style={{marginTop: -(screenHeight/ 7)}} />
-                                </View>
-                            }
-                        </View>
+                                        </View>
+                                    </TouchableOpacity>
+                                )
+                            }) : <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                                <EmptyState stateData={emptyStateData} style={{ marginTop: -(screenHeight / 7) }} />
+                            </View>
+                        }
+                    </View>
 
-                    <Button onPress={onSubmit} disabled={!isValid || updateOrder.isPending}>
+                    <Button onPress={onSubmit}   disabled={!isValid || updateOrder.isPending || !selectedTruckId}>
                         {updateOrder.isPending ? 'Proceeding...' : 'Proceed'}
                     </Button>
                 </View>

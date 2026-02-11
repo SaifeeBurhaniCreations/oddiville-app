@@ -1,5 +1,5 @@
 // 1. React and React Native core
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 
@@ -20,23 +20,23 @@ import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { useMultiStepFormValidator } from "@/src/sbc/form";
 
 import { useDispatchOrder } from "@/src/hooks/dispatchOrder";
-import { usePackedItems } from "@/src/hooks/packedItem";
-import { useChamber } from "@/src/hooks/useChambers";
 
 // 5. Project constants/utilities
 import { getColor } from "@/src/constants/colors";
 
 // 6. Types
 import { RootState } from "@/src/redux/store";
-import { ChamberProduct, CountryProps } from "@/src/types";
-import { clearLocations } from "@/src/redux/slices/bottomsheet/location.slice";
-import { clearRawMaterials } from "@/src/redux/slices/bottomsheet/raw-material.slice";
+import { CountryProps } from "@/src/types";
 import { clearProduct } from "@/src/redux/slices/product.slice";
 import { useAuth } from '@/src/context/AuthContext';
 import { resolveAccess } from '@/src/utils/policiesUtils';
 import { SALES_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
-import { PackageItemLocal } from "@/src/hooks/useChamberStock";
 import { DispatchUsedStockState } from "@/src/redux/slices/used-dispatch.slice";
+import { DispatchUIProduct } from "@/src/types/domain/dispatch/dispatch.types";
+import { usePackedItems } from "@/src/hooks/packing/getPackedItemsEvent";
+import { clearLocations } from "@/src/redux/slices/bottomsheet/location.slice";
+import { clearRawMaterials } from "@/src/redux/slices/bottomsheet/raw-material.slice";
+import { useQueryClient } from "@tanstack/react-query";
 
 // 7. Schemas
 // No items of this type
@@ -46,28 +46,6 @@ import { DispatchUsedStockState } from "@/src/redux/slices/used-dispatch.slice";
 
 // Redux slice actions
 
-interface Product {
-    id: string;
-    rating: number
-    product_name: string;
-    description?: string;
-    image: string;
-    isChecked: boolean;
-    // added extra
-  packages: PackageItemLocal[];
-    chambers: ChamberProduct[];
-//     usedBagsByProduct: {
-//   [productId: string]: {
-//     [packageKey: string]: {
-//       totalPackets: number;
-//       byChamber: {
-//         [chamberId: string]: number
-//       }
-//     };
-//   };
-// };
-}
-
 export type OrderStorageForm = {
   customer_name: string;
   est_delivered_date: string;
@@ -75,40 +53,79 @@ export type OrderStorageForm = {
   country: CountryProps;
   state: string | { name: string; isoCode: string };
   city: string | { name: string; isoCode: string };
-  products: Product[];
+  products: DispatchUIProduct[];
   usedBagsByProduct: {
-  [productId: string]: {
-    [packageKey: string]: {
-      totalPackets: number;
-      byChamber: {
-        [chamberId: string]: number
-      }
+    [productId: string]: {
+      [packageKey: string]: {
+        totalBags: number;
+        totalPackets: number;        
+      packet: {                    
+        size: number;
+        unit: "gm" | "kg";
+        packetsPerBag: number;
+      };
+        byChamber: {
+          [chamberId: string]: number;
+        };
+      };
     };
   };
 };
+
+type UsedBagsByProduct = {
+  [productId: string]: {
+    [packageKey: string]: {
+      totalBags: number;
+      totalPackets: number;         
+      packet: {                    
+        size: number;
+        unit: "gm" | "kg";
+        packetsPerBag: number;
+      };
+      byChamber: {
+        [chamberId: string]: number;
+      };
+    };
+  };
 };
 
-function buildUsedPackets(usedStock: DispatchUsedStockState) {
-  const result: any = {};
+function buildUsedBags(
+  usedStock: DispatchUsedStockState,
+  packetMetaIndex: Map<string, { size: number; unit: "gm" | "kg"; packetsPerBag: number }>
+): UsedBagsByProduct {
+
+  const result: UsedBagsByProduct = {};
 
   for (const productId in usedStock) {
     result[productId] = {};
 
-    for (const pkgKey in usedStock[productId]) {
-      const { packetsPerBag, usedBagsByChamber } =
-        usedStock[productId][pkgKey];
+    for (const packageKey in usedStock[productId]) {
 
-      let totalPackets = 0;
-      const byChamber: any = {};
+      const metaKey = `${productId.split("::")[0]}::${packageKey}`;
+      const packetMeta = packetMetaIndex.get(metaKey);
 
-      for (const chamberId in usedBagsByChamber) {
-        const packets = usedBagsByChamber[chamberId] * packetsPerBag;
-        byChamber[chamberId] = packets;
-        totalPackets += packets;
+      if (!packetMeta) {
+        console.warn("Missing packet meta for", metaKey);
+        continue;
       }
 
-      result[productId][pkgKey] = {
+      const { usedBagsByChamber } = usedStock[productId][packageKey];
+
+      let totalBags = 0;
+      const byChamber: Record<string, number> = {};
+
+      for (const chamberId in usedBagsByChamber) {
+        const bags = Number(usedBagsByChamber[chamberId] || 0);
+        byChamber[chamberId] = bags;
+        totalBags += bags;
+      }
+
+      const totalPackets = totalBags * packetMeta.packetsPerBag;
+
+      result[productId][packageKey] = {
+        totalBags,
         totalPackets,
+        packet: packetMeta,
         byChamber,
       };
     }
@@ -117,20 +134,44 @@ function buildUsedPackets(usedStock: DispatchUsedStockState) {
   return result;
 }
 
+
 const CreateOrder = () => {
-    const { role, policies } = useAuth();
-    
-    const safeRole = role ?? "guest";
-    const safePolicies = policies ?? [];
-    const access = resolveAccess(safeRole, safePolicies);
+  const { role, policies } = useAuth();
+const queryClient = useQueryClient();
+  const safeRole = role ?? "guest";
+  const safePolicies = policies ?? [];
+  const access = resolveAccess(safeRole, safePolicies);
 
   const dispatch = useDispatch();
-  const [step, setStep] = useState<number>(2);
+  const [step, setStep] = useState<number>(1);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastType, setToastType] = useState<"success" | "error" | "info">(
     "info"
   );
   const [toastMessage, setToastMessage] = useState("");
+
+    const { data: packedItemsDataNew, isFetching: packedItemsLoadingNew } =
+      usePackedItems();
+
+const packetMetaIndex = useMemo(() => {
+  const map = new Map<
+    string,
+    { size: number; unit: "gm" | "kg"; packetsPerBag: number }
+  >();
+
+  (packedItemsDataNew ?? []).forEach(item => {
+    const key = `${item.product_name}::${item.skuId}-${item.rating}`;
+
+    map.set(key, {
+      size: item.packet.size,
+      unit: item.packet.unit as "gm" | "kg",
+      packetsPerBag: item.packet.packetsPerBag,
+    });
+  });
+
+  return map;
+}, [packedItemsDataNew]);
+
   const { goTo } = useAppNavigation();
   const {
     countries: selectedCountry,
@@ -141,25 +182,13 @@ const CreateOrder = () => {
   const selectedProducts = useSelector(
     (state: RootState) => state.multipleProduct.selectedProducts
   );
-const usedStock = useSelector(
-  (state: RootState) => state.usedDispatchPkg
-);
+  const usedStock = useSelector(
+    (state: RootState) => state.usedDispatchPkg
+  );
 
   const dispatchOrder = useDispatchOrder();
-  const { data: packedItemsData, isFetching: packedItemsLoading } =
-    usePackedItems();
-
-  const filteredPackedItemsData = useMemo(() => {
-    return packedItemsData?.map((item) => ({
-      ...item,
-      chamber: item.chamber.filter(
-        (chamber) => !chamber.id.toLowerCase().includes("dry")
-      ),
-    }));
-  }, [packedItemsData]);
-
-  const { data: chambersData, isFetching: chambersLoading } = useChamber();
-  const canSeeAmount = access.isFullAccess; 
+ 
+  const canSeeAmount = access.isFullAccess;
 
   const {
     values,
@@ -211,8 +240,8 @@ const usedStock = useSelector(
         { type: "required" as const, message: "Address is required!" },
         {
           type: "minLength" as const,
-          length: 10,
-          message: "Address must be at least 10 characters!",
+          length: 3,
+          message: "Address must be at least 3 characters!",
         },
       ],
       country: [
@@ -254,36 +283,41 @@ const usedStock = useSelector(
     }
   );
 
-useFocusEffect(
-  React.useCallback(() => {
-    dispatch(clearProduct());
-  }, [])
-);
-
-useEffect(() => {
-  if (!Array.isArray(values.products)) return;
-
-  const selectedIds = new Set(
-    (selectedProducts ?? []).map(p => p.id)
+  useFocusEffect(
+    React.useCallback(() => {
+      dispatch(clearProduct());
+    }, [])
   );
 
-  const syncedProducts = values.products.filter(p =>
-    selectedIds.has(p.id)
-  );
+  useEffect(() => {
+    if (!Array.isArray(values.products)) return;
 
-  const existingIds = new Set(syncedProducts.map(p => p.id));
+    const selectedIds = new Set(
+      (selectedProducts ?? []).map(p => p.id)
+    );
 
-  const newProducts = (selectedProducts ?? []).filter(
-    sp => !existingIds.has(sp.id)
-  );
+    const syncedProducts = values.products.filter(p =>
+      selectedIds.has(p.id)
+    );
 
-  if (
-    syncedProducts.length !== values.products.length ||
-    newProducts.length > 0
-  ) {
-    setField("products", [...syncedProducts, ...newProducts]);
-  }
-}, [selectedProducts]);
+    const existingIds = new Set(syncedProducts.map(p => p.id));
+
+    const newProducts: DispatchUIProduct[] = (selectedProducts ?? [])
+      .filter(sp => !existingIds.has(sp.id))
+      .map(sp => ({
+        id: sp.id,
+        product_name: sp.product_name,
+        image: sp.image ?? "",
+        rating: sp.rating ?? 5,
+      }));
+
+    if (
+      syncedProducts.length !== values.products.length ||
+      newProducts.length > 0
+    ) {
+      setField("products", [...syncedProducts, ...newProducts]);
+    }
+  }, [selectedProducts]);
 
   const showToast = (type: "success" | "error" | "info", message: string) => {
     setToastType(type);
@@ -326,27 +360,55 @@ useEffect(() => {
 
   const onFinalSubmit = async () => {
     const result = validateForm();
+    const sanitizedProducts = values.products.map(p => ({
+      id: p.id,
+      product_name: p.product_name,
+      image: p.image,
+      rating: p.rating,
+    })) satisfies DispatchUIProduct[];
 
     if (result.success) {
-      const usedPacketsByProduct = buildUsedPackets(usedStock);
-      console.log("✅ Final form data:", JSON.stringify({...result.data, usedPacketsByProduct}));
+const usedBagsByProduct = buildUsedBags(
+  usedStock,
+  packetMetaIndex
+);
 
-      // try {
-      //   dispatchOrder.mutate({...result.data, usedBagsByProduct: usedPacketsByProduct}, {
-      //     onSuccess: (result) => {
-      //       resetForm();
-      //       dispatch(clearLocations());
-      //       dispatch(clearRawMaterials());
-      //       dispatch(clearProduct());
-      //       goTo("sales");
-      //     },
-      //     onError: (error) => {
-      //       showToast("error", "Failed to dispatch order");
-      //     },
-      //   });
-      // } catch (error) {
-      //   console.log("✅ Final form data:", JSON.stringify(result.data));
-      // }
+      const hasAnyBags = Object.values(usedBagsByProduct).some(product =>
+        Object.values(product).some(pkg => pkg.totalBags > 0)
+      );
+
+      if (!hasAnyBags) {
+        showToast("error", "Please enter at least one bag to dispatch");
+        return;
+      }
+
+      const payload = {
+        ...result.data,
+        products: sanitizedProducts,
+        usedBagsByProduct,
+      };
+
+      // console.log("✅ Final form data:", JSON.stringify(payload, null, 2));
+
+      try {
+        dispatchOrder.mutate(payload, {
+          onSuccess: (result) => {
+            queryClient.invalidateQueries({
+              queryKey: ["chamber-stock"],
+            });
+            resetForm();
+            dispatch(clearLocations());
+            dispatch(clearRawMaterials());
+            dispatch(clearProduct());
+            goTo("sales");
+          },
+          onError: (error) => {
+            showToast("error", "Failed to dispatch order");
+          },
+        });
+      } catch (error) {
+        console.log("✅ Final form data:", JSON.stringify(result.data));
+      }
       showToast("info", "Dispatch Order created!");
     } else {
       setToastVisible(true);
@@ -356,10 +418,10 @@ useEffect(() => {
   };
 
   const backRoute = resolveBackRoute(
-  access,
-  SALES_BACK_ROUTES,
-  resolveDefaultRoute(access)
-);
+    access,
+    SALES_BACK_ROUTES,
+    resolveDefaultRoute(access)
+  );
 
   return (
     <KeyboardAvoidingView

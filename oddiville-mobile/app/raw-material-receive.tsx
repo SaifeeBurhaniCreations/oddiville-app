@@ -70,6 +70,7 @@ type RawMaterialReceived = {
   bags: string; // NEW
 };
 
+const BAG_WEIGHT_KG = 30; 
 
 const parseWeight = (weight: any): number => {
   if (weight == null) return 0;
@@ -178,17 +179,15 @@ const SupervisorRawMaterialDetailsScreen = () => {
             message: "Tare weight must be 0 or greater!",
           },
         ],
-        quantity_received: [
-          { type: "required", message: "Quantity received is required!" },
-          {
-            type: "custom",
-            validate: (value) =>
-              parseWeight(value) > 0 &&
-              parseWeight(value) <= Number(orderData?.quantity_ordered),
-            message:
-              "Quantity must be greater than 0 or smaller then ordered quantity",
-          },
-        ],
+       quantity_received: [
+        { type: "required", message: "Quantity received is required!" },
+        {
+          type: "custom",
+          validate: (value) => parseWeight(value) > 0,
+          message: "Quantity must be greater than 0",
+        },
+      ],
+
         challan: [{ type: "required", message: "Challan is required!" }],
 
         truck_number: [
@@ -217,20 +216,12 @@ const SupervisorRawMaterialDetailsScreen = () => {
     return net > 0 ? net : 0;
   }, [values.truck_weight, values.tare_weight]);
 
-  const finalQuantityKg = useMemo(() => {
-    const productWeight = netWeightKg;
-    const bagsCount = parseWeight(values.bags || "0");
-    const bagsWeight = bagsCount;
-    const final = productWeight - bagsWeight;
-    return final > 0 ? final : 0;
-  }, [netWeightKg, values.bags]);
+useEffect(() => {
+  if (!values.truck_weight || !values.tare_weight) return;
 
-  useEffect(() => {
-    if (!values.truck_weight || !values.tare_weight) return;
-    const final = finalQuantityKg;
-
-    setField("quantity_received", final > 0 ? final.toString() : "0");
-  }, [finalQuantityKg, values.truck_weight, values.tare_weight, values.bags]);
+  const net = parseWeight(values.truck_weight) - parseWeight(values.tare_weight);
+  setField("quantity_received", net > 0 ? net.toString() : "0");
+}, [values.truck_weight, values.tare_weight]);
 
   const isWeightLogicValid = useMemo(() => {
     const truckWeight = parseWeight(values.truck_weight);
@@ -322,42 +313,39 @@ const SupervisorRawMaterialDetailsScreen = () => {
     setHasUnsavedChanges(hasChanges);
   }, [hasChanges]);
 
-  const handleBackPress = () => {
-    if (hasUnsavedChanges && !orderData?.arrival_date) {
-      setShowDiscardModal(true);
-    } else {
-      goTo("purchase");
-    }
-  };
+  // const handleBackPress = () => {
+  //   if (hasUnsavedChanges && !orderData?.arrival_date) {
+  //     setShowDiscardModal(true);
+  //   } else {
+  //     goTo("purchase");
+  //   }
+  // };
 
-  const validateWeights = (): boolean => {
-    const truckWeight = parseWeight(values.truck_weight);
-    const tareWeight = parseWeight(values.tare_weight);
-    const quantityReceived = parseWeight(values.quantity_received);
+const validateWeights = (): boolean => {
+  const truckWeight = parseWeight(values.truck_weight);
+  const tareWeight = parseWeight(values.tare_weight);
+  const bagsCount = parseWeight(values.bags || "0");
+  const quantityReceived = parseWeight(values.quantity_received);
 
-    if (truckWeight <= tareWeight) {
-      toast.error("Truck gross weight must be greater than tare weight!");
-      return false;
-    }
+  if (truckWeight <= tareWeight) {
+    toast.error("Truck gross weight must be greater than tare weight!");
+    return false;
+  }
 
-    const netWeight = truckWeight - tareWeight;
-    if (Math.abs(netWeight - quantityReceived) > quantityReceived * 0.1) {
-      toast.error(
-        `Net weight (${netWeight.toFixed(
-          2
-        )} kg) differs significantly from quantity received (${quantityReceived} kg). Please verify the weights.`
-      );
+  const netWeight = truckWeight - tareWeight;
 
-      onSubmit(true);
-      // [
-      //   { text: "Review", style: "cancel" },
-      //   { text: "Continue Anyway", onPress: () => onSubmit(true) }
-      // ]
-      return false;
-    }
+  const minAllowed = quantityReceived * 0.9;
 
-    return true;
-  };
+  if (netWeight < minAllowed) {
+toast.error(
+  `Truck net weight must be greater than zero
+`
+);
+    return false;
+  }
+
+  return true;
+};
 
   const onSubmit = async (skipValidation = false) => {
     if (loading || updateRawMaterialOrder.isPending) return;
@@ -394,9 +382,10 @@ const SupervisorRawMaterialDetailsScreen = () => {
       formData.append("truck_number", result.data.truck_number);
       formData.append("driver_name", result.data.driver_name);
 
-      const bagsCount = parseWeight(result.data.bags || "0").toString();
-      formData.append("bags", bagsCount);
-      
+const bagsCount = parseWeight(result.data.bags || "0");
+
+formData.append("bags", bagsCount.toString());
+
       formData.append(
         "quantity_received",
         parseWeight(result.data.quantity_received).toString()
@@ -442,7 +431,7 @@ const SupervisorRawMaterialDetailsScreen = () => {
         { id: safeRmId, data: formData },
         {
           onSuccess: (updated) => {
-            toast.success("Raw material order updated successfully!");
+            toast.success("Raw material received successfully!");
 
             queryClient.setQueryData<RawMaterialOrderProps[]>(
               PENDING_KEY,
@@ -578,7 +567,7 @@ const SupervisorRawMaterialDetailsScreen = () => {
               {shouldShowTruckDetails && (
                 <TruckWeightCard
                   title={`${netWeightKg.toFixed(2)}`}
-                  description="Net weight (Kg)"
+                  description="Net weight (verification only)"
                 />
               )}
 
@@ -593,32 +582,6 @@ const SupervisorRawMaterialDetailsScreen = () => {
                 )}
 
               <View style={styles.titleWithDataInputs}>
-                {/* <FormField
-                  name="quantity_received"
-                  form={{ values, setField, errors }}
-                >
-                  {({ value, onChange, error }) => (
-                    <Input
-                      value={value}
-                      onChangeText={(text: string) => {
-                        setField("quantity_received", text);
-                        setTouched((t) => ({ ...t, quantity_received: true }));
-                      }}
-                      onBlur={() =>
-                        setTouched((t) => ({ ...t, quantity_received: true }))
-                      }
-                      placeholder="Enter received quantity"
-                      error={touched.quantity_received ? error : undefined}
-                      keyboardType="numeric"
-                      disabled={!!isEditable}
-                      addonText="kg"
-                      mask="addon"
-                      post
-                    >
-                      Quantity received
-                    </Input>
-                  )}
-                </FormField> */}
                 <FormField
   name="quantity_received"
   form={{ values, setField, errors }}

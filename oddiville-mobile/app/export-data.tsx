@@ -146,22 +146,10 @@ const ExportData = () => {
                     },
                 ],
             };
-            
-            dispatch(updateBottomSheetMeta({
-                ...meta,
-                data: {
-                    fileUri: uri,
-                    fileName,
-                    size: `${sizeKB} KB`,
-                    rows: previewCount,
-                    type,
-                    range: filters.range,
-                }
-            }));
 
             validateAndSetData("nothing", "export-data-options", {
                 ...exportDataOptions,
-                metaData: {   
+                data: {   
                     fileUri: uri,
                     fileName,
                     size: `${sizeKB} KB`,
