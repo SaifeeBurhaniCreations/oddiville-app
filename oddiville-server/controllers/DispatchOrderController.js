@@ -1,4 +1,5 @@
 const router = require("express").Router();
+const safeRoute = require("../sbc/utils/safeRoute/index");
 const {
   DispatchOrder: orderClient,
   ChamberStock: stockClient,
@@ -18,170 +19,6 @@ require("dotenv").config();
 
 const { uploadToS3, deleteFromS3 } = require("../services/s3Service");
 const upload = require("../middlewares/upload");
-
-const allocateChamberQuantities = async (parsedProducts) => {
-  const updatedChamberAllocations = [];
-
-  for (const product of parsedProducts) {
-    const { name, chambers = [] } = product;
-    const stock = await stockClient.findOne({ where: { product_name: name } });
-
-    if (!stock || !Array.isArray(stock.chamber)) continue;
-
-    for (const productChamber of chambers) {
-      const chamberId = productChamber.id;
-      const requiredQty = Number(productChamber.quantity || 0);
-
-      // Filter matching chamber entries from stock
-      const matchingStockEntries = stock.chamber
-        .filter((entry) => entry.id === chamberId)
-        .sort((a, b) => Number(b.quantity) - Number(a.quantity)); // High to low quantity
-
-      let remainingQty = requiredQty;
-      const allocations = [];
-
-      for (const entry of matchingStockEntries) {
-        const available = Number(entry.quantity || 0);
-        if (available <= 0) continue;
-
-        const take = Math.min(remainingQty, available);
-        remainingQty -= take;
-
-        allocations.push({
-          id: chamberId,
-          name,
-          quantity: take,
-          rating: entry.rating,
-        });
-
-        if (remainingQty <= 0) break;
-      }
-
-      if (remainingQty > 0) {
-        throw new Error(
-          `Insufficient stock in chamber ${chamberId} for product ${name}. Required: ${requiredQty}, Missing: ${remainingQty}`
-        );
-      }
-
-      updatedChamberAllocations.push(...allocations);
-    }
-  }
-
-  return updatedChamberAllocations;
-};
-
-function validateProducts(products) {
-  if (!products || !Array.isArray(products) || products.length === 0) {
-    throw new Error("Products are required.");
-  }
-
-  // Prepare filtered products with only valid chambers
-  const filteredProducts = products.map((product) => {
-    if (!product.name) {
-      throw new Error("Product name is required for all products.");
-    }
-    if (!product.chambers || !Array.isArray(product.chambers)) {
-      throw new Error(
-        `Chambers should be an array for product: ${product.name}`
-      );
-    }
-
-    // Check for missing chamber ids (for all chambers)
-    product.chambers.forEach((chamber) => {
-      if (!chamber.id) {
-        throw new Error(`Chamber ID is required for product: ${product.name}`);
-      }
-    });
-
-    // Only keep chambers with a valid quantity (> 0)
-    const validChambers = product.chambers.filter(
-      (chamber) =>
-        chamber.id &&
-        chamber.quantity !== "" &&
-        chamber.quantity !== null &&
-        chamber.quantity !== undefined &&
-        !isNaN(Number(chamber.quantity)) &&
-        Number(chamber.quantity) > 0
-    );
-
-    // At least one chamber must have valid quantity (> 0)
-    if (validChambers.length === 0) {
-      throw new Error(
-        `Product "${product.name}" must have at least one chamber with quantity greater than 0.`
-      );
-    }
-
-    // Always return only valid chambers!
-    return {
-      ...product,
-      chambers: validChambers,
-    };
-  });
-
-  // Calculate total quantity across all valid chambers
-  const totalQuantity = filteredProducts.reduce(
-    (total, product) =>
-      total +
-      product.chambers.reduce(
-        (sum, chamber) => sum + Number(chamber.quantity),
-        0
-      ),
-    0
-  );
-
-  if (totalQuantity === 0) {
-    throw new Error(
-      "Total quantity across all products must be greater than 0."
-    );
-  }
-
-  return filteredProducts;
-}
-
-function validatePackages(packages, product_name, dbTypes) {
-  if (!packages || !Array.isArray(packages) || packages.length === 0) {
-    throw new Error("Packages are required.");
-  }
-
-  if (!dbTypes) {
-    throw new Error(`No package types found for product: ${product_name}`);
-  }
-
-  const normalize = (v) => v?.toString().trim().toLowerCase();
-
-  for (const { size, unit, quantity } of packages) {
-    const dbType = dbTypes.find(
-      (t) =>
-        normalize(t.size) === normalize(size) &&
-        normalize(t.unit) === normalize(unit)
-    );
-
-    if (!dbType) {
-      throw new Error(
-        `Package type with size ${size} and unit ${unit} not found.`
-      );
-    }
-
-    if (Number(quantity) > Number(dbType.quantity)) {
-      throw new Error(
-        `Requested quantity (${quantity}) for size ${size} ${unit} exceeds stock (${dbType.quantity}).`
-      );
-    }
-  }
-}
-
-function parseProducts(products) {
-  return products.map((product) => ({
-    name: product.name,
-    chambers: Array.isArray(product.chambers)
-      ? product.chambers.map((chamber) => ({
-          id: chamber.id,
-          name: chamber.name,
-          quantity: chamber.quantity,
-        }))
-      : [],
-  }));
-}
 
 // Get all dispatch orders
 router.get("/", async (req, res) => {
@@ -207,7 +44,34 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.post("/create", async (req, res) => {
+/**
+ * CREATE DISPATCH ORDER
+ * Payload:
+ * {
+ *   customer_name,
+ *   address,
+ *   state,
+ *   country,
+ *   city,
+ *   est_delivered_date,
+ *   products: [{ id, product_name, image, rating }],
+ *   usedBagsByProduct: {
+ *     [productId]: {
+ *       [packageKey]: {
+ *         totalBags,
+ *         totalPackets,
+ *         byChamber: { [chamberId]: bags },
+ *         packet: {
+ *           size,
+ *           unit,
+ *           packetsPerBag,
+ *         },
+ *       }
+ *     }
+ *   }
+ * }
+ */
+router.post("/create", safeRoute(async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
@@ -222,79 +86,104 @@ router.post("/create", async (req, res) => {
       usedBagsByProduct,
     } = req.body;
 
-console.log("usedBagsByProduct", usedBagsByProduct);
-
-    if (!customer_name) {
-      throw new Error("Customer name is required");
-    }
-
-    if (!Array.isArray(products) || products.length === 0) {
+    /* -------------------- BASIC VALIDATION -------------------- */
+    if (!customer_name) throw new Error("Customer name is required");
+    if (!Array.isArray(products) || products.length === 0)
       throw new Error("Products are required");
-    }
 
-    if (
-      !usedBagsByProduct ||
-      typeof usedBagsByProduct !== "object"
-    ) {
-      throw new Error("usedBagsByProduct is required for stock deduction");
-    }
+    if (!usedBagsByProduct || typeof usedBagsByProduct !== "object")
+      throw new Error("usedBagsByProduct is required");
 
-    for (const productId of Object.keys(usedBagsByProduct)) {
-      const productUsage = usedBagsByProduct[productId];
+    /* -------------------- STOCK DEDUCTION -------------------- */
+for (const productId of Object.keys(usedBagsByProduct)) {
+  const productUsage = usedBagsByProduct[productId];
+  const productName = productId.split("::")[0];
 
-      const stock = await stockClient.findOne({
-        where: { id: productId },
-        transaction: t,
-        lock: t.LOCK.UPDATE,
-      });
+  const stock = await stockClient.findOne({
+    where: { product_name: productName },
+    transaction: t,
+    lock: t.LOCK.UPDATE,
+  });
 
-      if (!stock) {
-        throw new Error(`Stock not found for productId ${productId}`);
-      }
+  if (!stock) {
+    throw new Error(`Stock not found for productId ${productId}`);
+  }
 
-      if (!Array.isArray(stock.chamber)) {
-        throw new Error(`Invalid chamber data for productId ${productId}`);
-      }
+  if (!Array.isArray(stock.chamber)) {
+    throw new Error(`Invalid chamber data for productId ${productId}`);
+  }
 
-      for (const pkgKey of Object.keys(productUsage)) {
-        const pkgUsage = productUsage[pkgKey];
-        const byChamber = pkgUsage?.byChamber || {};
+  for (const packageKey of Object.keys(productUsage)) {
+    const usage = productUsage[packageKey];
+    const { byChamber = {}, packet, totalBags = 0 } = usage;
 
-        for (const chamberId of Object.keys(byChamber)) {
-          const packetsToDeduct = Number(byChamber[chamberId]);
+    const packetsToDeduct =
+      Number(totalBags) * Number(packet?.packetsPerBag || 1);
 
-          if (!packetsToDeduct || packetsToDeduct <= 0) continue;
-
-          const chamberIndex = stock.chamber.findIndex(
-            (c) => String(c.id) === String(chamberId)
-          );
-
-          if (chamberIndex === -1) {
-            throw new Error(
-              `Chamber ${chamberId} not found for productId ${productId}`
-            );
-          }
-
-          const oldQty = Number(stock.chamber[chamberIndex].quantity || 0);
-
-          if (oldQty < packetsToDeduct) {
-            throw new Error(
-              `Insufficient stock in chamber ${chamberId}. Available: ${oldQty}, Required: ${packetsToDeduct}`
-            );
-          }
-
-          const newQty = oldQty - packetsToDeduct;
-
-          stock.chamber[chamberIndex].quantity = String(newQty);
-        }
-      }
-
-      await stockClient.update(
-        { chamber: stock.chamber },
-        { where: { id: stock.id }, transaction: t }
+    /* -------------------- PACKET DEDUCTION -------------------- */
+    if (Array.isArray(stock.packages) && packet) {
+      const pkgIndex = stock.packages.findIndex(
+        (p) =>
+          Number(p.size) === Number(packet.size) &&
+          p.unit === packet.unit
       );
+
+      if (pkgIndex !== -1) {
+        const oldPackets = Number(stock.packages[pkgIndex].quantity || 0);
+
+        if (oldPackets < packetsToDeduct) {
+          throw new Error(
+            `Insufficient packets. Available: ${oldPackets}, Required: ${packetsToDeduct}`
+          );
+        }
+
+        stock.packages[pkgIndex].quantity =
+          String(oldPackets - packetsToDeduct);
+      }
     }
 
+    /* -------------------- CHAMBER DEDUCTION -------------------- */
+    const expectedRating = Number(packageKey.split("-")[2]); 
+
+    for (const chamberId of Object.keys(byChamber)) {
+      const bagsToDeduct = Number(byChamber[chamberId]);
+      if (!bagsToDeduct || bagsToDeduct <= 0) continue;
+
+      const chamberIndex = stock.chamber.findIndex(
+        (c) =>
+          String(c.id) === String(chamberId) &&
+          Number(c.rating) === expectedRating
+      );
+
+      if (chamberIndex === -1) {
+        throw new Error(
+          `Chamber ${chamberId} with rating ${expectedRating} not found`
+        );
+      }
+
+      const oldQty = Number(stock.chamber[chamberIndex].quantity || 0);
+
+      if (oldQty < bagsToDeduct) {
+        throw new Error(
+          `Insufficient stock in chamber ${chamberId}. Available: ${oldQty}, Required: ${bagsToDeduct}`
+        );
+      }
+
+      stock.chamber[chamberIndex].quantity =
+        String(oldQty - bagsToDeduct);
+    }
+  }
+
+  await stockClient.update(
+    {
+      chamber: stock.chamber,
+      packages: stock.packages,
+    },
+    { where: { id: stock.id }, transaction: t }
+  );
+}
+
+    /* -------------------- CREATE ORDER -------------------- */
     const order = await orderClient.create(
       {
         customer_name,
@@ -304,44 +193,45 @@ console.log("usedBagsByProduct", usedBagsByProduct);
         city,
         status: "pending",
         est_delivered_date,
-        products,
+        products: products.map((p) => ({
+          id: p.id,
+          product_name: p.product_name,
+          image: p.image,
+          rating: p.rating,
+        })),
+        dispatched_items: usedBagsByProduct,
       },
-      { transaction: t }
+      { transaction: t },
     );
 
     await t.commit();
 
-    const totalPackets = Object.values(usedBagsByProduct).reduce(
-      (sum, productUsage) => {
-        return (
-          sum +
-          Object.values(productUsage).reduce(
-            (pkgSum, pkg) => pkgSum + Number(pkg.totalPackets || 0),
-            0
-          )
-        );
-      },
-      0
+    /* -------------------- NOTIFICATION -------------------- */
+    const totalBags = Object.values(usedBagsByProduct).reduce(
+      (sum, productUsage) =>
+        sum +
+        Object.values(productUsage).reduce(
+          (pkgSum, pkg) => pkgSum + Number(pkg.totalBags || 0),
+          0,
+        ),
+      0,
     );
 
     dispatchAndSendNotification({
       type: "order-ready",
       title: customer_name,
-      description: [`${products.length} Products`, `${totalPackets} Packets`],
+      description: [`${products.length === 1 ? products[0].product_name : products.length + " Products"}`, `${totalBags} Bags`],
       id: order.id,
       extraData: { id: order.id, status: "pending" },
     });
 
     return res.status(201).json(order);
   } catch (error) {
-    try {
-      await t.rollback();
-    } catch (_) {}
-
-    console.error("Error creating dispatch order:", error.message);
+    await t.rollback();
+    console.error("Dispatch create error:", error.message);
     return res.status(400).json({ error: error.message });
   }
-});
+}));
 
 router.patch("/status/:id", async (req, res) => {
   try {
@@ -365,16 +255,7 @@ router.patch("/status/:id", async (req, res) => {
     // Update only the status
     await order.update({ status });
 
-    // Send notifications based on status change
-    const totalWeight = order?.products?.reduce((sum, product) => {
-      const chamberSum = product?.chambers?.reduce(
-        (cSum, chamber) => cSum + (Number(chamber.quantity) || 0),
-        0
-      );
-      return sum + chamberSum;
-    }, 0);
-
-    const description = [order?.product_name, `${totalWeight} Kg`];
+    const description = [`${order.products.length} Products`];
 
     if (status === "in-progress") {
       dispatchAndSendNotification({
@@ -457,7 +338,10 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
     if (req.files && req.files.length > 0) {
       const uploadPromises = req.files.map(async (file) => {
         try {
-          const uploaded = await uploadToS3({file, folder: "dispatchOrder/challan"});
+          const uploaded = await uploadToS3({
+            file,
+            folder: "dispatchOrder/challan",
+          });
           uploadedKeys.push(uploaded.key);
           return uploaded.url;
         } catch (uploadError) {
@@ -524,20 +408,11 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
 
     const products = updatedData.products || order.products || [];
 
-    const totalWeight = products.reduce((sum, product) => {
-      const chamberSum =
-        product?.chambers?.reduce(
-          (cSum, chamber) => cSum + (Number(chamber.quantity) || 0),
-          0
-        ) || 0;
-      return sum + chamberSum;
-    }, 0);
-
     let truck = null;
     if (updatedData.truck_details?.number) {
       truck = await truckClient.findOne(
         { where: { number: updatedData.truck_details.number } },
-        { transaction: t }
+        { transaction: t },
       );
 
       if (!truck) {
@@ -547,18 +422,21 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
           .json({ error: "Truck not found for given number" });
       }
 
-      const truckCapacity = Number(truck.size || 0);
+      const totalBags = Object.values(order.usedBagsByProduct || {}).reduce(
+  (sum, productUsage) =>
+    sum +
+    Object.values(productUsage).reduce(
+      (pkgSum, pkg) => pkgSum + Number(pkg.totalBags || 0),
+      0
+    ),
+  0
+);
 
-      if (totalWeight > truckCapacity) {
-        await t.rollback();
-        return res.status(400).json({
-          error: "Truck capacity exceeded",
-          details: {
-            truckCapacity,
-            requiredCapacity: totalWeight,
-          },
-        });
-      }
+   if (totalBags > truck.size) {
+  throw new Error(
+    `Truck capacity exceeded. Capacity: ${truck.size} bags, Required: ${totalBags} bags`
+  );
+}
     }
 
     await order.update(updatedData, { transaction: t });
@@ -574,7 +452,8 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
     await t.commit();
 
     if (updatedData?.status === "in-progress") {
-      const description = [order?.product_name, `${totalWeight} Kg`];
+      const description = [`${products.length} Products`];
+
       dispatchAndSendNotification({
         type: "order-shipped",
         description,
@@ -582,7 +461,7 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
         id: order?.id,
       });
     } else if (updatedData?.status === "completed") {
-      const description = [order?.product_name, `${totalWeight} Kg`];
+      const description = [`${products.length} Products`];
       dispatchAndSendNotification({
         type: "order-reached",
         description,

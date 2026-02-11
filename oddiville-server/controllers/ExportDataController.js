@@ -20,7 +20,6 @@ router.get("/", async (req, res) => {
             "Content-Disposition",
             `attachment; filename=${type}-report.xlsx`
         );
-
         await workbook.xlsx.write(res);
         res.end();
     } catch (err) {

@@ -92,6 +92,12 @@ module.exports = (sequelize, Sequelize) => {
           },
         },
       },
+      dispatched_items: {
+        type: Sequelize.JSONB,
+        allowNull: false,
+        defaultValue: {},
+      },
+
     },
     {
       timestamps: true,

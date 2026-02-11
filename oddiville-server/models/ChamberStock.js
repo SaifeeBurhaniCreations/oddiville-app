@@ -27,7 +27,7 @@ module.exports = (sequelize, Sequelize) => {
         allowNull: true,
         validate: {
           isValidPackaging(value) {
-            if (this.category === "other") return;
+            if (this.category === "other" || this.category === "packed") return;
 
             if (value == null) {
               throw new Error("Packaging is required.");
@@ -144,7 +144,7 @@ module.exports = (sequelize, Sequelize) => {
             }
 
             value.forEach((pkg, index) => {
-              const allowedKeys = ["size", "unit", "rawSize", "dry_item_id", "quantity"];
+              const allowedKeys = ["size", "unit", "rawSize", "quantity"];
               const keys = Object.keys(pkg);
 
               const extra = keys.filter((k) => !allowedKeys.includes(k));
@@ -157,6 +157,11 @@ module.exports = (sequelize, Sequelize) => {
               if (pkg.size != null && isNaN(Number(pkg.size))) {
                 throw new Error(`Packages[${index}].size must be numeric.`);
               }
+
+              if (pkg.quantity == null || isNaN(Number(pkg.quantity))) {
+                  throw new Error(`Packages[${index}].quantity must be numeric string.`);
+                }
+
             });
           },
         },

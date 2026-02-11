@@ -8,6 +8,7 @@ const {
 } = require("../models");
 router.get("/:type/:id", async (req, res) => {
     const { type, id } = req.params;
+console.log("{ type, id }", { type, id });
 
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {

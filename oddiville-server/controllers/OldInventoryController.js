@@ -390,7 +390,7 @@ function validateChamberStock(items = [], allowedChambers) {
 
       const allowedKeys = new Set([
   "id",
-  "bags",       
+  "quantity",       
   "rating",
   "packets_per_bag" 
 ]);
@@ -403,7 +403,7 @@ function validateChamberStock(items = [], allowedChambers) {
         });
       }
 
-      ["id", "bags", "rating", "packets_per_bag"].forEach((k) => {
+      ["id", "quantity", "rating"].forEach((k) => {
         if (typeof it[k] !== "string" || !it[k].trim()) {
           issues.push({
             path: `chamber_stock[${i}].chamber[${j}].${k}`,
@@ -748,7 +748,8 @@ function normalizeChamberStockRow(row) {
           id: ensureString(it.id || it.chamber_name || it._id || it.name),
           quantity: ensureString(it.bags ?? ""),
           packets_per_bag: Number(it.packets_per_bag ?? 1),
-          rating: ensureString(it.rating ?? ""),
+         rating: ensureString(it.rating ?? row.rating ?? ""),
+
         }))
       : row.chamber_name
       ? [
@@ -766,6 +767,7 @@ function normalizeChamberStockRow(row) {
     product_name: ensureString(row.product_name || ""),
     category: ensureString(row.category || ""),
     unit: ensureString(row.unit || ""),
+      rating: ensureString(row.rating ?? ""), 
     chamber: chamberArr,
     clientId: row.clientId || null,
   };
@@ -1509,6 +1511,17 @@ const incomingChambers = Array.isArray(c.chamber)
           }
 
           cur.rating = inc.rating || cur.rating || "";
+
+          if (
+  cur.packets_per_bag &&
+  inc.packets_per_bag &&
+  cur.packets_per_bag !== inc.packets_per_bag
+) {
+  throw new Error(
+    `Packet size mismatch for chamber ${incId}`
+  );
+}
+
           cur.packets_per_bag =
   inc.packets_per_bag ?? cur.packets_per_bag ?? 1;
 
@@ -1561,37 +1574,50 @@ const incomingChambers = Array.isArray(c.chamber)
       });
       createdChamber.push(refreshed.toJSON());
       
-      if (c.category === "packed") {
+      if ((c.category || "").toLowerCase() === "packed") {
         const totalBags = incomingChambers.reduce(
           (s, ch) => s + Number(ch.quantity || 0),
           0
         );
+
+        const totalPackets = incomingChambers.reduce(
+          (sum, ch) =>
+            sum + Number(ch.quantity || 0) * Number(ch.packets_per_bag || 1),
+          0
+        );
   
-        const packetsPerBag =
-  incomingChambers[0]?.packets_per_bag ?? 1;
+  //       const packetsPerBag =
+  // incomingChambers[0]?.packets_per_bag ?? 1;
 
         await PackingEventClient.create(
           {
             product_name: productName,
-            rating,
+            rating: Number(rating) || 0,
             sku_id: uuid(),
             sku_label: productName,
   
             packet: {
-              size: c.packaging?.size?.value || 1,
-              unit: c.packaging?.size?.unit || "kg",
-              packetsPerBag
+              size: c.packaging?.size?.value ?? null,
+              unit: c.packaging?.size?.unit ?? null,
+              packetsPerBag: null
             },
   
             bags_produced: totalBags,
-            total_packets: totalBags * packetsPerBag,
+            total_packets: totalPackets,
   
             storage: incomingChambers.map((ch) => ({
               chamberId: ch.id,
               bagsStored: Number(ch.quantity || 0)
             })),
   
-            rm_consumption: [] 
+            rm_consumption: productions
+                .filter(p => p.product_name === productName)
+                .map(p => ({
+                  raw_material_order_id: p.raw_material_order_id,
+                  quantity_used: Number(p.quantity || 0),
+                  unit: p.unit || "kg"
+                }))
+
           },
           { transaction: t }
         );

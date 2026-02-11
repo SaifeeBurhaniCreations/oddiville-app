@@ -2,7 +2,9 @@ const router = require("express").Router();
 const { TruckDetails: truckDetailClient } = require("../models");
 const { uploadToS3, deleteFromS3 } = require("../services/s3Service");
 const upload = require("../middlewares/upload");
-
+const {
+    sequelize,
+} = require("../models");
 require("dotenv").config();
 
 // GET all truck details

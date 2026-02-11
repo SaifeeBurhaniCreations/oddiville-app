@@ -33,6 +33,7 @@ const {
 } = require("./models");
 const { setIO } = require("./config/socket");
 require("./models/Admin");
+// require("./workers/reminder.worker");
 
 dotenv.config();
 
@@ -142,21 +143,21 @@ const PORT = process.env.PORT || 8022;
       // await Chambers.sync({ force: true });
       // await Lanes.sync({ force: true });
 
-      await ChamberStock.sync({ force: true });
-      await PackingEvent.sync({ force: true });
-      await TruckDetails.sync({ force: true });
-      await Notifications.sync({ force: true });
-      await Production.sync({ force: true });
-      await RawMaterialOrder.sync({ force: true });
-      await History.sync({ force: true });
-      await OthersItem.sync({ force: true });
-      await ThirdPartyClient.sync({ force: true });
-      await Vendors.sync({ force: true });
-      await Packages.sync({ force: true });
-      await DryWarehouse.sync({ force: true });
-      await DispatchOrder.sync({ force: true });
-      await Calendar.sync({ force: true });
-      await Contractor.sync({ force: true });
+      await ChamberStock.sync({ alter: true });
+      // await PackingEvent.sync({ force: true });
+      // await TruckDetails.sync({ force: true });
+      // await Notifications.sync({ force: true });
+      // await Production.sync({ force: true });
+      // await RawMaterialOrder.sync({ force: true });
+      // await History.sync({ force: true });
+      // await OthersItem.sync({ force: true });
+      // await ThirdPartyClient.sync({ force: true });
+      // await Vendors.sync({ force: true });
+      // await Packages.sync({ force: true });
+      // await DryWarehouse.sync({ force: true });
+      // await DispatchOrder.sync({ true: true });
+      // await Calendar.sync({ force: true });
+      // await Contractor.sync({ force: true });
       console.log("✅ Synced DB with models");
     }
 

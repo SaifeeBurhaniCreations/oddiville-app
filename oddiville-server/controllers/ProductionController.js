@@ -249,13 +249,13 @@ router.patch("/:id", upload.array("sample_images"), async (req, res) => {
     const allImages = [...existingImages, ...newImages];
 
     const currentProduction = await fetchProductionOrFail(id);
-    const oldLaneId = currentProduction.lane;
+const oldLaneId = currentProduction.lane_id;
     const laneRecord = lane ? await validateLaneAssignment(lane, id) : null;
 
     const updatedFields = buildUpdatedFields({
       otherFields,
       allImages,
-      lane,
+       lane_id: lane,
       start_time: currentProduction?.start_time,
       currentProductionStatus: currentProduction.status,
     });
@@ -329,9 +329,9 @@ router.patch("/start/:id", upload.single("sample_image"), async (req, res) => {
     }
 
     let laneRecord = null;
-    if (status === "in-progress" && production.lane) {
-      laneRecord = await validateLaneAssignment(production.lane, id);
-    }
+if (status === "in-progress" && production.lane_id) {
+  laneRecord = await validateLaneAssignment(production.lane_id, id);
+}
 
     const updatedFields = {
       status,
@@ -525,10 +525,9 @@ router.patch("/complete/:id", async (req, res) => {
       await updateRawMaterialStoreDate(newProduction, { tx });
     }
 
-    if (production.lane) {
-      await clearLaneAssignment(production, { tx });
-    }
-
+if (production.lane_id) {
+  await clearLaneAssignment(production, { tx });
+}
     await tx.commit();
     tx = null;
 

@@ -39,21 +39,35 @@ router.get("/product/:productName", async (req, res) => {
   try {
     const { productName } = req.params;
 
-    let packages = await Packages.findOne({
-      where: { product_name: productName },
-    });
-    packages = packages.dataValues;
+    if (
+  !productName ||
+  productName === "Select product"
+) {
+  return res.status(400).json({
+    error: "Invalid product name",
+  });
+}
 
-    if (!packages)
-      return res
-        .status(404)
-        .json({ error: "No packages found for this product." });
-    return res.status(200).json(packages);
+const pkg = await Packages.findOne({
+  where: { product_name: productName },
+  raw: true,
+});
+
+if (!pkg) {
+  return res.status(404).json({ error: "No packages found for this product." });
+}
+
+return res.status(200).json(pkg);
+
   } catch (error) {
-    console.error("Error fetching packages by product_name:", error.message);
+    console.error(
+      "Error fetching packages by product_name:",
+      error.message
+    );
     return res.status(500).json({ error: "Internal server error." });
   }
 });
+
 
 // GET package by ID
 router.get("/:id", async (req, res) => {

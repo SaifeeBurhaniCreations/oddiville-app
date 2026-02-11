@@ -5,57 +5,39 @@ const { Calendar: calendarClient } = require("../models");
 const {
   dispatchAndSendNotification,
 } = require("../utils/dispatchAndSendNotification");
-const notificationQueue = require("../queues/notificationQueue")
+const reminderQueue = require("../queues/reminder.queue");
+
 router.post("/", async (req, res) => {
-  const body = req.body;
-  const io = req.app.get("io");
+  const event = await calendarClient.create(req.body);
 
-  const calenderEvent = await calendarClient.create(body);
+ const eventDateTime = new Date(
+  `${event.scheduled_date}T${event.start_time}`
+);
 
-  const notificationDetails = {
-    id: calenderEvent.id,
-    work_area: calenderEvent.work_area,
-    product_name: calenderEvent.product_name,
-    scheduled_date: calenderEvent.scheduled_date,
-    start_time: calenderEvent.start_time,
-    end_time: calenderEvent.end_time,
-  };
+const now = Date.now();
 
-  const description = [
-    calenderEvent.work_area,
-    format(new Date(calenderEvent.scheduled_date), "MMM d, yyyy"),
-  ];
+const delay24h = eventDateTime.getTime() - now - 24 * 60 * 60 * 1000;
+const delay1h  = eventDateTime.getTime() - now -  1 * 60 * 60 * 1000;
 
-  const title = calenderEvent.product_name;
-
-  io.emit("calendar:created", notificationDetails);
-
-  await dispatchAndSendNotification({
-    type: "calendar-event-scheduled",
-    description,
-    title,
-    id: calenderEvent.id,
-  });
-
-   const eventDateTime = new Date(
-    `${calenderEvent.scheduled_date} ${calenderEvent.start_time}`
+if (delay24h > 0) {
+  await reminderQueue.add(
+    "send-reminder",
+    { eventId: event.id, hoursBefore: 24 },
+    { jobId: `reminder-24h:${event.id}`, delay: delay24h }
   );
+}
 
-  // 1 hour before
-  const reminderTime = subHours(eventDateTime, 1);
+if (delay1h > 0) {
+  await reminderQueue.add(
+    "send-reminder",
+    { eventId: event.id, hoursBefore: 1 },
+    { jobId: `reminder-1h:${event.id}`, delay: delay1h }
+  );
+}
 
-  const delay = reminderTime.getTime() - Date.now();
-
-  if (delay > 0) {
-    await notificationQueue.add(
-      { calendarEvent: calenderEvent },
-      { delay }
-    );
-  }
-
-
-  res.status(201).json(calenderEvent);
+  res.status(201).json(event);
 });
+
 
 router.get("/", async (req, res) => {
   const calenderEvents = await calendarClient.findAll();

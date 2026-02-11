@@ -3,97 +3,94 @@ module.exports = (sequelize, Sequelize) => {
     id: {
       type: Sequelize.UUID,
       defaultValue: Sequelize.UUIDV4,
-      primaryKey: true
+      primaryKey: true,
     },
+
     product_name: {
       type: Sequelize.STRING,
-      allowNull: false
+      allowNull: false,
     },
+
     supervisor: {
       type: Sequelize.STRING,
-      allowNull: true
-      // allowNull: false
+      allowNull: true,
     },
-    lane: {
-      type: Sequelize.STRING,
-      allowNull: true
+
+    // lane: {
+    //   type: Sequelize.STRING,
+    //   allowNull: true
+    // },
+
+    lane_id: {
+      type: Sequelize.UUID,
+      allowNull: true,
     },
-    rating: {
-      type: Sequelize.STRING,
-      allowNull: true
-    },
-    wastage_quantity: {
-      type: Sequelize.STRING,
-      allowNull: true
-    },
+
+    rating: Sequelize.STRING,
+    wastage_quantity: Sequelize.STRING,
+
     quantity: {
       type: Sequelize.FLOAT,
-      allowNull: false
+      allowNull: false,
     },
-    recovery: {
-      type: Sequelize.FLOAT,
-      allowNull: true
-    },
+
+    recovery: Sequelize.FLOAT,
+
     unit: {
       type: Sequelize.STRING,
-      allowNull: false
+      allowNull: false,
     },
+
     raw_material_order_id: {
       type: Sequelize.UUID,
       allowNull: false,
-      references: {
-          model: 'raw_material_orders',
-          key: 'id'
-      }
     },
-    start_time: {
-      type: Sequelize.DATE,
-      allowNull: true
-    },
-    end_time: {
-      type: Sequelize.DATE,
-      allowNull: true
-    },
+
+    start_time: Sequelize.DATE,
+    end_time: Sequelize.DATE,
+
     status: {
-      type: Sequelize.ENUM("pending", "in-queue", "in-progress", "completed", "cancelled"),
-      defaultValue: "pending"
+      type: Sequelize.ENUM(
+        "pending",
+        "in-queue",
+        "in-progress",
+        "completed",
+        "cancelled"
+      ),
+      defaultValue: "pending",
     },
-    packaging: {
-      type: Sequelize.JSONB, 
-      allowNull: true
-    },
+
+    packaging: Sequelize.JSONB,
+
     batch_code: {
       type: Sequelize.STRING,
       allowNull: true,
-      unique: true
+      unique: true,
     },
-    notes: {
-      type: Sequelize.TEXT,
-      allowNull: true
-    },
-    sample_images: {
-      type: Sequelize.JSONB, 
-      allowNull: true
-    },
+
+    notes: Sequelize.TEXT,
+
+    sample_images: Sequelize.JSONB,
   }, {
     timestamps: true,
 
     indexes: [
-      { fields: ["raw_material_order_id"] }, // FK join
+      { fields: ["raw_material_order_id"] },
+      { fields: ["lane_id"] },
       { fields: ["status"] },
-      { fields: ["product_name"] },
-
-      { fields: ["status", "start_time"] }, // active dashboard
-
+      { fields: ["status", "start_time"] },
       { fields: ["batch_code"], unique: true },
-    ]
-  }
-  );
+    ],
+  });
 
   Production.associate = (models) => {
-    models.Production.belongsTo(models.RawMaterialOrder, {
+    Production.belongsTo(models.RawMaterialOrder, {
       foreignKey: "raw_material_order_id",
-      targetKey: "id", 
+    });
+
+    Production.belongsTo(models.Lanes, {
+      foreignKey: "lane_id",
+      as: "lane",
     });
   };
 

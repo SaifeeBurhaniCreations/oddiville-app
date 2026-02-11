@@ -29,11 +29,11 @@ const ORDER_READY = {
                                     value: "",
                                     icon: "box",
                                 },
-                                {
-                                    label: "Quantity",
-                                    value: "",
-                                    icon: "database",
-                                },
+                                // {
+                                //     label: "Quantity",
+                                //     value: "",
+                                //     icon: "database",
+                                // },
                             ],
                         },
                         {
@@ -70,18 +70,25 @@ const ORDER_READY = {
                     {
                         title: "",
                         image: "box",
-                        // packages: [
-                        //     { size: null, unit: '', quantity: '' },
-                        // ],
-                        chambers: [{ id: "", name: "", quantity: "" }],
                         description: "",
-                        // packagesSentence: "",
                         weight: "",
-                        price: "",
+
+                        productId: "",
+                        name: "",
+                        rating: undefined,
+
+                        skus: [
+                            {
+                                skuId: "",
+                                size: 0,
+                                unit: "gm",
+                                totalBags: 0,
+                            },
+                        ],
                     },
                 ],
             },
-        },
+        }
     ],
     buttons: [
         {
@@ -125,11 +132,11 @@ const ORDER_SHIPPED = {
                                     value: "",
                                     icon: "box",
                                 },
-                                {
-                                    label: "Quantity",
-                                    value: "",
-                                    icon: "database",
-                                },
+                                // {
+                                //     label: "Quantity",
+                                //     value: "",
+                                //     icon: "database",
+                                // },
                             ],
                         },
                         {
@@ -179,15 +186,22 @@ const ORDER_SHIPPED = {
                 products: [
                     {
                         title: "",
-                        image: "",
-                        // packages: [
-                        //     { size: "", unit: '', quantity: '' },
-                        // ],
-                        chambers: [{ name: "", quantity: "" }],
+                        image: "box",
                         description: "",
-                        // packagesSentence: "",
                         weight: "",
-                        price: "",
+
+                        productId: "",
+                        name: "",
+                        rating: undefined,
+
+                        skus: [
+                            {
+                                skuId: "",
+                                size: 0,
+                                unit: "gm",
+                                totalBags: 0,
+                            },
+                        ],
                     },
                 ],
             },
@@ -252,11 +266,11 @@ const ORDER_REACHED = {
                                     value: "",
                                     icon: "box",
                                 },
-                                {
-                                    label: "Quantity",
-                                    value: "",
-                                    icon: "database",
-                                },
+                                // {
+                                //     label: "Quantity",
+                                //     value: "",
+                                //     icon: "database",
+                                // },
                             ],
                         },
                         {
@@ -293,15 +307,22 @@ const ORDER_REACHED = {
                 products: [
                     {
                         title: "",
-                        image: "",
-                        // packages: [
-                        //     { size: "", unit: '', quantity: '' },
-                        // ],
-                        chambers: [{ name: "", quantity: "" }],
+                        image: "box",
                         description: "",
-                        // packagesSentence: "",
                         weight: "",
-                        price: "",
+
+                        productId: "",
+                        name: "",
+                        rating: undefined,
+
+                        skus: [
+                            {
+                                skuId: "",
+                                size: 0,
+                                unit: "gm",
+                                totalBags: 0,
+                            },
+                        ],
                     },
                 ],
             },
@@ -582,6 +603,7 @@ const ADD_PRODUCT = {
                 isCheckEnable: false,
                 route: "product",
                 options: [],
+                key: "select-product"
             },
         },
     ],
