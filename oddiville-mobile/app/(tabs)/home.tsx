@@ -65,7 +65,7 @@ const actionableNotificationsDataFormatter = (
           ] as ActionButtonConfig,
         ]
       : [],
-    metaData: { disableButton: val.type === "order-ready" ? true : false },
+    data: { disableButton: val.type === "order-ready" ? true : false },
   }));
 
 const todaysNotificationsDataFormatter = (

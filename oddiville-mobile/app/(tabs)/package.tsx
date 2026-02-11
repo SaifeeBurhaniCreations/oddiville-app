@@ -32,7 +32,7 @@ import { getEmptyStateData } from "@/src/utils/common";
 import { useRawMaterialConsumption } from "@/src/hooks/packing/useRawMaterialConsumption";
 import { setFinalDraft } from "@/src/redux/slices/packingDraft.slice";
 import { useDispatch, useSelector } from "react-redux";
-import { useChamberStockByName } from "@/src/hooks/useChamberStock";
+import { Packaging, useChamberStockByName } from "@/src/hooks/useChamberStock";
 import { RootState } from "@/src/redux/store";
 import { B4 } from "@/src/components/typography/Typography";
 import { clearProduct, setRawMaterials } from "@/src/redux/slices/product.slice";
@@ -41,6 +41,7 @@ import { clearChambers } from "@/src/redux/slices/bottomsheet/raw-material.slice
 import { clearRatings } from "@/src/redux/slices/bottomsheet/storage.slice";
 import PackingSummarySection from "@/src/components/ui/package/PackingSummarySection";
 import { useCreatePacking } from "@/src/hooks/packing/useGetPackedItemsToday";
+import { useQueryClient } from "@tanstack/react-query";
 
 // 6. Project types
 
@@ -55,14 +56,20 @@ const PackageScreen = () => {
   const dispatch = useDispatch();
   const form =
     usePackingForm({validateOnChange: true});
-        const { chamberStock } = useChamberStockByName(selectedRawMaterials);
-        const rmUsed = useMemo(
+
+    const { chamberStock } = useChamberStockByName(selectedRawMaterials);
+        
+    const rmUsed = useMemo(
           () => chamberStock ?? [],
           [chamberStock]
         );
-  const rm = useRawMaterialConsumption(rmUsed);
+
+    const rm = useRawMaterialConsumption(rmUsed);
 
   const { mutate: createPacked, isPending, error } = useCreatePacking();
+
+  // tanstack query 
+const queryClient = useQueryClient();
 
   // states
   const [searchText, setSearchText] = useState<string>("");
@@ -116,6 +123,11 @@ const onSubmit = async (data: any) => {
       dispatch(resetPackageSizes());
       dispatch(clearChambers());
       dispatch(clearRatings());
+
+      queryClient.invalidateQueries({
+        queryKey: ["packageName", data.product.productName],
+      });
+
       toast.success("Packed item created!");
     },
     onError: (err: any) => {
@@ -133,27 +145,61 @@ const onSubmit = async (data: any) => {
 
   const emptyStateData = getEmptyStateData("products")
 
+  function getRmKgPerBag(
+  packaging: Packaging | Packaging[] | null | undefined
+): number {
+  if (!packaging) return 0;
+
+  const pkg = Array.isArray(packaging) ? packaging[0] : packaging;
+
+  if (pkg.size.unit !== "kg") return 0;
+
+  return Number(pkg.size.value);
+}
+
 const isFormStructurallyValid = useMemo(() => {
   if (!form.values.product.productName) return false;
 
-const rmTotal = Object.values(form.values.rmInputs || {})
-  .flatMap(rm => Object.values(rm))
-  .reduce((s, v) => s + Number(v || 0), 0);
+  /* ---------------- RM KG USED ---------------- */
+  const rmKgUsed = rmUsed.reduce((sum, rm) => {
+    const kgPerBag = getRmKgPerBag(rm.packaging);
 
-const packedBags = form.values.packagingPlan
-  .reduce((s, p) => s + (p.bagsProduced || 0), 0);
+    const usedBags =
+      Object.values(form.values.rmInputs?.[rm.product_name] || {})
+        .reduce((s, v) => s + Number(v || 0), 0);
 
-if (rmTotal === 0) return false;
-if (packedBags === 0) return false;
+    return sum + usedBags * kgPerBag;
+  }, 0);
 
-const isRMMatchingPackaging = rmTotal === packedBags;
-if (!isRMMatchingPackaging) return false;
+  /* ---------------- PACKED KG ---------------- */
+  const packedKg = form.values.packagingPlan.reduce((sum, p) => {
+    const packetKg =
+      p.packet.unit === "gm"
+        ? p.packet.size / 1000
+        : p.packet.size;
 
-return true;
+    const kgPerBag = packetKg * p.packet.packetsPerBag;
+
+    return sum + kgPerBag * p.bagsProduced;
+  }, 0);
+
+  if (rmKgUsed === 0) return false;
+  if (packedKg === 0) return false;
+
+  // float-safe comparison
+  if (Math.abs(rmKgUsed - packedKg) > 0.001) return false;
+
+  // ensure every SKU is stored in chambers
+  for (const plan of form.values.packagingPlan) {
+    if (!plan.storage || plan.storage.length === 0) return false;
+  }
+
+  return true;
 }, [
   form.values.product.productName,
   form.values.rmInputs,
   form.values.packagingPlan,
+  rmUsed,
 ]);
 
 const isSubmitDisabled =
@@ -183,7 +229,7 @@ const isSubmitDisabled =
                 <View style={styles.storageColumn}>
                   <ProductContextSection setIsLoading={setIsLoading} form={form} setIsCurrentProduct={setIsCurrentProduct} />
                   <RawMaterialConsumptionSection setIsLoading={setIsLoading} isCurrentProduct={isCurrentProduct} form={form} rm={rm} rmUsed={rmUsed} />
-                  <PackingSKUSection setIsLoading={setIsLoading} isCurrentProduct={isCurrentProduct} form={form} onOverPackChange={handleOverPackChange} />
+                  <PackingSKUSection setIsLoading={setIsLoading} isCurrentProduct={isCurrentProduct} form={form} onOverPackChange={handleOverPackChange} rmUsed={rmUsed} />
 
                   {!isCurrentProduct && <View style={EmptyStateStyles.center}><EmptyState stateData={emptyStateData} /></View>}
                 </View>
@@ -191,12 +237,18 @@ const isSubmitDisabled =
               <View style={{ paddingHorizontal: 16 }}>
                 <View>
                   <Pressable
+                  disabled={isSubmitDisabled || isPending}
 onPress={() => {
   if (disableButton) {
     setShowTooltip(true);
     toast.error("Not enough packets in stock");
     return;
   }
+      if (isSubmitDisabled) {
+      setShowTooltip(true);
+      toast.error(submitDisabledReason || "Form is invalid");
+      return;
+    }
 
   const result = form.validateForm();
 
@@ -209,7 +261,6 @@ onPress={() => {
 
   onSubmit(result.data);
 }}
-                    disabled={isPending}
                   >
                     <Button
                       variant="fill"
