@@ -20,12 +20,12 @@ async function loadProductionBundle(ctx) {
     }
 
     
-    if (isValidUUID(prod?.lane)) {
-        ctx.lane = await LaneClient.findOne({
-            where: { id: prod.lane },
-            raw: true,
-        }) || {};
-    }
+if (isValidUUID(prod?.lane_id)) {
+    ctx.lane = await LaneClient.findOne({
+        where: { id: prod.lane_id },
+        raw: true,
+    }) || {};
+}
 
     if (prod?.vendor) {
         ctx.vendor = await VendorClient.findOne({

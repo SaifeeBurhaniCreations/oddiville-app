@@ -18,20 +18,27 @@ const buildWhere = (query, options = {}) => {
     };
 };
 
-const addSheet = (workbook, name, rows, extraRemove = []) => {
+const addSheet = (workbook, name, rows, extraRemove = [], chamberMap = {}) => {
     const ws = workbook.addWorksheet(name);
 
     if (!rows.length) return;
 
-    const cleanRows = rows.map((r) => sanitizeRow(r, extraRemove));
+    const cleanRows = rows.map((r) => sanitizeRow(r, extraRemove, { chamberMap, sheetName: name }));
 
     const orderedRows = applyColumnOrder(cleanRows, name);
 
-    ws.columns = Object.keys(orderedRows[0]).map((k) => ({
+    const allKeys = [
+        ...new Set(
+            orderedRows.flatMap(row => Object.keys(row))
+        )
+        ];
+
+        ws.columns = allKeys.map((k) => ({
         header: k.replace(/_/g, " ").toUpperCase(),
         key: k,
         width: 20,
-    }));
+        }));
+
 
     ws.addRows(orderedRows);
 };
@@ -49,7 +56,14 @@ async function exportDashboard(query) {
         stocks,
         others,
     ] = await Promise.all([
-        db.Production.findAll({ where }),
+        db.Production.findAll({ where,
+  include: [
+    {
+      model: db.Lanes,
+      as: "lane",
+      attributes: ["name"],
+    },
+  ], }),
         db.PackingEvent.findAll({ where }),
         db.DispatchOrder.findAll({ where }),
         db.RawMaterialOrder.findAll({ where }),
@@ -58,6 +72,104 @@ async function exportDashboard(query) {
     ]);
 
     const sheet = workbook.addWorksheet("Summary");
+
+    const chamberIds = [
+  ...new Set(
+    packing.flatMap(p =>
+      (p.storage || []).map(s => s.chamberId)
+    )
+  )
+];
+
+const chambers = await db.Chambers.findAll({
+  where: { id: { [Op.in]: chamberIds } },
+  attributes: ["id", "chamber_name"],
+});
+
+const chamberMap = Object.fromEntries(
+  chambers.map(c => [c.id, c.chamber_name])
+);
+
+const rmRows = [];
+
+for (const pack of packing) {
+  const productName = pack.product_name;
+
+  const rm = pack.rm_consumption || {};
+
+  for (const rmName in rm) {
+    const chamberData = rm[rmName];
+
+    for (const chamberId in chamberData) {
+      const data = chamberData[chamberId];
+
+      rmRows.push({
+        product_name: productName,
+        raw_material: rmName,
+        chamber_name: chamberMap[chamberId] || "",
+        rating: data.rating,
+        outer_used: data.outer_used,
+      });
+    }
+  }
+}
+
+const dispatchItemRows = [];
+
+for (const order of dispatch) {
+  const customerName = order.customer_name;
+  const dispatched = order.dispatched_items || {};
+  const products = order.products || [];
+
+  // Build product lookup
+  const productMap = Object.fromEntries(
+    products.map(p => [p.id, p])
+  );
+
+  for (const productKey in dispatched) {
+    const productInfo = productMap[productKey] || {};
+    const productName = productInfo.product_name;
+    const rating = productInfo.rating;
+
+    const skuData = dispatched[productKey];
+
+    for (const skuKey in skuData) {
+      const item = skuData[skuKey];
+
+      const byChamber = item.byChamber || {};
+
+      for (const chamberId in byChamber) {
+        dispatchItemRows.push({
+          customer_name: customerName,
+          product_name: productName,
+          sku: skuKey,
+          rating,
+          chamber_name: chamberMap[chamberId] || "",
+          total_bags: item.totalBags,
+          total_packets: item.totalPackets,
+        });
+      }
+    }
+  }
+}
+
+const stockChamberRows = [];
+
+for (const stock of stocks) {
+  const productName = stock.product_name;
+  const category = stock.category;
+  const chambers = stock.chamber || [];
+
+  for (const c of chambers) {
+    stockChamberRows.push({
+      product_name: productName,
+      category,
+      chamber_name: chamberMap[c.id] || c.id,
+      rating: c.rating,
+      quantity: c.quantity,
+    });
+  }
+}
 
     sheet.addRows([
         ["Filter", query.range || "all"],
@@ -70,18 +182,60 @@ async function exportDashboard(query) {
     ]);
 
     addSheet(workbook, "Raw Materials", raws, [
-        "vendor",
+        "id",
+        "sku_id",
+        "vendor_id",
+        "production_id",
+        "sample_image",
+        "warehoused_date",
+        "unit",
     ]);
-    addSheet(workbook, "Production", productions, [
-        "raw_material_order_id",
-    ]);
-    addSheet(workbook, "Packing", packing);
-    addSheet(workbook, "Dispatch", dispatch);
-    addSheet(workbook, "Stock", stocks, [
-        "packed_ref",
-    ]);
-    addSheet(workbook, "Third Party", others);
 
+    addSheet(workbook, "Production", productions, [
+        "id",
+        "raw_material_order_id",
+        "unit",
+        "sample_images",
+        "lane_id",
+
+    ]);
+
+addSheet(
+  workbook,
+  "Packing",
+  packing,              
+  [
+    "id",
+    "sku_id",
+    "sku_label",
+    "unit",
+    "packet",
+  ],
+  chamberMap            
+);
+
+addSheet(workbook, "RM Consumption", rmRows);
+
+    addSheet(workbook, "Dispatch", dispatch, [
+        "id",
+        "sample_images",
+    ]);
+
+addSheet(workbook, "Dispatch Items", dispatchItemRows);
+
+    addSheet(workbook, "Stock", stocks, [
+    "id",
+    "packed_ref",
+    "image",
+], chamberMap);
+
+addSheet(workbook, "Stock Chambers", stockChamberRows);
+
+
+    addSheet(workbook, "Third Party", others, [
+        "id",
+    ]);
+    
     return workbook;
 }
 
@@ -102,6 +256,7 @@ async function exportChamber(query) {
         });
 
         const ws = workbook.addWorksheet(chamber.chamber_name);
+        ws.views = [{ state: "frozen", ySplit: 1 }];
 
         ws.addRows([
             ["Chamber", chamber.chamber_name],

@@ -84,7 +84,7 @@ async function validateLaneAssignment(laneId, productionId) {
 function buildUpdatedFields({
   otherFields,
   allImages,
-  lane,
+  lane_id,
   start_time,
   currentProductionStatus,
 }) {
@@ -94,7 +94,7 @@ function buildUpdatedFields({
     updatedAt: new Date(),
   };
   if (!start_time || start_time === null) fields.start_time = new Date();
-  if (lane) fields.lane = lane;
+  if (lane_id) fields.lane_id = lane_id;
   if (currentProductionStatus !== "in-progress") {
     fields.status = "in-progress";
   }
@@ -114,7 +114,8 @@ async function updateProductionRecord(id, updatedFields) {
 
 async function createAndSendProductionStartNotification(productionData, lane) {
   const { id, product_name, quantity, unit } = productionData;
-  const description = [`${quantity}${unit ?? ""}`.trim(), lane].filter(Boolean);
+   const laneName = lane?.name ?? null;
+  const description = [`${quantity}${unit ?? ""}`.trim(), laneName].filter(Boolean);
   dispatchAndSendNotification({
     type: "production-start",
     description,
@@ -333,8 +334,8 @@ async function updateRawMaterialStoreDate(production, opts = {}) {
 }
 
 async function clearLaneAssignment(production, opts = {}) {
-  if (production.lane) {
-    const lane = await lanesClient.findByPk(production.lane, {
+  if (production.lane_id) {
+    const lane = await lanesClient.findByPk(production.lane_id, {
       transaction: opts.tx,
     });
     if (lane) {
