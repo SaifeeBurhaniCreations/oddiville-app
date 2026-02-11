@@ -20,7 +20,6 @@ import { setRawMaterials } from "@/src/redux/slices/product.slice";
 import { useRawMaterialByProduct } from "@/src/hooks/productItems";
 import { IconRatingProps } from "@/src/types";
 import { PackingFormController } from "@/src/hooks/packing/usePackingForm";
-import { updateBottomSheetMeta } from "@/src/redux/slices/bottomsheet.slice";
 
 type Props = {
   setIsLoading: (v: boolean) => void;
@@ -37,9 +36,9 @@ const ProductContextSection = ({ setIsLoading, form, setIsCurrentProduct }: Prop
     (state: RootState) => state.packageProductRating.packageProductRating
   );
 
-  const selectedProductName = useSelector(
-    (state: RootState) => state.product.product
-  );
+const selectedProductName = useSelector(
+  (state: RootState) => state.product.productName
+);
 
   const { rawMaterials, isLoading: rmLoading } =
     useRawMaterialByProduct(selectedProductName);

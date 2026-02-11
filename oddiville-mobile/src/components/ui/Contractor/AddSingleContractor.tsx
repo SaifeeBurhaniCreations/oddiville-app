@@ -1,7 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import React, { useEffect, useState } from "react";
 import Button from "../Buttons/Button";
-import Table, { TableColumn } from "../Table";
+import Table from "../Table2";
 import Input from "../Inputs/Input";
 import { useLocations } from "@/src/hooks/useFetchData";
 import { Controller, SubmitHandler, useForm } from "react-hook-form";
@@ -9,10 +9,9 @@ import addContractorSchema, {
   ContractorData,
 } from "@/src/schemas/AddContractorSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createContractor } from "@/src/services/contractor.service";
 import Loader from "../Loader";
-import { renameKey } from "@/src/hooks/renameKey";
 import { WorkLocation } from "@/src/hooks/useContractor";
+import { TableColumn } from "@/src/types";
 
 type SingleContractorRow = {
   location: string
@@ -24,8 +23,8 @@ type SingleContractorRow = {
 }
 
 const columns: TableColumn<SingleContractorRow>[] = [
-  { label: "Locations", key: "location" },
-  { label: "Count", key: "enterCount" },
+  { label: "Locations", key: "location", flex: 2 },
+  { label: "Count", key: "enterCount", flex: 1 },
 ]
 
 const AddSingleContractor = ({
@@ -182,10 +181,12 @@ const AddSingleContractor = ({
   };
 
   const onSubmit: SubmitHandler<ContractorData> = async (formData: any) => {
-    // Build final payload: an array (your API expects array)
-    const workLocationPayload = workAssigned.map((loc) =>
-      renameKey(loc, "location", "name")
-    );
+    const workLocationPayload = workAssigned.map(loc => ({
+  name: loc.location,
+  maleCount: Number(loc.countMale || 0),
+  femaleCount: Number(loc.countFemale || 0),
+}));
+
 
     const finalData = [
       {
@@ -194,28 +195,23 @@ const AddSingleContractor = ({
       },
     ];
 
-    try {
-      setLoading(true);
-      const response = await createContractor(finalData);
-      if (response && (response.status === 201 || response.status === 200)) {
-        onContractorAdded?.(true, "Successfully added contractor");
-        OnParentSubmit?.({
-          name: formData.name,
-          male_count: formData.male_count,
-          female_count: formData.female_count,
-          work_location: workLocationPayload,
-        });
-        reset();
-        clearLocalState();
-      } else {
-        onContractorAdded?.(false, "Failed to add contractor");
-      }
-    } catch (error: any) {
-      console.log("Create contractor failed:", error?.response?.data || error?.message);
-      onContractorAdded?.(false, error?.message || "Failed to add contractor");
-    } finally {
-      setLoading(false);
-    }
+try {
+  setLoading(true);
+
+  await OnParentSubmit?.({
+    name: formData.name,
+    male_count: formData.male_count,
+    female_count: formData.female_count,
+    work_location: workLocationPayload,
+  });
+
+  reset();
+  clearLocalState();
+} catch (error: any) {
+  onContractorAdded?.(false, error?.message || "Failed to add contractor");
+} finally {
+  setLoading(false);
+}
   };
 
   return (
@@ -287,7 +283,7 @@ const AddSingleContractor = ({
         />
       </View>
 
-    <Table
+    <Table<SingleContractorRow>
       columns={columns}
       content={workAssigned}
       mergableRows={[[1, 2]]}

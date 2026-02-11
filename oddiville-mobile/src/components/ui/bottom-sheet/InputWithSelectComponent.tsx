@@ -150,29 +150,36 @@ const {
   }
 }, [chamberRatingsById, formField_1]);
 
-  const handlePress = () => {
-    dispatch(setSource(source));
-    const mapKey = `${key}:${source}`;
-    const mapped = RMSoruceMap[mapKey];
-    if (source2) {
-      dispatch(setRmSource(source2));
-    } else if (mapped) {
-      dispatch(setRmSource(mapped));
-    }
+const handlePress = () => {
+  dispatch(setSource(source));
 
-    if (["package-weight", "add-raw-material"].includes(key)) {
-      validateAndSetData("Abc123", key);
-    } else if (source === "supervisor-production") {
-        if (!formField_1) return;
+  const mapKey = `${key}:${source}`;
+  const mapped = RMSoruceMap[mapKey];
 
-        validateAndSetData("Abc123", "rating");
-        dispatch(selectChamber(formField_1));
-        // packageFormValidator.setField("chamber_name", formField_1);
-        }
- else if (key === "select-package-type") {
-      validateAndSetData("Abc123", "select-package-type");
-    }
-  };
+  if (source2) {
+    dispatch(setRmSource(source2));
+  } else if (mapped) {
+    dispatch(setRmSource(mapped));
+  }
+
+  if (key === "select-package-type") {
+    validateAndSetData("Abc123", "select-package-type");
+    return;
+  }
+
+  if (["package-weight", "add-raw-material"].includes(key)) {
+    validateAndSetData("Abc123", key);
+    return;
+  }
+
+  if (source === "supervisor-production") {
+    if (!formField_1) return;
+
+    validateAndSetData("Abc123", "rating");
+    dispatch(selectChamber(formField_1));
+    return;
+  }
+};
 
   const { values, errors, setField } =
     meta?.type === "add-product-package"
@@ -372,9 +379,6 @@ const inputQty = Math.min(
              style={[
     styles.inputWrapper,
     {
-    //   borderColor: resolvedError
-    //     ? getColor("red", 600)
-    //     : getColor("green", 100),
     borderColor:
   isChamberField && storeErrors?.[formField_1]
     ? getColor("red", 600)
@@ -415,25 +419,13 @@ const inputQty = Math.min(
                 <DownChevron size={16} color={getColor("green", 700)} />
               </TouchableOpacity>
             </View>
-            {/* {storeErrors[chamberKey] && (
-              <View>
-                <C1 color={getColor("red", 700)}>
-                  {String(storeErrors[chamberKey] || "Field required!")}
-                </C1>
-              </View>
-            )} */}
           </View>
         </View>
-          {/* {resolvedError && (
-  <B4 color={getColor("red", 700)}>
-    {String(resolvedError)}
-  </B4>
-)} */}
-{isChamberField && storeErrors?.[formField_1] && (
-  <B4 color={getColor("red", 700)}>
-    {String(storeErrors[formField_1])}
-  </B4>
-)}
+        {isChamberField && storeErrors?.[formField_1] && (
+          <B4 color={getColor("red", 700)}>
+            {String(storeErrors[formField_1])}
+          </B4>
+        )}
       </View>
     </>
   );

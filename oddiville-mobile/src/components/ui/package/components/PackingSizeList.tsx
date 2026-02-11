@@ -11,7 +11,7 @@ import TrashIcon from "@/src/components/icons/common/TrashIcon";
 import { B1, B4 } from "@/src/components/typography/Typography";
 import { IconProps } from "@/src/types";
 import ChamberIcon from "@/src/components/icons/common/ChamberIcon";
-import { Packaging } from "@/src/hooks/useChamberStock";
+import { OutputBagPackaging, Packaging } from "@/src/hooks/useChamberStock";
 import { usePackingChambersForSKU } from "@/src/hooks/packing/usePackingChambersForSKU";
 import { normalizeKgToGrams, toChamberPackage } from "@/src/utils/packing/normalizers";
 
@@ -30,21 +30,23 @@ const ChamberRow = memo(
         onChange,
     }: {
         chamber: StockChamber;
-        packaging: Packaging;
+        packaging: OutputBagPackaging;
         value: number | undefined;
         onChange: (chamberId: string, value: string) => void;
     }) => {
         const existingKg = chamber.quantity;
 
-        const kgPerBag =
+        const packetKg =
             normalizeKgToGrams(packaging.size.value, packaging.size.unit) / 1000;
 
-        const existingBags = Math.floor(existingKg / kgPerBag);
+        const kgPerBag = packetKg * packaging.packetsPerBag;
 
-        const addedBags = Number(value || 0);
+            const existingBags = Math.floor(existingKg / kgPerBag);
+            const addedBags = Number(value || 0);
 
-        const totalBags = existingBags + addedBags;
-        const totalKg = existingKg + addedBags * kgPerBag;
+            const totalBags = existingBags + addedBags;
+            const totalKg = existingKg + addedBags * kgPerBag;
+
 
         // utils
         const fmtKg = (v: number) => v.toFixed(2);
@@ -128,7 +130,7 @@ const PackingSizeList = ({
 
     // const totalPackets = Math.max(pkg.count - usedPackets, 0);
 
-    const chamberPackage = toChamberPackage(pkg);
+    const chamberPackage = toChamberPackage(pkg, packetsPerBag);
 
     const { data: chamberOptions, isLoading } = usePackingChambersForSKU({
         productName,

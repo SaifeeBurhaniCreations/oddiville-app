@@ -1,7 +1,7 @@
 import { TableComponentProps } from '@/src/types'
 import { StyleSheet, View } from 'react-native'
 import React from 'react'
-import Table from '../Table';
+import Table from '../Table2';
 
 const TableComponent = ({ data }: TableComponentProps) => {
     return (

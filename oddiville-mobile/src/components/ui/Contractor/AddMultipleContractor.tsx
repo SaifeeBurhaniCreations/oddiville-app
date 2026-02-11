@@ -8,7 +8,6 @@ import NoContractorBatchImg from "@/src/assets/images/illustrations/no-contracto
  
 import { workAssignedMultiple } from '@/src/types'
 import { createContractor } from '@/src/services/contractor.service'
-import { useContractor } from '@/src/hooks/useContractor'
 import { TableColumn } from '../Table'
 
 export type ContractorLocationRow = {
@@ -21,10 +20,9 @@ export type ContractorLocationRow = {
 }
 
 const columns: TableColumn<ContractorLocationRow>[] = [
-  { label: "Locations", key: "location" },
-  { label: "Count", key: "enterCount" },
+  { label: "Locations", key: "location", flex: 2 },
+  { label: "Count", key: "enterCount", flex: 1 },
 ]
-
 
 const AddMultipleContractor = ({ setToast, onContractorAdded }: { setToast?: (val: boolean) => void, onContractorAdded?: (success: boolean, message: string) => void }) => {
 
@@ -44,55 +42,6 @@ const AddMultipleContractor = ({ setToast, onContractorAdded }: { setToast?: (va
     const [loading, setLoading] = useState(false);
     const [isAddDisabled, setIsAddDisabled] = useState<boolean>(false)
     const [workerCount, setworkerCount] = useState<number>(0)
-    const { data: AllContractors } = useContractor();
-
-    // useEffect(()=>{
-    //     console.log(JSON.stringify(workAssignedMultiple));
-    // },[workAssignedMultiple])
-
-    useEffect(() => {
-    if (!Array.isArray(AllContractors) || AllContractors.length === 0) return;
-  
-    const mapped = AllContractors.map((c: any, idx: number) => {
-      const locations = Array.isArray(c.work_location)
-        ? c.work_location.map((loc: any) => {
-            const name = loc.name ?? loc.location ?? String(loc.location_name ?? '');
-            const count = Number(loc.count ?? (Number(loc.countMale || 0) + Number(loc.countFemale || 0))) || 0;
-            const countMale = loc.male_count ?? loc.countMale ?? '';
-            const countFemale = loc.female_count ?? loc.countFemale ?? '';
-            const notNeeded = !(count > 0);
-            return {
-              location: name,
-              enterCount: !notNeeded,
-              notNeeded,
-              countMale: countMale !== undefined ? String(countMale) : '',
-              countFemale: countFemale !== undefined ? String(countFemale) : '',
-              count: count ? String(count) : '',
-            };
-          })
-        : [];
-  
-      return {
-        contractorName: c.name ?? `Contractor ${idx + 1}`,
-        male_count: String(c.male_count ?? 0),
-        female_count: String(c.female_count ?? 0),
-        locations,
-      } as any;
-    });
-  
-    setWorkAssignedMultiple(mapped);
-    if (mapped.length > 0) {
-      setSelectedContractor(0);
-      const firstTotal = Number(mapped[0].male_count || 0) + Number(mapped[0].female_count || 0);
-      setworkerCount(firstTotal);
-    }
-    }, [AllContractors]);
-
-  
-    // useEffect(() => {
-    //     // console.log(JSON.stringify(createInitialDataMultiple(contractor)));
-    //     console.log('contractor===', JSON.stringify(workAssignedMultiple));
-    // }, [workAssignedMultiple])
 
     const handleMultipleContractorRadioChange = (contractorIndex: number, locationIndex: number, field: "enterCount" | "notNeeded") => {
         setWorkAssignedMultiple(prev => {
@@ -157,6 +106,20 @@ const AddMultipleContractor = ({ setToast, onContractorAdded }: { setToast?: (va
     };
 
     const onSubmit = async () => {
+      if (workAssignedMultiple.length === 0) {
+        onContractorAdded?.(false, "Add at least one contractor");
+        return;
+      }
+const hasValidData = workAssignedMultiple.some(c =>
+  Number(c.male_count) > 0 ||
+  Number(c.female_count) > 0
+)
+
+if (!hasValidData) {
+  onContractorAdded?.(false, "Worker count cannot be zero");
+  return;
+}
+
         const finalPayload = workAssignedMultiple.map((contractor: any) => {
           const wl = (contractor.locations || [])
             .filter((loc: any) => !loc.notNeeded) 
@@ -266,7 +229,7 @@ const handleLabourRemove = (contractorIndex: number) => {
                 <View style={{ flex: 1, marginRight: 16 }}>
                     <Button
                         onPress={() => onSubmit()}
-                        disabled={loading || isAddDisabled}
+                          disabled={loading || isAddDisabled}
                     >
                         {loading ? 'Saving...' : 'Save'}
                     </Button>

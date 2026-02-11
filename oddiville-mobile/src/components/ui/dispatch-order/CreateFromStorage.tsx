@@ -47,6 +47,8 @@ import { useToast } from "@/src/context/ToastContext";
 import { PackedChamberRow, PackedItemEvent, RMConsumption, UIPackingItem } from "@/src/types/domain/packing/packing.types";
 import Chip from "../Chip";
 import BoxIcon from "../../icons/common/BoxIcon";
+import { useChamber } from "@/src/hooks/useChambers";
+import { useChamberStock } from "@/src/hooks/useChamberStock";
 
 type ControlledFormProps<T> = {
   values: T;
@@ -99,8 +101,7 @@ export const normalizePackedItemsToUI = (
           bags,
           kg: bags * packetKg,
 
-       
-          rating: 0,
+            rating: e.rating ?? 5,
         };
       });
   });
@@ -142,8 +143,6 @@ const CreateFromStorage = ({
   const { data: packedItemsDataNew, isFetching: packedItemsLoadingNew } =
     usePackedItems();
 
-    console.log("packedItemsDataNew", JSON.stringify(packedItemsDataNew, null, 2));
-    
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const [openTab, setOpenTab] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -153,6 +152,35 @@ const CreateFromStorage = ({
 const packingItems = useMemo(() => {
   return normalizePackedItemsToUI(packedItemsDataNew ?? []);
 }, [packedItemsDataNew]);
+
+const { data: chamberStocks } = useChamberStock();
+
+const chamberStockIndex = useMemo(() => {
+  const map = new Map<
+    string,
+    {
+      packages: any[];
+      chambers: {
+        chamberId: string;
+        rating: number;
+        bags: number;
+      }[];
+    }
+  >();
+
+  (chamberStocks ?? []).forEach(cs => {
+    map.set(cs.product_name, {
+      packages: cs.packages ?? [],
+      chambers: (cs.chamber ?? []).map(ch => ({
+        chamberId: ch.id,
+        rating: Number(ch.rating),
+        bags: Number(ch.quantity),
+      })),
+    });
+  });
+
+  return map;
+}, [chamberStocks]);
 
   useEffect(() => {
     if (values.products?.length && openTab === null) {
@@ -376,6 +404,7 @@ const packingItems = useMemo(() => {
                     setToast={handleToggleToast}
                     product={value}
                     packingItems={chamberRows}
+                    chamberStockIndex={chamberStockIndex}
                     controlledForm={{ values, setField, errors }}
                     onRemove={() => handleRemoveProduct(value.id)}
                   />

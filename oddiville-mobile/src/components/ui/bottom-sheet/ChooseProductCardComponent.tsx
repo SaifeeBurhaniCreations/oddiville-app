@@ -29,6 +29,7 @@ const ChooseProductCardComponent: React.FC<multipleProductCardProps> = ({
     selectedProducts.some((p) => p.id === productId);
 
   const handleToggle = (item: multipleProductCardDataProps) => {
+    
     if (isSelected(item.id)) {
       dispatch(removeProduct(item.id));
     } else {

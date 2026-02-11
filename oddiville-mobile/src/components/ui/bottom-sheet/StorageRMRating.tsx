@@ -53,18 +53,24 @@ const handleSelect = (selectedRating: number) => {
       );
       break;
 
-    case "DISPATCH_PACKAGE_RATING": {
-      const { productId, size, unit } = meta?.data!;
-      dispatch(
-        setRatingForProductSize({
-          productId,
-          size,
-          unit,
-          rating,
-        })
-      );
-      break;
-    }
+      case "DISPATCH_PACKAGE_RATING": {
+        if (!meta?.data) {
+          console.warn("Missing meta.data for DISPATCH_PACKAGE_RATING", meta);
+          break;
+        }
+
+        const { productId, size, unit } = meta.data;
+
+        dispatch(
+          setRatingForProductSize({
+            productId,
+            size,
+            unit,
+            rating,
+          })
+        );
+        break;
+      }
 
     default:
       console.warn("Unknown rating intent", meta);

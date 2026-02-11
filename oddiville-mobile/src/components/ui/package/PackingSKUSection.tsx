@@ -22,17 +22,19 @@ import { usePackageInputs } from "@/src/hooks/packing/usePackageInputs";
         isCurrentProduct: boolean;
         form: PackingFormController;
         onOverPackChange: (key: string, value: boolean) => void;
+          rmUsed: any[];
     };
 
-const PackingSKUSection = ({ setIsLoading, isCurrentProduct, form, onOverPackChange }: Props) => {
+const PackingSKUSection = ({ setIsLoading, isCurrentProduct, form, onOverPackChange, rmUsed }: Props) => {
         const dispatch = useDispatch();
-const { width } = useWindowDimensions();
-const isCompact = width < 390;
+        const { width } = useWindowDimensions();
+        const isCompact = width < 390;
         const rawSelectedPackages = useSelector(
             (state: RootState) => state.packageSize.selectedSizes
         );
+        
         const selectedProductName = useSelector(
-            (state: RootState) => state.product.product
+            (state: RootState) => state.product.productName
         );
 
         const { validateAndSetData } = useValidateAndOpenBottomSheet();
@@ -42,8 +44,17 @@ const isCompact = width < 390;
             [rawSelectedPackages]
         );
 
+        const isValidProduct =
+            !!selectedProductName &&
+            selectedProductName !== "Select product";
+
+        const productName = isValidProduct
+            ? selectedProductName
+            : null;
+
+
         const { data: packages, isLoading } = usePackingPackages(
-            selectedProductName,
+            isValidProduct ? productName : null,
             selectedPackages
         );
 
@@ -75,25 +86,66 @@ const isCompact = width < 390;
             );
         }, [form.values.packagingPlan]);
 
-const rmUsedBags = useMemo(() => {
-  return Object.values(form.values.rmInputs || {})
-    .flatMap(rm => Object.values(rm))
-    .reduce((sum, v) => sum + Number(v || 0), 0);
-}, [form.values.rmInputs]);
+// const rmUsedBags = useMemo(() => {
+//   return Object.values(form.values.rmInputs || {})
+//     .flatMap(rm => Object.values(rm))
+//     .reduce((sum, v) => sum + Number(v || 0), 0);
+// }, [form.values.rmInputs]);
+//  const rmMatchStatus = useMemo(() => {
+//             if (rmUsedBags === 0) return "neutral";
+//             if (rmUsedBags < packedBags) return "less";
+//             if (rmUsedBags > packedBags) return "more";
+//             return "equal";
+//         }, [rmUsedBags, packedBags]);
 
-        const rmMatchStatus = useMemo(() => {
-            if (rmUsedBags === 0) return "neutral";
-            if (rmUsedBags < packedBags) return "less";
-            if (rmUsedBags > packedBags) return "more";
-            return "equal";
-        }, [rmUsedBags, packedBags]);
+const rmUsedKg = useMemo(() => {
+  return rmUsed.reduce((sum: number, rm) => {
+    const kgPerBag =
+      rm.packaging?.size?.unit === "kg"
+        ? Number(rm.packaging.size.value)
+        : 0;
 
-        const rmColor = {
+    const usedBags =
+      Object.values(form.values.rmInputs?.[rm.product_name] || {})
+        .reduce((s, v) => s + Number(v || 0), 0);
+
+    return sum + usedBags * kgPerBag;
+  }, 0);
+}, [rmUsed, form.values.rmInputs]);
+       
+        // const rmColor = {
+        //     neutral: getColor("green", 700),
+        //     less: getColor("red", 500),
+        //     more: getColor("yellow", 500),
+        //     equal: getColor("green", 500),
+        // }[rmMatchStatus];
+
+const packedKg = useMemo(() => {
+  return form.values.packagingPlan.reduce((sum, p) => {
+    const packetKg =
+      p.packet.unit === "gm"
+        ? p.packet.size / 1000
+        : p.packet.size;
+
+    const kgPerBag = p.packet.packetsPerBag * packetKg;
+
+    return sum + kgPerBag * p.bagsProduced;
+  }, 0);
+}, [form.values.packagingPlan]);
+
+const kgMatchStatus = useMemo(() => {
+  if (rmUsedKg === 0 || packedKg === 0) return "neutral";
+  if (rmUsedKg < packedKg) return "less";
+  if (rmUsedKg > packedKg) return "more";
+  return "equal";
+}, [rmUsedKg, packedKg]);
+
+        const kgColor = {
             neutral: getColor("green", 700),
             less: getColor("red", 500),
             more: getColor("yellow", 500),
             equal: getColor("green", 500),
-        }[rmMatchStatus];
+        }[kgMatchStatus];
 
         useEffect(() => {
             setIsLoading(productPackagesLoading || productPackageFetching || isLoading);
@@ -185,8 +237,6 @@ const rmUsedBags = useMemo(() => {
             setIsLoading(false);
         }, [productPackages, validateAndSetData]);
 
-        const isAllGood = rmMatchStatus === "equal";
-
         if (isCurrentProduct) {
             return (
                 <>
@@ -205,9 +255,11 @@ const rmUsedBags = useMemo(() => {
                                     styles.quantityCard,
                                     isCompact && styles.quantityCardVertical,
                                     {
-                                        borderColor: isAllGood
-                                            ? getColor("green", 500)
-                                            : getColor("green", 100),
+                                       borderColor:
+                            kgMatchStatus === "equal"
+                                ? getColor("green", 500)
+                                : getColor("green", 100),
+
                                     },
                                 ]}
                             >
@@ -217,13 +269,14 @@ const rmUsedBags = useMemo(() => {
                                         {packedBags} bags · {packedPackets} packets
                                     </B4>
                                 </View>
-{isCompact && <View style={styles.divider} />}
+                                {isCompact && <View style={styles.divider} />}
                                 <View style={{ alignItems: "center" }}>
-                                    <H6>RM Used</H6>
-                                    <B4 style={{ color: rmColor }}>
-                                        {rmUsedBags} / {packedBags} bags
-                                    </B4>
+                                <H6>RM Used</H6>
+                                <B4 style={{ color: kgColor }}>
+                                    {rmUsedKg} kg / {packedKg} kg
+                                </B4>
                                 </View>
+
                             </View>
                         </View>
                         <FlatList
@@ -242,7 +295,7 @@ const rmUsedBags = useMemo(() => {
                                         inputs={packageInputs}
                                         onChangeInput={updatePackageInput}
                                         handleRemovePackage={handleRemovePackage}
-                                        productName={selectedProductName}
+                                        productName={selectedProductName ?? "Select Product"}
                                         packageErrors={packageErrors}
                                         onOverPackChange={onOverPackChange}
                                     />

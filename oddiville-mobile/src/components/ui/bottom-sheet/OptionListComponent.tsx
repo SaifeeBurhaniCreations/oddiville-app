@@ -15,50 +15,63 @@ import type {
   OptionListComponentProps,
   validRouteOptionList,
 } from "@/src/types";
-import { AddProductPackageForm, SupervisorProductionForm } from "./InputWithSelectComponent";
+import {
+  AddProductPackageForm,
+  SupervisorProductionForm,
+} from "./InputWithSelectComponent";
 import { useGlobalFormValidator } from "@/src/sbc/form/globalFormInstance";
 import { Chamber, useDryChambers } from "@/src/hooks/useChambers";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
-import { setDeleteUserPopup, setVendorDeletePopup } from "@/src/redux/slices/delete-popup-slice";
+import {
+  setDeleteUserPopup,
+  setVendorDeletePopup,
+} from "@/src/redux/slices/delete-popup-slice";
 import Modal from "../modals/Modal";
 import { useDeleteVendor } from "@/src/hooks/vendor";
 import { FilterEnum } from "@/src/schemas/BottomSheetSchema";
 import { ChamberQty } from "@/src/redux/slices/bottomsheet/chamber-ratings.slice";
 import { selectPackageType } from "@/src/redux/slices/bottomsheet/package-type-production.slice";
 import { setType } from "@/src/redux/slices/export/exportFilters.slice";
-import { EXPORT_LABEL_MAP, EXPORT_TYPES, ExportType } from "@/src/constants/exportFilterComponents";
+import {
+  EXPORT_LABEL_MAP,
+  EXPORT_TYPES,
+  ExportType,
+} from "@/src/constants/exportFilterComponents";
+import { setProductName } from "@/src/redux/slices/product.slice";
 
 const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
-
   const meta = useSelector((state: RootState) => state.bottomSheet.meta);
   const id = useSelector((state: RootState) => state.idStore.id);
   const isChoosingChambers = useSelector(
-    (state: RootState) => state.productPackageChamber.isChoosingChambers
+    (state: RootState) => state.productPackageChamber.isChoosingChambers,
   );
   const showVendorDeletePopup = useSelector(
-    (state: RootState) => state.deletePopup.showVendorDeletePopup
+    (state: RootState) => state.deletePopup.showVendorDeletePopup,
   );
-  const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
+  const packageTypeProduction = useSelector(
+    (state: RootState) => state.packageTypeProduction.selectedPackageType,
+  );
 
   const dispatch = useDispatch();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
 
   const productPackageForm = useGlobalFormValidator<AddProductPackageForm>(
-    "add-product-package"
+    "add-product-package",
   );
-  const supervisorForm =
-  useGlobalFormValidator<SupervisorProductionForm>("supervisor-production");
+  const supervisorForm = useGlobalFormValidator<SupervisorProductionForm>(
+    "supervisor-production",
+  );
   const { setField } = productPackageForm;
   const selectedChambers = useSelector(
-    (state: RootState) => state.rawMaterial.selectedChambers
+    (state: RootState) => state.rawMaterial.selectedChambers,
   );
   const chamberQuantity = useSelector(
-    (state: RootState) => state.chamberRatings.chamberQty
+    (state: RootState) => state.chamberRatings.chamberQty,
   );
   const { data: DryChambersRaw } = useDryChambers();
   const DryChambers = DryChambersRaw || [];
   const username = useSelector(
-    (state: RootState) => state.bottomSheet.meta?.id
+    (state: RootState) => state.bottomSheet.meta?.id,
   );
   const { product } = useSelector((state: RootState) => state.storeProduct);
 
@@ -69,7 +82,14 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
     async (
       route: validRouteOptionList | undefined,
       item: string | { name: string; isoCode: string },
-      key?: "user-action" | "vendor-action" | "supervisor-production" | "product-package" | "select-package-type" | "choose-export-type" | string
+      key?:
+        | "user-action"
+        | "vendor-action"
+        | "supervisor-production"
+        | "product-package"
+        | "select-package-type"
+        | "choose-export-type"
+        | string,
     ) => {
       const value = typeof item === "object" ? item.name : item;
 
@@ -80,7 +100,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
           applyFilter({
             path: [filterKey, value],
             value,
-          })
+          }),
         );
 
         dispatch(closeBottomSheet());
@@ -94,10 +114,10 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
       }
 
       if (key === "select-package-type") {
-          const value = typeof item === "object" ? item.name : item;
+        const value = typeof item === "object" ? item.name : item;
 
         dispatch(selectPackageType(item));
-          supervisorForm.setField("packaging_type", value);
+        supervisorForm.setField("packaging_type", value);
         const supervisorProduction = {
           sections: [
             {
@@ -122,7 +142,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
             ...selectedChambers.map((chamberName) => {
               const quantityValue =
                 chamberQuantity[chamberName]?.find(
-                  (chamber: ChamberQty) => chamber.name === chamberName
+                  (chamber: ChamberQty) => chamber.name === chamberName,
                 )?.quantity ?? "";
 
               return {
@@ -141,7 +161,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
                   key: "supervisor-production",
                   formField_1: chamberName,
                   source: "supervisor-production",
-                  keyboardType: "default",
+                  keyboardType: "number-pad",
                 },
               };
             }),
@@ -160,7 +180,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
                 // source: "add-product-package",
                 source: "supervisor-production",
                 source2: "product-package",
-            keyboardType: "number-pad",
+                keyboardType: "number-pad",
               },
             },
             {
@@ -172,7 +192,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
                 value: "0",
                 addonText: "Kg",
                 formField: "discard_quantity",
-            keyboardType: "number-pad",
+                keyboardType: "number-pad",
               },
             },
           ],
@@ -198,7 +218,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
         validateAndSetData(
           product?.id,
           "supervisor-production",
-          supervisorProduction
+          supervisorProduction,
         );
         return;
       }
@@ -324,7 +344,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
         await validateAndSetData(
           "temp123",
           "add-product-package",
-          addProductPackage
+          addProductPackage,
         );
         return;
       }
@@ -341,7 +361,7 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
       DryChambers,
       username,
       goTo,
-    ]
+    ],
   );
 
   return (
@@ -375,7 +395,9 @@ const OptionListComponent = memo(({ data }: OptionListComponentProps) => {
             {
               variant: "fill",
               label: "Delete",
-              action: () => typeof username === "string" && deleteVendorMutation.mutate({ id: username })
+              action: () =>
+                typeof username === "string" &&
+                deleteVendorMutation.mutate({ id: username }),
             },
           ],
         }}

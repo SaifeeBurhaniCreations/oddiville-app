@@ -32,6 +32,7 @@ import PencilIcon from "@/src/components/icons/common/PencilIcon";
 import CrossIcon from "@/src/components/icons/page/CrossIcon";
 import { RawMaterialConsumptionSetter } from "@/src/hooks/packing/useRawMaterialConsumption";
 import { PackingFormController } from "@/src/hooks/packing/usePackingForm";
+import { useToast } from "@/src/context/ToastContext";
 
 /* Types */
 type StockChamber = {
@@ -99,50 +100,73 @@ function filterVisibleChambers(
 const ChamberRow = memo(({
   chamber,
   rmPackaging,
-    value,
-    onChange,
-    error,
-  }: {
-    chamber: StockChamber;
-    rmPackaging: Packaging;
-    value: number | undefined;
-    onChange: (chamberId: string, value: number) => void;
-    error?: string;
-  }) => {
+  value,
+  onChange,
+  error,
+}: {
+  chamber: StockChamber;
+  rmPackaging: Packaging;
+  value: number | undefined;
+  onChange: (chamberId: string, value: number) => void;
+  error?: string;
+}) => {
+  const toast = useToast();
 
-    return (
-      <View style={[styles.chamberCard, styles.borderBottom]}>
-        <View style={styles.Hstack}>
-          <View style={styles.iconWrapper}>
-            <ChamberIcon color={getColor("green")} size={32} />
-          </View>
+  const maxBags = Math.floor(
+    chamber.quantity / rmPackaging.size.value
+  );
 
-          <View style={styles.Vstack}>
-            <B1>{String(chamber.name).slice(0, 12)}...</B1>
-            <B4>
-              {chamber.quantity} qty. | {rmPackaging.size.value}{" "}
-              {rmPackaging.size.unit} bag
-            </B4>
-          </View>
+  const usedBags = value ?? 0;
+
+  const remainingBags = Math.max(maxBags - usedBags, 0);
+  const remainingKg = remainingBags * rmPackaging.size.value;
+
+  return (
+    <View style={[styles.chamberCard, styles.borderBottom]}>
+      <View style={styles.Hstack}>
+        <View style={styles.iconWrapper}>
+          <ChamberIcon color={getColor("green")} size={32} />
         </View>
 
-        <View style={{ flex: 0.7 }}>
-          <Input
-            placeholder="Count"
-            addonText="bags"
-            mask="addon"
-            post
-            keyboardType="numeric"
-            value={String(value ?? "")}
-            onChangeText={(text: string) =>
-              onChange(chamber.id, Number(text) || 0)
-            }
-            error={error}
-          />
+        <View style={styles.Vstack}>
+          <B1>{String(chamber.name).slice(0, 12)}…</B1>
+          <B4>
+            {remainingKg} kg | {remainingBags}{" "}
+            {remainingBags === 1 ? "bag" : "bags"}
+          </B4>
         </View>
       </View>
-    );
-  });
+
+      <View style={{ flex: 0.7 }}>
+        <Input
+          placeholder="Count"
+          addonText="bags"
+          mask="addon"
+          post
+          keyboardType="numeric"
+          value={String(usedBags || "")}
+          onChangeText={(text: string) => {
+            const input = Number(text) || 0;
+
+            if (input > maxBags) {
+              toast.error(`Only ${maxBags} bags available in this chamber`);
+              onChange(chamber.id, maxBags);
+              return;
+            }
+
+            if (input < 0) {
+              onChange(chamber.id, 0);
+              return;
+            }
+
+            onChange(chamber.id, input);
+          }}
+          error={error}
+        />
+      </View>
+    </View>
+  );
+});
 
 type Props = {
   setIsLoading: (isLoading: boolean) => void;

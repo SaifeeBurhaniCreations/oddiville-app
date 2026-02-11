@@ -8,6 +8,7 @@ import { selectUnit } from '@/src/redux/slices/unit-select.slice';
   import { ManageActionProps } from '@/src/types'
   import { StyleSheet, Pressable, View } from 'react-native'
   import { useDispatch, useSelector } from 'react-redux';
+import { reset as chamberRatingReset } from "@/src/redux/slices/bottomsheet/chamber-ratings.slice";
 
   const actionHandlers = {
     changeNumber: () => console.log('Change number triggered'),
@@ -71,7 +72,7 @@ import { selectUnit } from '@/src/redux/slices/unit-select.slice';
                     key: "supervisor-production",
                     formField_1: chamberName,
                     source: "supervisor-production",
-                    keyboardType: "default",
+                    keyboardType: "number-pad",
                 },
             };
         }),
@@ -123,6 +124,7 @@ import { selectUnit } from '@/src/redux/slices/unit-select.slice';
                 
                   dispatch(setRating({ chamber, rating: action.actionKey }))
                 if(source === "add-product-package") {
+                  dispatch(chamberRatingReset());
                   validateAndSetData("temp123", "add-product-package")
                 } else if(source === "supervisor-production") {
                   validateAndSetData(id!, "supervisor-production", supervisorProduction)

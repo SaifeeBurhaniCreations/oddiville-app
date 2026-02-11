@@ -7,8 +7,6 @@ import CustomImage from '../CustomImage';
 import UpChevron from '../../icons/navigation/UpChevron';
 import DownChevron from '../../icons/navigation/DownChevron';
 import CustomSwitch from '../Switch';
-import ChipGroup from '../ChipGroup';
-import { mapPackageIcon } from '@/src/utils/common';
 import BoxIcon from '../../icons/common/BoxIcon';
 
 const ProductListAccordianComponent = ({ data }: ProductListAccordianComponentProps) => {
@@ -52,11 +50,11 @@ const ProductListAccordianComponent = ({ data }: ProductListAccordianComponentPr
             {isOpen && (
                 <View style={styles.column}>
                     {data?.products?.map((product, index) => {
-                        const chambers = product.chambers?.map((val: any) => ({ title: `${val.name} (${val.quantity})` }))?.filter(Boolean)
-                        const packages = product.packages?.map((val: any) => {
-                            const IconComp = mapPackageIcon(val)
-                            return { title: `${val.size}${val.unit}: (${val.quantity})`, icon: IconComp && <IconComp color={getColor("green", 700)} size={16} /> }
-                        })?.filter(Boolean)
+                        // const chambers = product.chambers?.map((val: any) => ({ title: `${val.name} (${val.quantity})` }))?.filter(Boolean)
+                        // const packages = product.packages?.map((val: any) => {
+                        //     const IconComp = mapPackageIcon(val)
+                        //     return { title: `${val.size}${val.unit}: (${val.quantity})`, icon: IconComp && <IconComp color={getColor("green", 700)} size={16} /> }
+                        // })?.filter(Boolean)
                         return (
                             <View style={styles.card} key={index}>
                                 <View style={[styles.gapedRow8, isChecked && styles.devider]}>
@@ -72,23 +70,23 @@ const ProductListAccordianComponent = ({ data }: ProductListAccordianComponentPr
     
                                                 <View style={styles.gapedRow}>
                                                     <B4>{product?.weight}</B4>
-                                                    <B4>{product?.price}</B4>
+                                                    {/* <B4>{product?.price}</B4> */}
                                                 </View>
                                             </View>
                                             <C1 color={getColor("green", 400)}>{product?.description}</C1>
                                         </View>
     
-                                        {product?.packagesSentence && <C1 color={getColor("green", 400)}>{product?.packagesSentence}</C1>}
+                                        {/* {product?.packagesSentence && <C1 color={getColor("green", 400)}>{product?.packagesSentence}</C1>} */}
                                     </View>
                                 </View>
-                                {
+                                {/* {
                                     isChecked && (
                                         <React.Fragment>
                                             <ChipGroup size={"sm"} isClickable={false} data={chambers}>Chambers</ChipGroup>
                                             {packages && packages?.length > 0 && <ChipGroup size={"sm"} isClickable={false} data={packages}>Package</ChipGroup>}
                                         </React.Fragment>
                                     )
-                                }
+                                } */}
     
                             </View>
                         )

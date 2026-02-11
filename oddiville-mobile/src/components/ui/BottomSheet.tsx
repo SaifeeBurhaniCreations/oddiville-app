@@ -32,11 +32,6 @@ import {
   ValidationRule,
 } from "@/src/sbc/form";
 import { isFormValid } from "@/src/sbc/form/globalFormUtils";
-import { clearUnit } from "@/src/redux/slices/unit-select.slice";
-import {
-  clearChambers,
-} from "@/src/redux/slices/bottomsheet/raw-material.slice";
-import { setIsChamberSelected } from "@/src/redux/slices/chamber.slice";
 import { clearInputBottomSheet } from "@/src/utils/clearBottomSheetUtils";
 import { useGlobalFormValidator } from "@/src/sbc/form/globalFormInstance";
 import {
@@ -739,7 +734,7 @@ if (meta?.type === "choose-package" && section.type === "package-size-choose-lis
               key: "supervisor-production",
               formField_1: chamberName,
               source: "supervisor-production",
-              keyboardType: "default",
+            keyboardType: "number-pad",
             },
           };
         }),
@@ -817,7 +812,11 @@ const supervisorExtraDisabled =
           color={btn.color}
           variant={btn.variant}
           disabled={baseDisabled}
-          loading={productionLoading}
+          loading={
+  productionLoading &&
+  btn.actionKey === "store-product"
+}
+
       onPress={async () => {
   if (!btn.actionKey) return;
 
