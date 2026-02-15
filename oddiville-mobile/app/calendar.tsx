@@ -22,7 +22,10 @@ import { useFormValidator } from '@/src/sbc/form';
 import { createCalendarEvent } from '@/src/services/calendar.service';
 import { useCalendar } from '@/src/hooks/calendar';
 import Loader from '@/src/components/ui/Loader';
-import DetailsToast from '@/src/components/ui/DetailsToast';
+import { useQueryClient } from '@tanstack/react-query';
+import { CalendarEventResponse } from '@/src/hooks/calendar';
+import { useToast } from '@/src/context/ToastContext';
+import OverlayLoader from '@/src/components/ui/OverlayLoader';
 
 // 6. Types
 // No items of this type
@@ -42,20 +45,11 @@ export type ScheduleEventForm = {
 }
 
 const CalendarScreen = () => {
+    const toast = useToast();
+    const queryClient = useQueryClient();
     const { data: scheduledEvents = [], refetch } = useCalendar();
     const [isLoading, setIsLoading] = useState(false);
     const [selectedDate, setSelectedDate] = useState<string>("")
-  const [toastType, setToastType] = useState<"success" | "error" | "info">(
-    "info"
-  );
-    const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-
-    const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setToastVisible(true);
-  };
 
     const {
         values,
@@ -96,19 +90,32 @@ const CalendarScreen = () => {
     }, [selectedDate])
 
 
-    const onSubmit = async () => {
-        setIsLoading(true)
-        const result = validateForm();
+const onSubmit = async () => {
+  setIsLoading(true);
 
-        if (!result.success) return;
-        await createCalendarEvent(result.data);
-        setIsLoading(false)
-      showToast("success", "Event Created");
+  const result = validateForm();
+  if (!result.success) {
+    setIsLoading(false);
+    return;
+  }
 
-        resetForm();
-        // setSelectedTime("");
-        setSelectedDate("");
+  const event = await createCalendarEvent(result.data);
+
+  queryClient.setQueryData<CalendarEventResponse[]>(
+    ['calendar'],
+    (old = []) => {
+      if (old.some(e => e.id === event.id)) return old;
+      return [event, ...old];
     }
+  );
+
+  setIsLoading(false);
+  toast.success("Event Created");
+
+  resetForm();
+  setSelectedDate("");
+};
+
     
     return (
         <KeyboardAvoidingView
@@ -192,19 +199,7 @@ const CalendarScreen = () => {
                 </View>
             </View>
 
-            {isLoading && (
-                <View style={styles.overlay}>
-                    <View style={styles.loaderContainer}>
-                        <Loader />
-                    </View>
-                </View>
-            )}
-              <DetailsToast
-        type={toastType}
-        message={toastMessage}
-        visible={toastVisible}
-        onHide={() => setToastVisible(false)}
-      />
+            {isLoading && <OverlayLoader />}
         </KeyboardAvoidingView>
     )
 }
@@ -254,10 +249,5 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         backgroundColor: getColor('green', 500, 0.1),
         zIndex: 2,
-    },
-    loaderContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
 })

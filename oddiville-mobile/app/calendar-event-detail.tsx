@@ -1,11 +1,10 @@
 import { StyleSheet, View } from "react-native";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useParams } from "@/src/hooks/useParams";
 import Tabs from "@/src/components/ui/Tabs";
 import { Timeline } from "@/src/components/ui/TimeLine";
 import PageHeader from "@/src/components/ui/PageHeader";
 import { getColor } from "@/src/constants/colors";
-import { format } from "date-fns";
 import { Event } from "@/src/types";
 import Calendar from "@/src/components/ui/Calendar";
 import BackButton from "@/src/components/ui/Buttons/BackButton";
@@ -27,12 +26,11 @@ const CalendarDetailScreen = () => {
   const formatDisplayedEvents = transformArray(eventsArray, {
     filter: (ev) => {
       try {
-        const evDateObj = new Date(ev.scheduled_date);
-        const selDateObj = date ? new Date(date) : new Date();
+        const evDate = ev.scheduled_date.slice(0, 10); // YYYY-MM-DD
+        const selDate = (date ?? new Date().toISOString()).slice(0, 10);
 
-        return (
-          format(evDateObj, "dd MMM yyyy") === format(selDateObj, "dd MMM yyyy")
-        );
+        return evDate === selDate;
+
       } catch {
         return false;
       }
@@ -44,7 +42,8 @@ const CalendarDetailScreen = () => {
     },
     map: (item) => ({
       ...item,
-      message: `${item.title} is currently being processed in ${item.work_area}.`,
+      message: item.work_area,
+      // message: `${item.title} is currently being processed in ${item.work_area}.`,
     }),
     storeMode: "state",
   }) as Event[];
@@ -99,10 +98,5 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: getColor("green", 500, 0.05),
     zIndex: 2,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
 });

@@ -50,7 +50,7 @@ export function useCalendar() {
     queryKey: ['calendar'],
     queryFn: rejectEmptyOrNull(async () => {
       const response = await getAllCalendarEvent();
-      return response.data;
+      return response;
     }),
   });
 }

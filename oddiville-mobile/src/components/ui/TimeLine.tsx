@@ -1,12 +1,15 @@
 import { ScrollView, StyleSheet, View } from "react-native";
-import { EventCard } from "./EventCard";
+import { FullEventCard } from "./FullEventCard";
 import { B4 } from "../typography/Typography";
 import { Event } from "@/src/types";
 import { eventColors } from "@/src/constants/EventColors";
+import { CompactEventCard } from "./CompactEventCard";
 
 const SLOT_HEIGHT = 90;
-const MINUTES_PER_SLOT = 60;
-const PIXELS_PER_MINUTE = SLOT_HEIGHT / MINUTES_PER_SLOT;
+const LABEL_BASELINE_OFFSET = 8;
+const PIXELS_PER_MINUTE = SLOT_HEIGHT / 60;
+const COMPACT_THRESHOLD = 60;
+const TINY_THRESHOLD = 28;
 
 function timeToMinutes(timeStr: string) {
   const [time, meridian] = timeStr.split(" ");
@@ -58,13 +61,10 @@ export const Timeline = ({ events }: { events: Event[] }) => {
   });
 
   return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={{ height: timelineHeight }}
-    >
-      <View style={{ flexDirection: "row", height: timelineHeight }}>
+    <ScrollView style={{ flex: 1 }}>
+      <View style={{ flexDirection: "row", minHeight: timelineHeight }}>
         <View style={{ width: 60 }}>
-          {baseTimeSlots.map((slot, idx) => (
+          {baseTimeSlots.map((slot) => (
             <View
               key={slot}
               style={[styles.timeLabelRow, { height: SLOT_HEIGHT }]}
@@ -83,7 +83,7 @@ export const Timeline = ({ events }: { events: Event[] }) => {
               zIndex: 1,
             }}
           >
-            {baseTimeSlots.map((slot, idx) => (
+            {baseTimeSlots.map((slot) => (
               <View
                 key={slot}
                 style={{
@@ -107,34 +107,67 @@ export const Timeline = ({ events }: { events: Event[] }) => {
           >
             {events.map((ev) => {
               if (!ev.start || !ev.end) return null;
-              const eventStartMinutes = timeToMinutes(ev.start);
-              const eventEndMinutes = timeToMinutes(ev.end);
-              let durationMins = eventEndMinutes - eventStartMinutes;
-              if (durationMins <= 0) durationMins += 24 * 60; 
-              const top = eventStartMinutes * PIXELS_PER_MINUTE;
-              const height = (durationMins * PIXELS_PER_MINUTE) * 2;
+
+              const startMin = timeToMinutes(ev.start);
+              const endMin = timeToMinutes(ev.end);
+
+              const crossesMidnight = endMin <= startMin;
+
+              let duration = endMin - startMin;
+              if (duration <= 0) duration += 24 * 60;
+
+              const top = Math.round(startMin * PIXELS_PER_MINUTE - LABEL_BASELINE_OFFSET);
+
+              const height = Math.round(duration * PIXELS_PER_MINUTE);
+
               const color = eventColorMap.get(ev.id);
 
-              return (
-                <View
-                  key={ev.id}
-                  style={{
-                    position: "absolute",
-                    top,
-                    left: 0,
-                    right: 0,
-                    height,
-                    zIndex: 2,
-                    paddingHorizontal: 4,
-                  }}
-                >
-                  <EventCard
-                    event={{ ...ev, color }}
-                    style={{ height, borderRadius: 6 }}
-                  />
-                </View>
-              );
+              const isCompact = height < COMPACT_THRESHOLD;
+
+              let segments = [];
+
+              if (!crossesMidnight) {
+                segments.push({ start: startMin, end: endMin });
+              } else {
+                // part 1: today till 24:00
+                segments.push({ start: startMin, end: 1440 });
+
+                // part 2: next day from 00:00
+                segments.push({ start: 0, end: endMin });
+              }
+              return segments.map((seg, index) => {
+                const duration = seg.end - seg.start;
+
+                const top = Math.round(seg.start * PIXELS_PER_MINUTE - LABEL_BASELINE_OFFSET);
+                const height = Math.round(duration * PIXELS_PER_MINUTE);
+                const color = eventColorMap.get(ev.id);
+
+                const isCompact = height < COMPACT_THRESHOLD;
+
+                return (
+                  <View
+                    key={`${ev.id}-${index}`}
+                    style={{
+                      position: "absolute",
+                      top,
+                      left: 0,
+                      right: 0,
+                      height,
+                      zIndex: 2,
+                      paddingHorizontal: 4,
+                    }}
+                  >
+                    {isCompact ? (
+                      <CompactEventCard event={{ ...ev, color }} style={{ height, borderRadius: 6 }} />
+                    ) : (
+                      <FullEventCard event={{ ...ev, color }} style={{ height, borderRadius: 6 }} />
+                    )}
+                  </View>
+                );
+              });
+
             })}
+
           </View>
         </View>
       </View>
