@@ -103,3 +103,38 @@ export function resolveEntryRoute(
   // No module access
   return null;
 }
+
+type ModulePermission = { view: boolean; edit: boolean };
+
+const hasPerm = (perm: boolean | ModulePermission | undefined): perm is ModulePermission => {
+  return typeof perm === "object" && perm !== null;
+};
+
+
+export const isSingleModuleUser = (access: Access, module: keyof Access) => {
+  const keys = Object.keys(access) as (keyof Access)[];
+
+  return keys.every((key) => {
+    if (key === module) return true;
+
+    const perm = access[key];
+
+    if (!hasPerm(perm)) return true; 
+
+    return !(perm.view || perm.edit);
+  });
+};
+
+export const canView = (perm?: boolean | ModulePermission) =>
+  typeof perm === "object" && !!(perm.view || perm.edit);
+
+export const canEdit = (perm?: boolean | ModulePermission) =>
+  typeof perm === "object" && !!perm.edit;
+
+export const isSingleModuleUserSafe = (
+  access: Access | undefined,
+  module: keyof Access
+) => {
+  if (!access) return false;
+  return isSingleModuleUser(access, module);
+};

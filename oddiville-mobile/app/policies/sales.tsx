@@ -31,11 +31,11 @@ import {
 import Button from "@/src/components/ui/Buttons/Button";
 import { H3 } from "@/src/components/typography/Typography";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
-import { useAuth } from "@/src/context/AuthContext";
-import { resolveAccess } from "@/src/utils/policiesUtils";
-import NoAccess from "@/src/components/ui/NoAccess";
 import { maskCurrency } from "@/src/utils/maskUtils";
 import { formatAmount } from "@/src/utils/common";
+import { useAppCapabilities } from "@/src/hooks/useAppCapabilities";
+import Require from "@/src/components/authentication/Require";
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
 const categorizeOrders = (
   orders: DispatchOrderList
@@ -84,48 +84,39 @@ const categorizeOrders = (
   return { upComingOrders, inProgressOrders, completedOrders };
 };
 
+const SalesSectionHeader = ({
+  canEdit,
+  onAdd,
+}: {
+  canEdit: boolean;
+  onAdd: () => void;
+}) => (
+  <View
+    style={[
+      styles.HStack,
+      styles.justifyBetween,
+      styles.alignCenter,
+      { paddingTop: 16 },
+    ]}
+  >
+    <H3>Create Dispatch Order</H3>
+    {canEdit && (
+      <Button
+        variant="outline"
+        size="md"
+        onPress={onAdd}
+      >
+        Create
+      </Button>
+    )}
+  </View>
+);
+
 const SalesScreen = () => {
   const { goTo } = useAppNavigation();
-  const { role, policies } = useAuth();
+  const caps = useAppCapabilities();
 
-  const SalesHeader = ({ canEdit }: { canEdit: boolean }) => (
-    <View
-      style={[
-        styles.HStack,
-        styles.justifyBetween,
-        styles.alignCenter,
-        { paddingTop: 16 },
-      ]}
-    >
-      <H3>Create Dispatch Order</H3>
-      {canEdit && (
-        <Button
-          variant="outline"
-          size="md"
-          onPress={() => goTo("create-orders")}
-        >
-          Create
-        </Button>
-      )}
-    </View>
-  );
-
-  const safeRole = role ?? "guest";
-  const safePolicies = policies ?? [];
-  const access = resolveAccess(safeRole, safePolicies);
-
-  const canSeeAmount = access.isFullAccess; 
-  const canView = access.sales.view;
-  const canEdit = access.sales.edit;
-
-  const redirectedRef = React.useRef(false);
-
-  useEffect(() => {
-    if (!redirectedRef.current && !canView && canEdit) {
-      redirectedRef.current = true;
-      goTo("create-orders");
-    }
-  }, [canView, canEdit]);
+  const canSeeFinancialData = caps.isAdmin;
 
   const {
     data: orderData,
@@ -136,26 +127,24 @@ const SalesScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isCancelOrderModal, setIsCancelOrderModal] = useState(false);
 
-const secureOrders = useMemo(() => {
-  if (!orderData) return [];
+  const secureOrders = useMemo(() => {
+    if (!orderData) return [];
 
-  return orderData.map(order => ({
-    ...order,
+    return orderData.map(order => ({
+      ...order,
 
-    amount: order.amount,
+      amount: order.amount,
 
-    amountLabel: canSeeAmount
-      ? formatAmount(Number(order.amount))
-      : maskCurrency(order.amount),
-  }));
-}, [orderData, canSeeAmount]);
+      amountLabel: canSeeFinancialData
+        ? formatAmount(Number(order.amount))
+        : maskCurrency(order.amount),
+    }));
+  }, [orderData, canSeeFinancialData]);
 
-  const categorizedOrders = useMemo(() => {
-    if (!secureOrders) {
-      return { upComingOrders: [], inProgressOrders: [], completedOrders: [] };
-    }
-    return categorizeOrders(secureOrders);
-  }, [secureOrders]);
+  const categorizedOrders = useMemo(
+    () => categorizeOrders(secureOrders),
+    [secureOrders]
+  );
 
   const { upComingOrders, inProgressOrders, completedOrders } =
     categorizedOrders;
@@ -164,96 +153,63 @@ const secureOrders = useMemo(() => {
     console.error("Error loading orders:", error);
   }
 
-  const showLoader = (ordersLoading && !secureOrders) || isLoading;
-
-  if (!canView && !canEdit) {
-    return <NoAccess />;
-  }
-
-  if (!canView && canEdit) {
-    return <Loader />;
-  }
-
-
+  const showLoader = ordersLoading && orderData === undefined;
 
   return (
-    <View style={styles.pageContainer}>
-      <PageHeader page="Dispatch" />
-      <View style={styles.wrapper}>
-        <Tabs
-          tabTitles={["Upcoming", "In-progress", "Completed"]}
-          color="green"
-          style={styles.flexGrow}
-        >
-          <View style={styles.flexGrow}>
-            <SalesHeader canEdit={canEdit} />
+  <Require view="sales">
+        <View style={styles.pageContainer}>
+        <PageHeader page="Dispatch" />
+        <View style={styles.wrapper}>
+          <Tabs
+            tabTitles={["Upcoming", "In-progress", "Completed"]}
+            color="green"
+            style={styles.flexGrow}
+          >
+            <View style={styles.flexGrow}>
+              <SalesSectionHeader canEdit={caps.sales.edit} onAdd={() => goTo("create-orders")} />
 
-            {canView && <UpComingOrders data={upComingOrders} />}
-          </View>
-          <View style={styles.flexGrow}>
-            <View
-              style={[
-                styles.HStack,
-                styles.justifyBetween,
-                styles.alignCenter,
-                { paddingTop: 16 },
-              ]}
-            >
-              <H3>Create Dispatch Order</H3>
-              {canEdit && (
-                <Button
-                  variant="outline"
-                  size="md"
-                  onPress={() => goTo("create-orders")}
-                >
-                  Create
-                </Button>
-              )}
+              <UpComingOrders data={upComingOrders} />
             </View>
-            {canView && <InProgressOrders data={inProgressOrders} />}
-          </View>
-          <View style={styles.flexGrow}>
-            <SalesHeader canEdit={canEdit} />
+            <View style={styles.flexGrow}>
+              <SalesSectionHeader canEdit={caps.sales.edit} onAdd={() => goTo("create-orders")} />
 
-            {canView && <CompletedOrders data={completedOrders} />}
-          </View>
-        </Tabs>
-      </View>
+              <InProgressOrders data={inProgressOrders} />
+            </View>
+            <View style={styles.flexGrow}>
+              <SalesSectionHeader canEdit={caps.sales.edit} onAdd={() => goTo("create-orders")} />
 
-      {showLoader && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <Loader />
-          </View>
+              <CompletedOrders data={completedOrders} />
+            </View>
+          </Tabs>
         </View>
-      )}
-
-      <Modal
-        showPopup={isCancelOrderModal}
-        setShowPopup={setIsCancelOrderModal}
-        markdown={{ description: ["\u201cVikram Patel\u201d"] }}
-        modalData={{
-          title: "Cancel order",
-          description:
-            "Are you sure you want to cancel \u201cVikram Patel\u201d order ",
-          buttons: [
-            { label: "Cancel", variant: "outline" },
-            { label: "Order cancel", variant: "fill" },
-          ],
-          extraDetails: (
-            <>
-              <Alert text="This action can't be undo." />
-              <Input
-                mask="textarea"
-                value=""
-                onChangeText={() => {}}
-                placeholder="Reason"
-              />
-            </>
-          ),
-        }}
-      />
-    </View>
+          {showLoader && <OverlayLoader /> }
+        <Modal
+          showPopup={isCancelOrderModal}
+          setShowPopup={setIsCancelOrderModal}
+          markdown={{ description: ["\u201cVikram Patel\u201d"] }}
+          modalData={{
+            title: "Cancel order",
+            description:
+              "Are you sure you want to cancel \u201cVikram Patel\u201d order ",
+            buttons: [
+              { label: "Cancel", variant: "outline" },
+              { label: "Order cancel", variant: "fill" },
+            ],
+            extraDetails: (
+              <>
+                <Alert text="This action can't be undo." />
+                <Input
+                  mask="textarea"
+                  value=""
+                  onChangeText={() => { }}
+                  placeholder="Reason"
+                />
+              </>
+            ),
+          }}
+        />
+      </View>
+  </Require>
   );
 };
 
@@ -279,11 +235,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: getColor("green", 500, 0.1),
     zIndex: 2,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   HStack: {
     flexDirection: "row",

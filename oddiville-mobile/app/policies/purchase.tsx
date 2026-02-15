@@ -1,10 +1,10 @@
 
 
 // 1. React and React Native core
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 
-import { ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 
 // 2. Third-party dependencies
 import { formatDate } from "date-fns";
@@ -16,7 +16,6 @@ import BottomSheet from "@/src/components/ui/BottomSheet";
 import SearchInput from "@/src/components/ui/SearchInput";
 import SupervisorFlatlist from "@/src/components/ui/Supervisor/SupervisorFlatlist";
 import Loader from "@/src/components/ui/Loader";
-import DatabaseIcon from "@/src/components/icons/page/DatabaseIcon";
 
 // 4. Project hooks
 import { useAdmin } from "@/src/hooks/useAdmin";
@@ -30,7 +29,6 @@ import { getColor } from "@/src/constants/colors";
 import { OrderProps, RawMaterialOrderProps } from "@/src/types";
 
 // 7. Schemas
-import { BottomSheetSchemaKey } from "@/src/schemas/BottomSheetSchema";
 import EmptyState, { EmptyStateStyles } from "@/src/components/ui/EmptyState";
 import { getEmptyStateData } from "@/src/utils/common";
 import { InfiniteData } from "@tanstack/query-core";
@@ -38,26 +36,45 @@ import Button from "@/src/components/ui/Buttons/Button";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { H3 } from "@/src/components/typography/Typography";
 import { RefreshControl } from "react-native-gesture-handler";
-import { useAuth } from "@/src/context/AuthContext";
-import { resolveAccess } from "@/src/utils/policiesUtils";
 import NoAccess from "@/src/components/ui/NoAccess";
+import { useAppCapabilities } from "@/src/hooks/useAppCapabilities";
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
 // 8. Assets
 // No items of this type
 
+const PurchaseSectionHeader = ({
+  canEdit,
+  onAdd,
+}: {
+  canEdit: boolean;
+  onAdd: () => void;
+}) => (
+  <View
+    style={[
+      styles.HStack,
+      styles.justifyBetween,
+      styles.alignCenter,
+      { paddingTop: 16 },
+    ]}
+  >
+    <H3>Order raw material</H3>
+    {canEdit && (
+      <Button variant="outline" size="md" onPress={onAdd}>
+        Add material
+      </Button>
+    )}
+  </View>
+);
+
 const PurchaseScreen = () => {
   const { goTo } = useAppNavigation();
-  const { height: screenHeight } = useWindowDimensions()
-  const { role, policies } = useAuth();
+  const caps = useAppCapabilities();
 
-  const safeRole = role ?? "guest";
-  const safePolicies = policies ?? [];
-  const access = resolveAccess(safeRole, safePolicies);
+  useAdmin();
 
   const [pendingSearch, setPendingSearch] = useState("");
   const [completedSearch, setCompletedSearch] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  useAdmin();
 
   const {
     data: pendingData = [],
@@ -158,55 +175,13 @@ const PurchaseScreen = () => {
       refetchRM();
       refetchCompleted();
       refetchVendor();
-    }, [])
+    }, [refetchRM, refetchCompleted, refetchVendor])
   );
-
 
   const emptyStateData = getEmptyStateData("no-order-pending");
 
+  if (!caps.purchase.view) return <NoAccess />;
 
-  const canView = access.purchase.view;
-  const canEdit = access.purchase.edit;
-
-  const redirectedRef = useRef(false);
-
-  useEffect(() => {
-    if (!redirectedRef.current && !canView && canEdit) {
-      redirectedRef.current = true;
-      goTo("raw-material-order");
-    }
-  }, [canView, canEdit]);
-
-
-  const PurchaseHeader = ({ canEdit }: { canEdit: boolean }) => (
-    <View
-      style={[
-        styles.HStack,
-        styles.justifyBetween,
-        styles.alignCenter,
-        { paddingTop: 16 },
-      ]}
-    >
-      <H3>Order raw material</H3>
-      {canEdit && (
-        <Button
-          variant="outline"
-          size="md"
-          onPress={() => goTo("raw-material-order")}
-        >
-          Add material
-        </Button>
-      )}
-    </View>
-  );
-
-  if (!canView && !canEdit) {
-    return <NoAccess />;
-  }
-
-  if (!canView && canEdit) {
-    return <Loader />;
-  }
   return (
     <View style={styles.pageContainer}>
       <PageHeader page={"Purchase"} />
@@ -217,25 +192,10 @@ const PurchaseScreen = () => {
           style={styles.flexGrow}
         >
           <View style={styles.flexGrow}>
-            <PurchaseHeader canEdit={canEdit} />
-            {canView && <>
-                        <View
-              style={[
-                styles.HStack,
-                styles.justifyBetween,
-                styles.alignCenter,
-                { paddingTop: 16 },
-              ]}
-            >
-              <H3>Order raw material</H3>
-              <Button
-                variant="outline"
-                size="md"
-                onPress={() => goTo("raw-material-order")}
-              >
-                Add material
-              </Button>
-            </View>
+            <PurchaseSectionHeader
+              canEdit={caps.purchase.edit}
+              onAdd={() => goTo("raw-material-order")}
+            />
             <View style={styles.searchinputWrapper}>
               <SearchInput
                 style={{ borderWidth: 1 }}
@@ -258,32 +218,13 @@ const PurchaseScreen = () => {
               </View>
             )}
             <SupervisorFlatlist data={pendingOrders} reFetchers={[refetchRM, refetchVendor]} />
-            </>}
 
           </View>
           <View style={styles.flexGrow}>
-              <PurchaseHeader canEdit={canEdit} />
-            {
-              canView && <>
-              
-
-            <View
-              style={[
-                styles.HStack,
-                styles.justifyBetween,
-                styles.alignCenter,
-                { paddingTop: 16 },
-              ]}
-            >
-              <H3>Order raw material</H3>
-              <Button
-                variant="outline"
-                size="md"
-                onPress={() => goTo("raw-material-order")}
-              >
-                Add material
-              </Button>
-            </View>
+            <PurchaseSectionHeader
+              canEdit={caps.purchase.edit}
+              onAdd={() => goTo("raw-material-order")}
+            />
             <View style={styles.searchinputWrapper}>
               <SearchInput
                 style={{ borderWidth: 1 }}
@@ -314,24 +255,16 @@ const PurchaseScreen = () => {
               isFetchingNext={isFetchingNextPage}
               reFetchers={[refetchCompleted, refetchRM]}
             />
-                          </>
-            }
+
           </View>
         </Tabs>
       </View>
 
       <BottomSheet color="green" />
 
-      {(isLoading ||
-        pendingLoading ||
+          {(pendingLoading ||
         vendorLoading ||
-        completedInitialLoading) && (
-          <View style={styles.overlay}>
-            <View style={styles.loaderContainer}>
-              <Loader />
-            </View>
-          </View>
-        )}
+        completedInitialLoading) && <OverlayLoader /> }
     </View>
   );
 };
@@ -378,11 +311,6 @@ const styles = StyleSheet.create({
   },
   gap8: {
     gap: 8,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
 });
 
