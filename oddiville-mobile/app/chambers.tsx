@@ -26,17 +26,18 @@ import {
   resolveBackRoute,
   resolveDefaultRoute,
 } from "@/src/utils/backRouteUtils";
+import { useAppCapabilities } from "@/src/hooks/useAppCapabilities";
+import NoAccess from "@/src/components/ui/NoAccess";
+import Require from "@/src/components/authentication/Require";
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
 const screenWidth = Dimensions.get("window").width;
 const chamberSize = screenWidth / 2 - 30;
 
 const ChamberScreen = () => {
-  const { role, policies } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
-
-  const safeRole = role ?? "guest";
-  const safePolicies = policies ?? [];
-  const access = resolveAccess(safeRole, safePolicies);
+  
+  const caps = useAppCapabilities();
 
   const {
     data: chambersData = [],
@@ -120,10 +121,23 @@ const ChamberScreen = () => {
     setRefreshing(false);
   }, [refetchChambers, refetchStocks]);
 
-  const backRoute = resolveBackRoute(access, CHAMBERS_BACK_ROUTES, resolveDefaultRoute(access));
+  const canAccessChambers =
+  caps.production.view ||
+  caps.package.view ||
+  caps.sales.view ||
+  caps.isAdmin;
+
+if (!canAccessChambers) return <NoAccess />;
+
+const backRoute = resolveBackRoute(
+  caps.access,
+  CHAMBERS_BACK_ROUTES,
+  resolveDefaultRoute(caps.access)
+);
 
   return (
-    <View style={styles.rootContainer}>
+  <Require anyOf={["production", "package", "sales"]}>
+      <View style={styles.rootContainer}>
       <PageHeader page={"Chamber"} />
       <View style={styles.wrapper}>
         <View style={[styles.paddingTLR16]}>
@@ -178,14 +192,9 @@ const ChamberScreen = () => {
           </View>
         </Tabs>
       </View>
-      {(chambersLoading || stockLoading) && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <Loader />
-          </View>
-        </View>
-      )}
+            {(chambersLoading || stockLoading) && <OverlayLoader />}
     </View>
+</Require>
   );
 };
 
@@ -216,11 +225,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 12,
     alignSelf: "center",
-    alignItems: "center",
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
     alignItems: "center",
   },
   overlay: {

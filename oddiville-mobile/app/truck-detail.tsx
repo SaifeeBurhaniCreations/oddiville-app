@@ -9,10 +9,8 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import PageHeader from '@/src/components/ui/PageHeader';
 import DatabaseIcon from '@/src/components/icons/page/DatabaseIcon';
 import BackButton from '@/src/components/ui/Buttons/BackButton';
-import DetailsToast from '@/src/components/ui/DetailsToast';
 import Loader from '@/src/components/ui/Loader';
 import TruckDetailsCard from '@/src/components/ui/TruckComps/TruckDetailsCard';
-import PhoneIcon from '@/src/components/icons/common/PhoneIcon';
 import TruckWeightCard from '@/src/components/ui/TruckWeightCard';
 import { B3 } from '@/src/components/typography/Typography';
 
@@ -25,6 +23,7 @@ import { getColor } from '@/src/constants/colors';
 
 // 6. Types
 import { OrderProps } from '@/src/types';
+import Require from '@/src/components/authentication/Require';
 
 // 7. Schemas
 // No items of this type
@@ -81,7 +80,6 @@ const formatTruckData = (truckData: any): OrderProps => ({
 }) 
 
 const TruckDetailScreen = () => {
-
     const { id } = useParams('truck-detail', 'id')
 
     if(!id) {
@@ -91,15 +89,12 @@ const TruckDetailScreen = () => {
     const { data: truckData, isLoading: truckLoading } = useTruckById(id)
 
     const [isLoading, setIsLoading] = useState(false);
-    const [toastVisible, setToastVisible] = useState(false);
-    const [toastType, setToastType] = useState<"success" | "error" | "info">("info");
-    const [toastMessage, setToastMessage] = useState("")
-
     const formattedData = formatTruckData(truckData)
 
 
     return (
-        <View style={styles.pageContainer}>
+     <Require view='trucks'>
+           <View style={styles.pageContainer}>
             <PageHeader page={'Truck Detail'} />
             <View style={styles.wrapper}>
                 <ScrollView showsVerticalScrollIndicator={false}>
@@ -122,13 +117,8 @@ const TruckDetailScreen = () => {
                     </View>
                 </View>
             )}
-            <DetailsToast
-                type={toastType}
-                message={toastMessage}
-                visible={toastVisible}
-                onHide={() => setToastVisible(false)}
-            />
         </View>
+     </Require>
     );
 };
 

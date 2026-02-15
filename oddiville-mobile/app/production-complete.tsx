@@ -15,8 +15,6 @@ import BackButton from "@/src/components/ui/Buttons/BackButton";
 import ChipGroup from "@/src/components/ui/ChipGroup";
 import FileUploadGallery from "@/src/components/ui/FileUploadGallery";
 import Button from "@/src/components/ui/Buttons/Button";
-import DetailsToast from "@/src/components/ui/DetailsToast";
-import Loader from "@/src/components/ui/Loader";
 
 // 4. Project hooks
 import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
@@ -32,7 +30,7 @@ import { useFormValidator } from "@/src/sbc/form";
 import FormField from "@/src/sbc/form/FormField";
 
 // 6. Types
-import { OrderProps, RootStackParamList } from "@/src/types";
+import { OrderProps } from "@/src/types";
 import { RootState } from "@/src/redux/store";
 
 // 7. Schemas & Redux slices
@@ -40,15 +38,16 @@ import { setCurrentProduct } from "@/src/redux/slices/store-product.slice";
 import { initFromSelection } from "@/src/redux/slices/bottomsheet/chamber-ratings.slice";
 import { setId } from "@/src/redux/slices/bottomsheet/store-productId.slice";
 import { setProductName } from "@/src/redux/slices/production-begin.slice";
-import { Chamber, useFrozenChambers } from "@/src/hooks/useChambers";
+import { useFrozenChambers } from "@/src/hooks/useChambers";
 
 // 8. Assets
 // No items of this type
 
-import { useAuth } from '@/src/context/AuthContext';
-import { resolveAccess } from '@/src/utils/policiesUtils';
 import { PRODUCTION_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
 import { RefreshControl } from "react-native-gesture-handler";
+import { useToast } from "@/src/context/ToastContext";
+import { useOverlayLoader } from "@/src/context/OverlayLoaderContext";
+import { useAppCapabilities } from "@/src/hooks/useAppCapabilities";
 
 type DuringProduction = {
   lane: string;
@@ -77,6 +76,10 @@ function toUrlArray(sample: any): string[] {
 }
 
 const ProductionCompleteScreen = () => {
+  const toast = useToast();
+  const caps = useAppCapabilities();
+  const loader = useOverlayLoader();
+
   const selectedChambers = useSelector(
     (state: RootState) => state.rawMaterial.selectedChambers
   );
@@ -87,24 +90,12 @@ const ProductionCompleteScreen = () => {
   );
 
   const dispatch = useDispatch();
-  const { role, policies } = useAuth();
-
-  const safeRole = role ?? "guest";
-  const safePolicies = policies ?? [];
-  const access = resolveAccess(safeRole, safePolicies);
-
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
-  const [isLoading, setIsLoading] = useState(false);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastType, setToastType] = useState<"success" | "error" | "info">(
-    "info"
-  );
-  
-  const [toastMessage, setToastMessage] = useState("");
   const [existingImage, setExistingImage] = useState<string[]>([]);
 const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const { id } = useParams("production-start", "id");
+  const updateProduction = useUpdateProduction();
 
   const { data: productionData } = useProductionById(id!);
   const rawOrderId = productionData?.raw_material_order_id;
@@ -191,11 +182,15 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
       }
     );
 
-  const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setToastVisible(true);
-  };
+const loading =
+  updateProduction.isPending ||
+  productionLoading ||
+  frozenLoading;
+
+useEffect(() => {
+  loader.bind(loading);
+}, [loading]);
+
 
   useEffect(() => {
     if (!productionData) return;
@@ -301,12 +296,9 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     dispatch(setCurrentProduct(productionData));
 
-    setIsLoading(true);
-
-    if (id) {
-      validateAndSetData(id, "supervisor-production", supervisorProduction);
-      setIsLoading(false);
-    }
+if (id) {
+  validateAndSetData(id, "supervisor-production", supervisorProduction);
+}
   };
 
   const buildFormData = useCallback((form: DuringProduction) => {
@@ -335,38 +327,27 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     return formData;
   }, []);
 
-  const updateProduction = useUpdateProduction();
 
-  const saved = async () => {
-    const result = validateForm();
-    if (!result.success) return;
+const saved = async () => {
+  const result = validateForm();
+  if (!result.success) return;
 
-    try {
-      setIsLoading(true);
-      const formData = buildFormData(result.data);
+  const formData = buildFormData(result.data);
 
-      updateProduction.mutate(
-        { id: id!, data: formData },
-        {
-            onSuccess: () => {
-              setHasUnsavedChanges(false);
-              goTo("production");
-              resetForm();
-            },
-          onError: (error) => {
-            showToast("error", "Failed to update production");
-          },
-           onSettled: () => {
-        setIsLoading(false); 
+  updateProduction.mutate(
+    { id: id!, data: formData },
+    {
+      onSuccess: () => {
+        setHasUnsavedChanges(false);
+        goTo("production");
+        resetForm();
       },
-        }
-      );
-    } catch (err) {
-      console.error("Production submission failed", err);
-    } finally {
-      setIsLoading(false);
+      onError: () => {
+        toast.error("Failed to update production");
+      },
     }
-  };
+  );
+};
 
 const isStarted = productionData?.start_time !== null;
 
@@ -384,11 +365,12 @@ const canComplete =
   !updateProduction.isPending &&
   !productionLoading;
 
-    const backRoute = resolveBackRoute(access, PRODUCTION_BACK_ROUTES, resolveDefaultRoute(access));
+    const backRoute = resolveBackRoute(caps.access, PRODUCTION_BACK_ROUTES, resolveDefaultRoute(caps.access));
 
   return (
     <View style={styles.pageContainer}>
       <PageHeader page={"Production"} />
+
       <View style={styles.wrapper}>
         <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={lanesLoading} onRefresh={lanesRefetch} />}>
           <View style={[styles.VStack, styles.gap16]}>
@@ -440,7 +422,7 @@ const canComplete =
         <View style={styles.buttonContainer}>
             <Button
               onPress={saved}
-              disabled={!canStart && !canSave}
+              disabled={updateProduction.isPending || (!canStart && !canSave)}
               variant="outline"
             >
               {updateProduction.isPending
@@ -464,19 +446,6 @@ const canComplete =
         </View>
       </View>
       <BottomSheet color="green" />
-      {(isLoading || productionLoading || frozenLoading) && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <Loader />
-          </View>
-        </View>
-      )}
-      <DetailsToast
-        type={toastType}
-        message={toastMessage}
-        visible={toastVisible}
-        onHide={() => setToastVisible(false)}
-      />
     </View>
   );
 };

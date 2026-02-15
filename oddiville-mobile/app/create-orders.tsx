@@ -13,7 +13,6 @@ import BackButton from "@/src/components/ui/Buttons/BackButton";
 
 import CreateFromStorage from "@/src/components/ui/dispatch-order/CreateFromStorage";
 import Button from "@/src/components/ui/Buttons/Button";
-import DetailsToast from "@/src/components/ui/DetailsToast";
 
 // 4. Project hooks
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
@@ -37,6 +36,8 @@ import { usePackedItems } from "@/src/hooks/packing/getPackedItemsEvent";
 import { clearLocations } from "@/src/redux/slices/bottomsheet/location.slice";
 import { clearRawMaterials } from "@/src/redux/slices/bottomsheet/raw-material.slice";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/src/context/ToastContext";
+import Require from "@/src/components/authentication/Require";
 
 // 7. Schemas
 // No items of this type
@@ -137,6 +138,7 @@ function buildUsedBags(
 
 const CreateOrder = () => {
   const { role, policies } = useAuth();
+  const toast = useToast();
 const queryClient = useQueryClient();
   const safeRole = role ?? "guest";
   const safePolicies = policies ?? [];
@@ -144,11 +146,6 @@ const queryClient = useQueryClient();
 
   const dispatch = useDispatch();
   const [step, setStep] = useState<number>(1);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastType, setToastType] = useState<"success" | "error" | "info">(
-    "info"
-  );
-  const [toastMessage, setToastMessage] = useState("");
 
     const { data: packedItemsDataNew, isFetching: packedItemsLoadingNew } =
       usePackedItems();
@@ -319,12 +316,6 @@ const packetMetaIndex = useMemo(() => {
     }
   }, [selectedProducts]);
 
-  const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setToastVisible(true);
-  };
-
   useEffect(() => {
     if (selectedCountry?.label && selectedCountry?.icon) {
       setField("country", selectedCountry);
@@ -353,7 +344,7 @@ const packetMetaIndex = useMemo(() => {
     const result = validateCurrentStep(updatedValues);
 
     if (result.success) {
-      showToast("info", "Move to step 2!");
+      toast.info("Move to step 2!");
       setStep(2);
     }
   };
@@ -378,7 +369,7 @@ const usedBagsByProduct = buildUsedBags(
       );
 
       if (!hasAnyBags) {
-        showToast("error", "Please enter at least one bag to dispatch");
+        toast.error("Please enter at least one bag to dispatch");
         return;
       }
 
@@ -403,17 +394,15 @@ const usedBagsByProduct = buildUsedBags(
             goTo("sales");
           },
           onError: (error) => {
-            showToast("error", "Failed to dispatch order");
+            toast.error("Failed to dispatch order");
           },
         });
       } catch (error) {
         console.log("✅ Final form data:", JSON.stringify(result.data));
       }
-      showToast("info", "Dispatch Order created!");
+      toast.success("Dispatch Order created!");
     } else {
-      setToastVisible(true);
-      setToastType("error");
-      setToastMessage(Object.values(result.errors).join("\n"));
+      toast.error(Object.values(result.errors).join("\n"));
     }
   };
 
@@ -424,7 +413,8 @@ const usedBagsByProduct = buildUsedBags(
   );
 
   return (
-    <KeyboardAvoidingView
+   <Require edit="sales">
+     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
@@ -472,14 +462,9 @@ const usedBagsByProduct = buildUsedBags(
             )}
           </View>
         </View>
-        <DetailsToast
-          type={toastType}
-          message={toastMessage}
-          visible={toastVisible}
-          onHide={() => setToastVisible(false)}
-        />
       </View>
     </KeyboardAvoidingView>
+   </Require>
   );
 };
 

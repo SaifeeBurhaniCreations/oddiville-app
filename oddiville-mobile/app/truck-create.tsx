@@ -13,7 +13,6 @@ import Input from "@/src/components/ui/Inputs/Input";
 import BottomSheet from "@/src/components/ui/BottomSheet";
 import Loader from "@/src/components/ui/Loader";
 import FormField from "@/src/sbc/form/FormField";
-import DetailsToast from "@/src/components/ui/DetailsToast";
 import SimpleFileUpload from "@/src/components/ui/SimpleFileUpload";
 
 // 4. Project hooks
@@ -29,6 +28,8 @@ import { getColor } from "@/src/constants/colors";
 import { useFormValidator } from "@/src/sbc/form";
 import CustomSwitch from "@/src/components/ui/Switch";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
+import { useToast } from "@/src/context/ToastContext";
+import Require from "@/src/components/authentication/Require";
 
 // 6. Types
 // No items of this type
@@ -55,19 +56,8 @@ const TruckCreateScreen = () => {
   const { data: truckData, isLoading: truckLoading } = useTruckById(id!);
   const updateTruck = useUpdateTruck();
   const createTruck = useCreateTruck();
-
+  const toast = useToast();
   const [isMyTruck, setIsMyTruck] = useState<boolean>(false);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastType, setToastType] = useState<"success" | "error" | "info">(
-    "info"
-  );
-  const [toastMessage, setToastMessage] = useState("");
-
-  const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setToastVisible(true);
-  };
 
   const { goTo } = useAppNavigation();
 
@@ -171,20 +161,20 @@ const TruckCreateScreen = () => {
       formData.append("challan", fileData);
     }
 
-    // @ts-ignore
     createTruck.mutate(formData, {
       onSuccess: (result) => {
-        showToast("success", "Shipping details updated successfully!");
+        toast.success("Shipping details updated successfully!");
         resetForm();
         goTo("trucks");
       },
       onError: (error) => {
-        showToast("error", "Failed to create truck");
+        toast.error("Failed to create truck");
       },
     });
   };
 
   return (
+        <Require edit="trucks">
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -320,14 +310,9 @@ const TruckCreateScreen = () => {
           </View>
         </View>
       )}
-      <DetailsToast
-        type={toastType}
-        message={toastMessage}
-        visible={toastVisible}
-        onHide={() => setToastVisible(false)}
-      />
     </View>
     </KeyboardAvoidingView>
+    </Require>
   );
 };
 

@@ -44,6 +44,7 @@ import { getTareWeight, parseWeightBoth } from '@/src/utils/packing/weightutils'
 import PaperRollIcon from "@/src/components/icons/packaging/PaperRollIcon";
 import BagIcon from "@/src/components/icons/packaging/BagIcon";
 import BigBagIcon from "@/src/components/icons/packaging/BigBagIcon";
+import OverlayLoader from '@/src/components/ui/OverlayLoader';
 
 
 export const PACKAGE_ICON_MAP: Record<PackageIconKey, React.ComponentType<any>> =
@@ -196,13 +197,7 @@ const uiPackages = useMemo(() => {
         </View>
 
         <View style={styles.cardList}>
-          {!uiPackages ? (
-            <View style={styles.overlay}>
-              <View style={styles.loaderContainer}>
-                <Loader />
-              </View>
-            </View>
-          ) : uiPackages?.length > 0 ? (
+          {!uiPackages ? ( <OverlayLoader />) : uiPackages?.length > 0 ? (
             chunkCards(sortBy([...uiPackages], "weight"), 2).map((pair, index) => (
               <View key={index} style={styles.cardRow}>
                 {pair.map((item, i) => (
@@ -225,14 +220,7 @@ const uiPackages = useMemo(() => {
         </View>
 
         <BottomSheet color='green' />
-
-        {(isLoadingPackageSize || isLoadingPackage || packageLoading) && (
-          <View style={styles.overlay}>
-            <View style={styles.loaderContainer}>
-              <Loader />
-            </View>
-          </View>
-        )}
+          {(isLoadingPackageSize || isLoadingPackage || packageLoading) && <OverlayLoader /> }
       </View>
     </View>
   );
@@ -288,11 +276,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 16,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   cardWrapper: {
     flex: 1,

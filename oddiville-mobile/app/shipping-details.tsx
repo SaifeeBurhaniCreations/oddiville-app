@@ -12,7 +12,6 @@ import PageHeader from '@/src/components/ui/PageHeader';
 import BottomSheet from '@/src/components/ui/BottomSheet';
 import Loader from '@/src/components/ui/Loader';
 import FormField from '@/src/sbc/form/FormField';
-import DetailsToast from '@/src/components/ui/DetailsToast';
 import FileUploadGallery from '@/src/components/ui/FileUploadGallery';
 import CustomImage from '@/src/components/ui/CustomImage';
 import { C1, H3 } from '@/src/components/typography/Typography';
@@ -29,6 +28,7 @@ import { useFormValidator } from '@/src/sbc/form';
 import { getColor } from '@/src/constants/colors';
 import EmptyState from '@/src/components/ui/EmptyState';
 import { getEmptyStateData } from '@/src/utils/common';
+import { useToast } from '@/src/context/ToastContext';
 
 // 6. Types
 // No items of this type
@@ -54,30 +54,20 @@ const ShippingDetailsForm = () => {
     const { height: screenHeight } = useWindowDimensions();
     const { goTo } = useAppNavigation();
     const { orderId } = useParams('shipping-details', 'orderId');
-
+    const toast = useToast();
     const { data: truckData, isFetching: truckLoading } = useTrucks();
     const { data: orderData, isFetching: isFetching } = useOrderById(orderId ?? null);
     const updateOrder = useUpdateOrder();
 
-    const [toastVisible, setToastVisible] = useState(false);
-    const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
-    const [toastMessage, setToastMessage] = useState('');
     const [existingImage, setExistingImage] = useState<string[]>([]);
     const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
-
-    const showToast = (type: 'success' | 'error' | 'info', message: string) => {
-        setToastType(type);
-        setToastMessage(message);
-        setToastVisible(true);
-    };
 
     const handleTruckSelection = (truck: any) => {
         const truckCapacity = Number(truck.size);
         const orderWeight = Number(totalProductWeight);
 
         if (orderWeight > truckCapacity) {
-            showToast(
-                "error",
+            toast.error(
                 `Order weight (${orderWeight} kg) exceeds truck capacity (${truckCapacity} kg)`
             );
             return;
@@ -190,8 +180,8 @@ const ShippingDetailsForm = () => {
         }
 
         updateOrder.mutate({ id: orderId!, data: formData }, {
-            onSuccess: (result) => { showToast('success', 'Shipping details updated successfully!'); goTo('sales') },
-            onError: (error) => { showToast('error', 'Failed to update shipping details'); }
+            onSuccess: (result) => { toast.success('Shipping details updated successfully!'); goTo('sales') },
+            onError: (error) => { toast.error('Failed to update shipping details'); }
         });
     };
     const emptyStateData = getEmptyStateData("truck_details");
@@ -314,12 +304,6 @@ const ShippingDetailsForm = () => {
                     </View>
                 </View>
             )}
-            <DetailsToast
-                type={toastType}
-                message={toastMessage}
-                visible={toastVisible}
-                onHide={() => setToastVisible(false)}
-            />
         </View>
     );
 };

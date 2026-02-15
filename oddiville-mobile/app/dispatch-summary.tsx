@@ -35,6 +35,7 @@ import { formatTimeDifference } from "@/src/utils/common";
 // 6. Types
 import { DispatchOrder, OrderProps, PackageItem, ProductDetail, productDetails, SummaryItem } from "@/src/types";
 import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
 // 7. Schemas
 // No items of this type
@@ -193,7 +194,7 @@ const DispatchSummaryScreen = () => {
         <View style={styles.pageContainer}>
             <PageHeader page={'Order'} />
             <View style={styles.wrapper}>
-                <BackButton label="Order details" backRoute="admin-orders"/>
+                <BackButton label="Order details" backRoute="admin-orders" />
 
                 <ScrollView showsVerticalScrollIndicator={false}>
                     <View style={{ gap: 24 }}>
@@ -220,14 +221,7 @@ const DispatchSummaryScreen = () => {
                     </View>
                 </ScrollView>
             </View>
-            {isLoading && (
-                <View style={styles.overlay}>
-                    <View style={styles.loaderContainer}>
-                        <Loader />
-                    </View>
-                </View>
-            )}
-
+            {isLoading && <OverlayLoader />}
         </View>
 
     )
@@ -260,11 +254,6 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         backgroundColor: getColor('green', 500, 0.05),
         zIndex: 2,
-    },
-    loaderContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     row: {
         flexDirection: "row",

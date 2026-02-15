@@ -14,7 +14,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import PriceInput from '@/src/components/ui/Inputs/PriceInput';
 import VendorPricing from '@/src/components/ui/VendorPricing';
 import { getLimitedMaterialNames, getLimitedVendorNames } from '@/src/utils/arrayUtils';
-import DetailsToast from '@/src/components/ui/DetailsToast'
 import { useFormValidator } from '@/src/sbc/form';
 import FormField from '@/src/sbc/form/FormField';
 import { VendorInputState } from '@/src/types';
@@ -23,9 +22,10 @@ import { addRawMaterialOrder } from '@/src/services/rawmaterial.service';
 import { clearVendors } from '@/src/redux/slices/bottomsheet/vendor.slice';
 import { useAppNavigation } from '@/src/hooks/useAppNavigation';
 import { Platform } from 'react-native';
-import { useAuth } from '@/src/context/AuthContext';
-import { resolveAccess } from '@/src/utils/policiesUtils';
 import { PURCHASE_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
+import { useToast } from '@/src/context/ToastContext';
+import { useAppCapabilities } from '@/src/hooks/useAppCapabilities';
+import Require from '@/src/components/authentication/Require';
 
 const screenHeight = Dimensions.get('window').height;
 
@@ -39,13 +39,11 @@ type RawMaterialOrderForm = {
 };
 
 const RawMaterialOrderScreen = () => {
-  const { role, policies } = useAuth();
-    
-    const safeRole = role ?? "guest";
-    const safePolicies = policies ?? [];
-    const access = resolveAccess(safeRole, safePolicies);
+const caps = useAppCapabilities();
+
 
     const dispatch = useDispatch();
+    const toast = useToast();
     const { validateAndSetData } = useValidateAndOpenBottomSheet();
     const selectedRM = useSelector((state: RootState) => state.rawMaterial.selectedRawMaterials);
     const selectedVendor = useSelector((state: RootState) => state.vendor.selectedVendors);
@@ -53,17 +51,8 @@ const RawMaterialOrderScreen = () => {
     const [totalWeight, setTotalWeight] = useState<number>(0);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [toastVisible, setToastVisible] = useState(false);
-    const [toastType, setToastType] = useState<"success" | "error" | "info">("info");
-    const [toastMessage, setToastMessage] = useState("");
 
     const { goTo } = useAppNavigation()
-
-    const showToast = (type: "success" | "error" | "info", message: string) => {
-        setToastType(type);
-        setToastMessage(message);
-        setToastVisible(true);
-    };
 
     const {
         values,
@@ -172,7 +161,7 @@ const RawMaterialOrderScreen = () => {
             if (response.status === 201) {
                 setIsSubmitting(false)
                 setIsLoading(false);
-                showToast('info', 'Order placed!')
+                toast.info('Order placed!')
                 resetForm()
                 dispatch(clearRawMaterials())
                 dispatch(clearVendors())
@@ -196,10 +185,15 @@ const RawMaterialOrderScreen = () => {
 
     const isNotChoosed = selectedRM?.length === 0;
 
-    const backRoute = resolveBackRoute(access, PURCHASE_BACK_ROUTES, resolveDefaultRoute(access));
-    
-    return (
-        <View style={styles.pageContainer}>
+const backRoute = resolveBackRoute(
+  caps.access,
+  PURCHASE_BACK_ROUTES,
+  resolveDefaultRoute(caps.access)
+);
+
+return (
+    <Require admin>
+            <View style={styles.pageContainer}>
             <PageHeader page={'Raw material'} />
             <View style={styles.wrapper}>
                 <KeyboardAvoidingView
@@ -308,7 +302,7 @@ const RawMaterialOrderScreen = () => {
                                                 values={value}
                                                 totalWeight={totalWeight}
                                                 onChangeVendors={onChange}
-                                                showToast={showToast}
+                                                toast={toast}
                                                 vendorCount={selectedVendor?.length}
                                             />
                                         )}
@@ -336,13 +330,8 @@ const RawMaterialOrderScreen = () => {
                 </View>
             )}
 
-            <DetailsToast
-                type={toastType}
-                message={toastMessage}
-                visible={toastVisible}
-                onHide={() => setToastVisible(false)}
-            />
         </View>
+    </Require>
     )
 }
 

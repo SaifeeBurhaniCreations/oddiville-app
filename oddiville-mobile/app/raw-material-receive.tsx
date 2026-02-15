@@ -50,7 +50,6 @@ import FormField from "@/src/sbc/form/FormField";
 // 6. Types
 import { OrderProps, RawMaterialOrderProps, RootStackParamList } from "@/src/types";
 import { formatDateForDisplay } from "@/src/utils/dateUtils";
-import DetailsToast from "@/src/components/ui/DetailsToast";
 import { hasUrlField, isChallanObject } from "@/src/utils/urlUtils";
 import { queryClient } from "@/src/lib/react-query";
 import { useAuth } from '@/src/context/AuthContext';
@@ -58,6 +57,8 @@ import { resolveAccess } from '@/src/utils/policiesUtils';
 import { PURCHASE_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
 import OverlayLoader from "@/src/components/ui/OverlayLoader";
 import { useToast } from "@/src/context/ToastContext";
+import { useAppCapabilities } from "@/src/hooks/useAppCapabilities";
+import Require from "@/src/components/authentication/Require";
 
 type RawMaterialReceived = {
   arrival_date: string;
@@ -69,8 +70,6 @@ type RawMaterialReceived = {
   driver_name: string;
   bags: string; // NEW
 };
-
-const BAG_WEIGHT_KG = 30; 
 
 const parseWeight = (weight: any): number => {
   if (weight == null) return 0;
@@ -114,12 +113,9 @@ const formatOrder = (order: any): OrderProps => ({
 });
 
 const SupervisorRawMaterialDetailsScreen = () => {
-      const { role, policies } = useAuth();
       const toast = useToast();
-      const safeRole = role ?? "guest";
-      const safePolicies = policies ?? [];
-      const access = resolveAccess(safeRole, safePolicies);
-  
+const caps = useAppCapabilities();
+
   const [loading, setLoading] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -497,7 +493,7 @@ formData.append("bags", bagsCount.toString());
     return !!orderData?.arrival_date;
   }, [orderData?.arrival_date]);
 
-  const backRoute = resolveBackRoute(access, PURCHASE_BACK_ROUTES, resolveDefaultRoute(access));
+  const backRoute = resolveBackRoute(caps.access, PURCHASE_BACK_ROUTES, resolveDefaultRoute(caps.access));
   
   if (isFetching) {
     return (
@@ -544,6 +540,7 @@ formData.append("bags", bagsCount.toString());
   }
 
   return (
+    <Require edit="purchase">
     <View style={styles.pageContainer}>
       <PageHeader page={"Raw Material"} />
       <View style={styles.wrapper}>
@@ -833,6 +830,7 @@ formData.append("bags", bagsCount.toString());
         }}
       />
     </View>
+    </Require>
   );
 };
 

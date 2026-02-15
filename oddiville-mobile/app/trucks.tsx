@@ -15,13 +15,12 @@ import Loader from '@/src/components/ui/Loader';
 // 4. Project hooks
 import { useAppNavigation } from '@/src/hooks/useAppNavigation';
 import { TruckDetailsProps, useTrucks } from '@/src/hooks/truck';
-import { useAuth } from '@/src/context/AuthContext';
 
 // 5. Project constants/utilities
 import { getColor } from '@/src/constants/colors';
 
 // 6. Types
-import { RootStackParamList, TruckProps } from '@/src/types';
+import { TruckProps } from '@/src/types';
 
 // 7. Schemas
 // No items of this type
@@ -29,8 +28,10 @@ import { RootStackParamList, TruckProps } from '@/src/types';
 // 8. Assets 
 // No items of this type
 
-import { resolveAccess } from '@/src/utils/policiesUtils';
 import { TRUCKS_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
+import { useAppCapabilities } from '@/src/hooks/useAppCapabilities';
+import { useToast } from '@/src/context/ToastContext';
+import Require from '@/src/components/authentication/Require';
 
 const formatTruckData = (truckData: TruckDetailsProps[]): TruckProps[] => {
     return truckData.map((truck) => ({
@@ -50,20 +51,22 @@ const formatTruckData = (truckData: TruckDetailsProps[]): TruckProps[] => {
 };
 
 const TrucksScreen = () => {
-  const { role, policies } = useAuth();
-
-  const safeRole = role ?? "guest";
-  const safePolicies = policies ?? [];
-  const access = resolveAccess(safeRole, safePolicies);
+  const caps = useAppCapabilities();
+  const toast = useToast();
 
     const { goTo } = useAppNavigation()
     const { data: trucksData, isLoading: trucksLoading } = useTrucks();
 
     const formattedTrucks = trucksData ? formatTruckData(trucksData) : [];
-    
-    const backRoute = resolveBackRoute(access, TRUCKS_BACK_ROUTES, resolveDefaultRoute(access));
-    
+        
+    const backRoute = resolveBackRoute(
+    caps.access,
+    TRUCKS_BACK_ROUTES,
+    resolveDefaultRoute(caps.access)
+    );
+
     return (
+         <Require view="trucks">
         <View style={styles.pageContainer}>
             <PageHeader page={'Trucks'} />
             <View style={styles.wrapper}>
@@ -71,10 +74,22 @@ const TrucksScreen = () => {
 
                     <BackButton label={`Trucks (${formattedTrucks.length ?? 0})`} backRoute={backRoute} />
 
-                    <Button variant='outline' onPress={() => goTo('truck-create')} size='md'>Add Truck</Button>
+                <Button
+                    variant='outline'
+                    onPress={() => {
+                        !caps.trucks.edit ? 
+                        goTo('truck-create')
+                        : 
+                        toast.error('Permission Denied')
+                    }}
+                    size='md'
+                     disabled={!caps.trucks.edit}>
+                    Add Truck
+                </Button>
+
                 </View>
                 <View style={styles.content}>
-                    <SearchWithFilter onFilterPress={() => { }} placeholder={"Search truck by name"} value='' onChangeText={() => { }} />
+                    <SearchWithFilter onFilterPress={() => {}} placeholder={"Search truck by name"} value='' onChangeText={() => {}} />
                     <TruckFlatList
                         trucks={formattedTrucks}
                         fetchMore={() => {}}
@@ -91,6 +106,7 @@ const TrucksScreen = () => {
                 </View>
             )}
         </View>
+        </Require>
     )
 }
 

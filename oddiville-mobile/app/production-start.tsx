@@ -32,12 +32,10 @@ import { useFormValidator } from '@/src/sbc/form';
 
 // 6. Types
 import { OrderProps } from '@/src/types';
-import DetailsToast from '@/src/components/ui/DetailsToast';
-import { useAuth } from '@/src/context/AuthContext';
-import { resolveAccess } from '@/src/utils/policiesUtils';
 import { PRODUCTION_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
 import { useToast } from '@/src/context/ToastContext';
 import OverlayLoader from '@/src/components/ui/OverlayLoader';
+import { useAppCapabilities } from '@/src/hooks/useAppCapabilities';
 
 type RNImageFile = {
     uri: string;
@@ -59,12 +57,8 @@ const KG_TO_TONS = 1000;
 const DATE_FORMAT = "MMM d, yyyy";
 
 const ProductionStartScreen = () => {
-    const { role, policies } = useAuth();
     const toast = useToast();
-    const safeRole = role ?? "guest";
-    const safePolicies = policies ?? [];
-    const access = resolveAccess(safeRole, safePolicies);
-
+    const caps = useAppCapabilities();
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
     // Hooks
@@ -384,7 +378,7 @@ const ProductionStartScreen = () => {
         );
     }
 
-    const backRoute = resolveBackRoute(access, PRODUCTION_BACK_ROUTES, resolveDefaultRoute(access));
+    const backRoute = resolveBackRoute(caps.access, PRODUCTION_BACK_ROUTES, resolveDefaultRoute(caps.access));
     
     return (
         <View style={styles.pageContainer}>
