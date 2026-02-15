@@ -6,9 +6,9 @@ const jwt = require("jsonwebtoken");
 const {
   Admin: adminClient,
 } = require("../models");
+
 router.get("/:type/:id", async (req, res) => {
     const { type, id } = req.params;
-console.log("{ type, id }", { type, id });
 
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -39,6 +39,7 @@ console.log("{ type, id }", { type, id });
   let states = [];
   let cities = [];
   
+  let packages = [];
   let packingSummary = {};
 
   let packingEvents = [];
@@ -75,6 +76,7 @@ console.log("{ type, id }", { type, id });
     cities,
 
     packingSummary,
+    packages,
 
     packingEvents,
     chamberStocks,

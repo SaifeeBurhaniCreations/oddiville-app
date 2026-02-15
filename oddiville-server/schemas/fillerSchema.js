@@ -25,6 +25,7 @@ const getFillerSchema = (ctx) => {
     currentUser = {},
     packingSummary = {},
 
+    packages = [],
     packingEvents = [],
     chamberStocks = [],
   } = ctx;
@@ -33,6 +34,7 @@ const getFillerSchema = (ctx) => {
     order,
     chambers,
     currentUser,
+    packages,
   });
 
   const rawMaterialSchemas = buildRawMaterialSchemas({

@@ -3,7 +3,7 @@ const safeRoute = require("../sbc/utils/safeRoute/index");
 const {
   DispatchOrder: orderClient,
   ChamberStock: stockClient,
-  // Packages: packageClient,
+  Packages: packagesClient,
   TruckDetails: truckClient,
   sequelize,
 } = require("../models");
@@ -86,7 +86,17 @@ router.post("/create", safeRoute(async (req, res) => {
       usedBagsByProduct,
     } = req.body;
 
-    /* -------------------- BASIC VALIDATION -------------------- */
+    /* -------------------- Packages Fetching -------------------- */
+    const productNames = products.map(p => p.product_name);
+
+    const packages = await packagesClient.findAll({
+      where: { product_name: productNames },
+      transaction: t,
+    });
+
+    const packageMap = new Map(
+      packages.map(p => [p.product_name.toLowerCase(), p.package_image?.url || p.image?.url])
+    );
     if (!customer_name) throw new Error("Customer name is required");
     if (!Array.isArray(products) || products.length === 0)
       throw new Error("Products are required");
@@ -95,93 +105,93 @@ router.post("/create", safeRoute(async (req, res) => {
       throw new Error("usedBagsByProduct is required");
 
     /* -------------------- STOCK DEDUCTION -------------------- */
-for (const productId of Object.keys(usedBagsByProduct)) {
-  const productUsage = usedBagsByProduct[productId];
-  const productName = productId.split("::")[0];
+    for (const productId of Object.keys(usedBagsByProduct)) {
+      const productUsage = usedBagsByProduct[productId];
+      const productName = productId.split("::")[0];
 
-  const stock = await stockClient.findOne({
-    where: { product_name: productName },
-    transaction: t,
-    lock: t.LOCK.UPDATE,
-  });
+      const stock = await stockClient.findOne({
+        where: { product_name: productName },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
 
-  if (!stock) {
-    throw new Error(`Stock not found for productId ${productId}`);
-  }
+      if (!stock) {
+        throw new Error(`Stock not found for productId ${productId}`);
+      }
 
-  if (!Array.isArray(stock.chamber)) {
-    throw new Error(`Invalid chamber data for productId ${productId}`);
-  }
+      if (!Array.isArray(stock.chamber)) {
+        throw new Error(`Invalid chamber data for productId ${productId}`);
+      }
 
-  for (const packageKey of Object.keys(productUsage)) {
-    const usage = productUsage[packageKey];
-    const { byChamber = {}, packet, totalBags = 0 } = usage;
+      for (const packageKey of Object.keys(productUsage)) {
+        const usage = productUsage[packageKey];
+        const { byChamber = {}, packet, totalBags = 0 } = usage;
 
-    const packetsToDeduct =
-      Number(totalBags) * Number(packet?.packetsPerBag || 1);
+        const packetsToDeduct =
+          Number(totalBags) * Number(packet?.packetsPerBag || 1);
 
-    /* -------------------- PACKET DEDUCTION -------------------- */
-    if (Array.isArray(stock.packages) && packet) {
-      const pkgIndex = stock.packages.findIndex(
-        (p) =>
-          Number(p.size) === Number(packet.size) &&
-          p.unit === packet.unit
-      );
-
-      if (pkgIndex !== -1) {
-        const oldPackets = Number(stock.packages[pkgIndex].quantity || 0);
-
-        if (oldPackets < packetsToDeduct) {
-          throw new Error(
-            `Insufficient packets. Available: ${oldPackets}, Required: ${packetsToDeduct}`
+        /* -------------------- PACKET DEDUCTION -------------------- */
+        if (Array.isArray(stock.packages) && packet) {
+          const pkgIndex = stock.packages.findIndex(
+            (p) =>
+              Number(p.size) === Number(packet.size) &&
+              p.unit === packet.unit
           );
+
+          if (pkgIndex !== -1) {
+            const oldPackets = Number(stock.packages[pkgIndex].quantity || 0);
+
+            if (oldPackets < packetsToDeduct) {
+              throw new Error(
+                `Insufficient packets. Available: ${oldPackets}, Required: ${packetsToDeduct}`
+              );
+            }
+
+            stock.packages[pkgIndex].quantity =
+              String(oldPackets - packetsToDeduct);
+          }
         }
 
-        stock.packages[pkgIndex].quantity =
-          String(oldPackets - packetsToDeduct);
+        /* -------------------- CHAMBER DEDUCTION -------------------- */
+        const expectedRating = Number(packageKey.split("-")[2]);
+
+        for (const chamberId of Object.keys(byChamber)) {
+          const bagsToDeduct = Number(byChamber[chamberId]);
+          if (!bagsToDeduct || bagsToDeduct <= 0) continue;
+
+          const chamberIndex = stock.chamber.findIndex(
+            (c) =>
+              String(c.id) === String(chamberId) &&
+              Number(c.rating) === expectedRating
+          );
+
+          if (chamberIndex === -1) {
+            throw new Error(
+              `Chamber ${chamberId} with rating ${expectedRating} not found`
+            );
+          }
+
+          const oldQty = Number(stock.chamber[chamberIndex].quantity || 0);
+
+          if (oldQty < bagsToDeduct) {
+            throw new Error(
+              `Insufficient stock in chamber ${chamberId}. Available: ${oldQty}, Required: ${bagsToDeduct}`
+            );
+          }
+
+          stock.chamber[chamberIndex].quantity =
+            String(oldQty - bagsToDeduct);
+        }
       }
-    }
 
-    /* -------------------- CHAMBER DEDUCTION -------------------- */
-    const expectedRating = Number(packageKey.split("-")[2]); 
-
-    for (const chamberId of Object.keys(byChamber)) {
-      const bagsToDeduct = Number(byChamber[chamberId]);
-      if (!bagsToDeduct || bagsToDeduct <= 0) continue;
-
-      const chamberIndex = stock.chamber.findIndex(
-        (c) =>
-          String(c.id) === String(chamberId) &&
-          Number(c.rating) === expectedRating
+      await stockClient.update(
+        {
+          chamber: stock.chamber,
+          packages: stock.packages,
+        },
+        { where: { id: stock.id }, transaction: t }
       );
-
-      if (chamberIndex === -1) {
-        throw new Error(
-          `Chamber ${chamberId} with rating ${expectedRating} not found`
-        );
-      }
-
-      const oldQty = Number(stock.chamber[chamberIndex].quantity || 0);
-
-      if (oldQty < bagsToDeduct) {
-        throw new Error(
-          `Insufficient stock in chamber ${chamberId}. Available: ${oldQty}, Required: ${bagsToDeduct}`
-        );
-      }
-
-      stock.chamber[chamberIndex].quantity =
-        String(oldQty - bagsToDeduct);
     }
-  }
-
-  await stockClient.update(
-    {
-      chamber: stock.chamber,
-      packages: stock.packages,
-    },
-    { where: { id: stock.id }, transaction: t }
-  );
-}
 
     /* -------------------- CREATE ORDER -------------------- */
     const order = await orderClient.create(
@@ -196,7 +206,7 @@ for (const productId of Object.keys(usedBagsByProduct)) {
         products: products.map((p) => ({
           id: p.id,
           product_name: p.product_name,
-          image: p.image,
+          image: packageMap.get(p.product_name.toLowerCase()) || null,
           rating: p.rating,
         })),
         dispatched_items: usedBagsByProduct,
@@ -423,20 +433,20 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
       }
 
       const totalBags = Object.values(order.usedBagsByProduct || {}).reduce(
-  (sum, productUsage) =>
-    sum +
-    Object.values(productUsage).reduce(
-      (pkgSum, pkg) => pkgSum + Number(pkg.totalBags || 0),
-      0
-    ),
-  0
-);
+        (sum, productUsage) =>
+          sum +
+          Object.values(productUsage).reduce(
+            (pkgSum, pkg) => pkgSum + Number(pkg.totalBags || 0),
+            0
+          ),
+        0
+      );
 
-   if (totalBags > truck.size) {
-  throw new Error(
-    `Truck capacity exceeded. Capacity: ${truck.size} bags, Required: ${totalBags} bags`
-  );
-}
+      if (totalBags > truck.size) {
+        throw new Error(
+          `Truck capacity exceeded. Capacity: ${truck.size} bags, Required: ${totalBags} bags`
+        );
+      }
     }
 
     await order.update(updatedData, { transaction: t });
@@ -474,7 +484,7 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
   } catch (error) {
     try {
       await t.rollback();
-    } catch (_) {}
+    } catch (_) { }
     console.error("Error updating dispatch order:", error?.message || error);
     return res.status(500).json({ error: "Internal server error" });
   }

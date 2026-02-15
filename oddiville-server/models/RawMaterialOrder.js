@@ -1,93 +1,106 @@
 module.exports = (sequelize, Sequelize) => {
-    const RawMaterialOrder = sequelize.define("raw_material_orders", {
-        id: {
-            type: Sequelize.UUID,
-            defaultValue: Sequelize.UUIDV4,
-            primaryKey: true
+  const RawMaterialOrder = sequelize.define(
+    "raw_material_orders",
+    {
+      id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        primaryKey: true,
+      },
+      production_id: { type: Sequelize.STRING, allowNull: true },
+      rating: Sequelize.INTEGER,
+ raw_material_name: {
+  type: Sequelize.STRING,
+  allowNull: false
+},
+
+raw_material_id: {
+  type: Sequelize.UUID,
+  allowNull: false, 
+  references: {
+    model: "raw_materials",
+    key: "id",
+  },
+},
+
+vendor: {
+  type: Sequelize.STRING,
+  allowNull: false
+},
+
+      vendor_id: {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: "Vendors",
+          key: "id",
         },
-        production_id: { type: Sequelize.STRING, allowNull: true },
-        rating: Sequelize.INTEGER,
-        raw_material_name: {
-            type: Sequelize.STRING,
-            allowNull: false,
-            references: {
-                model: 'raw_materials',
-                key: 'name'
-            }
+      },
+      status: {
+        type: Sequelize.STRING,
+        default: "pending",
+      },
+      truck_details: {
+        type: Sequelize.JSONB,
+        allowNull: true,
+      },
+      sample_image: Sequelize.JSONB,
+      sample_quantity: Sequelize.DECIMAL,
+      bags: Sequelize.INTEGER,
+      quantity_ordered: Sequelize.DECIMAL,
+      quantity_received: Sequelize.DECIMAL,
+      warehoused_date: { type: Sequelize.DATE, allowNull: true },
+      unit: Sequelize.STRING,
+      price: Sequelize.DECIMAL,
+      order_date: Sequelize.DATE,
+      store_date: Sequelize.DATE,
+      est_arrival_date: { type: Sequelize.DATE, allowNull: true },
+      arrival_date: Sequelize.DATE,
+    },
+    {
+      timestamps: true,
+
+      indexes: [
+        { fields: ["raw_material_name"] }, // JOIN RawMaterial
+        { fields: ["vendor"] }, // vendor lookup
+        { fields: ["status"] },
+
+        { fields: ["status", "order_date"] },
+        { fields: ["vendor", "status"] },
+      ],
+      hooks: {
+        beforeValidate(instance) {
+          const td = instance.truck_details || {};
+
+          instance.truck_details = {
+            truck_weight: td.truck_weight ?? null,
+            tare_weight: td.tare_weight ?? null,
+            truck_number: td.truck_number ?? null,
+            driver_name: td.driver_name ?? null,
+            challan:
+              td.challan && typeof td.challan === "object"
+                ? {
+                    url: td.challan.url ?? null,
+                    key: td.challan.key ?? null,
+                  }
+                : null,
+          };
         },
-        vendor: {
-            type: Sequelize.STRING,
-            references: {
-                model: "Vendors",
-                key: "name",
-            },
-        },
-        status: {
-            type: Sequelize.STRING,
-            default: 'pending'
-        },
-        truck_details: {
-            type: Sequelize.JSONB,
-            allowNull: true,
-            validate: {
-                isValidTruckDetails(value) {
-                    if (value == null) return; // allow null
+      },
+    },
+  );
 
-                    const requiredFields = ['truck_weight', 'tare_weight', 'challan', 'truck_number', 'driver_name'];
+  RawMaterialOrder.associate = (models) => {
+    RawMaterialOrder.belongsTo(models.RawMaterial, {
+  foreignKey: "raw_material_id",
+  as: "rawMaterial",
+});
+    RawMaterialOrder.belongsTo(models.Vendors, {
+  foreignKey: "vendor_id",
+  as: "vendorData"
+});
 
-                    for (const field of requiredFields) {
-                        if (!(field in value)) {
-                            throw new Error(`Truck detail missing required field: ${field}`);
-                        }
-                    }
+  };
 
-                    if (typeof value.truck_weight !== 'string') throw new Error("truck_weight must be a string");
-                    if (typeof value.tare_weight !== 'string') throw new Error("tare_weight must be a string");
-                    if (typeof value.truck_number !== 'string') throw new Error("truck_number must be a string");
-                    if (typeof value.driver_name !== 'string') throw new Error("driver_name must be a string");
-                    
-                    if (
-                        typeof value.challan !== 'object' ||
-                        value.challan === null 
-                    ) {
-                        throw new Error("challan must be an object with 'url' and 'key' as strings");
-                    }
-                }
-            }
-        },
-        sample_image: Sequelize.JSONB,
-        sample_quantity: Sequelize.DECIMAL,
-        bags: Sequelize.INTEGER,
-        quantity_ordered: Sequelize.DECIMAL,
-        quantity_received: Sequelize.DECIMAL,
-        warehoused_date: { type: Sequelize.DATE, allowNull: true },
-        unit: Sequelize.STRING,
-        price: Sequelize.DECIMAL,
-        order_date: Sequelize.DATE,
-        store_date: Sequelize.DATE,
-        est_arrival_date: { type: Sequelize.DATE, allowNull: true },
-        arrival_date: Sequelize.DATE,
-    }, {
-        timestamps: true,
-
-        indexes: [
-            { fields: ["raw_material_name"] },   // JOIN RawMaterial
-            { fields: ["vendor"] },              // vendor lookup
-            { fields: ["status"] },            
-
-            { fields: ["status", "order_date"] },
-            { fields: ["vendor", "status"] },
-        ]
-    });
-
-    RawMaterialOrder.associate = (models) => {
-        RawMaterialOrder.belongsTo(models.RawMaterial, {
-            foreignKey: 'raw_material_name',
-            targetKey: 'name',
-            as: 'rawMaterial'
-        });
-    };
-    
-
-    return RawMaterialOrder;
+  return RawMaterialOrder;
 };

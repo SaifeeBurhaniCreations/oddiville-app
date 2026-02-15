@@ -100,7 +100,7 @@ function getProductDetailsSection(order, productDetails, totalQuantity, actor) {
   ];
 }
 
-function buildOrderSchemas({ order, chambers, currentUser }) {
+function buildOrderSchemas({ order, chambers, currentUser, packages }) {
   const totalQuantity = getTotalQuantity(order.products || []);
   const productDetails = getProductLabel(order.products || []);
 
@@ -130,7 +130,7 @@ function buildOrderSchemas({ order, chambers, currentUser }) {
         totalQuantity,
         { key: "shipped", value: currentUser?.name ?? "N/A" },
       ),
-      "Truck Detail": {
+      "Truck Details": {
         driverName: order?.truck_details?.driver_name ?? "",
         driverImage: order?.truck_details?.driver_image ?? "",
         number: order?.truck_details?.number ?? "",
