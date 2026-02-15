@@ -19,7 +19,8 @@ const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: getColor("green", 500, 0.05),
-    zIndex: 2,
+    zIndex: 9999,
+    elevation: 9999,
   },
   loaderContainer: {
     flex: 1,

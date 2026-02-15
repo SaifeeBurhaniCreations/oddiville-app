@@ -1,15 +1,15 @@
 import React, { createContext, useContext, useState } from "react";
 import DetailsToast from "../components/ui/DetailsToast";
 
-type ToastType = "success" | "error" | "info";
-
-type ToastContextType = {
+export type Toast = {
   success: (msg: string) => void;
   error: (msg: string) => void;
   info: (msg: string) => void;
 };
 
-const ToastContext = createContext<ToastContextType | null>(null);
+type ToastType = "success" | "error" | "info";
+
+const ToastContext = createContext<Toast | null>(null);
 
 export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
   const [visible, setVisible] = useState(false);
