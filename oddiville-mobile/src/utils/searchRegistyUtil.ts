@@ -6,15 +6,15 @@ import { TruckDetailsProps } from "../hooks/truck";
 import { DispatchOrderData } from "../hooks/dispatchOrder";
 
 export const RAW_MATERIAL_ALL_KEY = ["raw-material-orders", "all"] as const;
-
 export const VENDOR_ALL_KEY = ["vendors"] as const;
 export const PRODUCTION_ALL_KEY = ["production"] as const;
 export const TRUCKS_ALL_KEY = ["Trucks"] as const;
 export const DISPATCH_ORDER_ALL_KEY = ["dispatchOrders"] as const;
+export const PACKING_EVENT_ALL_KEY = ["packing-events"] as const;
 
 export function normalizeRawMaterialOrderToSearchActivity(rm: RawMaterialOrderProps): SearchActivityProps {
   return {
-    id: `raw-ord-${rm.id}`, // optional use for notification
+    id: `raw-ord-${rm.id}`,
     itemId: rm.id,
     title: rm.raw_material_name ?? "Raw material order",
     read: true,
@@ -25,13 +25,17 @@ export function normalizeRawMaterialOrderToSearchActivity(rm: RawMaterialOrderPr
     extra_details: [String(rm.quantity_ordered), rm.est_arrival_date
       ? format(new Date(rm.est_arrival_date), "MMM d, yyyy")
       : "--", String(rm.vendor ?? "")],
-    identifier: "raw-material-ordered",
+    domain: "raw-material-ordered",
+    action: {
+      type: "bottomSheet",
+      key: "raw-material-ordered",
+    }
   };
 }
 
 export function normalizeRawMaterialReachToSearchActivity(rm: RawMaterialOrderProps): SearchActivityProps {
   return {
-    id: `raw-rch-${rm.id}`, // optional use for notification
+    id: `raw-rch-${rm.id}`,
     itemId: rm.id,
     title: rm.raw_material_name ?? "Raw material reach",
     read: true,
@@ -42,13 +46,17 @@ export function normalizeRawMaterialReachToSearchActivity(rm: RawMaterialOrderPr
     extra_details: [String(rm.quantity_ordered), rm.est_arrival_date
       ? format(new Date(rm.est_arrival_date), "MMM d, yyyy")
       : "--", String(rm.vendor ?? "")],
-    identifier: "raw-material-reached",
+    domain: "raw-material-reached",
+    action: {
+      type: "bottomSheet",
+      key: "raw-material-reached",
+    }
   };
 }
 
 export function normalizeVendorToSearchActivity(vendor: Vendor): SearchActivityProps {
   return {
-    id: `vendor-${vendor.id}`, // optional use for notification
+    id: `vendor-${vendor.id}`,
     itemId: vendor.id,
     title: vendor.name ?? "Vendor",
     read: true,
@@ -57,13 +65,17 @@ export function normalizeVendorToSearchActivity(vendor: Vendor): SearchActivityP
     badgeText: vendor.alias ?? null,
     createdAt: new Date(),
     extra_details: [String(vendor.phone), vendor.city, vendor.materials.join(",")],
-    identifier: "raw-material-reached",
+    domain: "vendor",
+    action: {
+      type: "navigate",
+      screen: "vendors",
+    }
   };
 }
 
 export function normalizeProductionStartToSearchActivity(production: Production): SearchActivityProps {
   return {
-    id: `production-start-${production.id}`, // optional use for notification
+    id: `production-start-${production.id}`,
     itemId: production.id,
     title: production.product_name ?? "Production Start",
     read: true,
@@ -77,13 +89,17 @@ export function normalizeProductionStartToSearchActivity(production: Production)
       production.end_time ? format(new Date(production.end_time), "MMM d, yyyy") : "--",
     ],
 
-    identifier: "production-start",
+    domain: "production-start",
+    action: {
+      type: "bottomSheet",
+      key: "production-start",
+    }
   };
 }
 
 export function normalizeProductionCompleteToSearchActivity(production: Production): SearchActivityProps {
   return {
-    id: `production-complete-${production.id}`, // optional use for notification
+    id: `production-complete-${production.id}`,
     itemId: production.id,
     title: production.product_name ?? "Production Completed",
     read: true,
@@ -97,13 +113,17 @@ export function normalizeProductionCompleteToSearchActivity(production: Producti
       production.end_time ? format(new Date(production.end_time), "MMM d, yyyy") : "--",
     ],
 
-    identifier: "production-completed",
+    domain: "production-completed",
+    action: {
+      type: "bottomSheet",
+      key: "production-completed",
+    }
   };
 }
 
 export function normalizeProductionInprogressToSearchActivity(production: Production): SearchActivityProps {
   return {
-    id: `production-inprogress-${production.id}`, // optional use for notification
+    id: `production-inprogress-${production.id}`,
     itemId: production.id,
     title: production.product_name ?? "Production Inprogress",
     read: true,
@@ -117,13 +137,17 @@ export function normalizeProductionInprogressToSearchActivity(production: Produc
       production.end_time ? format(new Date(production.end_time), "MMM d, yyyy") : "--",
     ],
 
-    identifier: "production-completed",
+    domain: "production-start",
+    action: {
+      type: "bottomSheet",
+      key: "production-start",
+    }
   };
 }
 
 export function normalizeTrucksToSearchActivity(truck: TruckDetailsProps): SearchActivityProps {
   return {
-    id: `trucks-${truck.id}`, // optional use for notification
+    id: `trucks-${truck.id}`,
     itemId: truck.id,
     title: truck.agency_name ?? "Trucks",
     read: true,
@@ -135,13 +159,14 @@ export function normalizeTrucksToSearchActivity(truck: TruckDetailsProps): Searc
       truck.driver_name,
       String(truck.phone ?? ""), String(truck.status ?? "--")
     ],
-    identifier: "production-completed",
+    domain: "trucks",
+    action: { type: "none" }
   };
 }
 
 export function normalizeDispatchOrderReadyToSearchActivity(disOrder: DispatchOrderData): SearchActivityProps {
   return {
-    id: `dispatch-order-ready-${disOrder.id}`, // optional use for notification
+    id: `dispatch-order-ready-${disOrder.id}`,
     itemId: disOrder.id,
     title:
       "Order Ready",
@@ -156,14 +181,18 @@ export function normalizeDispatchOrderReadyToSearchActivity(disOrder: DispatchOr
       ? format(new Date(disOrder.est_delivered_date), "MMM d, yyyy")
       : "--"
     ],
-    identifier: "order-ready",
+    domain: "order-ready",
+    action: {
+      type: "bottomSheet",
+      key: "order-ready",
+    }
   };
 }
 
 export function normalizeDispatchOrderShippedToSearchActivity(disOrder: DispatchOrderData): SearchActivityProps {
 
   return {
-    id: `dispatch-order-shipped-${disOrder.id}`, // optional use for notification
+    id: `dispatch-order-shipped-${disOrder.id}`,
     itemId: disOrder.id,
     title:
       "Order Shipped",
@@ -178,14 +207,18 @@ export function normalizeDispatchOrderShippedToSearchActivity(disOrder: Dispatch
       ? format(new Date(disOrder.dispatch_date), "MMM d, yyyy")
       : "--"
     ],
-    identifier: "order-shipped",
+    domain: "order-shipped",
+    action: {
+      type: "bottomSheet",
+      key: "order-shipped",
+    }
   };
 }
 
 export function normalizeDispatchOrderReachedToSearchActivity(disOrder: DispatchOrderData): SearchActivityProps {
-  
+
   return {
-    id: `dispatch-order-reached-${disOrder.id}`, // optional use for notification
+    id: `dispatch-order-reached-${disOrder.id}`,
     itemId: disOrder.id,
     title:
       "Order Reached",
@@ -200,9 +233,66 @@ export function normalizeDispatchOrderReachedToSearchActivity(disOrder: Dispatch
       ? format(new Date(disOrder.delivered_date), "MMM d, yyyy")
       : "--"
     ],
-    identifier: "order-reached",
+    domain: "order-reached",
+    action: {
+      type: "bottomSheet",
+      key: "order-reached",
+    }
   };
 }
+
+export function normalizePackingEventToSearchActivity(event: any): SearchActivityProps {
+  return {
+    id: `packing-${event.id}`,
+    itemId: event.id,
+    title: event.product_name ?? "Packing",
+    read: true,
+    extraData: undefined,
+    type: "PACKING COMPLETED",
+    badgeText: `${event.bagsProduced ?? 0} bags`,
+    createdAt: event.createdAt ? new Date(event.createdAt) : new Date(),
+    extra_details: [
+      String(event.skuLabel ?? ""),
+      `${event.totalPacketsProduced ?? 0} packets`,
+      `rating ${event.rating ?? 5}`,
+    ],
+    domain: "packing-event",
+    action: {
+      type: "navigate",
+      screen: "package",
+    }
+  };
+}
+
+export function normalizePackage(pkg: any): SearchActivityProps {
+  const totalQty =
+    pkg.types?.reduce(
+      (sum: number, t: any) => sum + Number(t.quantity || 0),
+      0
+    ) ?? 0;
+
+  return {
+    id: `package-${pkg.id}`,
+    itemId: pkg.id,
+    title: pkg.product_name ?? "Package",
+    read: true,
+    extraData: undefined,
+    type: "PACKAGE STOCK",
+    badgeText: `${totalQty} available`,
+    createdAt: new Date(),
+
+    extra_details: (pkg.types ?? []).map(
+      (t: any) => `${t.size}${t.unit ?? ""} (${t.quantity})`
+    ),
+
+    domain: "package-inventory",
+    action: {
+      type: "navigate",
+      screen: "package",
+    }
+  };
+}
+
 
 export const searchRegistry = {
   "raw-material-ordered": {
@@ -244,6 +334,14 @@ export const searchRegistry = {
   "order-reached": {
     normalize: normalizeDispatchOrderReachedToSearchActivity,
     queryKey: DISPATCH_ORDER_ALL_KEY,
+  },
+  "packing-event": {
+    normalize: normalizePackingEventToSearchActivity,
+    queryKey: PACKING_EVENT_ALL_KEY,
+  },
+  "package-inventory": {
+    normalize: normalizePackage,
+    queryKey: ["packages"],
   },
 } as const;
 

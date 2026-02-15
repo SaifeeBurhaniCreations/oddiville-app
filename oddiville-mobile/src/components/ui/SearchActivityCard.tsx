@@ -26,22 +26,21 @@ const SearchActivityCard = ({ activity, color, bgSvg: BgSvg, style, onPress }: S
     const dispatch = useDispatch<AppDispatch>();
     const tagColor = color === "yellow" ? "green" : "yellow";
     const typeColor = color === "red" ? "green" : "red";
-    const {
-      type,
-      createdAt,
-      href,
-      id,
-      itemId,
-      identifier = "filter",
-      params,
-      dateDescription,
-      title,
-      badgeText,
-      extra_details,
-      buttons,
-      read,
-      extraData,
-    } = activity;
+const {
+  type,
+  createdAt,
+  id,
+  itemId,
+  params,
+  dateDescription,
+  title,
+  badgeText,
+  extra_details,
+  buttons,
+  read,
+  extraData,
+  action,
+} = activity;
     
     useEffect(() => {
         const getUserFromStorage = async () => {
@@ -65,40 +64,41 @@ const SearchActivityCard = ({ activity, color, bgSvg: BgSvg, style, onPress }: S
 
     const markRead = useMarkNotificationRead();
 
-    // const markInfoRead = useMarkNotificationRead(username, "notifications-informative");
-    // const markActionableRead = useMarkNotificationRead(username, "notifications-actionable");
-    // const markTodayRead = useMarkNotificationRead(username, "notifications-today");
+  const handleCardPress = () => {
+  if (!action) return;
 
-    // const markNotificationRead =
-    //   typeof identifier === "string" && isActionableNotification(identifier)
-    //     ? markActionableRead
-    //     : typeof identifier === "string" &&  isTodaysNotification(identifier)
-    //     ? markTodayRead
-    //     : markInfoRead;
+  switch (action.type) {
+    case "navigate":
+      goTo(action.screen, params);
+      break;
 
-    const handleCardPress = () => {
-        if (href) {
-            goTo(href, params);
-        } else {
-          
-            identifier && identifier !== null && identifier !== undefined && onPress(itemId, identifier);
-            if(meta?.type === "order-ready") {
-                dispatch(updateBottomSheetMeta({ ...meta, data: extraData }));
-            }
-              
-            if (id) {
-              markRead.mutate({
-                id,
-                read: true,
-                updateQueryKeys: [
-                  ["notifications", "informative"],
-                  ["notifications", "actionable"],
-                  ["notifications", "today"],
-                ],
-              });
-            }
-        }
-    };
+    case "bottomSheet":
+      onPress?.(itemId, action.key);
+
+      if (meta?.type === action.key) {
+        dispatch(updateBottomSheetMeta({ ...meta, data: extraData }));
+      }
+      break;
+
+    case "none":
+    default:
+      return;
+  }
+
+  // mark read (kept global — works for search too)
+  if (id) {
+    markRead.mutate({
+      id,
+      read: true,
+      updateQueryKeys: [
+        ["notifications", "informative"],
+        ["notifications", "actionable"],
+        ["notifications", "today"],
+      ],
+    });
+  }
+};
+
 
     return (
       <Pressable style={[styles.container, style]} onPress={handleCardPress}>

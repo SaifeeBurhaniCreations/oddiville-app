@@ -7,45 +7,37 @@ import {
   Platform,
 } from "react-native";
 import SearchInput from "@/src/components/ui/SearchInput";
-import { useCallback, useEffect, useMemo, useState } from "react";
 import Chip from "@/src/components/ui/Chip";
 import BellRingingIcon from "@/src/components/icons/page/BellringingIcon";
 import HistoryIcon from "@/src/components/icons/page/HistoryIcon";
 import { getColor } from "@/src/constants/colors";
 import EmptyState from "@/src/components/ui/EmptyState";
-import RecentSearchItem from "@/src/components/ui/RecentSearchTerm";
-import { B5, H2 } from "@/src/components/typography/Typography";
-import Button from "@/src/components/ui/Buttons/Button";
+import { H2 } from "@/src/components/typography/Typography";
 import { useParams } from "@/src/hooks/useParams";
 import BackButton from "@/src/components/ui/Buttons/BackButton";
-import { useInformativeNotifications } from "@/src/hooks/useNotifications";
-import { AdminNotification } from "@/src/types/notification";
-import { ActivityProps } from "@/src/types";
 import SearchActivitesFlatList from "@/src/components/ui/SearchActivitesFlatList";
-import { useGlobalSearch } from "@/src/hooks/globalSearch";
-import { getCreatedAt, getDescription } from "@/src/utils/formatUtils";
-import useDebouncedValue from "@/src/utils/debounceUtil";
 import PageHeader from "@/src/components/ui/PageHeader";
 import type { SearchRegistryKey } from "@/src/utils/searchRegistyUtil";
+import { useSearchController } from "@/src/hooks/useSearchController";
 
 type ChipItem = {
   text: string;
   icon: JSX.Element;
   key: SearchRegistryKey;
-  isActive: boolean;
 };
 
-const initialChips: ChipItem[] = [
-  { text: "Raw material ordered", icon: <HistoryIcon />, key: "raw-material-ordered", isActive: false },
-  { text: "Order shipped", icon: <BellRingingIcon />, key: "order-shipped", isActive: false },
-  { text: "Raw material reached", icon: <HistoryIcon />, key: "raw-material-reached", isActive: false },
-  { text: "Order ready", icon: <BellRingingIcon />, key: "order-ready", isActive: false },
-  { text: "Order reached", icon: <BellRingingIcon />, key: "order-reached", isActive: false },
-  { text: "Vendors", icon: <HistoryIcon />, key: "vendor", isActive: false },
-  { text: "Production Start", icon: <BellRingingIcon />, key: "production-start", isActive: false },
-  { text: "Production Completed", icon: <BellRingingIcon />, key: "production-completed", isActive: false },
-  { text: "Production Inprogress", icon: <BellRingingIcon />, key: "production-inprogress", isActive: false },
-  { text: "Trucks", icon: <HistoryIcon />, key: "trucks", isActive: false },
+const chips: ChipItem[] = [
+  { text: "Raw material ordered", icon: <HistoryIcon />, key: "raw-material-ordered" },
+  { text: "Order shipped", icon: <BellRingingIcon />, key: "order-shipped" },
+  { text: "Raw material reached", icon: <HistoryIcon />, key: "raw-material-reached" },
+  { text: "Order ready", icon: <BellRingingIcon />, key: "order-ready" },
+  { text: "Order reached", icon: <BellRingingIcon />, key: "order-reached" },
+  { text: "Vendors", icon: <HistoryIcon />, key: "vendor" },
+  { text: "Production Start", icon: <BellRingingIcon />, key: "production-start" },
+  { text: "Production Completed", icon: <BellRingingIcon />, key: "production-completed" },
+  { text: "Production Inprogress", icon: <BellRingingIcon />, key: "production-inprogress" },
+  { text: "Trucks", icon: <HistoryIcon />, key: "trucks" },
+{ text: "Packing", icon: <HistoryIcon />, key: "packing-event" },
 ];
 
 const KEYBOARD_VERTICAL_OFFSET = Platform.OS === "ios" ? 88 : 0;
@@ -54,72 +46,75 @@ const SearchResultsScreen = () => {
   const { query } = useParams("search-results", "query");
   const queryString = typeof query === "string" ? query : "";
 
-  const [searchText, setSearchText] = useState(queryString || "");
-  const [searchedState, setSearchedState] = useState(false);
+  const search = useSearchController(queryString);
 
-  const [chipList, setChipList] = useState(() => initialChips);
-
-  const selectedKeys = useMemo(
-    () => chipList.filter((c) => c.isActive).map((c) => c.key),
-    [chipList]
-  );
-
-  const debouncedSelectedKeys = useDebouncedValue<SearchRegistryKey[]>(selectedKeys, 300);
-  const debouncedSearchText = useDebouncedValue(searchText, 300);
-
-  const { items: activities = [], count = 0 } =
-    useGlobalSearch(debouncedSelectedKeys, debouncedSearchText);
-
-  const [recentSearchTerm, setRecentSearchTerm] = useState<string[]>([]);
-  const isRecentSearch = recentSearchTerm.length > 0;
-
-  const informativeNotificationsDataFormatter = (data: AdminNotification[] = []): ActivityProps[] =>
-    data.map((val: any) => ({
-      id: val.id ?? "unknown",
-      itemId: val.itemId ?? "unknown",
-      title: val.title,
-      type: val.type,
-      read: val.read,
-      createdAt: getCreatedAt(val),
-      extra_details: getDescription(val),
-      identifier: val.identifier,
-    }));
-
-  const {
-    data: informativenotifications,
-    fetchNextPage: fetchNextInformativePage,
-    hasNextPage: hasNextInformativePage,
-    isFetchingNextPage: isFetchingNextInformativePage,
-    isFetching: isFetchingInformativeNotifications,
-    refetch: refetchInformative,
-  } = useInformativeNotifications();
-
-  const formatedInformativeNotifications = informativeNotificationsDataFormatter(informativenotifications ?? []);
-
-  const toggleChip = useCallback((index: number) => {
-    setChipList((prev) => {
-      const copy = prev.slice();
-      copy[index] = { ...copy[index], isActive: !copy[index].isActive };
-      return copy;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!searchText && selectedKeys.length === 0) {
-      setSearchedState(false);
-    }
-  }, [searchText, selectedKeys]);
-
+  /* ---------------- Handlers ---------------- */
 
   const handleSearchInputChange = (text: string) => {
-    setSearchText(text);
+    search.updateQuery(text);
   };
 
   const handleSubmit = () => {
-    setSearchedState(true);
+    search.submitSearch();
   };
 
-  const handleOpen = async () => {};
+  /* ---------------- UI ---------------- */
+
+  const renderContent = () => {
+    if (search.phase === "idle") {
+      return (
+        <View style={styles.emptyWrapper}>
+          <EmptyState
+            stateData={{
+              title: "Start typing to search",
+              description: "Search across orders, vendors, production, trucks & packing",
+            }}
+            color="green"
+          />
+        </View>
+      );
+    }
+
+    if (search.phase === "loading") {
+      return (
+        <View style={styles.emptyWrapper}>
+          <EmptyState
+            stateData={{
+              title: "Searching...",
+              description: "Preparing results",
+            }}
+            color="green"
+          />
+        </View>
+      );
+    }
+
+    if (search.phase === "empty") {
+      return (
+        <View style={styles.emptyWrapper}>
+          <EmptyState
+            stateData={{
+              title: "No results found",
+              description: "Try different keywords or filters",
+            }}
+            color="green"
+          />
+        </View>
+      );
+    }
+
+    return (
+      <View style={{ flex: 1, gap: 24 }}>
+        <H2 style={{ paddingHorizontal: 24 }}>
+          Search result: {search.rawCount}
+        </H2>
+
+        <SearchActivitesFlatList
+          activities={search.results.map(doc => doc.activity)}
+        />
+      </View>
+    );
+  };
 
   return (
     <View style={styles.pageContainer}>
@@ -130,116 +125,37 @@ const SearchResultsScreen = () => {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           keyboardVerticalOffset={KEYBOARD_VERTICAL_OFFSET}
         >
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            contentContainerStyle={{
-              flexGrow: 1,
-              justifyContent: "flex-start",
-              paddingBottom: Platform.OS === "ios" ? 0 : 24,
-            }}
-          >
+          <ScrollView keyboardShouldPersistTaps="handled">
             <View style={styles.wrapContainer}>
               <BackButton label="Search result" backRoute="home" style={{ marginHorizontal: 16 }} />
 
               <SearchInput
-                value={searchText}
+                value={search.query}
                 defaultValue={queryString}
                 onChangeText={handleSearchInputChange}
                 onSubmitEditing={handleSubmit}
                 returnKeyType="search"
-                border={true}
-                cross={true}
+                border
+                cross
                 w={0.92}
                 style={{ marginHorizontal: 16 }}
               />
 
-              <View
-                style={[
-                  styles.centeredChips,
-                  {
-                    borderBottomWidth: searchedState ? 0 : 1,
-                    paddingBottom: searchedState ? 0 : 24,
-                  },
-                ]}
-              >
-                {(() => {
-                  const withIndex = chipList.map((c, i) => ({ ...c, originalIndex: i }));
-                  const chipsToRender = searchedState ? withIndex.filter((c) => c.isActive) : withIndex;
-                  return chipsToRender.map((chip) => (
-                    <Chip key={chip.key}
- icon={chip.icon} isActive={chip.isActive} onPress={() => toggleChip(chip.originalIndex)}>
-                      {chip.text}
-                    </Chip>
-                  ));
-                })()}
+              {/* FILTER CHIPS */}
+              <View style={styles.centeredChips}>
+                {chips.map((chip) => (
+                  <Chip
+                    key={chip.key}
+                    icon={chip.icon}
+                    isActive={search.filters.includes(chip.key)}
+                    onPress={() => search.toggleFilter(chip.key)}
+                  >
+                    {chip.text}
+                  </Chip>
+                ))}
               </View>
 
-              {isRecentSearch && !searchedState ? (
-                <View style={styles.flexFill}>
-                  <View style={styles.recentSearchWrapper}>
-                    <B5 style={{ textTransform: "uppercase" }}>Recent search</B5>
-                    <ScrollView style={{ width: "100%" }}>
-                      <View style={[styles.recentSearchList, { width: "100%" }]}>
-                        {recentSearchTerm.map((value, index) => (
-                          <RecentSearchItem
-                            color="green"
-                            key={value}
-                            recentSearchTerm={recentSearchTerm}
-                            setRecentSearchTerm={setRecentSearchTerm}
-                            index={index}
-                          >
-                            {value}
-                          </RecentSearchItem>
-                        ))}
-                      </View>
-                    </ScrollView>
-                  </View>
-
-                  <Button variant="fill" color="green" style={{ textAlign: "center" }}>
-                    View all searches
-                  </Button>
-                </View>
-              ) : searchedState ? (
-                <View style={{ flex: 1, flexDirection: "column", gap: 24 }}>
-                  <H2 style={{ paddingHorizontal: 24 }}>Search result: {count}</H2>
-
-                  <SearchActivitesFlatList
-                    isVirtualised={false}
-                    onPress={handleOpen}
-                    fetchMore={() => {
-                      if (hasNextInformativePage && !isFetchingNextInformativePage) fetchNextInformativePage();
-                    }}
-                    style={{ paddingHorizontal: 16 }}
-                    hasMore={hasNextInformativePage ?? false}
-                    activities={activities}
-                    isLoading={isFetchingInformativeNotifications}
-                    listKey={"global_search"}
-                    extraData={formatedInformativeNotifications}
-                    refetch={refetchInformative}
-                  />
-                </View>
-              ) : (
-                <View style={styles.emptyWrapper}>
-                  <EmptyState
-                    stateData={{
-                      title: "No recent search yet",
-                      description: "'Recent Search' shows the last 30 days, auto-deleting after.",
-                    }}
-                    color="green"
-                    style={{
-                      flexDirection: "column",
-                      gap: 24,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      maxWidth: 270,
-                      flexGrow: 1,
-                      minHeight: 300,
-                      paddingBottom: 24,
-                    }}
-                  />
-                </View>
-              )}
+              {renderContent()}
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -254,12 +170,9 @@ const styles = StyleSheet.create({
   pageContainer: {
     flex: 1,
     backgroundColor: getColor("green", 500),
-    position: "relative",
   },
   wrapper: {
     flex: 1,
-    flexDirection: "column",
-    gap: 24,
     backgroundColor: getColor("light", 200),
     borderTopStartRadius: 16,
     borderTopEndRadius: 16,
@@ -274,31 +187,12 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: getColor("green", 100),
-    paddingBottom: 24,
+    paddingBottom: 16,
   },
-
   emptyWrapper: {
     flex: 1,
-    width: "100%",
+    minHeight: 300,
     alignItems: "center",
     justifyContent: "center",
-  },
-  flexFill: {
-    flex: 1,
-    flexDirection: "column",
-    justifyContent: "space-between",
-  },
-  recentSearchWrapper: {
-    flex: 1,
-    flexDirection: "column",
-    gap: 16,
-    width: "100%",
-  },
-  recentSearchList: {
-    flexDirection: "column",
-    gap: 16,
-    width: "100%",
   },
 });
