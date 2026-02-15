@@ -43,6 +43,7 @@ resetToAddMode
 
       <div className="card-body">
         <Banners
+          key={editMode ? getBanners : "new"}
           name="Upload Product Image"
           getBanners={getBanners}
           deleteBanners={deleteBanners}

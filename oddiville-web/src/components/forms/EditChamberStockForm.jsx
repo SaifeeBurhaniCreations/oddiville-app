@@ -2,6 +2,10 @@ import ChamberStockTable from "@/components/tables/ChamberStockTable";
 import { useChambers, useChamberstock } from "../../hooks/chamberStock";
 import { useArrayTransformer } from "../../sbc/utils/arrayTransformer/useArrayTransformer";
 import { useMemo } from "react";
+import { usePackages } from "../../hooks/Packages";
+
+const normalize = (str) =>
+  (str || "").toLowerCase().replace(/\s+/g, " ").trim();
 
 const resolveChamberName = (c, lookup) => {
   const cid = c.id ?? c.chamberId ?? c._id;
@@ -18,14 +22,26 @@ const resolveChamberName = (c, lookup) => {
 };
 
 const ChamberStockForm = ({ id, form, isLoading, handleSubmit, handleExit }) => {
-  const { values, errors, setField, isValid } = form;
   const { isLoading: isChamberStockLoading, data: chamberStock } =
     useChamberstock();
 
   const { data: chambers, isLoading: isChamberLoading, error } = useChambers();
 
 const chamberStockSafe = Array.isArray(chamberStock) ? chamberStock : [];
+const { data: packages = [] } = usePackages("");
 
+  const packageImageMap = useMemo(() => {
+    const map = {};
+
+    packages.forEach((pkg) => {
+      const key = normalize(pkg.product_name);
+      if (!key) return;
+
+      map[key] = pkg?.image?.url || pkg?.package_image?.url || "";
+    });
+
+    return map;
+  }, [packages]);
   const chamberLookup = useMemo(() => {
     const m = new Map();
     (Array.isArray(chambers) ? chambers : []).forEach((c) => {
@@ -35,26 +51,34 @@ const chamberStockSafe = Array.isArray(chamberStock) ? chamberStock : [];
     return m;
   }, [chambers]);
 
-  const { data: transformed = [] } = useArrayTransformer(
-    chamberStockSafe,
-    {
-      deepClone: true,
-      map: (service) => {
-        if (!Array.isArray(service.chamber)) return service;
-        const s = { ...service };
-        s.chamber = s.chamber.map((c) => ({
+const { data: transformed = [] } = useArrayTransformer(
+  chamberStockSafe,
+  {
+    deepClone: true,
+    map: (service) => {
+      if (!Array.isArray(service.chamber)) return service;
+
+      const s = { ...service };
+
+      const pkgImage = packageImageMap[normalize(service.product_name)] || "";
+
+      if (service.category === "packed" && !service.image) {
+        s.image = pkgImage;
+      }
+
+      s.chamber = s.chamber.map((c) => ({
         ...c,
         chamber_name:
           c.chamber_name && c.chamber_name.trim() !== ""
             ? c.chamber_name
             : resolveChamberName(c, chamberLookup),
-
       }));
-       return s;
-      },
+
+      return s;
     },
-    [chamberLookup]
-  );
+  },
+  [chamberLookup, packageImageMap]
+);
 
   if (isChamberStockLoading || isChamberLoading) return <div>Loading…</div>;
   

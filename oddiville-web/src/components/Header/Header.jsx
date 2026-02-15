@@ -1,16 +1,11 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
-const formatBreadcrumb = (str) =>
-  str
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+import { getBreadcrumbs } from "../../util/getBreadcrumbs";
 
 const Header = ({ onSidebarToggle }) => {
   const location = useLocation();
-  const pathnames = location.pathname.split("/").filter((x) => x);
+const crumbs = getBreadcrumbs(location.pathname);
 
   return (
     <>
@@ -30,35 +25,24 @@ const Header = ({ onSidebarToggle }) => {
           <nav aria-label="breadcrumb">
             <ol className="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
               <li className="breadcrumb-item text-sm">
-                <NavLink className="opacity-5 text-dark" to="/">
-                  Home
-                </NavLink>
-              </li>
-              {pathnames.map((name, index) => {
-                const routeTo = `/${pathnames.slice(0, index + 1).join("/")}`;
-                const isLast = index === pathnames.length - 1;
-                return isLast ? (
-                  <li
-                    className="breadcrumb-item text-sm text-dark active"
-                    aria-current="page"
-                    key={name}
-                  >
-                    {formatBreadcrumb(name)}
-                  </li>
-                ) : (
-                  <li className="breadcrumb-item text-sm" key={name}>
-                    <NavLink className="opacity-5 text-dark" to={routeTo}>
-                      {formatBreadcrumb(name)}
-                    </NavLink>
-                  </li>
-                );
-              })}
+  <NavLink className="opacity-5 text-dark" to="/">
+    Home
+  </NavLink>
+</li>
+
+{crumbs.slice(1).map((c, i) => (
+  <li
+    key={i}
+    className={`breadcrumb-item text-sm ${i === crumbs.length - 2 ? "text-dark active" : ""}`}
+  >
+    {c}
+  </li>
+))}
+
             </ol>
             <h6 className="font-weight-bolder mb-0">
-              {pathnames.length > 0
-                ? formatBreadcrumb(pathnames[pathnames.length - 1])
-                : "Home"}
-            </h6>
+  {crumbs[crumbs.length - 1]}
+</h6>
           </nav>
           <div
             className="collapse navbar-collapse mt-sm-0 mt-2 me-md-0 me-sm-4"

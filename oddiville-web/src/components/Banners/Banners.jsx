@@ -13,6 +13,20 @@ const Banners = ({
   const [banner, setBanner] = useState({ banner: null, preview: "" });
   const [typeCheckError, setTypeCheckError] = useState("");
 
+  useEffect(() => {
+  if (!getBanners) return;
+
+  setBanner({
+    banner: null,
+    preview: typeof getBanners === "string" ? getBanners : getBanners?.url
+  });
+}, [getBanners]);
+
+  useEffect(() => {
+    fetchBanners?.(banner.banner);
+  }, [banner.banner]);
+
+
  const updateBanner = (file) => {
   if (!file) return;
 
@@ -29,19 +43,10 @@ const Banners = ({
   reader.onload = () => {
     setBanner({ banner: file, preview: reader.result });
 
-    // ✅ THIS IS THE FIX
     onFileChange?.(file);
   };
   reader.readAsDataURL(file);
 };
-
-
-  
-
-  useEffect(() => {
-    fetchBanners?.(banner.banner);
-  }, [banner.banner]);
-
   return (
     <>
       <input
@@ -97,7 +102,7 @@ const Banners = ({
               </div>
 
               <img
-                src={banner?.preview || getBanners?.url || "/assets/img/png/fallback_img.png"}
+                src={banner?.preview || "/assets/img/png/fallback_img.png"}
                 alt="Preview"
                 className="img-fluid rounded shadow-sm"
                 style={{ maxHeight: "200px", objectFit: "cover" }}
@@ -110,7 +115,11 @@ const Banners = ({
                   <div className="mb-2">
                     <button
                       type="button"
-                      onClick={() => setBanner({ banner: null, preview: "" })}
+                      onClick={() => {
+                        setBanner({ banner: null, preview: "" });
+onFileChange?.(null);
+                      }
+}
                       className="btn btn-sm btn-outline-danger"
                     >
                       Remove

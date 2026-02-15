@@ -9,7 +9,9 @@ const create = async(formData) => {
 const modify = async(dataModel) => {
     const { id, formData } = dataModel
 
-    const response = await api.patch(`/other-product/${id}`, formData)
+    const response = await api.patch(`/other-product/${id}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  })
     return response;
 }
 

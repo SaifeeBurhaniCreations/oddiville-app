@@ -3,40 +3,6 @@ import { useCallback } from "react";
 export default function useInventoryValidator() {
   const STEP_RULES = {
     1: {
-      name: "Raw Material",
-      requiredColumns: [
-        "raw_material_name",
-        "vendor",
-        "quantity_ordered",
-        "unit",
-        "order_date",
-        "est_arrival_date",
-        "arrival_date",
-        "truck_weight",
-        "tare_weight",
-        "truck_loaded_weight",
-        "truck_number",
-        "driver_name",
-        "rating",
-        "quantity_received",
-        "price",
-      ],
-      validators: {
-        Quantity: (v) =>
-          v === "" || v == null
-            ? "Quantity is required"
-            : isFinite(Number(v))
-            ? null
-            : "Quantity must be a number",
-        HSN: (v) =>
-          v === "" || v == null
-            ? "HSN is required"
-            : /^\d+$/.test(String(v).trim())
-            ? null
-            : "HSN must be numeric",
-      },
-    },
-    2: {
       name: "Vendor",
       requiredColumns: [
         "name",
@@ -46,40 +12,33 @@ export default function useInventoryValidator() {
         "address",
         "materials",
       ],
-      validators: {
-        Quantity: (v) =>
-          v === "" || v == null
-            ? "Quantity is required"
-            : isFinite(Number(v))
-            ? null
-            : "Quantity must be a number",
-      },
     },
-    // 2: {
-    //   name: "Production",
-    //   requiredColumns: [
-    //     "product_name",
-    //     "raw_material_name",
-    //     "quantity",
-    //     "unit",
-    //     "status",
-    //     "start_time",
-    //     "end_time",
-    //     "wastage_quantity",
-    //     "supervisor",
-    //     "lane",
-    //     "recovery",
-    //     "rating",
-    //   ],
-    //   validators: {
-    //     Quantity: (v) =>
-    //       v === "" || v == null
-    //         ? "Quantity is required"
-    //         : isFinite(Number(v))
-    //         ? null
-    //         : "Quantity must be a number",
-    //   },
-    // },
+    2: {
+      name: "Raw Material",
+      requiredColumns: [
+        "raw_material_name",
+        "vendor",
+        "quantity_ordered",
+        "unit",
+        "order_date",
+        "est_arrival_date",
+        "arrival_date",
+        "gross_weight",
+        "tare_weight",
+        "truck_number",
+        "driver_name",
+        "rating",
+        "quantity_received",
+        "price",
+      ],
+      validators: {
+        gross_weight: (v) =>
+          isFinite(Number(v)) ? null : "Gross weight must be a number",
+
+        tare_weight: (v) =>
+          isFinite(Number(v)) ? null : "Tare weight must be a number",
+      }
+    },
     3: {
       name: "Chamber Stock",
       requiredColumns: [
@@ -88,73 +47,77 @@ export default function useInventoryValidator() {
         "unit",
         "chamber_name",
         "bags",
+        "size_value",
+        "size_unit",
         "packets_per_bag",
         "rating",
       ],
- validators: {
-    Quantity: (v) =>
-      v === "" || v == null
-        ? "Quantity is required"
-        : isFinite(Number(v))
-        ? null
-        : "Quantity must be a number",
+      validators: {
+        bags: (v) =>
+          v === "" || v == null
+            ? "Bags is required"
+            : isFinite(Number(v))
+              ? null
+              : "Bags must be a number",
 
-    rating: (v) => {
-      const n = Number(v);
-      if (!Number.isFinite(n)) return "Rating must be a number";
-      if (n < 1 || n > 5) return "Rating must be between 1 and 5";
-      return null;
-    },
-      packets_per_bag: (v) => {
-      const n = Number(v);
-      if (!Number.isInteger(n)) return "Packets per bag must be an integer";
-      if (n <= 0) return "Packets per bag must be greater than 0";
-      return null;
-    }
-  },
+        size_value: (v) =>
+          v === "" || v == null
+            ? "Size value is required"
+            : isFinite(Number(v))
+              ? null
+              : "Size value must be a number",
+
+        packets_per_bag: (v) =>
+          v === "" || v == null
+            ? null
+            : isFinite(Number(v))
+              ? null
+              : "Packets per bag must be a number",
+      },
     },
     4: {
       name: "Dispatch",
       requiredColumns: [
         "customer_name",
+        "address",
+        "state",
+        "country",
+        "city",
         "status",
         "est_delivered_date",
-        // "dispatch_date",
-        // "delivered_date",
         "amount",
         "product_name",
-        "product_bags",
-        "product_chamber",
+        "chamber_id",
+        "dispatch_quantity",
         "package_size",
-        "package_quantity",
         "package_unit",
-        "truck_weight",
+        "gross_weight",
         "tare_weight",
-        "truck_loaded_weight",
         "truck_number",
         "truck_agency",
         "truck_driver",
         "truck_phone",
       ],
-    validators: {
-        Quantity: (v) =>
-          v === "" || v == null
-            ? "Quantity is required"
-            : isFinite(Number(v))
-            ? null
-                : "Quantity must be a number",
-          },
-        },
+    }
   };
 
-  const normalize = (s) => (s == null ? "" : String(s).trim().toLowerCase());
+  const normalize = (s) =>
+    s == null
+      ? ""
+      : String(s)
+        .normalize("NFKD")
+        .replace(/[^\w\s]/g, "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_");
 
-  const rowsToObjects = (rows2D) => {
+  const rowsToObjects = (rows2D, rule) => {
     if (!Array.isArray(rows2D) || rows2D.length === 0)
       return { headers: [], headerNormToOriginal: {}, objects: [] };
 
     const rawHeaders = rows2D[0].map((h) => (h == null ? "" : String(h)));
     const headerNormToOriginal = {};
+
     const normalizedHeaders = rawHeaders.map((h) => {
       const n = normalize(h);
       if (!(n in headerNormToOriginal))
@@ -162,7 +125,33 @@ export default function useInventoryValidator() {
       return n;
     });
 
-    const dataRows = rows2D.slice(1);
+    const requiredNorms = rule.requiredColumns.map((c) => normalize(c));
+
+    const dataRows = rows2D.slice(1).filter((row) => {
+      if (!row || row.length === 0) return false;
+      
+      let filledRequired = 0;
+
+      requiredNorms.forEach((reqNorm) => {
+        const header = headerNormToOriginal[reqNorm];
+        if (!header) return;
+
+        const index = rawHeaders.indexOf(header);
+        const value = row[index];
+
+        if (
+          value != null &&
+          String(value).trim() !== "" &&
+          String(value).trim() !== "`" &&
+          String(value).trim() !== "-"
+        ) {
+          filledRequired++;
+        }
+      });
+
+      return filledRequired > 0;
+    });
+
     const objects = dataRows.map((row) => {
       const obj = {};
       for (let i = 0; i < normalizedHeaders.length; i++) {
@@ -181,8 +170,10 @@ export default function useInventoryValidator() {
     };
   };
 
+
   const validateExcel = useCallback((rows2D, step = 1) => {
     const rule = STEP_RULES[step];
+    
     if (!rule) {
       return {
         errors: [
@@ -196,7 +187,7 @@ export default function useInventoryValidator() {
     }
 
     const { headerNormToOriginal, objects, normalizedHeaders } =
-      rowsToObjects(rows2D);
+      rowsToObjects(rows2D, rule);
 
     const availableNorms = {};
     Object.keys(headerNormToOriginal).forEach((norm) => {
@@ -221,6 +212,7 @@ export default function useInventoryValidator() {
     });
 
     objects.forEach((rowObj, idx) => {
+
       const rowNumber = idx + 2; 
       rule.requiredColumns.forEach((reqCol) => {
         const normReq = normalize(reqCol);
