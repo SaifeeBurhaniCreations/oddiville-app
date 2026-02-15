@@ -21,27 +21,36 @@ require('dotenv').config()
 const { Sequelize } = require('sequelize');
 
 const sequelize = new Sequelize(
-  process.env.DATABASE_NAME, 
-  process.env.DATABASE_USERNAME, 
-  process.env.DATABASE_PASSWORD, 
+  process.env.DATABASE_NAME,
+  process.env.DATABASE_USERNAME,
+  process.env.DATABASE_PASSWORD,
   {
-    host: process.env.DATABASE_HOST,        
-    port: process.env.DATABASE_PORT,         
-    dialect: 'postgres',
+    host: process.env.DATABASE_HOST,
+    port: process.env.DATABASE_PORT,
+    dialect: "postgres",
+
+    logging: (msg, timing) => {
+      console.log("SQL:", msg);
+      if (timing) console.log("TIME:", timing);
+    },
+    benchmark: true,
+    logQueryParameters: true,
+
     dialectOptions: {
-      // ssl: {
-      //   ca: process.env.DATABASE_CA_PATH,
-      // }
       ssl: {
         ca: fs.readFileSync(process.env.DATABASE_CA_PATH).toString(),
-      }
+        rejectUnauthorized: false,
+      },
+      statement_timeout: 0,
+      query_timeout: 0,
     },
+
     pool: {
       max: 5,
       min: 0,
       acquire: 30000,
       idle: 10000,
-    }
+    },
   }
 );
 
