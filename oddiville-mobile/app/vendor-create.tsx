@@ -27,14 +27,11 @@ import {
 } from "@/src/redux/slices/bottomsheet/raw-material.slice";
 import { useFormValidator } from "@/src/sbc/form";
 import FormField from "@/src/sbc/form/FormField";
-import DetailsToast from "@/src/components/ui/DetailsToast";
 import {
   clearCity,
   clearLocations,
   setCity,
-  setCitySearched,
   setState,
-  setStateSearched,
 } from "@/src/redux/slices/bottomsheet/location.slice";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { getLimitedMaterialNames } from "@/src/utils/arrayUtils";
@@ -44,7 +41,6 @@ import {
   useUpdateVendor,
   useVendorById,
 } from "@/src/hooks/vendor";
-import { queryClient } from "@/src/lib/react-query";
 import OverlayLoader from "@/src/components/ui/OverlayLoader";
 import { useToast } from "@/src/context/ToastContext";
 
@@ -588,11 +584,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: getColor("green", 500, 0.05),
     zIndex: 2,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   keyboardAvoidingView: {
     flex: 1,

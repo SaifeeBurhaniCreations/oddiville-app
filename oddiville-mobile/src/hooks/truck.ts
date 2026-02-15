@@ -113,8 +113,8 @@ export function useTruckById(id: string | null) {
 export function useCreateTruck() {
   const queryClient = useQueryClient();
 
-  return useMutation<TruckDetailsProps, unknown, Partial<TruckDetailsProps>>({
-    mutationFn: async (data) => {
+  return useMutation<TruckDetailsProps, unknown, FormData>({
+    mutationFn: async (data: FormData) => {
       const response = await createTruck(data);
       return response.data as TruckDetailsProps;
     },
@@ -136,7 +136,7 @@ export function useCreateTruck() {
 export function useUpdateTruck() {
   const queryClient = useQueryClient();
 
-  return useMutation<TruckDetailsProps, unknown, { id: string; data: Partial<TruckDetailsProps> }>({
+  return useMutation<TruckDetailsProps, unknown, { id: string; data: FormData }>({
     mutationFn: async ({ id, data }) => {
       const response = await updateTruck({ id, data });
       return response.data as TruckDetailsProps;

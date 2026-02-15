@@ -28,6 +28,7 @@ import { SocketProvider } from "@/src/context/SocketProvider";
 import Constants from "expo-constants";
 import { ToastProvider } from "@/src/context/ToastContext";
 import { usePathname } from "expo-router";
+import { OverlayLoaderProvider } from "@/src/context/OverlayLoaderContext";
 
 function InnerLayout() {
   const { role } = useAuth();
@@ -113,6 +114,7 @@ export default function RootLayout() {
       >
         <Provider store={store}>
           <MultiToggleProvider>
+            <OverlayLoaderProvider>
             <ToastProvider>
             <SocketProvider url={apiUrl}>
                 <AuthProvider>
@@ -129,6 +131,7 @@ export default function RootLayout() {
                 </AuthProvider>
             </SocketProvider>
             </ToastProvider>
+            </OverlayLoaderProvider>
           </MultiToggleProvider>
         </Provider>
       </PersistQueryClientProvider>

@@ -13,6 +13,7 @@ import { useVendors } from "@/src/hooks/vendor";
 import Loader from "@/src/components/ui/Loader";
 import { runFilter } from "@/src/utils/bottomSheetUtils";
 import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
 const VendorsScreen = () => {
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
@@ -111,13 +112,7 @@ const VendorsScreen = () => {
           onActionPress={handlePress}
         />
 
-        {(isVendorLoading || isLoading) && (
-          <View style={styles.overlay}>
-            <View style={styles.loaderContainer}>
-              <Loader />
-            </View>
-          </View>
-        )}
+       {(isVendorLoading || isLoading) && <OverlayLoader />}
       </View>
     </View>
   );
@@ -153,10 +148,5 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: getColor("green", 500, 0.05),
     zIndex: 2,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
 });

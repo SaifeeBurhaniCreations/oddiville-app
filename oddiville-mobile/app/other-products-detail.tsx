@@ -29,6 +29,7 @@ import PriceInput from "@/src/components/ui/Inputs/PriceInput";
 import { useToast } from "@/src/context/ToastContext";
 import OverlayLoader from "@/src/components/ui/OverlayLoader";
 import { useQueryClient } from "@tanstack/react-query";
+import Require from "@/src/components/authentication/Require";
 
 
 export type OthersProductForm = {
@@ -60,7 +61,7 @@ const sumRecordValues = (obj: Record<string, number> | undefined) =>
     0
   );
 
-  
+
 const OthersProductScreen = () => {
   const { data } = useParams("other-products-detail", "data");
   const queryClient = useQueryClient();
@@ -97,7 +98,7 @@ const OthersProductScreen = () => {
   const productIds: string[] | undefined = otherProduct?.chambers?.map(
     (product) => product?.id
   );
-  
+
   const queryIds = productIds ?? null;
 
   const { data: chamberData } = useChamberById(null, queryIds);
@@ -164,10 +165,10 @@ const OthersProductScreen = () => {
       }
     );
 
-    const totalAdd = sumRecordValues(values.add_quantity);
-    const totalSub = sumRecordValues(values.sub_quantity);
+  const totalAdd = sumRecordValues(values.add_quantity);
+  const totalSub = sumRecordValues(values.sub_quantity);
 
-    const isAllZero = totalAdd === 0 && totalSub === 0;
+  const isAllZero = totalAdd === 0 && totalSub === 0;
 
   useEffect(() => {
     if (!stockData?.chamber) return;
@@ -245,101 +246,97 @@ const OthersProductScreen = () => {
   // console.log("chambers", stockData?.chamber);
 
   return (
-    <View style={styles.pageContainer}>
-      <PageHeader page={"Third Party Booking"} />
-      <View style={styles.wrapper}>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={[styles.VStack, styles.gap16]}>
-            <BackButton
-              label="Detail"
-              backRoute="chambers"
-              style={styles.pX16}
-            />
-            <View style={styles.supervisroCard}>
-              <SupervisorOrderDetailsCard
-                order={orderDetail}
-                color="green"
-                bgSvg={DatabaseIcon}
+    <Require admin>
+      <View style={styles.pageContainer}>
+        <PageHeader page={"Third Party Booking"} />
+        <View style={styles.wrapper}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={[styles.VStack, styles.gap16]}>
+              <BackButton
+                label="Detail"
+                backRoute="chambers"
+                style={styles.pX16}
               />
-            </View>
-            {/* , "Dispatch History" */}
-            <Tabs
-              tabTitles={["Dispatch Entry"]}
-              color="green"
-              style={styles.flexGrow}
-            >
-              <View
-                style={[
-                  styles.flexGrow,
-                  styles.VStack,
-                  styles.gap8,
-                  styles.mt16,
-                ]}
-              >
-                {stockData?.chamber?.map((chamber: StockChamber) => (
-                  <ItemsRepeater
-                    key={chamber.id}
-                    title={
-                      chamberMap[chamber.id]?.chamber_name ?? "Unknown Chamber"
-                    }
-                    description={chamber.quantity}
-                  >
-                    <PriceInput
-                      value={String(values.add_quantity?.[chamber.id] ?? "")}
-                      onChangeText={(text) => {
-                        const num = Number(text) || 0;
-                        setField("add_quantity", {
-                          ...(values.add_quantity || {}),
-                          [chamber.id]: num,
-                        });
-                      }}
-                      placeholder="Enter quantity"
-                      addonText="Kg"
-                      error={(errors as any)?.add_quantity?.[chamber.id]}
-                      style={styles.flexGrow}
-                    >
-                      (+) Add Quantity
-                    </PriceInput>
-
-                    <PriceInput
-                      value={String(values.sub_quantity?.[chamber.id] ?? "")}
-                      onChangeText={(text) => {
-                        const num = Number(text) || 0;
-                        setField("sub_quantity", {
-                          ...(values.sub_quantity || {}),
-                          [chamber.id]: num,
-                        });
-                      }}
-                      placeholder="Enter quantity"
-                      addonText="Kg"
-                      error={(errors as any)?.sub_quantity?.[chamber.id]}
-                      style={styles.flexGrow}
-                    >
-                      (-) Substract Quantity
-                    </PriceInput>
-                  </ItemsRepeater>
-                ))}
+              <View style={styles.supervisroCard}>
+                <SupervisorOrderDetailsCard
+                  order={orderDetail}
+                  color="green"
+                  bgSvg={DatabaseIcon}
+                />
               </View>
-            </Tabs>
-          </View>
-        </ScrollView>
-        <Button
-          variant="fill"
-          onPress={onSubmit}
-          disabled={!isValid || isAllZero || !otherProductData}
-          style={styles.mx16}
-        >
-          Done
-        </Button>
-      </View>
-      {isLoading && !updateMutation.isSuccess && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <Loader />
-          </View>
+              {/* , "Dispatch History" */}
+              <Tabs
+                tabTitles={["Dispatch Entry"]}
+                color="green"
+                style={styles.flexGrow}
+              >
+                <View
+                  style={[
+                    styles.flexGrow,
+                    styles.VStack,
+                    styles.gap8,
+                    styles.mt16,
+                  ]}
+                >
+                  {stockData?.chamber?.map((chamber: StockChamber) => (
+                    <ItemsRepeater
+                      key={chamber.id}
+                      title={
+                        chamberMap[chamber.id]?.chamber_name ?? "Unknown Chamber"
+                      }
+                      description={chamber.quantity}
+                    >
+                      <PriceInput
+                        value={String(values.add_quantity?.[chamber.id] ?? "")}
+                        onChangeText={(text) => {
+                          const num = Number(text) || 0;
+                          setField("add_quantity", {
+                            ...(values.add_quantity || {}),
+                            [chamber.id]: num,
+                          });
+                        }}
+                        placeholder="Enter quantity"
+                        addonText="Kg"
+                        error={(errors as any)?.add_quantity?.[chamber.id]}
+                        style={styles.flexGrow}
+                      >
+                        (+) Add Quantity
+                      </PriceInput>
+
+                      <PriceInput
+                        value={String(values.sub_quantity?.[chamber.id] ?? "")}
+                        onChangeText={(text) => {
+                          const num = Number(text) || 0;
+                          setField("sub_quantity", {
+                            ...(values.sub_quantity || {}),
+                            [chamber.id]: num,
+                          });
+                        }}
+                        placeholder="Enter quantity"
+                        addonText="Kg"
+                        error={(errors as any)?.sub_quantity?.[chamber.id]}
+                        style={styles.flexGrow}
+                      >
+                        (-) Substract Quantity
+                      </PriceInput>
+                    </ItemsRepeater>
+                  ))}
+                </View>
+              </Tabs>
+            </View>
+          </ScrollView>
+          <Button
+            variant="fill"
+            onPress={onSubmit}
+            disabled={!isValid || isAllZero || !otherProductData}
+            style={styles.mx16}
+          >
+            Done
+          </Button>
         </View>
-      )}
-    </View>
+        {isLoading && !updateMutation.isSuccess && <OverlayLoader />}
+      </View>
+    </Require>
   );
 };
 
@@ -392,11 +389,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: getColor("green", 500, 0.005),
     zIndex: 2,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   supervisroCard: {
     backgroundColor: getColor("light", 200),

@@ -36,7 +36,7 @@ import { clearAdmin } from "@/src/redux/slices/admin.slice";
 import { useAuth } from "@/src/context/AuthContext";
 import { closeFab } from "@/src/redux/slices/fab.Slice";
 import { useRouter } from "expo-router";
-import { resolveAccess } from "@/src/utils/policiesUtils";
+import { canView, isSingleModuleUser, resolveAccess } from "@/src/utils/policiesUtils";
 
 const user1 = require("@/src/assets/images/users/user-1.png");
 
@@ -106,6 +106,20 @@ const MenuSheet = () => {
 
   const access = resolveAccess(admin && admin?.role, admin && admin?.policies);
 
+  const canPurchase = canView(access.purchase);
+const canSales = canView(access.sales);
+const canProduction = canView(access.production);
+const canPackage = canView(access.package);
+const canTrucks = canView(access.trucks);
+const canLabours = canView(access.labours);
+
+// behaviour
+const onlyPurchaseUser = isSingleModuleUser(access, "purchase");
+const onlySalesUser = isSingleModuleUser(access, "sales");
+const onlyProductionUser = isSingleModuleUser(access, "production");
+const onlyPackageUser = isSingleModuleUser(access, "package");
+const onlyTrucksUser = isSingleModuleUser(access, "trucks");
+const onlyLaboursUser = isSingleModuleUser(access, "labours");
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {isOpen && (
@@ -176,90 +190,56 @@ const MenuSheet = () => {
             </View>
           </View>
 
-          <ScrollView contentContainerStyle={styles.contentContainer}>
-            <View style={styles.navigationContainer}>
-              {/* Admin / Superadmin */}
-              {access.isFullAccess &&
-                MENU_ITEMS.map((item) => (
-                  <MenuCard
-                    key={item.name}
-                    item={item}
-                    onPress={handleMenuPress}
-                  />
-                ))}
+<ScrollView contentContainerStyle={styles.contentContainer}>
+  <View style={styles.navigationContainer}>
 
-              {/* Policy-based roles */}
-              {!access.isFullAccess && (
-                <>
-                  {/* Base */}
-                  {(access.purchase.view || access.purchase.edit || access.production || access.package || access.sales.view || access.sales.edit) &&
-                    CHAMBERS_MENU_ITEMS.map((item) => (
-                      <MenuCard
-                        key={item.name}
-                        item={item}
-                        onPress={handleMenuPress}
-                      />
-                    ))}
+    {/* Admin */}
+    {access.isFullAccess &&
+      MENU_ITEMS.map((item) => (
+        <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
+      ))}
 
-                  {/* Features */}
-                  {(access.purchase.view || access.purchase.edit) &&
-                    PURCHASE_MENU_ITEMS.map((item) => (
-                      <MenuCard
-                        key={item.name}
-                        item={item}
-                        onPress={handleMenuPress}
-                      />
-                    ))}
+    {/* Operator roles */}
+    {!access.isFullAccess && !onlyPurchaseUser && !onlySalesUser && !onlyProductionUser && !onlyPackageUser && !onlyTrucksUser && !onlyLaboursUser && (
+      <>
+        {(canProduction || canPackage || canSales) &&
+          CHAMBERS_MENU_ITEMS.map((item) => (
+            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
+          ))}
 
-                  {access.production &&
-                    PRODUCTION_MENU_ITEMS.map((item) => (
-                      <MenuCard
-                        key={item.name}
-                        item={item}
-                        onPress={handleMenuPress}
-                      />
-                    ))}
+        {canPurchase &&
+          PURCHASE_MENU_ITEMS.map((item) => (
+            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
+          ))}
 
-                  {access.package &&
-                    PACKAGE_MENU_ITEMS.map((item) => (
-                      <MenuCard
-                        key={item.name}
-                        item={item}
-                        onPress={handleMenuPress}
-                      />
-                    ))}
+        {canProduction &&
+          PRODUCTION_MENU_ITEMS.map((item) => (
+            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
+          ))}
 
-                  {(access.sales.view || access.sales.edit) && 
-                    DISPATCH_MENU_ITEMS.map((item) => (
-                      <MenuCard
-                        key={item.name}
-                        item={item}
-                        onPress={handleMenuPress}
-                      />
-                    ))}
+        {canPackage &&
+          PACKAGE_MENU_ITEMS.map((item) => (
+            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
+          ))}
 
-                     {access.trucks &&
-                    TRUCKS_MENU_ITEMS.map((item) => (
-                      <MenuCard
-                        key={item.name}
-                        item={item}
-                        onPress={handleMenuPress}
-                      />
-                    ))}
+        {canSales &&
+          DISPATCH_MENU_ITEMS.map((item) => (
+            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
+          ))}
 
-                    {access.labours &&
-                    LABOURS_MENU_ITEMS.map((item) => (
-                      <MenuCard
-                        key={item.name}
-                        item={item}
-                        onPress={handleMenuPress}
-                      />
-                    ))}
+        {canTrucks &&
+          TRUCKS_MENU_ITEMS.map((item) => (
+            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
+          ))}
 
-                </>
-              )}
-            </View>
-          </ScrollView>
+        {canLabours &&
+          LABOURS_MENU_ITEMS.map((item) => (
+            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
+          ))}
+      </>
+    )}
+  </View>
+</ScrollView>
 
           <TouchableOpacity
             activeOpacity={0.7}

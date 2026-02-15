@@ -35,14 +35,14 @@ import { getColor } from "../src/constants/colors";
 import PencilIcon from "../src/components/icons/common/PencilIcon";
 import { useDispatch } from "react-redux";
 import { setAdmin } from "../src/redux/slices/admin.slice";
-import DetailsToast from "../src/components/ui/DetailsToast";
 import * as SecureStorage from "expo-secure-store";
 import { useRouter } from "expo-router";
+import { useToast } from "@/src/context/ToastContext";
 
 const LoginScreen = () => {
   const dispatch = useDispatch();
 const router = useRouter();
-
+const toast = useToast();
   const otpRefs = Array.from({ length: 4 }, () => React.createRef<any>());
 
   const [loading, setLoading] = useState(false);
@@ -52,12 +52,6 @@ const router = useRouter();
   const [checkOtpState, setcheckOtpState] = useState<
     "error" | "default" | "success"
   >("default");
-
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastType, setToastType] = useState<"success" | "error" | "info">(
-    "info"
-  );
-  const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
     const checkOtpState = async () => {
@@ -150,13 +144,13 @@ const router = useRouter();
         dispatch(setAdmin(authData));
 router.replace("/");
 
-        showToast("success", "Login successfully!");
+        toast.success("Login successfully!");
       }
     } catch (error: any) {
       console.log("Login failed:", error.response?.data || error.message);
       const errorMsg =
         error.response?.data?.message || error.message || "Unknown error";
-      showToast("error", `Login failed: ${errorMsg}`);
+      toast.error(`Login failed: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -209,11 +203,6 @@ router.replace("/");
     }
   };
 
-  const showToast = (type: "success" | "error" | "info", message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setToastVisible(true);
-  };
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: "#fff" }}
@@ -229,20 +218,13 @@ router.replace("/");
             <View style={styles.loginWrapper}>
               <View style={styles.headerContent}>
                 <BoldHeading>Let’s you in</BoldHeading>
-                <Alert
+                {/* <Alert
                   color={"blue"}
                   text="If you're a new user, please log in with your phone number. If you're an existing user, please log in with your email."
-                />
+                /> */}
               </View>
 
-              <ButtonTab
-                activeIndex={activeTabIndex}
-                onChange={handleTabChange}
-                tabs={[
-                  {
-                    label: "Email",
-                    content: (
-                      <View style={styles.tabContainer} key="email-tab">
+            <View style={styles.tabContainer} key="email-tab">
                         <View style={styles.textContainer}>
                           <View>
                             <H2 style={{ fontFamily: "FunnelSans-SemiBold" }}>
@@ -297,130 +279,6 @@ router.replace("/");
                           />
                         </View>
                       </View>
-                    ),
-                  },
-                  {
-                    label: "Phone mobile",
-                    content: !showOtpInput ? (
-                      <View style={styles.tabContainer} key="phone-tab">
-                        <View style={styles.textContainer}>
-                          <View>
-                            <H2 style={{ fontFamily: "FunnelSans-SemiBold" }}>
-                              Hey mate,
-                            </H2>
-                            <H2>Welcome to Oddiville!</H2>
-                          </View>
-                          <B4 color={getColor("green", 300)}>
-                            Enter your phone number & get OTP to Verify.
-                          </B4>
-                        </View>
-
-                        {/* Phone number Field */}
-                        <Controller
-                          control={controlPhone}
-                          name="userphone"
-                          render={({ field: { onChange, onBlur, value } }) => (
-                            <Input
-                              placeholder="Enter new number"
-                              value={value}
-                              addonText="+91"
-                              onChangeText={(text: string) => {
-                                const numericText = text.replace(/[^0-9]/g, "");
-                                onChange(numericText);
-                              }}
-                              onBlur={onBlur}
-                              error={errorsPhone.userphone?.message}
-                              keyboardType="phone-pad"
-                              secureTextEntry={true}
-                              maxLength={10}
-                            >
-                              Phone number
-                            </Input>
-                          )}
-                        />
-                      </View>
-                    ) : (
-                      <View style={styles.tabContainer} key="phone-tab">
-                        <View style={styles.textContainer}>
-                          <View>
-                            <H2 style={{ fontFamily: "FunnelSans-SemiBold" }}>
-                              Enter OTP
-                            </H2>
-                          </View>
-                          <View style={styles.otpDesc}>
-                            <B4 color={getColor("green", 400)}>
-                              We are sent a 4-digit code to{" "}
-                              <B4 color={getColor("green", 700)}>+91***90</B4>
-                            </B4>
-                            <PencilIcon color={getColor("green")} size={16} />
-                            <B3 color={getColor("green")}>Edit</B3>
-                          </View>
-                        </View>
-                        <View style={styles.otpWithErrorContainer}>
-                          <View style={styles.otpContainer}>
-                            {Array.from({ length: 4 }).map((_, index) => (
-                              <Controller
-                                key={index}
-                                control={controlPhone}
-                                name={`otp.${index}`}
-                                render={({
-                                  field: { onChange, onBlur, value },
-                                }) => (
-                                  <Input
-                                    ref={otpRefs[index]}
-                                    value={value}
-                                    onChangeText={(text: string) => {
-                                      const digit = text.replace(/[^0-9]/g, "");
-                                      onChange(digit);
-                                      // Move focus to next input if available
-                                      if (digit?.length === 1 && index < 3) {
-                                        otpRefs[index + 1]?.current?.focus();
-                                      }
-                                    }}
-                                    onBlur={onBlur}
-                                    keyboardType="numeric"
-                                    maxLength={1}
-                                    inputStyle={{
-                                      height: 60,
-                                      textAlign: "center",
-                                    }}
-                                    status={checkOtpState}
-                                    manualErrorMessage="Sorry, the OTP you entered is invalid."
-                                  />
-                                )}
-                              />
-                            ))}
-                          </View>
-                          {checkOtpState === "error" && (
-                            <B3 color={getColor("red", 700)}>
-                              Sorry, the OTP you entered is invalid.
-                            </B3>
-                          )}
-                        </View>
-
-                        <View style={styles.expireTime}>
-                          <B4 color={getColor("green", 400)}>
-                            Don’t receive code?
-                          </B4>
-                          {secondsLeft > 0 ? (
-                            <B3 color={getColor("green")}>
-                              {" "}
-                              {`${String(Math.floor(secondsLeft / 60)).padStart(
-                                2,
-                                "0"
-                              )}:${String(secondsLeft % 60).padStart(2, "0")}`}
-                            </B3>
-                          ) : (
-                            <Pressable onPress={handleResendOtp}>
-                              <B3 color="green">Resend OTP</B3>
-                            </Pressable>
-                          )}
-                        </View>
-                      </View>
-                    ),
-                  },
-                ]}
-              />
 
               {/* Login Button */}
               <View style={styles.loginButtonWrapper}>
@@ -461,12 +319,6 @@ router.replace("/");
                 </View>
               )}
             </View>
-            <DetailsToast
-              type={toastType}
-              message={toastMessage}
-              visible={toastVisible}
-              onHide={() => setToastVisible(false)}
-            />
           </ScrollView>
         </View>
       </TouchableWithoutFeedback>

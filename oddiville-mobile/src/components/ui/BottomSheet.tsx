@@ -281,16 +281,6 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
           value &&
           typeof value === "object" &&
           value.quantity > 0,
-
-          // value &&
-          // typeof value === "object" &&
-          // "quantity" in value &&
-          // value.quantity !== 0 &&
-          // value.quantity !== null &&
-          // value.quantity !== undefined &&
-          // value.rating !== 0 &&
-          // value.rating !== null &&
-          // value.rating !== undefined,
           message: `Selected chamber must have some quantity!`,
         },
       ];

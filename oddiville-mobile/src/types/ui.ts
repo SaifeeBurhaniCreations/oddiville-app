@@ -20,6 +20,7 @@ import { z } from "zod";
 import { TextInput } from "react-native";
 import { DispatchOrderData } from "../hooks/dispatchOrder";
 import { PackageItemLocal as DispatchPackageItem } from "@/src/hooks/useChamberStock"
+import { SearchRegistryKey } from "../utils/searchRegistyUtil";
 export interface TagProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   color?: "red" | "green" | "blue" | "yellow";
@@ -238,7 +239,12 @@ export interface ActivityProps {
   color?: "red" | "yellow" | "green" | null;
 }
 
-export interface SearchActivityProps {
+export type SearchActivityAction =
+  | { type: "bottomSheet"; key: BottomSheetSchemaKey }
+  | { type: "navigate"; screen: keyof RootStackParamList }
+  | { type: "none" };
+
+export type SearchActivityProps = {
   id: string;
   itemId: string;
   title: string;
@@ -250,10 +256,14 @@ export interface SearchActivityProps {
   createdAt?: Date;
   extra_details: string[];
   buttons?: ActionButtonConfig[];
-  href?: keyof RootStackParamList;
-  identifier: BottomSheetSchemaKey | null;
   params?: any;
-}
+
+  /** 🔥 NEW — used by filters */
+  domain: SearchRegistryKey;
+
+  /** 🔥 NEW — used by UI interaction */
+  action?: SearchActivityAction;
+};
 
 // export interface SupervisorCardDetailsProps {
 //     name?: string;
@@ -406,7 +416,7 @@ export interface InputProps {
 export interface loaderProps {
   size?: number;
   strokeWidth?: number;
-  color?: "red" | "blue" | "green" | "yellow";
+  color?: "red" | "blue" | "green" | "yellow" | "light";
   style?: any;
   withOverlay?: boolean;
 }

@@ -29,6 +29,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/src/redux/store";
 import { runFilter } from "@/src/utils/bottomSheetUtils";
 import { FilterNode } from "@/src/redux/slices/bottomsheet/filters.slice";
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
 const informativeNotificationsDataFormatter = (
   data: AdminNotification[]
@@ -331,16 +332,11 @@ useEffect(() => {
       </View>
 
       <BottomSheet color="green" />
-      {(isLoading ||
+
+       {(isLoading ||
         isFetchingInformativeNotifications ||
         isFetchingActionableNotifications ||
-        isFetchingTodaysNotifications) && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <Loader />
-          </View>
-        </View>
-      )}
+        isFetchingTodaysNotifications) && <OverlayLoader />}
     </View>
   );
 };
@@ -365,11 +361,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: getColor("green", 500, 0.05),
     zIndex: 2,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
     searchinputWrapper: {
     height: 44,

@@ -11,7 +11,6 @@ import Input from "@/src/components/ui/Inputs/Input";
 import Select from "@/src/components/ui/Select";
 import StepLineComponent from "@/src/components/ui/StepLineComponent";
 import EmptyState from "@/src/components/ui/EmptyState";
-import DetailsToast from "@/src/components/ui/DetailsToast";
 import Loader from "@/src/components/ui/Loader";
 import BottomSheet from "@/src/components/ui/BottomSheet";
 import FormField from "@/src/sbc/form/FormField";

@@ -22,6 +22,7 @@ import { setDeleteUserPopup } from "@/src/redux/slices/delete-popup-slice";
 import { removeUser } from "@/src/services/user.service";
 import { useAuth } from "@/src/context/AuthContext";
 import { resolveAccess } from "@/src/utils/policiesUtils";
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
 const UserScreen = () => {
       const { role, policies } = useAuth();
@@ -132,13 +133,7 @@ const UserScreen = () => {
           />
         </View>
       </View>
-      {userFetching && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <Loader />
-          </View>
-        </View>
-      )}
+      {userFetching && <OverlayLoader />}
 
       <Modal
         showPopup={showDeletePopup}
@@ -204,10 +199,5 @@ const styles = StyleSheet.create({
   },
   gap8: {
     gap: 8,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
 });

@@ -25,16 +25,16 @@ import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { useParams } from "@/src/hooks/useParams";
 import { useUpdateUser, useUserByUsername } from "@/src/hooks/user";
 import { selectRole } from "@/src/redux/slices/select-role";
-import DetailsToast from "@/src/components/ui/DetailsToast";
 import ChipGroup from "@/src/components/ui/ChipGroup";
 import { allowedPolicies } from "@/src/constants/allowedPolicies";
 import { clearPolicies, setPolicies } from "@/src/redux/slices/bottomsheet/policies.slice";
 import { useAuth } from "@/src/context/AuthContext";
 import { resolveAccess } from "@/src/utils/policiesUtils";
+import { useToast } from "@/src/context/ToastContext";
 
 const EditUserScreen = () => {
     const { role, policies } = useAuth();
-    
+    const toast = useToast();
     const safeRole = role ?? "guest";
     const safePolicies = policies ?? [];
     const access = resolveAccess(safeRole, safePolicies);
@@ -175,12 +175,6 @@ const EditUserScreen = () => {
     }
   }, [isSelectionDone, selectedPolicies, setField, values.policies]);
 
-    const showToast = (type: "success" | "error" | "info", message: string) => {
-      setToastType(type);
-      setToastMessage(message);
-      setToastVisible(true);
-    };
-
     if (!access.isFullAccess) {
       return null;
     }
@@ -201,9 +195,7 @@ const EditUserScreen = () => {
           { username, data: result.data },
           {
             onSuccess: (updatedUser) => {
-              showToast(
-                "success",
-                `User '${updatedUser.name}' successfully updated!`
+              toast.success(`User '${updatedUser.name}' successfully updated!`
               );
               // console.log("updated", updatedUser);
             },
@@ -358,12 +350,7 @@ const EditUserScreen = () => {
           </View>
         )}
       </KeyboardAvoidingView>
-      <DetailsToast
-        type={toastType}
-        message={toastMessage}
-        visible={toastVisible}
-        onHide={() => setToastVisible(false)}
-      />
+    
     </View>
   );
 };

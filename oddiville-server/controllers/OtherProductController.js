@@ -16,6 +16,24 @@ const upload = require("../middlewares/upload");
 const { extractKeyFromUrl } = require("../utils/fileUtils");
 const { linkStockToChambers } = require("../utils/stockUtils");
 
+function parseProductsFromMultipart(body) {
+  const products = {};
+
+  for (const key in body) {
+    const match = key.match(/^products\[(\d+)\]\[(.+)\]$/);
+    if (!match) continue;
+
+    const index = match[1];
+    const field = match[2];
+
+    if (!products[index]) products[index] = {};
+    products[index][field] = body[key];
+  }
+
+  return Object.values(products);
+}
+
+
 router.get("/", async (req, res) => {
   try {
     const clients = await thirdPartyClient.findAll();
@@ -507,47 +525,93 @@ router.patch("/:id", upload.any(), async (req, res) => {
       return res.status(404).json({ error: "Client not found" });
     }
 
-    /* =====================
-         1️⃣ UPDATE BASIC DATA
-         ===================== */
     const { name, company, address, phone } = req.body;
 
     await client.update({ name, company, address, phone }, { transaction: t });
 
-    /* =====================
-         2️⃣ UPDATE PRODUCTS
-         ===================== */
-    let products = [];
+    const products = parseProductsFromMultipart(req.body);
+    const deleted = JSON.parse(req.body.deleted_products || "[]");
 
-    try {
-      if (req.body.products) {
-        products =
-          typeof req.body.products === "string"
-            ? JSON.parse(req.body.products)
-            : req.body.products;
+    const productIdMap = {};
+
+    for (let i = 0; i < products.length; i++) {
+      const prod = products[i];
+      const isNew = !prod.id || prod.id === "";
+
+      const selectedChambers = JSON.parse(prod.selectedChambers || "[]");
+
+      if (deleted.includes(prod.id)) {
+        await otherItemClient.destroy({
+          where: { client_id: client.id, product_id: prod.id },
+          transaction: t
+        });
+        continue;
       }
-    } catch (e) {
-      return res.status(400).json({ error: "Invalid products payload" });
-    }
-    console.log("products", products);
 
-    /* =====================
-         3️⃣ HANDLE IMAGES (OPTIONAL)
-         ===================== */
+      /* ---------- CREATE --------- */
+      if (isNew) {
+        const stock = await stockClient.create({
+          product_name: prod.product_name,
+          category: "other",
+          unit: "kg",
+          chamber: selectedChambers.map(c => ({
+            id: c.id,
+            quantity: String(c.quantity || 0)
+          }))
+        }, { transaction: t });
+
+        await otherItemClient.create({
+          product_id: stock.id,
+          client_id: client.id,
+          stored_quantity: selectedChambers.reduce((s,c)=>s+Number(c.quantity||0),0),
+          rent: prod.rent,
+          stored_date: new Date(),
+          est_dispatch_date: prod.est_dispatch_date || null,
+        }, { transaction: t });
+
+        productIdMap[i] = stock.id;  
+        continue;
+      }
+
+      /* ---------- UPDATE ---------- */
+      const existingItem = await otherItemClient.findOne({
+        where: { client_id: client.id, product_id: prod.id },
+        transaction: t,
+        lock: t.LOCK.UPDATE
+      });
+
+      if (!existingItem) continue;
+
+      await existingItem.update({
+        rent: prod.rent,
+        est_dispatch_date: prod.est_dispatch_date || null
+      }, { transaction: t });
+
+      await stockClient.update({
+        product_name: prod.product_name,
+        chamber: selectedChambers.map(c => ({
+          id: c.id,
+          quantity: String(c.quantity || 0)
+        }))
+      }, {
+        where: { id: prod.id },
+        transaction: t
+      });
+
+      productIdMap[i] = prod.id;
+    }
+
     if (req.files?.length) {
       for (const file of req.files) {
         const match = file.fieldname.match(/^products\[(\d+)\]\[sample_image\]$/);
         if (!match) continue;
 
         const index = Number(match[1]);
-        const productId = products[index]?.id;
+        const productId = productIdMap[index];
         if (!productId) continue;
 
         const existingItem = await otherItemClient.findOne({
-          where: {
-            client_id: client.id,
-            product_id: productId,
-          },
+          where: { client_id: client.id, product_id: productId },
           transaction: t,
           lock: t.LOCK.UPDATE,
         });
@@ -566,16 +630,25 @@ router.patch("/:id", upload.any(), async (req, res) => {
       }
     }
 
+    const allItems = await otherItemClient.findAll({
+      where: { client_id: client.id },
+      transaction: t
+    });
+
+    await client.update({
+      products: allItems.map(i => i.product_id)
+    }, { transaction: t });
 
     await t.commit();
-
     return res.status(200).json({ message: "Updated successfully" });
+
   } catch (err) {
     await t.rollback();
     console.error("PATCH error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
+
 
 router.patch("/:id/image", upload.single("sample_image"), async (req, res) => {
   const t = await sequelize.transaction();

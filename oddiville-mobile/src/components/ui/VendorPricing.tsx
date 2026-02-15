@@ -4,19 +4,20 @@ import { getColor } from '@/src/constants/colors';
 import { B2, H3, H5 } from '../typography/Typography';
 import PriceInput from './Inputs/PriceInput';
 import { VendorInputState } from '@/src/types';
+import { Toast } from '@/src/context/ToastContext';
 
 const VendorPricing = ({
     values,
     totalWeight,
     onChangeVendors,
-    showToast,
+    toast,
     vendorCount = 0,
 }: {
     values: VendorInputState[];
     totalWeight: number;
     vendorCount: number;
     onChangeVendors: (vendors: VendorInputState[]) => void;
-    showToast: (type: "success" | "error" | "info", message: string) => void;
+    toast: Toast;
 }) => {
     const prevVendorCountRef = useRef<number | null>(null);
 
@@ -83,9 +84,7 @@ const VendorPricing = ({
         const n = updated.length;
 
         if (totalWeight < n) {
-            showToast(
-                'error',
-                `Total weight (${totalWeight} Kg) is less than number of vendors (${n}). Some vendors cannot be assigned at least 1 Kg.`
+            toast.error(`Total weight (${totalWeight} Kg) is less than number of vendors (${n}). Some vendors cannot be assigned at least 1 Kg.`
             );
             return updated;
         }
@@ -111,7 +110,7 @@ const VendorPricing = ({
                 }
             }
             if (over > 0) {
-                showToast('error', 'Unable to ensure every vendor has >=1 Kg without exceeding totalWeight.');
+                toast.error('Unable to ensure every vendor has >=1 Kg without exceeding totalWeight.');
             }
         } else if (sum < totalWeight) {
             let remaining = totalWeight - sum;
@@ -198,7 +197,7 @@ const VendorPricing = ({
                                     if (newQty > remainingQty) {
                                         updated[index].quantity = remainingQty;
                                         onChangeVendors(updated);
-                                        showToast('error', `Only ${remainingQty} Kg left to assign. Value has been adjusted.`);
+                                        toast.error(`Only ${remainingQty} Kg left to assign. Value has been adjusted.`);
                                     } else {
                                         updated[index].quantity = newQty;
                                         onChangeVendors(updated);

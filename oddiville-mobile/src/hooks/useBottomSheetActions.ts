@@ -442,6 +442,7 @@ const actions: Record<string, BottomSheetAction> = {
     dispatch(resetProductStore());
     dispatch(chamberRatingReset());
     dispatch(chamberReset());
+    dispatch(clearUnit());
 
     storeChambersForm.resetForm();
     supervisorProductionForm.resetForm();

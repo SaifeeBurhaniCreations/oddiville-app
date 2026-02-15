@@ -8,7 +8,6 @@ import BackButton from '@/src/components/ui/Buttons/BackButton'
 import SupervisorOrderDetailsCard from '@/src/components/ui/Supervisor/SupervisorOrderDetailsCard'
 import Table from '@/src/components/ui/Table2'
 import Loader from '@/src/components/ui/Loader'
-import DetailsToast from '@/src/components/ui/DetailsToast'
 
 import DatabaseIcon from '@/src/components/icons/page/DatabaseIcon'
 import { useParams } from '@/src/hooks/useParams'
@@ -46,12 +45,6 @@ const SupervisorWorkerDetailsScreen = () => {
     'wId',
     'mode'
   )
-
-  const [toastVisible, setToastVisible] = useState(false)
-  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>(
-    'info'
-  )
-  const [toastMessage, setToastMessage] = useState('')
 
   const {
     contractors,
@@ -205,13 +198,6 @@ const multipleTables = useMemo(() => {
           </View>
         </ScrollView>
       </View>
-
-      <DetailsToast
-        type={toastType}
-        message={toastMessage}
-        visible={toastVisible}
-        onHide={() => setToastVisible(false)}
-      />
 
       <BottomSheet color="green" />
     </View>

@@ -31,6 +31,7 @@ import {
 import Button from "@/src/components/ui/Buttons/Button";
 import { H3 } from "@/src/components/typography/Typography";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
 const categorizeOrders = (
   orders: DispatchOrderList
@@ -178,13 +179,7 @@ const SalesScreen = () => {
         </Tabs>
       </View>
 
-      {showLoader && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <Loader />
-          </View>
-        </View>
-      )}
+      {showLoader && <OverlayLoader />}
 
       <Modal
         showPopup={isCancelOrderModal}
@@ -237,11 +232,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: getColor("green", 500, 0.1),
     zIndex: 2,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   HStack: {
     flexDirection: "row",

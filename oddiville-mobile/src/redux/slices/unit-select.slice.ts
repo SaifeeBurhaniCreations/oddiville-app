@@ -1,8 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+const initialState = { slectedUnit: "gm", source: "add-product-package" };
 const UnitSelectSlice = createSlice({
   name: "unit select",
-  initialState: { slectedUnit: "gm", source: "add-product-package" },
+  initialState,
   reducers: {
     selectUnit: (state, action) => {
       state.slectedUnit = action.payload;
@@ -10,7 +11,7 @@ const UnitSelectSlice = createSlice({
     setSource: (state, action) => {
       state.source = action.payload;
     },
-    clearUnit: () => ({ slectedUnit: "gm", source: "add-product-package" }),
+    clearUnit: () => initialState,
   },
 });
 

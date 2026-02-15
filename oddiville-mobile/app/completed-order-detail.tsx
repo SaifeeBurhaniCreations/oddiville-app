@@ -41,6 +41,7 @@ import {
   productDetails,
   SummaryItem,
 } from "@/src/types";
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
 // ---- Helper: safely convert string | Date | null to Date ----
 const toDate = (value: string | Date | null | undefined): Date | undefined => {
@@ -140,11 +141,11 @@ const formatOrder = {
       title: (item as any).name,
       image: (item as any).image ?? "",
       description,
-      packagesSentence,
+      // packagesSentence,
       weight: `${totalWeight} Kg`,
-      price,
-      packages: allPackages,
-      chambers: (item as any).chambers,
+      // price,
+      // packages: allPackages,
+      // chambers: (item as any).chambers,
     };
   },
 
@@ -310,13 +311,7 @@ const CompletedOrderDetailScreen = () => {
           </View>
         </ScrollView>
       </View>
-      {isLoading && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderContainer}>
-            <Loader />
-          </View>
-        </View>
-      )}
+            {isLoading && <OverlayLoader />}
     </View>
   );
 };
@@ -344,11 +339,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: getColor("green", 500, 0.05),
     zIndex: 2,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   row: {
     flexDirection: "row",

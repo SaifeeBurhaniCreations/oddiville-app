@@ -91,7 +91,7 @@ const Button = ({
         {children}
       </B2>
       {postIcon && <View style={styles.iconContainer}>{postIcon}</View>}
-      {loading && <Loader />}
+      {loading && <Loader color={variant === "fill" ? "light" : "green"} />}
     </View>
   );
 

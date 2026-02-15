@@ -1,5 +1,5 @@
 // 1. React and React Native core
-import React, { useEffect, useMemo} from "react";
+import React, { useEffect, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { FlatList, RefreshControl } from "react-native-gesture-handler";
 
@@ -34,6 +34,35 @@ import { sortBy } from "@/src/utils/numberUtils";
 import OverlayLoader from "../OverlayLoader";
 import { useSelector } from "react-redux";
 import { RootState } from "@/src/redux/store";
+import { useAppCapabilities } from "@/src/hooks/useAppCapabilities";
+
+const PackageSectionHeader = ({
+  canEdit,
+  onAdd,
+}: {
+  canEdit: boolean;
+  onAdd: () => void;
+}) => (
+  <View
+    style={[
+      styles.HStack,
+      styles.justifyBetween,
+      styles.alignCenter,
+      { paddingTop: 16, paddingHorizontal: 16 },
+    ]}
+  >
+    <H3>Package</H3>
+    {canEdit && (
+      <Button
+        variant="outline"
+        size="md"
+        onPress={onAdd}
+      >
+        Add package
+      </Button>
+    )}
+  </View>
+);
 
 const PackingListingSection = ({
   searchText,
@@ -44,7 +73,9 @@ const PackingListingSection = ({
   setSearchText: (text: string) => void;
   setIsLoading: (isLoading: boolean) => void;
 }) => {
+
   // custom hooks start
+  const caps = useAppCapabilities();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const { isProductLoading } = useSelector((state: RootState) => state.product);
   const productPackageForm = useGlobalFormValidator<AddProductPackageForm>(
@@ -68,7 +99,7 @@ const PackingListingSection = ({
   }, [packageData, packageLoading]);
   // custom hooks end
 
-// Effects
+  // Effects
   useEffect(() => {
     setIsLoading(packageLoading);
   }, [packageLoading]);
@@ -112,7 +143,7 @@ const PackingListingSection = ({
             label_second: "Unit",
             keyboardType: "number-pad",
             source: "add-product-package",
-            
+
           },
         },
         {
@@ -134,8 +165,8 @@ const PackingListingSection = ({
               DryChambers.length === 0
                 ? []
                 : DryChambers.map(
-                    (dch: DryChambersTypes) => dch.chamber_name
-                  ),
+                  (dch: DryChambersTypes) => dch.chamber_name
+                ),
             key: "product-package",
           },
         },
@@ -181,70 +212,57 @@ const PackingListingSection = ({
   // functions end
 
   return (
-                <View style={styles.flexGrow}>
-              <View
-                style={[
-                  styles.HStack,
-                  styles.justifyBetween,
-                  styles.alignCenter,
-                  { paddingTop: 16, paddingHorizontal: 16 },
-                ]}
-              >
-                <H3>Package</H3>
-                <Button
-                  variant="outline"
-                  size="md"
-                  onPress={handleOpenAddNewPackage}
-                >
-                  Add package
-                </Button>
-              </View>
-              <View style={styles.searchinputWrapper}>
-                <SearchWithFilter
-                  value={searchText}
-                  onChangeText={(text: string) => setSearchText(text)}
-                  placeholder={"Search by product name"}
-                  onFilterPress={() => {}}
-                />
-              </View>
-              <FlatList
-                style={{ flex: 1, paddingHorizontal: 16 }}
-                data={formattedData}
-                keyExtractor={(item, index) =>
-                  item.id?.toString() ?? index.toString()
-                }
-                renderItem={({ item }) => (
-                  <View style={{ marginBottom: 20 }}>
-                    <PackageCard
-                      name={item.name}
-                      id={item.id}
-                      href={item.href}
-                      bundle={item.bundle}
-                      img={item.img}
-                    />
-                  </View>
-                )}
-                numColumns={2}
-                columnWrapperStyle={{
-                  justifyContent: "space-between",
-                  gap: 8,
-                }}
-                contentContainerStyle={{ paddingBottom: 120 }}
-                refreshControl={
-                  <RefreshControl
-                    refreshing={packageFetching}
-                    onRefresh={packageRefetch}
-                  />
-                }
-                ListEmptyComponent={
-                  <View style={{ alignItems: "center", marginTop: 80 }}>
-                    <EmptyState stateData={emptyStateData} />
-                  </View>
-                }
-              />
+    <View style={styles.flexGrow}>
+      <PackageSectionHeader
+        canEdit={caps.package.edit}
+        onAdd={handleOpenAddNewPackage}
+      />
+      <View style={styles.searchinputWrapper}>
+        <SearchWithFilter
+          value={searchText}
+          onChangeText={(text: string) => setSearchText(text)}
+          placeholder={"Search by product name"}
+          onFilterPress={() => { }}
+        />
+      </View>
+      <FlatList
+        style={{ flex: 1, paddingHorizontal: 16 }}
+        data={formattedData}
+        keyExtractor={(item, index) =>
+          item.id?.toString() ?? index.toString()
+        }
+        renderItem={({ item }) => (
+          <View style={{ marginBottom: 20 }}>
+            <PackageCard
+              name={item.name}
+              id={item.id}
+              href={item.href}
+              bundle={item.bundle}
+              img={item.img}
+            />
+          </View>
+        )}
+        numColumns={2}
+        columnWrapperStyle={{
+          justifyContent: "space-between",
+          gap: 8,
+        }}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={packageFetching}
+            onRefresh={packageRefetch}
+          />
+        }
+        ListEmptyComponent={
+          <View style={{ alignItems: "center", marginTop: 80 }}>
+            <EmptyState stateData={emptyStateData} />
+          </View>
+        }
+      />
       {(isProductLoading) && <OverlayLoader />}
-              
-            </View>
+
+    </View>
   )
 }
 
@@ -260,7 +278,7 @@ const styles = StyleSheet.create({
   alignCenter: {
     alignItems: "center",
   },
-    flexGrow: {
+  flexGrow: {
     flex: 1,
   },
   searchinputWrapper: {

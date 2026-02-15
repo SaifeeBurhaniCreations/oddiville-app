@@ -35,6 +35,11 @@ import { useAuth } from "@/src/context/AuthContext";
 import { useAdmin } from "@/src/hooks/useAdmin";
 import { useUnreadNotificationCount } from "@/src/hooks/useNotifications";
 import HomeLightIcon from "../icons/bottom-bar/HomeLightIcon";
+import LogoutIcon from "../icons/menu/LogoutIcon";
+import { closeMenu } from "@/src/redux/slices/menusheet.slice";
+import { clearAdmin } from "@/src/redux/slices/admin.slice";
+import { useRouter } from "expo-router";
+import { useAppCapabilities } from "@/src/hooks/useAppCapabilities";
 
 type PageVariant =
   | "welcome"
@@ -201,6 +206,11 @@ const BACKGROUND_CONFIG: Record<PageVariant, BgIconConfig[]> = {
 
 const PageHeader = ({ page }: { page: string }) => {
   const { role } = useAuth();
+  const caps = useAppCapabilities();
+
+  const router = useRouter();
+  const { logout } = useAuth();
+
   const admin = useAdmin();
   const { goTo } = useAppNavigation();
   const dispatch = useDispatch();
@@ -209,11 +219,18 @@ const PageHeader = ({ page }: { page: string }) => {
   const bgIcons = BACKGROUND_CONFIG[variant];
   const { total } = useUnreadNotificationCount(admin?.username);
 
-  const notificationCount = total.toString(); 
+  const notificationCount = total.toString();
   const badgeLabel =
     parseInt(notificationCount) > 99 ? "99+" : notificationCount.toString().padStart(2, "0");
 
-    const isWelcome = page === "Welcome";
+  const isWelcome = page === "Welcome";
+
+  const handleLogout = async () => {
+    dispatch(closeMenu());
+    dispatch(clearAdmin());
+    await logout();
+    router.replace("/");
+  };
 
   return (
     <View style={[styles.columnGap12, styles.pageHeader]}>
@@ -230,29 +247,38 @@ const PageHeader = ({ page }: { page: string }) => {
       )}
 
       <View style={styles.headerRow}>
-   {role === "admin" || role === "superadmin" && (
-        <Pressable style={styles.bellIconContainer} onPress={() => goTo("home")}>
-          <HomeLightIcon size={24} />
-          {parseInt(notificationCount) > 0 && (
-            <View style={styles.badgeContainer}>
-              <B6 style={styles.badgeText}>{badgeLabel}</B6>
-            </View>
-          )}
-        </Pressable>
-   )}
+        {role === "admin" || role === "superadmin" && (
+          <Pressable style={styles.iconContainer} onPress={() => goTo("home")}>
+            <HomeLightIcon size={24} />
+            {parseInt(notificationCount) > 0 && (
+              <View style={styles.badgeContainer}>
+                <B6 style={styles.badgeText}>{badgeLabel}</B6>
+              </View>
+            )}
+          </Pressable>
+        )}
 
         <H1 color={getColor("light")} style={styles.headerText}>
           {page}
         </H1>
 
-      {!isWelcome && (
-        <Pressable
-          onPress={() => toggleMenu({ isOpen, dispatch })}
-          style={styles.userIconContainer}
-        >
-          <UserCircleIcon />
-        </Pressable>
-      )}
+        {!isWelcome && (
+          caps.isSingleOperator ? (
+            <Pressable
+              onPress={handleLogout}
+              style={styles.iconContainer}
+            >
+              <LogoutIcon size={24} color={getColor("light")} />
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => toggleMenu({ isOpen, dispatch })}
+              style={styles.iconContainer}
+            >
+              <UserCircleIcon color={getColor("light")} />
+            </Pressable>
+          )
+        )}
       </View>
     </View>
   );
@@ -278,10 +304,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
   },
-  userIconContainer: {
-    paddingHorizontal: 4,
-  },
-  bellIconContainer: {
+  iconContainer: {
     paddingHorizontal: 4,
   },
   badgeContainer: {

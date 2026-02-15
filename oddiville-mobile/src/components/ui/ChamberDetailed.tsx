@@ -2,7 +2,7 @@ import { StyleSheet, View, RefreshControl, FlatList } from "react-native";
 import React, { useState, useMemo, useEffect } from "react";
 import SearchWithFilter from "./Inputs/SearchWithFilter";
 import Select from "./Select";
-import { RawMaterialProps, RootStackParamList } from "@/src/types";
+import { RootStackParamList } from "@/src/types";
 import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
 import { getColor } from "@/src/constants/colors";
 import {
@@ -22,6 +22,16 @@ import { filterHandlers } from "@/src/lookups/filters";
 import { FilterEnum } from "@/src/schemas/BottomSheetSchema";
 import { useRawMaterial } from "@/src/hooks/rawMaterial";
 import OverlayLoader from "./OverlayLoader";
+import { usePackages } from "@/src/hooks/Packages";
+
+const normalize = (str?: string): string =>
+  (str || "").toLowerCase().replace(/\s+/g, " ").trim();
+
+type PackageItem = {
+  product_name?: string;
+  image?: { url?: string };
+  package_image?: { url?: string };
+};
 
 const ChamberDetailed = ({
   chamberLoading,
@@ -39,15 +49,29 @@ const ChamberDetailed = ({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading: stockInfinityLoading,
     refetch: refetchStock,
   } = useChamberStockPaginated(searchValue);
 
   const { data: rawMaterial = [] } = useRawMaterial();
 
   const { chamber: selectedChamber } = useSelector(
-    (state: RootState) => state.chamber
+    (state: RootState) => state.chamber,
   );
+
+  const { data: packages = [] } = usePackages("") as { data: PackageItem[] };
+
+  const packageImageMap = useMemo(() => {
+    const map: Record<string, string> = {};
+
+    packages.forEach((pkg) => {
+      const key = normalize(pkg.product_name);
+      if (!key) return;
+
+      map[key] = pkg?.image?.url || pkg?.package_image?.url || "";
+    });
+
+    return map;
+  }, [packages]);
 
   const { data = [], refetch: refetchChambers } = useChamber();
   const chambers = data.filter((c) => c.tag !== "dry");
@@ -56,7 +80,7 @@ const ChamberDetailed = ({
 
   const flatStockData =
     stockData?.pages.flatMap(
-      (page: ChamberStockPage) => (page as ChamberStockPage).data
+      (page: ChamberStockPage) => (page as ChamberStockPage).data,
     ) || [];
 
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
@@ -102,12 +126,12 @@ const ChamberDetailed = ({
       .filter((item) => item.chamber?.some((c) => c.id === chamberData.id))
       .map((item) => {
         const chamberEntries = item.chamber.filter(
-          (c) => c.id === chamberData.id
+          (c) => c.id === chamberData.id,
         );
 
         const totalQuantity = chamberEntries.reduce(
           (sum, c) => sum + Number(c.quantity || 0),
-          0
+          0,
         );
 
         const disabled = totalQuantity <= 0;
@@ -118,38 +142,43 @@ const ChamberDetailed = ({
 
         const isOtherCategory = item.category === "other";
         const isMaterialCategory = item.category === "material";
+        const isPackedCategory = item.category === "packed";
 
-        const ratingDisplay =
-          isOtherCategory
-            ? ratingStrings[0] ?? "N/A"
-            : ratingStrings.length
-              ? `★ ${ratingStrings.length > 1
-                ? `${Math.min(...ratingStrings.map(Number))} - ${Math.max(
-                  ...ratingStrings.map(Number)
-                )}`
-                : ratingStrings[0]
+        const matchedPackageImage =
+          packageImageMap[normalize(item.product_name)] || "";
+
+        const ratingDisplay = isOtherCategory
+          ? (ratingStrings[0] ?? "N/A")
+          : ratingStrings.length
+            ? `★ ${
+                ratingStrings.length > 1
+                  ? `${Math.min(...ratingStrings.map(Number))} - ${Math.max(
+                      ...ratingStrings.map(Number),
+                    )}`
+                  : ratingStrings[0]
               }`
-              : "";
+            : "";
 
-        const href: keyof RootStackParamList | undefined =
-          isOtherCategory
-
-            ? "other-products-detail"
-            : isMaterialCategory
+        const href: keyof RootStackParamList | undefined = isOtherCategory
+          ? "other-products-detail"
+          : isMaterialCategory
             ? "stock-detail"
             : undefined;
 
         const matchedMaterial = rawMaterial.find(
           (m) =>
             m?.name?.trim().toLowerCase() ===
-            item.product_name?.trim().toLowerCase()
+            item.product_name?.trim().toLowerCase(),
         );
 
-        const image = matchedMaterial?.sample_image?.url
-          ? matchedMaterial.sample_image.url
-          : isOtherCategory
-          ? require("@/src/assets/images/fallback/others-stock-fallback.png")
-          : require("@/src/assets/images/fallback/chamber-stock-fallback.png");
+        const image =
+          isPackedCategory && matchedPackageImage
+            ? matchedPackageImage
+            : matchedMaterial?.sample_image?.url
+              ? matchedMaterial.sample_image.url
+              : isOtherCategory
+                ? require("@/src/assets/images/fallback/others-stock-fallback.png")
+                : require("@/src/assets/images/fallback/chamber-stock-fallback.png");
 
         return {
           id: item.id,
@@ -173,11 +202,11 @@ const ChamberDetailed = ({
           image,
         };
       });
-  }, [flatStockData, chamberData?.id]);
+  }, [flatStockData, chamberData?.id, packageImageMap, rawMaterial]);
 
   const filters = useMemo(
     () => flattenFilters(nestedFilters) as Record<FilterEnum, string[]>,
-    [nestedFilters]
+    [nestedFilters],
   );
 
   const filteredItems = useMemo(() => {
@@ -238,7 +267,7 @@ const ChamberDetailed = ({
           onEndReachedThreshold={0.6}
         />
       </View>
-      {(isLoading && chamberLoading && stockLoading) && <OverlayLoader />}
+      {isLoading && chamberLoading && stockLoading && <OverlayLoader />}
     </>
   );
 };

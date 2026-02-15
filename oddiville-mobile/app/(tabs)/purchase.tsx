@@ -36,6 +36,7 @@ import Button from "@/src/components/ui/Buttons/Button";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import { H3 } from "@/src/components/typography/Typography";
 import { RefreshControl } from "react-native-gesture-handler";
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
 // 8. Assets
 // No items of this type
@@ -257,17 +258,10 @@ const PurchaseScreen = () => {
       </View>
 
       <BottomSheet color="green" />
-
       {(isLoading ||
         pendingLoading ||
         vendorLoading ||
-        completedInitialLoading) && (
-          <View style={styles.overlay}>
-            <View style={styles.loaderContainer}>
-              <Loader />
-            </View>
-          </View>
-        )}
+        completedInitialLoading) && <OverlayLoader />}
     </View>
   );
 };
@@ -314,11 +308,6 @@ const styles = StyleSheet.create({
   },
   gap8: {
     gap: 8,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
 });
 

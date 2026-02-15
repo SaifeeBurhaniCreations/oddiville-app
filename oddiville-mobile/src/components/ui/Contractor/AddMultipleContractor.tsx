@@ -24,7 +24,7 @@ const columns: TableColumn<ContractorLocationRow>[] = [
   { label: "Count", key: "enterCount", flex: 1 },
 ]
 
-const AddMultipleContractor = ({ setToast, onContractorAdded }: { setToast?: (val: boolean) => void, onContractorAdded?: (success: boolean, message: string) => void }) => {
+const AddMultipleContractor = ({ setToast, onContractorAdded, isEditable }: { setToast?: (val: boolean) => void, onContractorAdded?: (success: boolean, message: string) => void, isEditable?: boolean }) => {
 
     const { data } = useLocations();
 
@@ -44,6 +44,7 @@ const AddMultipleContractor = ({ setToast, onContractorAdded }: { setToast?: (va
     const [workerCount, setworkerCount] = useState<number>(0)
 
     const handleMultipleContractorRadioChange = (contractorIndex: number, locationIndex: number, field: "enterCount" | "notNeeded") => {
+      if (!isEditable) return;
         setWorkAssignedMultiple(prev => {
             const updatedContractors = [...prev];
             const updatedLocations = [...updatedContractors[contractorIndex].locations];
@@ -67,6 +68,8 @@ const AddMultipleContractor = ({ setToast, onContractorAdded }: { setToast?: (va
     };
 
     const handleMultipleContractorInputChange = (contractorIndex: number, locationIndex: number, field: "male" | "female", value: string) => {
+      if (!isEditable) return;
+
         const num = Number(value);
         if (isNaN(num) || num < 0) return;
 
@@ -106,6 +109,8 @@ const AddMultipleContractor = ({ setToast, onContractorAdded }: { setToast?: (va
     };
 
     const onSubmit = async () => {
+      if (!isEditable) return;
+
       if (workAssignedMultiple.length === 0) {
         onContractorAdded?.(false, "Add at least one contractor");
         return;
@@ -162,6 +167,7 @@ if (!hasValidData) {
       };
       
     const handleAddContractor = () => {
+      if (!isEditable) return;
         setWorkAssignedMultiple([
             ...workAssignedMultiple,
             {
@@ -181,6 +187,7 @@ if (!hasValidData) {
     };
 
 const handleLabourRemove = (contractorIndex: number) => {
+      if (!isEditable) return;
   setWorkAssignedMultiple(prev =>
     prev.filter((_, idx) => idx !== contractorIndex)
   );
@@ -222,6 +229,7 @@ const handleLabourRemove = (contractorIndex: number) => {
                 <View style={{ flex: 1, marginLeft: 16 }}>
                     <Button
                         onPress={handleAddContractor}
+                        disabled={!isEditable}
                     >
                         Add Contractor
                     </Button>
@@ -229,7 +237,7 @@ const handleLabourRemove = (contractorIndex: number) => {
                 <View style={{ flex: 1, marginRight: 16 }}>
                     <Button
                         onPress={() => onSubmit()}
-                          disabled={loading || isAddDisabled}
+                        disabled={!isEditable || loading || isAddDisabled}
                     >
                         {loading ? 'Saving...' : 'Save'}
                     </Button>

@@ -186,10 +186,8 @@ const isFormStructurallyValid = useMemo(() => {
   if (rmKgUsed === 0) return false;
   if (packedKg === 0) return false;
 
-  // float-safe comparison
   if (Math.abs(rmKgUsed - packedKg) > 0.001) return false;
 
-  // ensure every SKU is stored in chambers
   for (const plan of form.values.packagingPlan) {
     if (!plan.storage || plan.storage.length === 0) return false;
   }

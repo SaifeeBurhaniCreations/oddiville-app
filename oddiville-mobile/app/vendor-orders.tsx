@@ -17,6 +17,7 @@ import Loader from '@/src/components/ui/Loader';
 import { formatAmount } from '@/src/utils/common';
 import { runFilter } from '@/src/utils/bottomSheetUtils';
 import useValidateAndOpenBottomSheet from '@/src/hooks/useValidateAndOpenBottomSheet';
+import OverlayLoader from '@/src/components/ui/OverlayLoader';
 
 function extractOrdersFormatted(vendors: Vendor[], rawOrders: any[]): ActivityProps[] {
     if (!Array.isArray(vendors) || !Array.isArray(rawOrders)) return [];
@@ -126,11 +127,7 @@ const VendorOrdersScreen = () => {
                 />
 
                 {rawOrderLoading ?
-                    <View style={styles.overlay}>
-                        <View style={styles.loaderContainer}>
-                            <Loader />
-                        </View>
-                    </View>
+                    <OverlayLoader />
                     : (
                         <ActivitesFlatList isVirtualised activities={orders} listKey={"vendor-order"} />
                     )}
@@ -167,10 +164,5 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         backgroundColor: getColor('green', 500, 0.05),
         zIndex: 2,
-    },
-    loaderContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
 });

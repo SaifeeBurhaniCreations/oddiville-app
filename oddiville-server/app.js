@@ -143,12 +143,12 @@ const PORT = process.env.PORT || 8022;
       // await Chambers.sync({ force: true });
       // await Lanes.sync({ force: true });
 
-      await ChamberStock.sync({ alter: true });
+      // await ChamberStock.sync({ alter: true });
       // await PackingEvent.sync({ force: true });
       // await TruckDetails.sync({ force: true });
       // await Notifications.sync({ force: true });
       // await Production.sync({ force: true });
-      // await RawMaterialOrder.sync({ force: true });
+      await RawMaterialOrder.sync({ alter: true });
       // await History.sync({ force: true });
       // await OthersItem.sync({ force: true });
       // await ThirdPartyClient.sync({ force: true });

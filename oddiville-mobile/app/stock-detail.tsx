@@ -16,13 +16,12 @@ import { usePackedItems } from "@/src/hooks/packing/getPackedItemsEvent";
 
 import { getEmptyStateData, mapPackageIcon } from "@/src/utils/common";
 
-import BoxIcon from "@/src/components/icons/common/BoxIcon";
 import StarIcon from "@/src/components/icons/page/StarIcon";
 import { B4 } from "@/src/components/typography/Typography";
 
 import { RootState } from "@/src/redux/store";
 import { safeNumber, toKg } from "@/src/utils/chamberstock/stockUtils";
-import { PackagingStorage } from "@/src/types/domain/packing/packing.types";
+import Require from "@/src/components/authentication/Require";
 
 type PackedItemStorage = {
   chamberId: string;
@@ -209,6 +208,7 @@ const StockDetail = () => {
     ) : null;
 
   return (
+      <Require anyOf={["production", "package", "sales"]}>
     <View style={styles.rootContainer}>
       <PageHeader page="Chamber" />
 
@@ -246,6 +246,7 @@ const StockDetail = () => {
         </View>
       </View>
     </View>
+    </Require>
   );
 };
 

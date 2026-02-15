@@ -1,221 +1,196 @@
-  // 1. React and React Native core
-  import React, { useState, useMemo, useCallback } from "react";
-  import {
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-    RefreshControl,
-  } from "react-native";
+// 1. React and React Native core
+import React, { useState, useMemo, useCallback } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  RefreshControl,
+} from "react-native";
 
-  // 2. Third-party dependencies
-  // No items of this type
+// 2. Third-party dependencies
+// No items of this type
 
-  // 3. Project components
-  import PageHeader from "@/src/components/ui/PageHeader";
-  import Tabs from "@/src/components/ui/Tabs";
-  import RadioGroup from "@/src/components/ui/RadioGroup";
-  import BottomSheet from "@/src/components/ui/BottomSheet";
-  import ActivitesFlatList from "@/src/components/ui/ActivitesFlatList";
-  import AddSingleContractor from "@/src/components/ui/Contractor/AddSingleContractor";
-  import AddMultipleContractor from "@/src/components/ui/Contractor/AddMultipleContractor";
-  import DetailsToast from "@/src/components/ui/DetailsToast";
-  import Loader from "@/src/components/ui/Loader";
+// 3. Project components
+import PageHeader from "@/src/components/ui/PageHeader";
+import Tabs from "@/src/components/ui/Tabs";
+import RadioGroup from "@/src/components/ui/RadioGroup";
+import BottomSheet from "@/src/components/ui/BottomSheet";
+import ActivitesFlatList from "@/src/components/ui/ActivitesFlatList";
+import AddSingleContractor from "@/src/components/ui/Contractor/AddSingleContractor";
+import AddMultipleContractor from "@/src/components/ui/Contractor/AddMultipleContractor";
+import Loader from "@/src/components/ui/Loader";
 
-  // 4. Project hooks
-  import { useAppNavigation } from "@/src/hooks/useAppNavigation";
-  import {
-    useFormattedContractors,
-    useContractorSummary,
-    useCreateContractor,
-    WorkLocation,
-    FormattedContractor,
-    useContractors,
-  } from "@/src/hooks/useContractor";
+// 4. Project hooks
+import { useAppNavigation } from "@/src/hooks/useAppNavigation";
+import {
+  useFormattedContractors,
+  useContractorSummary,
+  useCreateContractor,
+  WorkLocation,
+  FormattedContractor,
+  useContractors,
+} from "@/src/hooks/useContractor";
 
-  // 5. Project constants/utilities
-  import { getColor } from "@/src/constants/colors";
+// 5. Project constants/utilities
+import { getColor } from "@/src/constants/colors";
 
-  // 6. Types
-  import { ActivityProps } from "@/src/types";
-  import { BottomSheetSchemaKey } from "@/src/schemas/BottomSheetSchema";
-  import { B2 } from "@/src/components/typography/Typography";
-  import EmptyState from "@/src/components/ui/EmptyState";
+// 6. Types
+import { ActivityProps } from "@/src/types";
+import { B2 } from "@/src/components/typography/Typography";
+import EmptyState from "@/src/components/ui/EmptyState";
 
-  // 7. Schemas
-  // No items of this type
+// 7. Schemas
+// No items of this type
 
-  // 8. Assets
-  import NoContractorBatchImg from "@/src/assets/images/illustrations/no-contractor-batch.png"
-  import BackButton from "@/src/components/ui/Buttons/BackButton";
+// 8. Assets
+import NoContractorBatchImg from "@/src/assets/images/illustrations/no-contractor-batch.png";
+import BackButton from "@/src/components/ui/Buttons/BackButton";
 
-import { resolveAccess } from '@/src/utils/policiesUtils';
-import { LABOURS_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
-import { useAuth } from "@/src/context/AuthContext";
+import {
+  LABOURS_BACK_ROUTES,
+  resolveBackRoute,
+  resolveDefaultRoute,
+} from "@/src/utils/backRouteUtils";
+import { useToast } from "@/src/context/ToastContext";
+import { useAppCapabilities } from "@/src/hooks/useAppCapabilities";
+import NoAccess from "@/src/components/ui/NoAccess";
+import Require from "@/src/components/authentication/Require";
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
-  const options = [{ text: "Add multiple" }, { text: "Add single" }];
+const options = [{ text: "Add multiple" }, { text: "Add single" }];
 
-  const LaboursScreen = () => {
-      const { role, policies } = useAuth();
-    
-      const safeRole = role ?? "guest";
-      const safePolicies = policies ?? [];
-      const access = resolveAccess(safeRole, safePolicies);
-    
-    const { goTo } = useAppNavigation();
-    const {
-      createContractors,
-      isLoading: creating,
-      isError: createError,
-    } = useCreateContractor();
+const LaboursScreen = () => {
+  const caps = useAppCapabilities();
+  const { success, error } = useToast();
 
-    // Toast state
-    const [toastVisible, setToastVisible] = useState(false);
-    const [toastType, setToastType] = useState<"success" | "error" | "info">(
-      "info"
-    );
-    const [toastMessage, setToastMessage] = useState("");
+  const { goTo } = useAppNavigation();
+  const { createContractors, isLoading: creating } = useCreateContractor();
 
-    // Refresh state
-    const [refreshing, setRefreshing] = useState(false);
+  // Refresh state
+  const [refreshing, setRefreshing] = useState(false);
 
-    // Data hooks
-    const {
-      contractors,
-      isLoading: contractorsLoading,
-      error: contractorsError,
-      refetch,
-    } = useFormattedContractors();
+  // Data hooks
+  const {
+    contractors,
+    isLoading: contractorsLoading,
+    error: contractorsError,
+    refetch,
+  } = useFormattedContractors();
 
-    const showToast = useCallback(
-      (type: "success" | "error" | "info", message: string) => {
-        setToastType(type);
-        setToastMessage(message);
-        setToastVisible(true);
-      },
-      []
-    );
-
-    const handleAddSingleContractor = useCallback(
-      async (contractorPayload: {
-        name: string;
-        male_count: number;
-        female_count: number;
-        work_location: WorkLocation[];
-      }) => {
-        // contractorPayload should be { name, male_count, female_count, work_location? }
-        try {
-          await createContractors([
-            {
-              name: contractorPayload.name,
-              male_count: Number(contractorPayload.male_count) || 0,
-              female_count: Number(contractorPayload.female_count) || 0,
-              work_location: contractorPayload.work_location || [],
-            },
-          ]);
-
-          showToast("success", "Contractor created");
-          await refetch?.();
-        } catch (err: any) {
-          showToast("error", err?.message || "Failed to create contractor");
-        }
-      },
-      [createContractors, showToast, refetch]
-    );
-
-    const handleToggleToast = useCallback(
-      (isError: boolean) => {
-        if (isError)
-          showToast(
-            "error",
-            "Total assigned count exceeds available worker count!"
-          );
-        else showToast("success", "Updated successfully!");
-      },
-      [showToast]
-    );
-
-    const handleContractorAdded = useCallback(
-      (success: boolean, message: string) => {
-        if (success) {
-          showToast("success", message || "Contractor added successfully!");
-        } else {
-          showToast("error", message || "Failed to add contractor!");
-        }
-      },
-      [showToast]
-    );
-
-    // Error handling
-    const handleError = useCallback(
-      (error: any) => {
-        console.error("Contractor Screen Error:", error);
-        showToast("error", "Failed to load contractor data. Please try again.");
-      },
-      [showToast]
-    );
-
-    const onRefresh = useCallback(async () => {
-      try {
-        setRefreshing(true);
-        await refetch?.();
-      } catch (err) {
-        handleError(err);
-      } finally {
-        setRefreshing(false);
+  const handleAddSingleContractor = useCallback(
+    async (contractorPayload: {
+      name: string;
+      male_count: number;
+      female_count: number;
+      work_location: WorkLocation[];
+    }) => {
+      if (!caps.labours.edit) {
+        error("Permission Denied");
+        return;
       }
-    }, [refetch, handleError]);
+      // contractorPayload should be { name, male_count, female_count, work_location? }
+      try {
+        await createContractors([
+          {
+            name: contractorPayload.name,
+            male_count: Number(contractorPayload.male_count) || 0,
+            female_count: Number(contractorPayload.female_count) || 0,
+            work_location: contractorPayload.work_location || [],
+          },
+        ]);
 
-    const contractorsHistory = useMemo((): ActivityProps[] => {
-      if (contractorsLoading || !contractors?.length) return [];
+        success("Contractor created");
+        await refetch?.();
+      } catch (err: any) {
+        error(err?.message || "Failed to create contractor");
+      }
+    },
+    [createContractors, success, error, refetch],
+  );
 
-      return contractors.map((contractor: FormattedContractor) => ({
-        id: contractor.id,
-        itemId: contractor.id,
-        title: `${contractor.displayTotalCount} workers`,
-        type: contractor.name,
-        createdAt: Number(contractor.updatedAt)
-          ? new Date(contractor.updatedAt)
-          : new Date(),
-        extra_details: [
-          `male: ${contractor.displayMaleCount}`,
-          `female: ${contractor.displayFemaleCount}`,
-          ...(contractor.workLocations?.length > 0
-            ? [`locations: ${contractor.workLocations?.length}`]
-            : []),
-        ],
-        identifier:
-          contractor.totalCount > 20
-            ? "order-ready"
-            : contractor.totalCount > 10
+  const handleToggleToast = useCallback(
+    (isError: boolean) => {
+      if (isError)
+        error("Total assigned count exceeds available worker count!");
+      else success("Updated successfully!");
+    },
+    [error, success],
+  );
+
+  // Error handling
+  const handleError = useCallback(
+    (error: any) => {
+      console.error("Contractor Screen Error:", error);
+      error("Failed to load contractor data. Please try again.");
+    },
+    [error],
+  );
+
+  const onRefresh = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      await refetch?.();
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch, handleError]);
+
+  const contractorsHistory = useMemo((): ActivityProps[] => {
+    if (contractorsLoading || !contractors?.length) return [];
+
+    return contractors.map((contractor: FormattedContractor) => ({
+      id: contractor.id,
+      itemId: contractor.id,
+      title: `${contractor.displayTotalCount} workers`,
+      type: contractor.name,
+      createdAt: Number(contractor.updatedAt)
+        ? new Date(contractor.updatedAt)
+        : new Date(),
+      extra_details: [
+        `male: ${contractor.displayMaleCount}`,
+        `female: ${contractor.displayFemaleCount}`,
+        ...(contractor.workLocations?.length > 0
+          ? [`locations: ${contractor.workLocations?.length}`]
+          : []),
+      ],
+      identifier:
+        contractor.totalCount > 20
+          ? "order-ready"
+          : contractor.totalCount > 10
             ? "in-progress-order"
             : "choose-product",
-      }));
-    }, [contractors, contractorsLoading]);
+    }));
+  }, [contractors, contractorsLoading]);
 
-    const handleContractorPress = (
-      id: string
-    ) => {
-      if (id) {
-        goTo("labours-details", {
-          wId: id,
-          mode: "single",
-        });
-      } else {
-        showToast("error", "Unable to view contractor details");
-      }
-    };
+  const handleContractorPress = (id: string) => {
+    if (!caps.labours.edit) {
+      error("Permission Denied");
+      return;
+    }
+    if (id) {
+      goTo("labours-details", {
+        wId: id,
+        mode: "single",
+      });
+    } else {
+      error("Unable to view contractor details");
+    }
+  };
 
-    const isLoading = contractorsLoading;
+  const isLoading = contractorsLoading;
 
-    const backRoute = resolveBackRoute(
-  access,
-  LABOURS_BACK_ROUTES,
-  resolveDefaultRoute(access)
-);
+  const backRoute = resolveBackRoute(
+    caps.access,
+    LABOURS_BACK_ROUTES,
+    resolveDefaultRoute(caps.access),
+  );
 
-    if (contractorsError && !contractors?.length) {
-      return (
+  if (contractorsError && !contractors?.length) {
+    return (
+      <Require view="labours">
         <View style={styles.pageContainer}>
           <PageHeader page={"Labour"} />
           <View style={styles.wrapper}>
@@ -229,23 +204,21 @@ import { useAuth } from "@/src/context/AuthContext";
             </View>
           </View>
           <BottomSheet color="green" />
-          <DetailsToast
-            type={toastType}
-            message={toastMessage}
-            visible={toastVisible}
-            onHide={() => setToastVisible(false)}
-          />
         </View>
-      );
-    }
+      </Require>
+    );
+  }
 
-    return (
+  return (
+    <Require view="labours">
       <View style={styles.pageContainer}>
         <PageHeader page={"Labour"} />
         <View style={styles.wrapper}>
-          {(safeRole !== "admin" && safeRole !== "superadmin") && <View style={[styles.paddingTLR16]}>
-            <BackButton label="Labours" backRoute={backRoute} />
-          </View>}
+          {!caps.isAdmin && (
+            <View style={[styles.paddingTLR16]}>
+              <BackButton label="Labours" backRoute={backRoute} />
+            </View>
+          )}
           <Tabs
             tabTitles={["Today's worker", "History"]}
             headerStyle={{ padding: 16 }}
@@ -273,7 +246,7 @@ import { useAuth } from "@/src/context/AuthContext";
                     selected={activeTab}
                     onSelect={(selected) =>
                       setActiveTab(
-                        options.findIndex((opt) => opt.text === selected)
+                        options.findIndex((opt) => opt.text === selected),
                       )
                     }
                   />
@@ -281,11 +254,13 @@ import { useAuth } from "@/src/context/AuthContext";
               >
                 <AddMultipleContractor
                   setToast={handleToggleToast}
+                  isEditable={caps.labours.edit}
                 />
                 <AddSingleContractor
                   setToast={handleToggleToast}
                   onSubmit={handleAddSingleContractor}
                   isSubmitting={creating}
+                  isEditable={caps.labours.edit}
                 />
               </Tabs>
             </ScrollView>
@@ -303,12 +278,10 @@ import { useAuth } from "@/src/context/AuthContext";
               }
             >
               {isLoading ? (
-                <View style={styles.loaderContainer}>
-                  <Loader />
-                </View>
+                <OverlayLoader />
               ) : contractorsHistory?.length > 0 ? (
                 <ActivitesFlatList
-                  style={{paddingHorizontal: 16}}
+                  style={{ paddingHorizontal: 16 }}
                   onPress={handleContractorPress}
                   isVirtualised={false}
                   activities={contractorsHistory}
@@ -316,13 +289,13 @@ import { useAuth } from "@/src/context/AuthContext";
               ) : (
                 <View style={styles.emptyState}>
                   <EmptyState
-                              stateData={{
-                                  title: "No contractor batches selected",
-                                  description: "No Contractors yet.",
-                              }}
-                              image={NoContractorBatchImg}
-                              color="green"
-                          />
+                    stateData={{
+                      title: "No contractor batches selected",
+                      description: "No Contractors yet.",
+                    }}
+                    image={NoContractorBatchImg}
+                    color="green"
+                  />
                 </View>
               )}
             </ScrollView>
@@ -333,80 +306,67 @@ import { useAuth } from "@/src/context/AuthContext";
 
         {/* Overlay for loading states if needed */}
         {false && <TouchableOpacity style={styles.overlay} activeOpacity={1} />}
-
-        {/* Toast notifications */}
-        <DetailsToast
-          type={toastType}
-          message={toastMessage}
-          visible={toastVisible}
-          onHide={() => setToastVisible(false)}
-        />
       </View>
-    );
-  };
+    </Require>
+  );
+};
 
-  export default LaboursScreen;
+export default LaboursScreen;
 
-  const styles = StyleSheet.create({
-    pageContainer: {
-      flex: 1,
-      backgroundColor: getColor("green", 500),
-      position: "relative",
-    },
-    wrapper: {
-      flex: 1,
-      backgroundColor: getColor("light", 200),
-      borderTopStartRadius: 16,
-      borderTopEndRadius: 16,
-    },
-    flexGrow: {
-      flex: 1,
-    },
-    count: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 16,
-    },
-    single: {
-      flexDirection: "column",
-      gap: 16,
-      padding: 16,
-    },
-    overlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: getColor("green", 500, 0.05),
-      zIndex: 2,
-    },
-    emptyState: {
-      flex: 1,
-      flexDirection: "column",
-      height: 200,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 16,
-    },
-    errorContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 16,
-    },
-    retryButton: {
-      padding: 12,
-      backgroundColor: getColor("green", 500),
-      borderRadius: 8,
-      minWidth: 120,
-      alignItems: "center",
-    },
-    loaderContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      minHeight: 200,
-    },
-      paddingTLR16: {
-          paddingTop: 16,
-          paddingLeft: 16,
-          paddingRight: 16,
-      },
-  });
+const styles = StyleSheet.create({
+  pageContainer: {
+    flex: 1,
+    backgroundColor: getColor("green", 500),
+    position: "relative",
+  },
+  wrapper: {
+    flex: 1,
+    backgroundColor: getColor("light", 200),
+    borderTopStartRadius: 16,
+    borderTopEndRadius: 16,
+  },
+  flexGrow: {
+    flex: 1,
+  },
+  count: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  single: {
+    flexDirection: "column",
+    gap: 16,
+    padding: 16,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: getColor("green", 500, 0.05),
+    zIndex: 2,
+  },
+  emptyState: {
+    flex: 1,
+    flexDirection: "column",
+    height: 200,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  retryButton: {
+    padding: 12,
+    backgroundColor: getColor("green", 500),
+    borderRadius: 8,
+    minWidth: 120,
+    alignItems: "center",
+  },
+  paddingTLR16: {
+    paddingTop: 16,
+    paddingLeft: 16,
+    paddingRight: 16,
+  },
+});

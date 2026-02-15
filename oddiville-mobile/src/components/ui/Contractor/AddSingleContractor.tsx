@@ -14,29 +14,36 @@ import { WorkLocation } from "@/src/hooks/useContractor";
 import { TableColumn } from "@/src/types";
 
 type SingleContractorRow = {
-  location: string
-  enterCount: boolean
-  notNeeded: boolean
-  countMale: string
-  countFemale: string
-  count: string
-}
+  location: string;
+  enterCount: boolean;
+  notNeeded: boolean;
+  countMale: string;
+  countFemale: string;
+  count: string;
+};
 
 const columns: TableColumn<SingleContractorRow>[] = [
   { label: "Locations", key: "location", flex: 2 },
   { label: "Count", key: "enterCount", flex: 1 },
-]
+];
 
 const AddSingleContractor = ({
   setToast,
   onContractorAdded,
   onSubmit: OnParentSubmit,
-  isSubmitting= false,
+  isSubmitting = false,
+  isEditable,
 }: {
   setToast?: (val: boolean) => void;
   onContractorAdded?: (success: boolean, message: string) => void;
-  onSubmit: (contractorPayload: { name: string; male_count: number; female_count: number; work_location: WorkLocation[]; }) => Promise<void>;
+  onSubmit: (contractorPayload: {
+    name: string;
+    male_count: number;
+    female_count: number;
+    work_location: WorkLocation[];
+  }) => Promise<void>;
   isSubmitting: boolean;
+  isEditable?: boolean;
 }) => {
   const { data } = useLocations();
 
@@ -76,14 +83,17 @@ const AddSingleContractor = ({
   });
 
   const handleRadioChange = (rowIndex: number, field: string) => {
+    if (!isEditable) return;
     setWorkAssigned((prev) => {
       const updated = [...prev];
       updated[rowIndex] = {
         ...updated[rowIndex],
         enterCount: field === "enterCount",
         notNeeded: field === "notNeeded",
-        countMale: field === "notNeeded" ? "" : updated[rowIndex].countMale ?? "",
-        countFemale: field === "notNeeded" ? "" : updated[rowIndex].countFemale ?? "",
+        countMale:
+          field === "notNeeded" ? "" : (updated[rowIndex].countMale ?? ""),
+        countFemale:
+          field === "notNeeded" ? "" : (updated[rowIndex].countFemale ?? ""),
       };
       return updated;
     });
@@ -92,8 +102,9 @@ const AddSingleContractor = ({
   const handleInputChange = (
     rowIndex: number,
     field: "male" | "female",
-    value: string
+    value: string,
   ) => {
+    if (!isEditable) return;
     const num = Number(value);
     if (isNaN(num) || num < 0) return;
 
@@ -108,8 +119,8 @@ const AddSingleContractor = ({
 
     const nextRow = {
       ...current,
-      countMale: field === "male" ? value : current.countMale ?? "",
-      countFemale: field === "female" ? value : current.countFemale ?? "",
+      countMale: field === "male" ? value : (current.countMale ?? ""),
+      countFemale: field === "female" ? value : (current.countFemale ?? ""),
     };
 
     const rowMale = Number(nextRow.countMale || 0) || 0;
@@ -122,7 +133,8 @@ const AddSingleContractor = ({
       return acc + c;
     }, 0);
 
-    const totalWorkerCount = (Number(workerCount.male) || 0) + (Number(workerCount.female) || 0);
+    const totalWorkerCount =
+      (Number(workerCount.male) || 0) + (Number(workerCount.female) || 0);
     const prospectiveTotal = otherTotal + nextRowCount;
 
     if (prospectiveTotal > totalWorkerCount) {
@@ -162,7 +174,7 @@ const AddSingleContractor = ({
   });
 
   const clearLocalState = () => {
-    // reset counts and name and workAssigned to initial mapping (if data exists)
+    if (!isEditable) return;
     setContractorName("");
     setworkerCount({ male: 0, female: 0 });
     if (Array.isArray(data)) {
@@ -181,37 +193,30 @@ const AddSingleContractor = ({
   };
 
   const onSubmit: SubmitHandler<ContractorData> = async (formData: any) => {
-    const workLocationPayload = workAssigned.map(loc => ({
-  name: loc.location,
-  maleCount: Number(loc.countMale || 0),
-  femaleCount: Number(loc.countFemale || 0),
-}));
+    if (!isEditable) return;
+    const workLocationPayload = workAssigned.map((loc) => ({
+      name: loc.location,
+      maleCount: Number(loc.countMale || 0),
+      femaleCount: Number(loc.countFemale || 0),
+    }));
 
+    try {
+      setLoading(true);
 
-    const finalData = [
-      {
-        ...formData,
+      await OnParentSubmit?.({
+        name: formData.name,
+        male_count: formData.male_count,
+        female_count: formData.female_count,
         work_location: workLocationPayload,
-      },
-    ];
+      });
 
-try {
-  setLoading(true);
-
-  await OnParentSubmit?.({
-    name: formData.name,
-    male_count: formData.male_count,
-    female_count: formData.female_count,
-    work_location: workLocationPayload,
-  });
-
-  reset();
-  clearLocalState();
-} catch (error: any) {
-  onContractorAdded?.(false, error?.message || "Failed to add contractor");
-} finally {
-  setLoading(false);
-}
+      reset();
+      clearLocalState();
+    } catch (error: any) {
+      onContractorAdded?.(false, error?.message || "Failed to add contractor");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -283,20 +288,19 @@ try {
         />
       </View>
 
-    <Table<SingleContractorRow>
-      columns={columns}
-      content={workAssigned}
-      mergableRows={[[1, 2]]}
-      onRadioChange={handleRadioChange}
-      onInputChange={(rowIndex, field, value) => {
-        if (field === "male" || field === "female") {
-          handleInputChange(rowIndex, field, value)
-        }
-      }}
-    />
-
+      <Table<SingleContractorRow>
+        columns={columns}
+        content={workAssigned}
+        mergableRows={[[1, 2]]}
+        onRadioChange={handleRadioChange}
+        onInputChange={(rowIndex, field, value) => {
+          if (field === "male" || field === "female") {
+            handleInputChange(rowIndex, field, value);
+          }
+        }}
+      />
       <Button
-        disabled={isAddDisabled || loading || isSubmitting}
+        disabled={!isEditable || isAddDisabled || loading || isSubmitting}
         onPress={handleSubmit(onSubmit)}
       >
         {loading && <Loader size={20} />}{" "}
