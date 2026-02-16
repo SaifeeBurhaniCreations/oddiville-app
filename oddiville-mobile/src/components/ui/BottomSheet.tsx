@@ -49,24 +49,25 @@ const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 function filterOptions<T extends optionListEnumKeys>(
   options: T,
-  search: string
+  search: string,
 ): T {
   if (options?.length === 0) return options;
   if (typeof options[0] === "string") {
     return (options as string[]).filter((opt) =>
-      (opt as string).includes(search)
+      (opt as string).includes(search),
     ) as T;
   }
   return (options as { name: string; isoCode: string }[]).filter((opt) =>
-    opt.name.includes(search)
+    opt.name.includes(search),
   ) as T;
 }
 
 const buildChamberValidationRules = (
   selectedChambers: string[],
-  producedTotal: number
+  producedTotal: number,
 ): Partial<Record<string, ValidationRule<StoreChambersForm>[]>> => {
-  const rules: Partial<Record<string, ValidationRule<StoreChambersForm>[]>> = {};
+  const rules: Partial<Record<string, ValidationRule<StoreChambersForm>[]>> =
+    {};
 
   // per-chamber rule
   selectedChambers.forEach((chamberName) => {
@@ -92,7 +93,7 @@ const buildChamberValidationRules = (
 
         const totalStored = Object.values(allValues).reduce(
           (sum, v: any) => sum + Number(v?.quantity || 0),
-          0
+          0,
         );
 
         if (totalStored === 0) return true;
@@ -108,52 +109,53 @@ const buildChamberValidationRules = (
 
 const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
   const selectedRawMaterials = useSelector(
-    (state: RootState) => state.rawMaterial.selectedRawMaterials
+    (state: RootState) => state.rawMaterial.selectedRawMaterials,
   );
   const selectedChambers = useSelector(
-    (state: RootState) => state.rawMaterial.selectedChambers
+    (state: RootState) => state.rawMaterial.selectedChambers,
   );
   const { isProductLoading } = useSelector((state: RootState) => state.product);
   const { slectedUnit } = useSelector((state: RootState) => state.selectUnit);
   const { product } = useSelector((state: RootState) => state.storeProduct);
 
   const { stateSearched, citySearched, countrySearched } = useSelector(
-    (state: RootState) => state.location
+    (state: RootState) => state.location,
   );
 
   const { source } = useSelector((state: RootState) => state.rawMaterial);
 
   const packageFormValidator = useGlobalFormValidator<AddProductPackageForm>(
-    "add-product-package"
+    "add-product-package",
   );
 
-  const {
-    errors: storeErrors,
-  } = useGlobalFormValidator<StoreChambersForm>("store-chambers");
-  
+  const { errors: storeErrors } =
+    useGlobalFormValidator<StoreChambersForm>("store-chambers");
+
   const packageSizeValidator =
     useGlobalFormValidator<AddPackageSizeForm>("add-package-size");
   const dispatch = useDispatch<AppDispatch>();
   const { isVisible, config, meta } = useSelector(
-    (state: RootState) => state.bottomSheet
+    (state: RootState) => state.bottomSheet,
   );
   const chamberQuantity = useSelector(
-    (state: RootState) => state.chamberRatings.chamberQty
+    (state: RootState) => state.chamberRatings.chamberQty,
   );
   const rawMaterialSearch = useSelector(
-    (state: RootState) => state.rawMaterialSearch.searchTerm
+    (state: RootState) => state.rawMaterialSearch.searchTerm,
   );
   const ProductSearched = useSelector(
-    (state: RootState) => state.productSearch.productSearched
+    (state: RootState) => state.productSearch.productSearched,
   );
   const productionLoading = useSelector(
-    (state: RootState) => state.production.isLoading
+    (state: RootState) => state.production.isLoading,
   );
 
   const PackageSizeSearched = useSelector(
-    (state: RootState) => state.packageSizeSearch.packageSizeSearched
+    (state: RootState) => state.packageSizeSearch.packageSizeSearched,
   );
-  const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
+  const packageTypeProduction = useSelector(
+    (state: RootState) => state.packageTypeProduction.selectedPackageType,
+  );
 
   const { runAction } = useBottomSheetActions(meta);
 
@@ -205,7 +207,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
         {
           validateOnChange: true,
           debounce: 300,
-        }
+        },
       );
     }
 
@@ -225,7 +227,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
         {
           validateOnChange: true,
           debounce: 300,
-        }
+        },
       );
     }
 
@@ -241,7 +243,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
         {
           validateOnChange: true,
           debounce: 300,
-        }
+        },
       );
     }
 
@@ -249,10 +251,13 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
     type StoreProductFormFields = Record<string, ChamberValue | number>;
 
     const initialValues: StoreProductFormFields = {
-      ...selectedChambers.reduce((acc, chamberName) => {
-        acc[chamberName] = { quantity: 0, rating: 0 };
-        return acc;
-      }, {} as Record<string, ChamberValue>),
+      ...selectedChambers.reduce(
+        (acc, chamberName) => {
+          acc[chamberName] = { quantity: 0, rating: 0 };
+          return acc;
+        },
+        {} as Record<string, ChamberValue>,
+      ),
       discard_quantity: 0,
       packaging_type: 0,
       packaging_quantity: 0,
@@ -277,10 +282,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
       validationRules[chamberName] = [
         {
           type: "custom",
-         validate: (value: any) =>
-          value &&
-          typeof value === "object" &&
-          value.quantity > 0,
+          validate: (value: any) =>
+            value && typeof value === "object" && value.quantity > 0,
           message: `Selected chamber must have some quantity!`,
         },
       ];
@@ -320,122 +323,124 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
     //     });
     // }
 
-    
-useGlobalFormsStore.getState().initializeForm(
-  "supervisor-production",
-  {
-    packaging_size: "",
-    packaging_type: "bag",
-  },
-  {
-    packaging_size: [
-      { type: "required", message: "Packaging size is required" },
-    ],
-    packaging_type: [
-      { type: "required", message: "Packaging type is required" },
-    ],
-  },
-  { validateOnChange: true }
-);
+    useGlobalFormsStore.getState().initializeForm(
+      "supervisor-production",
+      {
+        packaging_size: "",
+        packaging_type: "bag",
+      },
+      {
+        packaging_size: [
+          { type: "required", message: "Packaging size is required" },
+        ],
+        packaging_type: [
+          { type: "required", message: "Packaging type is required" },
+        ],
+      },
+      { validateOnChange: true },
+    );
 
-const producedTotal = Number(product?.quantity ?? 0);
+    const producedTotal = Number(product?.quantity ?? 0);
 
-const chamberValidationRules: Partial<
-  Record<string, ValidationRule<StoreChambersForm>[]>
-> = {};
-
+    const chamberValidationRules: Partial<
+      Record<string, ValidationRule<StoreChambersForm>[]>
+    > = {};
 
     if (!isFormInitialized("store-chambers")) {
-const chamberInitialValues: StoreChambersForm =
-  selectedChambers.reduce((acc, chamberName) => {
-    acc[chamberName] = { quantity: 0, rating: 0 };
-    return acc;
-  }, {} as StoreChambersForm);
-
-
-const chamberValidationRules: Partial<
-  Record<string, ValidationRule<StoreChambersForm>[]>
-> = {};
-
-// per-chamber rule
-selectedChambers.forEach((chamberName) => {
-  chamberValidationRules[chamberName] = [
-    {
-      type: "custom",
-      validate: (value: any) =>
-        value &&
-        typeof value === "object" &&
-        value.quantity > 0 &&
-        value.rating > 0,
-      message: "Enter quantity and select rating",
-    },
-  ];
-});
-
-// aggregate rule
-chamberValidationRules.__TOTAL__ = [
-  {
-    type: "custom",
-    validate: (_value, allValues) => {
-      if (!producedTotal || producedTotal <= 0) return true;
-
-      const totalStored = Object.values(allValues).reduce(
-        (sum, v: any) => sum + Number(v?.quantity || 0),
-        0
+      const chamberInitialValues: StoreChambersForm = selectedChambers.reduce(
+        (acc, chamberName) => {
+          acc[chamberName] = { quantity: 0, rating: 0 };
+          return acc;
+        },
+        {} as StoreChambersForm,
       );
 
-      if (totalStored === 0) return true;
+      const chamberValidationRules: Partial<
+        Record<string, ValidationRule<StoreChambersForm>[]>
+      > = {};
 
-      return totalStored <= producedTotal;
-    },
-    message: "Stored quantity cannot exceed produced quantity",
-  },
-];
+      // per-chamber rule
+      selectedChambers.forEach((chamberName) => {
+        chamberValidationRules[chamberName] = [
+          {
+            type: "custom",
+            validate: (value: any) =>
+              value &&
+              typeof value === "object" &&
+              value.quantity > 0 &&
+              value.rating > 0,
+            message: "Enter quantity and select rating",
+          },
+        ];
+      });
 
-useGlobalFormsStore.getState().initializeForm(
-  "store-chambers",
-  chamberInitialValues,
-  chamberValidationRules,
-  { validateOnChange: true }
-);
-}
+      // aggregate rule
+      chamberValidationRules.__TOTAL__ = [
+        {
+          type: "custom",
+          validate: (_value, allValues) => {
+            if (!producedTotal || producedTotal <= 0) return true;
+
+            const totalStored = Object.values(allValues).reduce(
+              (sum, v: any) => sum + Number(v?.quantity || 0),
+              0,
+            );
+
+            if (totalStored === 0) return true;
+
+            return totalStored <= producedTotal;
+          },
+          message: "Stored quantity cannot exceed produced quantity",
+        },
+      ];
+
+      useGlobalFormsStore
+        .getState()
+        .initializeForm(
+          "store-chambers",
+          chamberInitialValues,
+          chamberValidationRules,
+          { validateOnChange: true },
+        );
+    }
   }, []);
 
-useEffect(() => {
-  if (!selectedChambers.length) return;
-
-  const producedTotal = Number(product?.quantity ?? 0);
-
-  const initialValues: StoreChambersForm =
-    selectedChambers.reduce((acc, chamberName) => {
-      acc[chamberName] = { quantity: 0, rating: 0 };
-      return acc;
-    }, {} as StoreChambersForm);
-
-  const validationRules = buildChamberValidationRules(
-    selectedChambers,
-    producedTotal
-  );
-
-  useGlobalFormsStore.getState().initializeForm(
-    "store-chambers",
-    initialValues,
-    validationRules,
-    { validateOnChange: true }
-  );
-}, [product?.quantity, selectedChambers]);
-
   useEffect(() => {
-  if (isFormInitialized("supervisor-production")) {
+    if (!selectedChambers.length) return;
+
+    const producedTotal = Number(product?.quantity ?? 0);
+
+    const initialValues: StoreChambersForm = selectedChambers.reduce(
+      (acc, chamberName) => {
+        acc[chamberName] = { quantity: 0, rating: 0 };
+        return acc;
+      },
+      {} as StoreChambersForm,
+    );
+
+    const validationRules = buildChamberValidationRules(
+      selectedChambers,
+      producedTotal,
+    );
+
     useGlobalFormsStore
       .getState()
-      .setField(
-        "supervisor-production",
-        "packaging_type",
-        packageTypeProduction ?? "bag"
-      );
-  }
-}, [packageTypeProduction]);
+      .initializeForm("store-chambers", initialValues, validationRules, {
+        validateOnChange: true,
+      });
+  }, [product?.quantity, selectedChambers]);
+
+  useEffect(() => {
+    if (isFormInitialized("supervisor-production")) {
+      useGlobalFormsStore
+        .getState()
+        .setField(
+          "supervisor-production",
+          "packaging_type",
+          packageTypeProduction ?? "bag",
+        );
+    }
+  }, [packageTypeProduction]);
 
   useEffect(() => {
     if (isFormInitialized("add-product-package")) {
@@ -458,9 +463,7 @@ useEffect(() => {
     }
   }, [slectedUnit]);
 
-  const isOverLimit =
-  storeErrors?.__TOTAL__ !== undefined;
-
+  const isOverLimit = storeErrors?.__TOTAL__ !== undefined;
 
   const buttonsContainerStyle: ViewStyle = useMemo(() => {
     const allRight = config?.buttons?.every((btn) => btn.alignment === "right");
@@ -489,7 +492,8 @@ useEffect(() => {
         section.type === "optionList" &&
         stateSearched?.length !== 0
       ) {
-        const options = filterOptions(section.data.options, stateSearched) ?? [];
+        const options =
+          filterOptions(section.data.options, stateSearched) ?? [];
         data = { ...section.data, options };
       }
 
@@ -520,7 +524,7 @@ useEffect(() => {
         const vendorsRaw = section.data;
 
         const vendors = vendorsRaw.filter((v) =>
-          selectedRawMaterials.some((rm) => v.materials.includes(rm.name))
+          selectedRawMaterials.some((rm) => v.materials.includes(rm.name)),
         );
 
         data = vendors;
@@ -536,7 +540,7 @@ useEffect(() => {
           filtered = rawList.filter(
             (item) =>
               item.name?.toLowerCase().includes(s) ||
-              item.description?.toLowerCase().includes(s)
+              item.description?.toLowerCase().includes(s),
           );
         }
 
@@ -563,32 +567,35 @@ useEffect(() => {
         }
 
         const filteredStrings: string[] = filtered.map((item) =>
-          typeof item === "string" ? item : item.name
+          typeof item === "string" ? item : item.name,
         );
-        
+
         data = {
           isCheckEnable: false,
           route: "product",
-          options: filteredStrings ?? []
+          options: filteredStrings ?? [],
         };
       }
 
-if (meta?.type === "choose-package" && section.type === "package-size-choose-list") {
-  const rawList = section.data.list;
+      if (
+        meta?.type === "choose-package" &&
+        section.type === "package-size-choose-list"
+      ) {
+        const rawList = section.data.list;
 
-  let filtered = rawList;
-  if (PackageSizeSearched?.trim()) {
-    const s = PackageSizeSearched.toLowerCase();
-    filtered = rawList.filter((item) =>
-      item.name.toLowerCase().includes(s)
-    );
-  }
+        let filtered = rawList;
+        if (PackageSizeSearched?.trim()) {
+          const s = PackageSizeSearched.toLowerCase();
+          filtered = rawList.filter((item) =>
+            item.name.toLowerCase().includes(s),
+          );
+        }
 
-  data = {
-    ...section.data,
-    list: filtered,
-  };
-}
+        data = {
+          ...section.data,
+          list: filtered,
+        };
+      }
 
       return Component ? (
         <React.Fragment key={`${section.type}-${idx}`}>
@@ -622,7 +629,7 @@ if (meta?.type === "choose-package" && section.type === "package-size-choose-lis
         </React.Fragment>
       ) : null;
     },
-    [color, selectedChambers, toggleModal, conditions]
+    [color, selectedChambers, toggleModal, conditions],
   );
 
   if (!config) return null;
@@ -636,12 +643,12 @@ if (meta?.type === "choose-package" && section.type === "package-size-choose-lis
     meta?.type === "add-product-package"
       ? isAddProductFormValid
       : meta?.type === "add-package-size"
-      ? isAddPackageSizeFormValid
-      : meta?.type === "fill-package"
-      ? isAddPackageQuantityFormValid
-      : meta?.type === "isStoreQuantityFormValid"
-      ? isStoreQuantityFormValid
-      : true;
+        ? isAddPackageSizeFormValid
+        : meta?.type === "fill-package"
+          ? isAddPackageQuantityFormValid
+          : meta?.type === "isStoreQuantityFormValid"
+            ? isStoreQuantityFormValid
+            : true;
 
   const isOrderAlreadyShipped =
     meta?.type === "order-ready" &&
@@ -676,11 +683,13 @@ if (meta?.type === "choose-package" && section.type === "package-size-choose-lis
       source !== "add" &&
       source !== "vendor";
     const shouldOpenStoreProduct =
-      btn.closeOnPress !== false && btn.actionKey === "choose-chamber" && source === "chamber";
-    
+      btn.closeOnPress !== false &&
+      btn.actionKey === "choose-chamber" &&
+      source === "chamber";
+
     // const shouldOpenStoreProduct =
     //   btn.closeOnPress !== false && btn.actionKey === "store-product";
-    
+
     const supervisorProduction = {
       sections: [
         {
@@ -705,7 +714,7 @@ if (meta?.type === "choose-package" && section.type === "package-size-choose-lis
         ...selectedChambers.map((chamberName) => {
           const quantityValue =
             chamberQuantity[chamberName]?.find(
-              (chamber: ChamberQty) => chamber.name === chamberName
+              (chamber: ChamberQty) => chamber.name === chamberName,
             )?.quantity ?? "";
 
           return {
@@ -724,7 +733,7 @@ if (meta?.type === "choose-package" && section.type === "package-size-choose-lis
               key: "supervisor-production",
               formField_1: chamberName,
               source: "supervisor-production",
-            keyboardType: "number-pad",
+              keyboardType: "number-pad",
             },
           };
         }),
@@ -778,14 +787,13 @@ if (meta?.type === "choose-package" && section.type === "package-size-choose-lis
     };
 
     const baseDisabled =
-  btn.disabled ||
-  !isBottomSheetFormValid ||
-  isOrderAlreadyShipped ||
-  isProductLoading;
+      btn.disabled ||
+      !isBottomSheetFormValid ||
+      isOrderAlreadyShipped ||
+      isProductLoading;
 
-const supervisorExtraDisabled =
-  meta.type === "supervisor-production" && isOverLimit;
-
+    const supervisorExtraDisabled =
+      meta.type === "supervisor-production" && isOverLimit;
 
     return (
       <Animated.View
@@ -802,40 +810,35 @@ const supervisorExtraDisabled =
           color={btn.color}
           variant={btn.variant}
           disabled={baseDisabled}
-          loading={
-  productionLoading &&
-  btn.actionKey === "store-product"
-}
+          loading={productionLoading && btn.actionKey === "store-product"}
+          onPress={async () => {
+            if (!btn.actionKey) return;
 
-      onPress={async () => {
-  if (!btn.actionKey) return;
+            const shouldClose = await runAction(btn.actionKey);
 
-  const shouldClose = await runAction(btn.actionKey);
+            if (shouldClose === false) return;
 
-  if (shouldClose === false) return;
+            if (shouldCloseOrValidate) {
+              validateAndSetData("abcd1", "add-product-package");
+              return;
+            }
 
-  if (shouldCloseOrValidate) {
-    validateAndSetData("abcd1", "add-product-package");
-    return;
-  }
+            if (shouldOpenStoreProduct) {
+              validateAndSetData(
+                product?.id,
+                "supervisor-production",
+                supervisorProduction,
+              );
+              return;
+            }
 
-  if (shouldOpenStoreProduct) {
-    validateAndSetData(
-      product?.id,
-      "supervisor-production",
-      supervisorProduction
-    );
-    return;
-  }
+            if (source === "product-chamber") {
+              dispatch(closeBottomSheet());
+              return;
+            }
 
-  if (source === "product-chamber") {
-    dispatch(closeBottomSheet());
-    return;
-  }
-
-  dispatch(closeBottomSheet());
-}}
-
+            dispatch(closeBottomSheet());
+          }}
         >
           {btn.text}
         </Button>
@@ -863,17 +866,17 @@ const supervisorExtraDisabled =
             style={styles.scrollContainer}
             contentContainerStyle={styles.verticalContainer}
             showsVerticalScrollIndicator={false}
-          bounces={false}
-        >
-          {config.sections?.map((section: SectionConfig, secidx: number) =>
-            renderSection(section, secidx)
-          )}
-          {config.buttons && config.buttons?.length > 0 && (
-            <View style={[buttonsContainerStyle]}>
-              {config.buttons.map(renderButton)}
-            </View>
-          )}
-        </ScrollView>
+            bounces={false}
+          >
+            {config.sections?.map((section: SectionConfig, secidx: number) =>
+              renderSection(section, secidx),
+            )}
+            {config.buttons && config.buttons?.length > 0 && (
+              <View style={[buttonsContainerStyle]}>
+                {config.buttons.map(renderButton)}
+              </View>
+            )}
+          </ScrollView>
         </KeyboardAvoidingView>
       </View>
     </Modal>
@@ -894,13 +897,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     maxHeight: Math.min(SCREEN_HEIGHT * 0.95, 700),
   },
-scrollContainer: {
-  flexGrow: 1,
-},
-verticalContainer: {
-  flexGrow: 1,
-  gap: 16,
-},
+  scrollContainer: {
+    flexGrow: 1,
+  },
+  verticalContainer: {
+    flexGrow: 1,
+    gap: 16,
+  },
   HStack: {
     flexDirection: "row",
   },

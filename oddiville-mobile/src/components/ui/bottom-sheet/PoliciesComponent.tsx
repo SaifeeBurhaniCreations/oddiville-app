@@ -12,7 +12,7 @@ import { togglePolicy } from "@/src/redux/slices/bottomsheet/policies.slice";
 const PoliciesCardComponent: React.FC<PoliciesCardProps> = ({ data }) => {
   const dispatch = useDispatch();
   const { selectedPolicies } = useSelector(
-    (state: RootState) => state.policies
+    (state: RootState) => state.policies,
   );
 
   return (

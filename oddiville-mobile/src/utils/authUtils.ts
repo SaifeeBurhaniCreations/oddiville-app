@@ -5,17 +5,15 @@ export function isAdminRole(role: "superadmin" | "admin" | "supervisor") {
         return "supervisor-raw-material"
     }
 }
-export function rejectEmptyOrNull<Args extends any[], Return>(
-    fn: (...args: Args) => Promise<Return>
-  ): (...args: Args) => Promise<Return> {
-    return async (...args: Args) => {
-      const data = await fn(...args);
-  
-      if (data == null) {
-        throw new Error("No data received – likely API or network issue");
-      }
-  
-      return data;
-    };
-  }
-  
+
+export function rejectEmptyOrNull<TArgs extends any[], TResult>(
+  fn: (...args: TArgs) => Promise<TResult>
+) {
+  return async (...args: TArgs): Promise<TResult> => {
+    const res = await fn(...args);
+
+    if (!res) throw new Error("Empty response");
+
+    return res;
+  };
+}

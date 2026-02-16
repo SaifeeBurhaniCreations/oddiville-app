@@ -36,6 +36,8 @@ export const getBottomSheetActions = (type: BottomSheetSchemaKey): BottomSheetAc
         return ["add-dispatch-product"];
       case "add-vendor":
         return ["add-vendor"];
+      case "select-status":
+        return ["cancel","choose-export-status"];
       default:
         return [];
     }

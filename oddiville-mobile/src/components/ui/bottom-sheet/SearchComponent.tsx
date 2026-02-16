@@ -14,35 +14,39 @@ import { setPackageSizeSearch } from "@/src/redux/slices/bottomsheet/package-siz
 const SearchComponent: React.FC<SearchProps> = ({ data }) => {
   const dispatch = useDispatch();
   const { stateSearched, citySearched } = useSelector(
-    (state: RootState) => state.location
+    (state: RootState) => state.location,
   );
   const RmSearched = useSelector(
-    (state: RootState) => state.rawMaterialSearch.searchTerm
+    (state: RootState) => state.rawMaterialSearch.searchTerm,
   );
   const ProductSearched = useSelector(
-    (state: RootState) => state.productSearch.productSearched
+    (state: RootState) => state.productSearch.productSearched,
   );
   const PackageSizeSearched = useSelector(
-    (state: RootState) => state.packageSizeSearch.packageSizeSearched
+    (state: RootState) => state.packageSizeSearch.packageSizeSearched,
   );
 
   const value =
-  data.searchType === "add-package" ? PackageSizeSearched : data.searchType === "add-product"
-      ? ProductSearched
-      : data.searchType === "add-raw-material"
-      ? RmSearched
-      : data.searchType === "state"
-      ? stateSearched
-      : citySearched;
+    data.searchType === "add-package"
+      ? PackageSizeSearched
+      : data.searchType === "add-product"
+        ? ProductSearched
+        : data.searchType === "add-raw-material"
+          ? RmSearched
+          : data.searchType === "state"
+            ? stateSearched
+            : citySearched;
 
   const setSearched =
-  data.searchType === "add-package" ? setPackageSizeSearch : data.searchType === "add-product"
-      ? setProductSearch
-      : data.searchType === "add-raw-material"
-      ? setRMSearchTerm
-      : data.searchType === "state"
-      ? setStateSearched
-      : setCitySearched;
+    data.searchType === "add-package"
+      ? setPackageSizeSearch
+      : data.searchType === "add-product"
+        ? setProductSearch
+        : data.searchType === "add-raw-material"
+          ? setRMSearchTerm
+          : data.searchType === "state"
+            ? setStateSearched
+            : setCitySearched;
 
   return (
     <SearchInput

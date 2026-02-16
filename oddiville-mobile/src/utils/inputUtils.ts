@@ -2,5 +2,4 @@ export function getPlaceholder(placeholder: string | undefined, chamber: string 
     if(!placeholder && !chamber) return "Select";
     if(!chamber) return placeholder;
     return chamber;
-    
 }

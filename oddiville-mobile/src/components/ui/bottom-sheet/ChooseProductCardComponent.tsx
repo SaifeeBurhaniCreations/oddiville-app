@@ -22,14 +22,13 @@ const ChooseProductCardComponent: React.FC<multipleProductCardProps> = ({
   const dispatch = useDispatch();
 
   const selectedProducts = useSelector(
-    (state: RootState) => state.multipleProduct.selectedProducts
+    (state: RootState) => state.multipleProduct.selectedProducts,
   );
 
   const isSelected = (productId: string) =>
     selectedProducts.some((p) => p.id === productId);
 
   const handleToggle = (item: multipleProductCardDataProps) => {
-    
     if (isSelected(item.id)) {
       dispatch(removeProduct(item.id));
     } else {
@@ -41,7 +40,7 @@ const ChooseProductCardComponent: React.FC<multipleProductCardProps> = ({
           rating: Number(item.rating),
           packages: item.packages,
           chambers: item.chambers,
-        })
+        }),
       );
     }
   };
@@ -49,7 +48,6 @@ const ChooseProductCardComponent: React.FC<multipleProductCardProps> = ({
   return (
     <View style={styles.listContainer}>
       {data.map((item) => {
-        
         const { image, isCustomImage } = getImageSource({
           image: item.image,
           options: {

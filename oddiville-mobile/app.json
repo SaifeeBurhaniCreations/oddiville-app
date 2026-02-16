@@ -4,7 +4,7 @@
     "slug": "oddiville-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/images/icon-main.png",
+    "icon": "./src/assets/images/icon-ios.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -19,7 +19,7 @@
       "router": {
         "origin": false
       },
-      "API_URL": "https://1bf3-103-185-243-143.ngrok-free.app",
+      "API_URL": "https://1a7c-103-185-243-163.ngrok-free.app",
       "comment": "https://oddiapi.sbcws.com",
       "eas": {
         "projectId": "ed40e76d-b0ed-40cc-af22-1cf28030d635"
@@ -27,7 +27,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/images/icon-main.png",
+        "foregroundImage": "./src/assets/images/icon-foreground.png",
         "backgroundColor": "#3D874C"
       },
       "abiFilters": ["armeabi-v7a", "arm64-v8a"],

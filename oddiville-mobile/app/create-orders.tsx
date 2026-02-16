@@ -27,9 +27,13 @@ import { getColor } from "@/src/constants/colors";
 import { RootState } from "@/src/redux/store";
 import { CountryProps } from "@/src/types";
 import { clearProduct } from "@/src/redux/slices/product.slice";
-import { useAuth } from '@/src/context/AuthContext';
-import { resolveAccess } from '@/src/utils/policiesUtils';
-import { SALES_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
+import { useAuth } from "@/src/context/AuthContext";
+import { resolveAccess } from "@/src/utils/policiesUtils";
+import {
+  SALES_BACK_ROUTES,
+  resolveBackRoute,
+  resolveDefaultRoute,
+} from "@/src/utils/backRouteUtils";
 import { DispatchUsedStockState } from "@/src/redux/slices/used-dispatch.slice";
 import { DispatchUIProduct } from "@/src/types/domain/dispatch/dispatch.types";
 import { usePackedItems } from "@/src/hooks/packing/getPackedItemsEvent";
@@ -59,12 +63,12 @@ export type OrderStorageForm = {
     [productId: string]: {
       [packageKey: string]: {
         totalBags: number;
-        totalPackets: number;        
-      packet: {                    
-        size: number;
-        unit: "gm" | "kg";
-        packetsPerBag: number;
-      };
+        totalPackets: number;
+        packet: {
+          size: number;
+          unit: "gm" | "kg";
+          packetsPerBag: number;
+        };
         byChamber: {
           [chamberId: string]: number;
         };
@@ -77,8 +81,8 @@ type UsedBagsByProduct = {
   [productId: string]: {
     [packageKey: string]: {
       totalBags: number;
-      totalPackets: number;         
-      packet: {                    
+      totalPackets: number;
+      packet: {
         size: number;
         unit: "gm" | "kg";
         packetsPerBag: number;
@@ -92,16 +96,17 @@ type UsedBagsByProduct = {
 
 function buildUsedBags(
   usedStock: DispatchUsedStockState,
-  packetMetaIndex: Map<string, { size: number; unit: "gm" | "kg"; packetsPerBag: number }>
+  packetMetaIndex: Map<
+    string,
+    { size: number; unit: "gm" | "kg"; packetsPerBag: number }
+  >,
 ): UsedBagsByProduct {
-
   const result: UsedBagsByProduct = {};
 
   for (const productId in usedStock) {
     result[productId] = {};
 
     for (const packageKey in usedStock[productId]) {
-
       const metaKey = `${productId.split("::")[0]}::${packageKey}`;
       const packetMeta = packetMetaIndex.get(metaKey);
 
@@ -135,11 +140,10 @@ function buildUsedBags(
   return result;
 }
 
-
 const CreateOrder = () => {
   const { role, policies } = useAuth();
   const toast = useToast();
-const queryClient = useQueryClient();
+  const queryClient = useQueryClient();
   const safeRole = role ?? "guest";
   const safePolicies = policies ?? [];
   const access = resolveAccess(safeRole, safePolicies);
@@ -147,27 +151,27 @@ const queryClient = useQueryClient();
   const dispatch = useDispatch();
   const [step, setStep] = useState<number>(1);
 
-    const { data: packedItemsDataNew, isFetching: packedItemsLoadingNew } =
-      usePackedItems();
+  const { data: packedItemsDataNew, isFetching: packedItemsLoadingNew } =
+    usePackedItems();
 
-const packetMetaIndex = useMemo(() => {
-  const map = new Map<
-    string,
-    { size: number; unit: "gm" | "kg"; packetsPerBag: number }
-  >();
+  const packetMetaIndex = useMemo(() => {
+    const map = new Map<
+      string,
+      { size: number; unit: "gm" | "kg"; packetsPerBag: number }
+    >();
 
-  (packedItemsDataNew ?? []).forEach(item => {
-    const key = `${item.product_name}::${item.skuId}-${item.rating}`;
+    (packedItemsDataNew ?? []).forEach((item) => {
+      const key = `${item.product_name}::${item.skuId}-${item.rating}`;
 
-    map.set(key, {
-      size: item.packet.size,
-      unit: item.packet.unit as "gm" | "kg",
-      packetsPerBag: item.packet.packetsPerBag,
+      map.set(key, {
+        size: item.packet.size,
+        unit: item.packet.unit as "gm" | "kg",
+        packetsPerBag: item.packet.packetsPerBag,
+      });
     });
-  });
 
-  return map;
-}, [packedItemsDataNew]);
+    return map;
+  }, [packedItemsDataNew]);
 
   const { goTo } = useAppNavigation();
   const {
@@ -177,14 +181,12 @@ const packetMetaIndex = useMemo(() => {
   } = useSelector((state: RootState) => state.location);
 
   const selectedProducts = useSelector(
-    (state: RootState) => state.multipleProduct.selectedProducts
+    (state: RootState) => state.multipleProduct.selectedProducts,
   );
-  const usedStock = useSelector(
-    (state: RootState) => state.usedDispatchPkg
-  );
+  const usedStock = useSelector((state: RootState) => state.usedDispatchPkg);
 
   const dispatchOrder = useDispatchOrder();
- 
+
   const canSeeAmount = access.isFullAccess;
 
   const {
@@ -277,31 +279,27 @@ const packetMetaIndex = useMemo(() => {
     {
       validateOnChange: true,
       debounce: 300,
-    }
+    },
   );
 
   useFocusEffect(
     React.useCallback(() => {
       dispatch(clearProduct());
-    }, [])
+    }, []),
   );
 
   useEffect(() => {
     if (!Array.isArray(values.products)) return;
 
-    const selectedIds = new Set(
-      (selectedProducts ?? []).map(p => p.id)
-    );
+    const selectedIds = new Set((selectedProducts ?? []).map((p) => p.id));
 
-    const syncedProducts = values.products.filter(p =>
-      selectedIds.has(p.id)
-    );
+    const syncedProducts = values.products.filter((p) => selectedIds.has(p.id));
 
-    const existingIds = new Set(syncedProducts.map(p => p.id));
+    const existingIds = new Set(syncedProducts.map((p) => p.id));
 
     const newProducts: DispatchUIProduct[] = (selectedProducts ?? [])
-      .filter(sp => !existingIds.has(sp.id))
-      .map(sp => ({
+      .filter((sp) => !existingIds.has(sp.id))
+      .map((sp) => ({
         id: sp.id,
         product_name: sp.product_name,
         image: sp.image ?? "",
@@ -351,7 +349,7 @@ const packetMetaIndex = useMemo(() => {
 
   const onFinalSubmit = async () => {
     const result = validateForm();
-    const sanitizedProducts = values.products.map(p => ({
+    const sanitizedProducts = values.products.map((p) => ({
       id: p.id,
       product_name: p.product_name,
       image: p.image,
@@ -359,13 +357,10 @@ const packetMetaIndex = useMemo(() => {
     })) satisfies DispatchUIProduct[];
 
     if (result.success) {
-const usedBagsByProduct = buildUsedBags(
-  usedStock,
-  packetMetaIndex
-);
+      const usedBagsByProduct = buildUsedBags(usedStock, packetMetaIndex);
 
-      const hasAnyBags = Object.values(usedBagsByProduct).some(product =>
-        Object.values(product).some(pkg => pkg.totalBags > 0)
+      const hasAnyBags = Object.values(usedBagsByProduct).some((product) =>
+        Object.values(product).some((pkg) => pkg.totalBags > 0),
       );
 
       if (!hasAnyBags) {
@@ -409,62 +404,62 @@ const usedBagsByProduct = buildUsedBags(
   const backRoute = resolveBackRoute(
     access,
     SALES_BACK_ROUTES,
-    resolveDefaultRoute(access)
+    resolveDefaultRoute(access),
   );
 
   return (
-   <Require edit="sales">
-     <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-    >
-      <View style={styles.pageContainer}>
-        <PageHeader page={"Sales"} />
-        <View style={styles.wrapper}>
-          <View style={[styles.HStack, { paddingHorizontal: 16 }]}>
-            <View style={{ paddingBottom: 8 }}>
-              <BackButton
-                label="Create Dispatch Order"
-                onPress={() => {
-                  if (step === 2) {
-                    setStep(1);
-                  } else {
-                    goTo(backRoute);
-                  }
-                }}
-              />
+    <Require edit="sales">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+      >
+        <View style={styles.pageContainer}>
+          <PageHeader page={"Sales"} />
+          <View style={styles.wrapper}>
+            <View style={[styles.HStack, { paddingHorizontal: 16 }]}>
+              <View style={{ paddingBottom: 8 }}>
+                <BackButton
+                  label="Create Dispatch Order"
+                  onPress={() => {
+                    if (step === 2) {
+                      setStep(1);
+                    } else {
+                      goTo(backRoute);
+                    }
+                  }}
+                />
+              </View>
+            </View>
+            <CreateFromStorage
+              handleGetStep={step}
+              controlledForm={{ values, setField, errors }}
+            />
+            <View style={{ paddingHorizontal: 16 }}>
+              {step === 1 ? (
+                <Button
+                  onPress={onSubmit}
+                  variant="fill"
+                  disabled={!isCurrentStepValid}
+                >
+                  Next
+                </Button>
+              ) : (
+                <Button
+                  onPress={onFinalSubmit}
+                  disabled={dispatchOrder.isPending}
+                  variant="fill"
+                >
+                  {dispatchOrder.isPending
+                    ? "Creating Dispatch..."
+                    : "Create Dispatch"}
+                </Button>
+              )}
             </View>
           </View>
-          <CreateFromStorage
-            handleGetStep={step}
-            controlledForm={{ values, setField, errors }}
-          />
-          <View style={{ paddingHorizontal: 16 }}>
-            {step === 1 ? (
-              <Button
-                onPress={onSubmit}
-                variant="fill"
-                disabled={!isCurrentStepValid}
-              >
-                Next
-              </Button>
-            ) : (
-              <Button
-                onPress={onFinalSubmit}
-                disabled={dispatchOrder.isPending}
-                variant="fill"
-              >
-                {dispatchOrder.isPending
-                  ? "Creating Dispatch..."
-                  : "Create Dispatch"}
-              </Button>
-            )}
-          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
-   </Require>
+      </KeyboardAvoidingView>
+    </Require>
   );
 };
 

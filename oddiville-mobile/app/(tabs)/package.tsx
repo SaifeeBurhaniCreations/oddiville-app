@@ -35,7 +35,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { Packaging, useChamberStockByName } from "@/src/hooks/useChamberStock";
 import { RootState } from "@/src/redux/store";
 import { B4 } from "@/src/components/typography/Typography";
-import { clearProduct, setRawMaterials } from "@/src/redux/slices/product.slice";
+import {
+  clearProduct,
+  setRawMaterials,
+} from "@/src/redux/slices/product.slice";
 import { resetPackageSizes } from "@/src/redux/slices/bottomsheet/package-size.slice";
 import { clearChambers } from "@/src/redux/slices/bottomsheet/raw-material.slice";
 import { clearRatings } from "@/src/redux/slices/bottomsheet/storage.slice";
@@ -48,28 +51,24 @@ import { useQueryClient } from "@tanstack/react-query";
 const PackageScreen = () => {
   // selectors
   const selectedRawMaterials = useSelector(
-    (state: RootState) => state.product.rawMaterials
+    (state: RootState) => state.product.rawMaterials,
   );
-  
+
   // custom hooks
   const toast = useToast();
   const dispatch = useDispatch();
-  const form =
-    usePackingForm({validateOnChange: true});
+  const form = usePackingForm({ validateOnChange: true });
 
-    const { chamberStock } = useChamberStockByName(selectedRawMaterials);
-        
-    const rmUsed = useMemo(
-          () => chamberStock ?? [],
-          [chamberStock]
-        );
+  const { chamberStock } = useChamberStockByName(selectedRawMaterials);
 
-    const rm = useRawMaterialConsumption(rmUsed);
+  const rmUsed = useMemo(() => chamberStock ?? [], [chamberStock]);
+
+  const rm = useRawMaterialConsumption(rmUsed);
 
   const { mutate: createPacked, isPending, error } = useCreatePacking();
 
-  // tanstack query 
-const queryClient = useQueryClient();
+  // tanstack query
+  const queryClient = useQueryClient();
 
   // states
   const [searchText, setSearchText] = useState<string>("");
@@ -81,27 +80,23 @@ const queryClient = useQueryClient();
   // derived variable
   const disableButton = Object.values(overPackMap).some(Boolean);
 
-//  memo 
-const submitDisabledReason = useMemo(() => {
-  if (isPending) return "Packing in progress";
+  //  memo
+  const submitDisabledReason = useMemo(() => {
+    if (isPending) return "Packing in progress";
 
-  const errors = form.getErrors?.();
-  if (!errors || Object.keys(errors).length === 0) return null;
+    const errors = form.getErrors?.();
+    if (!errors || Object.keys(errors).length === 0) return null;
 
-  if (errors["product.productName"])
-    return "Please select a product";
+    if (errors["product.productName"]) return "Please select a product";
 
-  if (errors["rm"])
-    return "Raw material consumption is required";
+    if (errors["rm"]) return "Raw material consumption is required";
 
-  if (errors["cross"])
-    return errors["cross"];
+    if (errors["cross"]) return errors["cross"];
 
-  if (errors["packaging"])
-    return "Packaging quantity is required";
+    if (errors["packaging"]) return "Packaging quantity is required";
 
-  return "Please fix the highlighted fields";
-}, [form.getErrors, isPending]);
+    return "Please fix the highlighted fields";
+  }, [form.getErrors, isPending]);
 
   // effect
   useEffect(() => {
@@ -111,99 +106,95 @@ const submitDisabledReason = useMemo(() => {
   }, [showTooltip]);
 
   // functions
-const onSubmit = async (data: any) => {
-  dispatch(setFinalDraft(data));
-  setIsLoading(true);
+  const onSubmit = async (data: any) => {
+    dispatch(setFinalDraft(data));
+    setIsLoading(true);
 
-  createPacked(data, {
-    onSuccess: () => {
-      form.resetForm();
-      dispatch(clearProduct());
-      dispatch(setRawMaterials([]));
-      dispatch(resetPackageSizes());
-      dispatch(clearChambers());
-      dispatch(clearRatings());
+    createPacked(data, {
+      onSuccess: () => {
+        form.resetForm();
+        dispatch(clearProduct());
+        dispatch(setRawMaterials([]));
+        dispatch(resetPackageSizes());
+        dispatch(clearChambers());
+        dispatch(clearRatings());
 
-      queryClient.invalidateQueries({
-        queryKey: ["packageName", data.product.productName],
-      });
+        queryClient.invalidateQueries({
+          queryKey: ["packageName", data.product.productName],
+        });
 
-      toast.success("Packed item created!");
-    },
-    onError: (err: any) => {
-      toast.error(err?.message || "Packing failed");
-    },
-    onSettled: () => {
-      setIsLoading(false);
-    },
-  });
-};
-
-  const handleOverPackChange = (key: string, value: boolean) => {
-    setOverPackMap(prev => ({ ...prev, [key]: value }));
+        toast.success("Packed item created!");
+      },
+      onError: (err: any) => {
+        toast.error(err?.message || "Packing failed");
+      },
+      onSettled: () => {
+        setIsLoading(false);
+      },
+    });
   };
 
-  const emptyStateData = getEmptyStateData("products")
+  const handleOverPackChange = (key: string, value: boolean) => {
+    setOverPackMap((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const emptyStateData = getEmptyStateData("products");
 
   function getRmKgPerBag(
-  packaging: Packaging | Packaging[] | null | undefined
-): number {
-  if (!packaging) return 0;
+    packaging: Packaging | Packaging[] | null | undefined,
+  ): number {
+    if (!packaging) return 0;
 
-  const pkg = Array.isArray(packaging) ? packaging[0] : packaging;
+    const pkg = Array.isArray(packaging) ? packaging[0] : packaging;
 
-  if (pkg.size.unit !== "kg") return 0;
+    if (pkg.size.unit !== "kg") return 0;
 
-  return Number(pkg.size.value);
-}
-
-const isFormStructurallyValid = useMemo(() => {
-  if (!form.values.product.productName) return false;
-
-  /* ---------------- RM KG USED ---------------- */
-  const rmKgUsed = rmUsed.reduce((sum, rm) => {
-    const kgPerBag = getRmKgPerBag(rm.packaging);
-
-    const usedBags =
-      Object.values(form.values.rmInputs?.[rm.product_name] || {})
-        .reduce((s, v) => s + Number(v || 0), 0);
-
-    return sum + usedBags * kgPerBag;
-  }, 0);
-
-  /* ---------------- PACKED KG ---------------- */
-  const packedKg = form.values.packagingPlan.reduce((sum, p) => {
-    const packetKg =
-      p.packet.unit === "gm"
-        ? p.packet.size / 1000
-        : p.packet.size;
-
-    const kgPerBag = packetKg * p.packet.packetsPerBag;
-
-    return sum + kgPerBag * p.bagsProduced;
-  }, 0);
-
-  if (rmKgUsed === 0) return false;
-  if (packedKg === 0) return false;
-
-  if (Math.abs(rmKgUsed - packedKg) > 0.001) return false;
-
-  for (const plan of form.values.packagingPlan) {
-    if (!plan.storage || plan.storage.length === 0) return false;
+    return Number(pkg.size.value);
   }
 
-  return true;
-}, [
-  form.values.product.productName,
-  form.values.rmInputs,
-  form.values.packagingPlan,
-  rmUsed,
-]);
+  const isFormStructurallyValid = useMemo(() => {
+    if (!form.values.product.productName) return false;
 
-const isSubmitDisabled =
-  isPending ||
-  disableButton ||
-  !isFormStructurallyValid;
+    /* ---------------- RM KG USED ---------------- */
+    const rmKgUsed = rmUsed.reduce((sum, rm) => {
+      const kgPerBag = getRmKgPerBag(rm.packaging);
+
+      const usedBags = Object.values(
+        form.values.rmInputs?.[rm.product_name] || {},
+      ).reduce((s, v) => s + Number(v || 0), 0);
+
+      return sum + usedBags * kgPerBag;
+    }, 0);
+
+    /* ---------------- PACKED KG ---------------- */
+    const packedKg = form.values.packagingPlan.reduce((sum, p) => {
+      const packetKg =
+        p.packet.unit === "gm" ? p.packet.size / 1000 : p.packet.size;
+
+      const kgPerBag = packetKg * p.packet.packetsPerBag;
+
+      return sum + kgPerBag * p.bagsProduced;
+    }, 0);
+
+    if (rmKgUsed === 0) return false;
+    if (packedKg === 0) return false;
+
+    if (Math.abs(rmKgUsed - packedKg) > 0.001) return false;
+
+    for (const plan of form.values.packagingPlan) {
+      if (!plan.storage || plan.storage.length === 0) return false;
+    }
+
+    return true;
+  }, [
+    form.values.product.productName,
+    form.values.rmInputs,
+    form.values.packagingPlan,
+    rmUsed,
+  ]);
+
+  const isSubmitDisabled =
+    isPending || disableButton || !isFormStructurallyValid;
 
   return (
     <KeyboardAvoidingView
@@ -225,40 +216,60 @@ const isSubmitDisabled =
                 contentContainerStyle={{ flexGrow: 1, paddingBottom: 56 }}
               >
                 <View style={styles.storageColumn}>
-                  <ProductContextSection setIsLoading={setIsLoading} form={form} setIsCurrentProduct={setIsCurrentProduct} />
-                  <RawMaterialConsumptionSection setIsLoading={setIsLoading} isCurrentProduct={isCurrentProduct} form={form} rm={rm} rmUsed={rmUsed} />
-                  <PackingSKUSection setIsLoading={setIsLoading} isCurrentProduct={isCurrentProduct} form={form} onOverPackChange={handleOverPackChange} rmUsed={rmUsed} />
+                  <ProductContextSection
+                    setIsLoading={setIsLoading}
+                    form={form}
+                    setIsCurrentProduct={setIsCurrentProduct}
+                  />
+                  <RawMaterialConsumptionSection
+                    setIsLoading={setIsLoading}
+                    isCurrentProduct={isCurrentProduct}
+                    form={form}
+                    rm={rm}
+                    rmUsed={rmUsed}
+                  />
+                  <PackingSKUSection
+                    setIsLoading={setIsLoading}
+                    isCurrentProduct={isCurrentProduct}
+                    form={form}
+                    onOverPackChange={handleOverPackChange}
+                    rmUsed={rmUsed}
+                  />
 
-                  {!isCurrentProduct && <View style={EmptyStateStyles.center}><EmptyState stateData={emptyStateData} /></View>}
+                  {!isCurrentProduct && (
+                    <View style={EmptyStateStyles.center}>
+                      <EmptyState stateData={emptyStateData} />
+                    </View>
+                  )}
                 </View>
               </ScrollView>
               <View style={{ paddingHorizontal: 16 }}>
                 <View>
                   <Pressable
-                  disabled={isSubmitDisabled || isPending}
-onPress={() => {
-  if (disableButton) {
-    setShowTooltip(true);
-    toast.error("Not enough packets in stock");
-    return;
-  }
-      if (isSubmitDisabled) {
-      setShowTooltip(true);
-      toast.error(submitDisabledReason || "Form is invalid");
-      return;
-    }
+                    disabled={isSubmitDisabled || isPending}
+                    onPress={() => {
+                      if (disableButton) {
+                        setShowTooltip(true);
+                        toast.error("Not enough packets in stock");
+                        return;
+                      }
+                      if (isSubmitDisabled) {
+                        setShowTooltip(true);
+                        toast.error(submitDisabledReason || "Form is invalid");
+                        return;
+                      }
 
-  const result = form.validateForm();
+                      const result = form.validateForm();
 
-  if (!result.success) {
-    setShowTooltip(true);
-    const firstError = Object.values(result.errors)[0];
-    toast.error(firstError);
-    return;
-  }
+                      if (!result.success) {
+                        setShowTooltip(true);
+                        const firstError = Object.values(result.errors)[0];
+                        toast.error(firstError);
+                        return;
+                      }
 
-  onSubmit(result.data);
-}}
+                      onSubmit(result.data);
+                    }}
                   >
                     <Button
                       variant="fill"
@@ -272,9 +283,7 @@ onPress={() => {
 
                   {showTooltip && submitDisabledReason && (
                     <View style={styles.tooltip}>
-                      <B4 style={styles.tooltipText}>
-                        {submitDisabledReason}
-                      </B4>
+                      <B4 style={styles.tooltipText}>{submitDisabledReason}</B4>
                     </View>
                   )}
                 </View>
@@ -289,7 +298,7 @@ onPress={() => {
           </Tabs>
         </View>
         <BottomSheet color="green" />
-        {(isLoading && isPending) && <OverlayLoader />}
+        {isLoading && isPending && <OverlayLoader />}
       </View>
     </KeyboardAvoidingView>
   );
@@ -332,7 +341,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 12,
   },
-
 });
 
 export default PackageScreen;

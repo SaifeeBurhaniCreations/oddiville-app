@@ -19,10 +19,7 @@ import OneStarIcon from "@/src/components/icons/page/Rating/OneStarIcon";
 
 import { B1, B4 } from "@/src/components/typography/Typography";
 
-import {
-  ChamberStock,
-  Packaging,
-} from "@/src/hooks/useChamberStock";
+import { ChamberStock, Packaging } from "@/src/hooks/useChamberStock";
 import { Chamber, useFrozenChambers } from "@/src/hooks/useChambers";
 import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
 
@@ -66,107 +63,107 @@ function useChamberNameMap(frozenChambers: Chamber[]) {
 
 function useChambersByRM(
   rmUsed: ChamberStock[],
-  chamberNameMap: Map<string, string>
+  chamberNameMap: Map<string, string>,
 ): ChambersByRM {
   return useMemo(() => {
     const byRM = new Map<string, StockChamber[]>();
 
-      rmUsed.forEach((stock) => {
-        if (!stock.product_name) return;
+    rmUsed.forEach((stock) => {
+      if (!stock.product_name) return;
 
-        const chambers: StockChamber[] = stock.chamber.map((ch) => ({
-          id: String(ch.id),
-          name: chamberNameMap.get(String(ch.id)) ?? "Unknown Chamber",
-          quantity: Number(ch.quantity) || 0,
-          rating: Number(ch.rating),
-        }));
+      const chambers: StockChamber[] = stock.chamber.map((ch) => ({
+        id: String(ch.id),
+        name: chamberNameMap.get(String(ch.id)) ?? "Unknown Chamber",
+        quantity: Number(ch.quantity) || 0,
+        rating: Number(ch.rating),
+      }));
 
-        byRM.set(stock.product_name, chambers);
-      });
+      byRM.set(stock.product_name, chambers);
+    });
 
-      return byRM;
-    }, [rmUsed, chamberNameMap]);
-  }
+    return byRM;
+  }, [rmUsed, chamberNameMap]);
+}
 
 function filterVisibleChambers(
   chambers: StockChamber[],
-  selectedRating: number
+  selectedRating: number,
 ) {
   return chambers.filter(
-    (ch) => ch.rating === selectedRating && ch.quantity > 0
+    (ch) => ch.rating === selectedRating && ch.quantity > 0,
   );
 }
 
-const ChamberRow = memo(({
-  chamber,
-  rmPackaging,
-  value,
-  onChange,
-  error,
-}: {
-  chamber: StockChamber;
-  rmPackaging: Packaging;
-  value: number | undefined;
-  onChange: (chamberId: string, value: number) => void;
-  error?: string;
-}) => {
-  const toast = useToast();
+const ChamberRow = memo(
+  ({
+    chamber,
+    rmPackaging,
+    value,
+    onChange,
+    error,
+  }: {
+    chamber: StockChamber;
+    rmPackaging: Packaging;
+    value: number | undefined;
+    onChange: (chamberId: string, value: number) => void;
+    error?: string;
+  }) => {
+    const toast = useToast();
 
-  const maxBags = Math.floor(
-    chamber.quantity / rmPackaging.size.value
-  );
+    const maxBags = Math.floor(chamber.quantity / rmPackaging.size.value);
 
-  const usedBags = value ?? 0;
+    const usedBags = value ?? 0;
 
-  const remainingBags = Math.max(maxBags - usedBags, 0);
-  const remainingKg = remainingBags * rmPackaging.size.value;
+    const remainingBags = Math.max(maxBags - usedBags, 0);
+    const remainingKg = remainingBags * rmPackaging.size.value;
 
-  return (
-    <View style={[styles.chamberCard, styles.borderBottom]}>
-      <View style={styles.Hstack}>
-        <View style={styles.iconWrapper}>
-          <ChamberIcon color={getColor("green")} size={32} />
+    return (
+      <View style={[styles.chamberCard, styles.borderBottom]}>
+        <View style={styles.Hstack}>
+          <View style={styles.iconWrapper}>
+            <ChamberIcon color={getColor("green")} size={32} />
+          </View>
+
+          <View style={styles.Vstack}>
+            <B1>{String(chamber.name).slice(0, 12)}…</B1>
+            <B4>
+              {remainingKg} kg | {remainingBags}{" "}
+              {remainingBags === 1 ? "bag" : "bags"}
+            </B4>
+          </View>
         </View>
 
-        <View style={styles.Vstack}>
-          <B1>{String(chamber.name).slice(0, 12)}…</B1>
-          <B4>
-            {remainingKg} kg | {remainingBags}{" "}
-            {remainingBags === 1 ? "bag" : "bags"}
-          </B4>
+        <View style={{ flex: 0.7 }}>
+          <Input
+            placeholder="Count"
+            addonText="bags"
+            mask="addon"
+            post
+            keyboardType="numeric"
+            value={String(usedBags || "")}
+            onChangeText={(text: string) => {
+              const input = Number(text) || 0;
+
+              if (input > maxBags) {
+                toast.error(`Only ${maxBags} bags available in this chamber`);
+                onChange(chamber.id, maxBags);
+                return;
+              }
+
+              if (input < 0) {
+                onChange(chamber.id, 0);
+                return;
+              }
+
+              onChange(chamber.id, input);
+            }}
+            error={error}
+          />
         </View>
       </View>
-
-      <View style={{ flex: 0.7 }}>
-        <Input
-          placeholder="Count"
-          addonText="bags"
-          mask="addon"
-          post
-          keyboardType="numeric"
-          value={String(usedBags || "")}
-          onChangeText={(text: string) => {
-            const input = Number(text) || 0;
-
-            if (input > maxBags) {
-              toast.error(`Only ${maxBags} bags available in this chamber`);
-              onChange(chamber.id, maxBags);
-              return;
-            }
-
-            if (input < 0) {
-              onChange(chamber.id, 0);
-              return;
-            }
-
-            onChange(chamber.id, input);
-          }}
-          error={error}
-        />
-      </View>
-    </View>
-  );
-});
+    );
+  },
+);
 
 type Props = {
   setIsLoading: (isLoading: boolean) => void;
@@ -174,24 +171,22 @@ type Props = {
   form: PackingFormController;
   rm: RawMaterialConsumptionSetter;
   rmUsed: ChamberStock[];
-  };
+};
 const RawMaterialConsumptionSection = ({
   setIsLoading,
-    isCurrentProduct,
-    form,
-    rm,
-    rmUsed,
-  }: Props) => {
+  isCurrentProduct,
+  form,
+  rm,
+  rmUsed,
+}: Props) => {
+  const ratingByRM = useSelector(
+    (state: RootState) => state.StorageRMRating.ratingByRM,
+  );
 
-    const ratingByRM = useSelector(
-      (state: RootState) => state.StorageRMRating.ratingByRM
-    );
+  const { validateAndSetData } = useValidateAndOpenBottomSheet();
 
-    const { validateAndSetData } = useValidateAndOpenBottomSheet();
-
-
-    const { data: frozenChambers, isLoading: frozenLoading } =
-      useFrozenChambers();
+  const { data: frozenChambers, isLoading: frozenLoading } =
+    useFrozenChambers();
   const {
     isLoading,
     editingRM,
@@ -202,19 +197,19 @@ const RawMaterialConsumptionSection = ({
     setChamberInput,
   } = rm;
 
-    const chamberNameMap = useChamberNameMap(frozenChambers);
-    const chambersByRM = useChambersByRM(rmUsed, chamberNameMap);
+  const chamberNameMap = useChamberNameMap(frozenChambers);
+  const chambersByRM = useChambersByRM(rmUsed, chamberNameMap);
 
   const rmMeta = useMemo(
     () =>
-      rmUsed.map(rm => ({
+      rmUsed.map((rm) => ({
         rmName: rm.product_name,
-        chambers: rm.chamber.map(ch => ({
+        chambers: rm.chamber.map((ch) => ({
           chamberId: String(ch.id),
           rating: Number(ch.rating) || 5,
         })),
       })),
-    [rmUsed]
+    [rmUsed],
   );
 
   useEffect(() => {
@@ -225,189 +220,197 @@ const RawMaterialConsumptionSection = ({
     form.setRMMeta(rmMeta);
   }, [rmMeta]);
 
+  useEffect(() => {
+    setIsLoading(isLoading || frozenLoading);
+  }, [isLoading, frozenLoading, setIsLoading]);
 
-    useEffect(() => {
-      setIsLoading(isLoading || frozenLoading);
-    }, [isLoading, frozenLoading, setIsLoading]);
+  useEffect(() => {
+    setEditingRM(null);
+  }, [ratingByRM]);
 
-    useEffect(() => {
-      setEditingRM(null);
-    }, [ratingByRM]);
-    
-    if (isCurrentProduct) {
-      return (
-        <View style={[styles.rawMaterialColumn, styles.borderBottom]}>
-          {rmUsed.map((rm) => {
-            const ratingForThisRM = ratingByRM[rm.product_name] ?? {
-              rating: 5,
-              message: "Excellent",
-            };
+  if (isCurrentProduct) {
+    return (
+      <View style={[styles.rawMaterialColumn, styles.borderBottom]}>
+        {rmUsed.map((rm) => {
+          const ratingForThisRM = ratingByRM[rm.product_name] ?? {
+            rating: 5,
+            message: "Excellent",
+          };
 
-            const selectedRating = ratingForThisRM.rating;
-            const RatingIcon = RatingIconMap[selectedRating] ?? FiveStarIcon;
+          const selectedRating = ratingForThisRM.rating;
+          const RatingIcon = RatingIconMap[selectedRating] ?? FiveStarIcon;
 
-            const rmPackaging =
-              rm.packaging && !Array.isArray(rm.packaging) ? rm.packaging : null;
+          const rmPackaging =
+            rm.packaging && !Array.isArray(rm.packaging) ? rm.packaging : null;
 
-            if (!rmPackaging) {
-              return (
-                <View style={EmptyStateStyles.center}>
-                  <EmptyState
-                    key={rm.product_name}
-                    stateData={{
-                      title: "Raw material missing",
-                      description: `${rm.product_name} raw material data not found`,
-                    }}
-                    compact
-                  />
-                </View>
-              );
-            }
-
-            const rmChambers = chambersByRM.get(rm.product_name) || [];
-            const visibleChambers = filterVisibleChambers(
-              rmChambers,
-              selectedRating
-            );
-
-            const isChambersEmpty = visibleChambers.length === 0;
-
+          if (!rmPackaging) {
             return (
-              <ItemsRepeater
-                key={rm.product_name}
+              <View style={EmptyStateStyles.center}>
+                <EmptyState
+                  key={rm.product_name}
+                  stateData={{
+                    title: "Raw material missing",
+                    description: `${rm.product_name} raw material data not found`,
+                  }}
+                  compact
+                />
+              </View>
+            );
+          }
 
-                title={rm.product_name}
-                description={rm.product_name}
-                noValue
-              >
-                <View style={styles.cardBody}>
-                  <View style={[styles.Hstack, styles.JustifyBetween, { width: "100%" }]}>
-                    <Select
-                      value={ratingForThisRM.message}
-                      showOptions={false}
-                      preIcon={RatingIcon}
-                      selectStyle={{ flex: 1 }}
+          const rmChambers = chambersByRM.get(rm.product_name) || [];
+          const visibleChambers = filterVisibleChambers(
+            rmChambers,
+            selectedRating,
+          );
+
+          const isChambersEmpty = visibleChambers.length === 0;
+
+          return (
+            <ItemsRepeater
+              key={rm.product_name}
+              title={rm.product_name}
+              description={rm.product_name}
+              noValue
+            >
+              <View style={styles.cardBody}>
+                <View
+                  style={[
+                    styles.Hstack,
+                    styles.JustifyBetween,
+                    { width: "100%" },
+                  ]}
+                >
+                  <Select
+                    value={ratingForThisRM.message}
+                    showOptions={false}
+                    preIcon={RatingIcon}
+                    selectStyle={{ flex: 1 }}
+                    onPress={() => {
+                      setEditingRM(rm.product_name);
+                      validateAndSetData(
+                        `${rm.product_name}:${ratingForThisRM.rating}`,
+                        "storage-rm-rating",
+                        {
+                          sections: [
+                            {
+                              type: "title-with-details-cross",
+                              data: {
+                                title: "Select rating",
+                              },
+                            },
+                            {
+                              type: "storage-rm-rating",
+                              data: [
+                                {
+                                  rating: "5",
+                                  message: "Excellent",
+                                },
+                                {
+                                  rating: "4",
+                                  message: "Good",
+                                },
+                                {
+                                  rating: "3",
+                                  message: "Neutral",
+                                },
+                                {
+                                  rating: "2",
+                                  message: "Poor",
+                                },
+                                {
+                                  rating: "1",
+                                  message: "Very poor",
+                                },
+                              ],
+                            },
+                          ],
+                          intent: "PACKING_RM_FILTER_RATING",
+                        },
+                      );
+                    }}
+                  />
+                  {editingRM === rm.product_name ? (
+                    <ActionButton
+                      icon={CrossIcon}
+                      style={{ height: 42, width: 42 }}
+                      onPress={() => setEditingRM(null)}
+                    />
+                  ) : (
+                    <ActionButton
+                      icon={PencilIcon}
+                      style={{
+                        height: 42,
+                        width: 42,
+                        opacity: isChambersEmpty ? 0.5 : 1,
+                      }}
+                      disabled={isChambersEmpty}
                       onPress={() => {
+                        if (isChambersEmpty) return;
                         setEditingRM(rm.product_name);
-                        validateAndSetData(
-                          `${rm.product_name}:${ratingForThisRM.rating}`,
-                          "storage-rm-rating",
-                          {
-              sections: [
-                {
-                  type: 'title-with-details-cross',
-                  data: {
-                    title: 'Select rating'
-                  },
-                },
-                {
-                  type: 'storage-rm-rating',
-                  data: [
-                    {
-                    rating: "5",
-                    message: "Excellent",
-                  },
-                  {
-                    rating: "4",
-                    message: "Good",
-                  },
-                  {
-                    rating: "3",
-                    message: "Neutral",
-                  },
-                  {
-                    rating: "2",
-                    message: "Poor",
-                  },
-                  {
-                    rating: "1",
-                    message: "Very poor",
-                  },
-                  ]
-                },
-              ],
-                intent: "PACKING_RM_FILTER_RATING",
-            }
-                        )
                       }}
                     />
-                    {editingRM === rm.product_name ? (
-                      <ActionButton
-                        icon={CrossIcon}
-                        style={{ height: 42, width: 42 }}
-                        onPress={() => setEditingRM(null)}
-                      />
-                    ) : (
-                      <ActionButton
-                        icon={PencilIcon}
-                        style={{ height: 42, width: 42, opacity: isChambersEmpty ? 0.5 : 1 }}
-                        disabled={isChambersEmpty}
-                        onPress={() => {
-                          if (isChambersEmpty) return;
-                          setEditingRM(rm.product_name);
-                        }}
-                      />
-                    )}
-
-                  </View>
-
-                  {editingRM === rm.product_name && !isChambersEmpty && (
-                    <View>
-                      <Input
-                        placeholder="Packets per bag"
-                        addonText="packets"
-                        mask="addon"
-                        post
-                        keyboardType="numeric"
-                        value={String(packetsPerBagPerRM[rm.product_name] ?? "")}
-                        onChangeText={(text: string) =>
-                          setPacketsPerBagPerRM((prev) => ({
-                            ...prev,
-                            [rm.product_name]: Number(text) || 0,
-                          }))
-                        }
-                      />
-                    </View>
-                  )}
-                  {isChambersEmpty ? (
-                    <View style={EmptyStateStyles.center}>
-                      <EmptyState
-                        stateData={{
-                          title: "No stock found",
-                          description: `${rm.product_name} is not available in any chamber`,
-                        }}
-                        compact
-                      />
-                    </View>
-                  ) : (
-                    visibleChambers.map((chamber) => (
-                      <ChamberRow
-                        key={`${rm.product_name}-${chamber.id}`}
-                        chamber={chamber}
-                        rmPackaging={rmPackaging}
-                        value={containerInputByChamber[rm.product_name]?.[chamber.id]}
-                        onChange={(chamberId, value) => {
-                          setChamberInput(rm.product_name, chamberId, value);
-                          form.setRMInput(rm.product_name, chamberId, value);
-
-                          if (value > 0) {
-                            form.clearError("rm");
-                            form.clearError(`rm.${rm.product_name}`);
-                          }
-                        }}
-
-                        error={form.getError(`rm.${rm.product_name}`)}
-                      />
-                    ))
                   )}
                 </View>
-              </ItemsRepeater>
-            );
-          })}
-        </View>
-      );
-    }
-  };
+
+                {editingRM === rm.product_name && !isChambersEmpty && (
+                  <View>
+                    <Input
+                      placeholder="Packets per bag"
+                      addonText="packets"
+                      mask="addon"
+                      post
+                      keyboardType="numeric"
+                      value={String(packetsPerBagPerRM[rm.product_name] ?? "")}
+                      onChangeText={(text: string) =>
+                        setPacketsPerBagPerRM((prev) => ({
+                          ...prev,
+                          [rm.product_name]: Number(text) || 0,
+                        }))
+                      }
+                    />
+                  </View>
+                )}
+                {isChambersEmpty ? (
+                  <View style={EmptyStateStyles.center}>
+                    <EmptyState
+                      stateData={{
+                        title: "No stock found",
+                        description: `${rm.product_name} is not available in any chamber`,
+                      }}
+                      compact
+                    />
+                  </View>
+                ) : (
+                  visibleChambers.map((chamber) => (
+                    <ChamberRow
+                      key={`${rm.product_name}-${chamber.id}`}
+                      chamber={chamber}
+                      rmPackaging={rmPackaging}
+                      value={
+                        containerInputByChamber[rm.product_name]?.[chamber.id]
+                      }
+                      onChange={(chamberId, value) => {
+                        setChamberInput(rm.product_name, chamberId, value);
+                        form.setRMInput(rm.product_name, chamberId, value);
+
+                        if (value > 0) {
+                          form.clearError("rm");
+                          form.clearError(`rm.${rm.product_name}`);
+                        }
+                      }}
+                      error={form.getError(`rm.${rm.product_name}`)}
+                    />
+                  ))
+                )}
+              </View>
+            </ItemsRepeater>
+          );
+        })}
+      </View>
+    );
+  }
+};
 
 export default RawMaterialConsumptionSection;
 
@@ -455,6 +458,5 @@ const styles = StyleSheet.create({
   },
   JustifyBetween: {
     justifyContent: "space-between",
-
-    },
-  });
+  },
+});

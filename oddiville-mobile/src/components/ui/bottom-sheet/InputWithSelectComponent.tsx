@@ -56,7 +56,7 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
   );
 
   const selectedChambers = useSelector(
-    (state: RootState) => state.rawMaterial.selectedChambers
+    (state: RootState) => state.rawMaterial.selectedChambers,
   );
 
   const { meta } = useSelector((state: RootState) => state.bottomSheet);
@@ -105,17 +105,17 @@ const InputWithSelectComponent = ({ data }: InputWithSelectComponentProps) => {
   const packageFormValidator = useGlobalFormValidator<AddProductPackageForm>(
     "add-product-package",
   );
-const supervisorForm =
-  useGlobalFormValidator<SupervisorProductionForm>("supervisor-production");
+  const supervisorForm = useGlobalFormValidator<SupervisorProductionForm>(
+    "supervisor-production",
+  );
 
   const packageSizeValidator =
     useGlobalFormValidator<AddPackageSizeForm>("add-package-size");
-const {
-  values: storeValues,
-  errors: storeErrors,
-  setField: storeSetField,
-  
-} = useGlobalFormValidator<StoreChambersForm>("store-chambers");
+  const {
+    values: storeValues,
+    errors: storeErrors,
+    setField: storeSetField,
+  } = useGlobalFormValidator<StoreChambersForm>("store-chambers");
 
   const {
     placeholder,
@@ -132,54 +132,54 @@ const {
   const [qty, setQty] = useState(value);
 
   useEffect(() => {
-  if (
-    meta?.type === "supervisor-production" &&
-    typeof formField_1 === "string" &&
-    selectedChambers.includes(formField_1)
-  ) {
-    const current = storeValues[formField_1];
-    if (!current) return;
+    if (
+      meta?.type === "supervisor-production" &&
+      typeof formField_1 === "string" &&
+      selectedChambers.includes(formField_1)
+    ) {
+      const current = storeValues[formField_1];
+      if (!current) return;
 
-    const rating = Number(chamberRatingsById[formField_1]?.rating);
-    if (Number.isNaN(rating)) return;
+      const rating = Number(chamberRatingsById[formField_1]?.rating);
+      if (Number.isNaN(rating)) return;
 
-    storeSetField(formField_1, {
-      ...current,
-      rating,
-    });
-  }
-}, [chamberRatingsById, formField_1]);
+      storeSetField(formField_1, {
+        ...current,
+        rating,
+      });
+    }
+  }, [chamberRatingsById, formField_1]);
 
-const handlePress = () => {
-  dispatch(setSource(source));
- 
-  const mapKey = `${key}:${source}`;
-  const mapped = RMSoruceMap[mapKey];
+  const handlePress = () => {
+    dispatch(setSource(source));
 
-  if (source2) {
-    dispatch(setRmSource(source2));
-  } else if (mapped) {
-    dispatch(setRmSource(mapped));
-  }
+    const mapKey = `${key}:${source}`;
+    const mapped = RMSoruceMap[mapKey];
 
-  if (key === "select-package-type") {
-    validateAndSetData("Abc123", "select-package-type");
-    return;
-  }
+    if (source2) {
+      dispatch(setRmSource(source2));
+    } else if (mapped) {
+      dispatch(setRmSource(mapped));
+    }
 
-  if (["package-weight", "add-raw-material"].includes(key)) {
-    validateAndSetData("Abc123", key);
-    return;
-  }
+    if (key === "select-package-type") {
+      validateAndSetData("Abc123", "select-package-type");
+      return;
+    }
 
-  if (source === "supervisor-production") {
-    if (!formField_1) return;
+    if (["package-weight", "add-raw-material"].includes(key)) {
+      validateAndSetData("Abc123", key);
+      return;
+    }
 
-    validateAndSetData("Abc123", "rating");
-    dispatch(selectChamber(formField_1));
-    return;
-  }
-};
+    if (source === "supervisor-production") {
+      if (!formField_1) return;
+
+      validateAndSetData("Abc123", "rating");
+      dispatch(selectChamber(formField_1));
+      return;
+    }
+  };
 
   const { values, errors, setField } =
     meta?.type === "add-product-package"
@@ -227,38 +227,36 @@ const handlePress = () => {
   const remainingKg = chamberSummary?.remaining;
 
   const inputValue = (() => {
-  // packaging size (supervisor)
-  if (
-    meta?.type === "supervisor-production" &&
-    formField_1 === "packaging_size"
-  ) {
-    return supervisorForm.values.packaging_size || "";
-  }
+    // packaging size (supervisor)
+    if (
+      meta?.type === "supervisor-production" &&
+      formField_1 === "packaging_size"
+    ) {
+      return supervisorForm.values.packaging_size || "";
+    }
 
-  // chamber quantity (supervisor)
-  if (
+    // chamber quantity (supervisor)
+    if (
+      meta?.type === "supervisor-production" &&
+      typeof formField_1 === "string" &&
+      selectedChambers.includes(formField_1)
+    ) {
+      return String(storeValues[formField_1]?.quantity ?? "");
+    }
+
+    // normal forms
+    return values[formField_1 as any] || "";
+  })();
+
+  const isChamberField =
     meta?.type === "supervisor-production" &&
     typeof formField_1 === "string" &&
-    selectedChambers.includes(formField_1)
-  ) {
-    return String(storeValues[formField_1]?.quantity ?? "");
-  }
+    selectedChambers.includes(formField_1);
 
-  // normal forms
-  return values[formField_1 as any] || "";
-})();
+  const resolvedKeyboardType =
+    data.keyboardType ??
+    (meta?.type === "supervisor-production" ? "number-pad" : "number-pad");
 
-const isChamberField =
-  meta?.type === "supervisor-production" &&
-  typeof formField_1 === "string" &&
-  selectedChambers.includes(formField_1);
-
-    const resolvedKeyboardType =
-  data.keyboardType ??
-  (meta?.type === "supervisor-production"
-    ? "number-pad"
-    : "number-pad");
-    
   const renderInput = () =>
     meta?.type === "add-product-package" ||
     meta?.type === "add-package" ||
@@ -268,77 +266,76 @@ const isChamberField =
           style={styles.textInput}
           keyboardType={resolvedKeyboardType}
           placeholder={placeholder}
+          onChangeText={(val) => {
+            const producedTotal = Number(product?.quantity ?? 0);
+            if (
+              meta?.type === "supervisor-production" &&
+              formField_1 === "packaging_size"
+            ) {
+              supervisorForm.setField("packaging_size", val);
+              return;
+            }
 
-      onChangeText={(val) => {
-const producedTotal = Number(product?.quantity ?? 0);
-  if (
-    meta?.type === "supervisor-production" &&
-    formField_1 === "packaging_size"
-  ) {
-    supervisorForm.setField("packaging_size", val);
-    return;
-  }
+            if (
+              meta?.type === "supervisor-production" &&
+              typeof formField_1 === "string" &&
+              selectedChambers.includes(formField_1)
+            ) {
+              const maxAllowed =
+                producedTotal -
+                Object.entries(storeValues).reduce((sum, [key, v]) => {
+                  if (key === formField_1) return sum;
+                  return sum + (v as ChamberValue).quantity;
+                }, 0);
 
- if (
-  meta?.type === "supervisor-production" &&
-  typeof formField_1 === "string" &&
-  selectedChambers.includes(formField_1)
-) {
-const maxAllowed =
-  producedTotal -
-  Object.entries(storeValues).reduce((sum, [key, v]) => {
-    if (key === formField_1) return sum;
-    return sum + (v as ChamberValue).quantity;
-  }, 0);
+              const inputQty = Math.min(
+                Math.max(0, Number(val) || 0),
+                maxAllowed,
+              );
 
-const inputQty = Math.min(
-  Math.max(0, Number(val) || 0),
-  maxAllowed
-);
+              const totalStored = Object.entries(storeValues).reduce(
+                (sum, [key, v]) => {
+                  if (key === formField_1) return sum + inputQty;
+                  return sum + Number((v as any)?.quantity || 0);
+                },
+                0,
+              );
 
-  const totalStored = Object.entries(storeValues).reduce(
-    (sum, [key, v]) => {
-      if (key === formField_1) return sum + inputQty;
-      return sum + Number((v as any)?.quantity || 0);
-    },
-    0
-  );
+              if (totalStored > producedTotal) {
+                toast.error(
+                  `Stored quantity cannot exceed produced quantity (${producedTotal} Kg)`,
+                );
 
-  if (totalStored > producedTotal) {
-    toast.error(
-      `Stored quantity cannot exceed produced quantity (${producedTotal} Kg)`
-    );
+                storeSetField(formField_1, {
+                  quantity: 0,
+                  rating: Number(chamberRatingsById[formField_1]?.rating || 0),
+                });
 
-    storeSetField(formField_1, {
-      quantity: 0,
-      rating: Number(chamberRatingsById[formField_1]?.rating || 0),
-    });
+                dispatch(setChamberQty({ name: formField_1, quantity: "0" }));
 
+                return;
+              }
 
-    dispatch(
-      setChamberQty({ name: formField_1, quantity: "0" })
-    );
+              storeSetField(formField_1, {
+                quantity: inputQty,
+                rating: Number(chamberRatingsById[formField_1]?.rating || 0),
+              });
 
-    return;
-  }
+              dispatch(
+                setChamberQty({
+                  name: formField_1,
+                  quantity: String(inputQty),
+                }),
+              );
 
-  storeSetField(formField_1, {
-    quantity: inputQty,
-    rating: Number(chamberRatingsById[formField_1]?.rating || 0),
-  });
+              return;
+            }
 
-  dispatch(
-    setChamberQty({ name: formField_1, quantity: String(inputQty) })
-  );
-
-  return;
-}
-
-  setField(formField_1 as any, val);
-}}
+            setField(formField_1 as any, val);
+          }}
           placeholderTextColor={getColor("green", 700, 0.7)}
           textAlignVertical="center"
-         value={inputValue}
+          value={inputValue}
         />
       </>
     ) : (
@@ -376,19 +373,18 @@ const inputQty = Math.min(
               </B4>
             </View>
             <View
-             style={[
-    styles.inputWrapper,
-    {
-    borderColor:
-  isChamberField && storeErrors?.[formField_1]
-    ? getColor("red", 600)
-    : formField_1 === "packaging_size" &&
-      supervisorForm.errors?.packaging_size
-    ? getColor("red", 600)
-    : getColor("green", 100),
-
-    },
-  ]}
+              style={[
+                styles.inputWrapper,
+                {
+                  borderColor:
+                    isChamberField && storeErrors?.[formField_1]
+                      ? getColor("red", 600)
+                      : formField_1 === "packaging_size" &&
+                          supervisorForm.errors?.packaging_size
+                        ? getColor("red", 600)
+                        : getColor("green", 100),
+                },
+              ]}
             >
               {renderInput()}
             </View>
@@ -409,7 +405,8 @@ const inputQty = Math.min(
                 style={[
                   styles.selectContainer,
                   {
-                    borderWidth: isChamberField && storeErrors?.[formField_1] ? 1 : 0,
+                    borderWidth:
+                      isChamberField && storeErrors?.[formField_1] ? 1 : 0,
                     borderColor: getColor("red"),
                   },
                 ]}

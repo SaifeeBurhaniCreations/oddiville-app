@@ -64,15 +64,15 @@ const VendorCreateScreen = () => {
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const updateVendor = useUpdateVendor();
   const selected = useSelector(
-    (state: RootState) => state.rawMaterial.selectedRawMaterials
+    (state: RootState) => state.rawMaterial.selectedRawMaterials,
   );
   const { states: selectedState, cities: selectedCity } = useSelector(
-    (state: RootState) => state.location
+    (state: RootState) => state.location,
   );
 
   const { userId } = useParams("vendor-create", "userId");
   const { data: fetchedVendor, isLoading: isFetchingVendor } = useVendorById(
-    userId ?? null
+    userId ?? null,
   );
 
   const addVendorMutation = useAddVendor();
@@ -145,7 +145,7 @@ const VendorCreateScreen = () => {
     {
       validateOnChange: true,
       debounce: 300,
-    }
+    },
   );
 
   useEffect(() => {
@@ -223,8 +223,8 @@ const VendorCreateScreen = () => {
             rating: "",
             category: "material",
             chambers: [],
-          }))
-        )
+          })),
+        ),
       );
 
       dispatch(setState(fetchedVendor.state));
@@ -232,70 +232,68 @@ const VendorCreateScreen = () => {
     }
   }, [userId, fetchedVendor]);
 
+  const onSubmit = async (userId: string | null) => {
+    setIsLoading(true);
+    const updatedValues = {
+      ...values,
+      state: selectedState.name,
+      city: selectedCity,
+    };
+    const result = validateForm(updatedValues);
 
-const onSubmit = async (userId: string | null) => {
-  setIsLoading(true);
-  const updatedValues = {
-    ...values,
-    state: selectedState.name,
-    city: selectedCity,
-  };
-  const result = validateForm(updatedValues);
+    if (!result.success) return;
 
-  if (!result.success) return;
-
-  setIsSubmitting(true);
-  try {
-    if (userId) {
-      // UPDATE vendor
-      await updateVendor.mutateAsync({
-        id: userId,
-        data: {
-          ...result.data,
-          state: {
-            name: selectedState.name,
-            isoCode: selectedState.isoCode,
+    setIsSubmitting(true);
+    try {
+      if (userId) {
+        // UPDATE vendor
+        await updateVendor.mutateAsync({
+          id: userId,
+          data: {
+            ...result.data,
+            state: {
+              name: selectedState.name,
+              isoCode: selectedState.isoCode,
+            },
           },
-        },
-      });
+        });
 
-      toast.info("Vendor Updated");
-      resetForm();
-      dispatch(clearRawMaterials());
-      dispatch(clearLocations());
-      goTo("vendors");
-    } else {
-      // CREATE vendor
-      const createdVendor = await addVendorMutation.mutateAsync({
-        data: {
-          ...result.data,
-          state: {
-            name: selectedState.name,
-            isoCode: selectedState.isoCode,
-          },
-        },
-      });
-
-      // if mutateAsync didn't throw, it succeeded
-      if (createdVendor) {
-        toast.info("New Vendor Added");
+        toast.info("Vendor Updated");
         resetForm();
         dispatch(clearRawMaterials());
         dispatch(clearLocations());
         goTo("vendors");
       } else {
-        toast.error("Failed to add vendor");
-      }
-    }
-  } catch (err) {
-    console.error("vendor create/update failed", err);
-    toast.error("Failed to update vendor");
-  } finally {
-    setIsSubmitting(false);
-    setIsLoading(false);
-  }
-};
+        // CREATE vendor
+        const createdVendor = await addVendorMutation.mutateAsync({
+          data: {
+            ...result.data,
+            state: {
+              name: selectedState.name,
+              isoCode: selectedState.isoCode,
+            },
+          },
+        });
 
+        // if mutateAsync didn't throw, it succeeded
+        if (createdVendor) {
+          toast.info("New Vendor Added");
+          resetForm();
+          dispatch(clearRawMaterials());
+          dispatch(clearLocations());
+          goTo("vendors");
+        } else {
+          toast.error("Failed to add vendor");
+        }
+      }
+    } catch (err) {
+      console.error("vendor create/update failed", err);
+      toast.error("Failed to update vendor");
+    } finally {
+      setIsSubmitting(false);
+      setIsLoading(false);
+    }
+  };
 
   const handleDeactivateToggle = () => {
     const hasPendingOrders = vendorData?.orders?.some((order) => {
@@ -355,7 +353,7 @@ const onSubmit = async (userId: string | null) => {
         style={styles.keyboardAvoidingView}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
-        <ScrollView >
+        <ScrollView>
           <View style={styles.wrapper}>
             <View
               style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}
@@ -504,7 +502,7 @@ const onSubmit = async (userId: string | null) => {
                   if (!vendorData) return;
 
                   const newMaterials = vendorData.materials.filter(
-                    (_, i) => i !== index
+                    (_, i) => i !== index,
                   );
 
                   setVendorData((prev) =>
@@ -513,7 +511,7 @@ const onSubmit = async (userId: string | null) => {
                           ...prev,
                           materials: newMaterials,
                         }
-                      : prev
+                      : prev,
                   );
 
                   setField("materials", newMaterials);
@@ -532,8 +530,8 @@ const onSubmit = async (userId: string | null) => {
                   ? "Save changes"
                   : "Saving changes..."
                 : !isSubmitting
-                ? "Add Vendor"
-                : "Adding Vendor..."}
+                  ? "Add Vendor"
+                  : "Adding Vendor..."}
             </Button>
           </View>
         </ScrollView>
@@ -548,7 +546,7 @@ const onSubmit = async (userId: string | null) => {
         />
       )}
       <BottomSheet color="green" />
-      {(isLoading || isFetchingVendor) && <OverlayLoader /> }
+      {(isLoading || isFetchingVendor) && <OverlayLoader />}
     </View>
   );
 };

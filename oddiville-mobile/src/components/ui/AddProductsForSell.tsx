@@ -38,13 +38,11 @@ type ControlledFormProps<T> = {
   errors: Partial<Record<keyof T, string>>;
 };
 
-
 function getPackageIconType(pkg: {
   size: number;
   unit: string;
 }): "paper-roll" | "bag" | "big-bag" {
-  const grams =
-    pkg.unit === "kg" ? pkg.size * 1000 : pkg.size;
+  const grams = pkg.unit === "kg" ? pkg.size * 1000 : pkg.size;
 
   if (grams <= 250) return "paper-roll";
   if (grams <= 500) return "bag";
@@ -72,7 +70,13 @@ const AddProductsForSell = ({
   isOpen?: boolean;
   onPress?: () => void;
   onRemove?: () => void;
-  chamberStockIndex: Map<string, { packages: any[]; chambers: { chamberId: string; rating: number; bags: number; }[]; }>;
+  chamberStockIndex: Map<
+    string,
+    {
+      packages: any[];
+      chambers: { chamberId: string; rating: number; bags: number }[];
+    }
+  >;
   controlledForm: ControlledFormProps<OrderStorageForm>;
   [key: string]: any;
 }) => {
@@ -81,37 +85,37 @@ const AddProductsForSell = ({
 
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   // const packedRows = packingItems;
-// console.log("chamberStockIndex", JSON.stringify(chamberStockIndex.get(product.product_name), null, 2));
+  // console.log("chamberStockIndex", JSON.stringify(chamberStockIndex.get(product.product_name), null, 2));
 
   const stock = chamberStockIndex.get(product.product_name);
 
   const selectedPackagesFromBS = useSelector(
     (state: RootState) =>
       state.dispatchPackageSize.selectedSizesByProduct[product.id] ||
-      EMPTY_ARRAY
+      EMPTY_ARRAY,
   );
   const ratingByProductSize = useSelector(
-    (state: RootState) => state.dispatchRating.ratingByProductSize
+    (state: RootState) => state.dispatchRating.ratingByProductSize,
   );
   const selectedSizeKeys = useMemo(() => {
     return new Set(
       selectedPackagesFromBS
         .filter(
           (p): p is DispatchPackageSize & { unit: "gm" | "kg" } =>
-            p.unit === "gm" || p.unit === "kg"
+            p.unit === "gm" || p.unit === "kg",
         )
-        .map(p => `${p.size}-${p.unit}`)
+        .map((p) => `${p.size}-${p.unit}`),
     );
   }, [selectedPackagesFromBS]);
 
   const getSelectedRating = (
-  productId: string,
-  size: number,
-  unit: "gm" | "kg"
-): number => {
-  const key = `${size}-${unit}`;
-  return ratingByProductSize?.[productId]?.[key]?.rating ?? 5;
-};
+    productId: string,
+    size: number,
+    unit: "gm" | "kg",
+  ): number => {
+    const key = `${size}-${unit}`;
+    return ratingByProductSize?.[productId]?.[key]?.rating ?? 5;
+  };
 
   // const packageOptions = useMemo(() => {
   //   const map = new Map<string, {
@@ -135,16 +139,16 @@ const AddProductsForSell = ({
   //   return Array.from(map.values());
   // }, [packedRows]);
   const packageOptions = useMemo(() => {
-  if (!stock?.packages) return [];
+    if (!stock?.packages) return [];
 
-  return stock.packages.map(pkg => ({
-    size: pkg.size,
-    unit: pkg.unit,
-    bags: stock.chambers
-      .filter(ch => ch.rating != null)
-      .reduce((sum, ch) => sum + Number(ch.bags || 0), 0),
-  }));
-}, [stock]);
+    return stock.packages.map((pkg) => ({
+      size: pkg.size,
+      unit: pkg.unit,
+      bags: stock.chambers
+        .filter((ch) => ch.rating != null)
+        .reduce((sum, ch) => sum + Number(ch.bags || 0), 0),
+    }));
+  }, [stock]);
 
   const usedStock = useSelector((s: RootState) => s.usedDispatchPkg);
 
@@ -157,7 +161,7 @@ const AddProductsForSell = ({
       {
         type: "package-size-choose-list",
         data: {
-          list: packageOptions.map(p => ({
+          list: packageOptions.map((p) => ({
             name: `${p.size}${p.unit}`,
             size: p.size,
             unit: p.unit,
@@ -184,7 +188,7 @@ const AddProductsForSell = ({
   const getRatingForPackage = (
     productId: string,
     size: number,
-    unit: "gm" | "kg"
+    unit: "gm" | "kg",
   ): RatingFilter => {
     const key: PackageKey = `${size}-${unit}`;
 
@@ -203,110 +207,113 @@ const AddProductsForSell = ({
     2: TwoStarIcon,
     1: OneStarIcon,
   };
-//   const groupedPackages = useMemo(() => {
-//     const map = new Map<string, {
-//       size: number;
-//       unit: "gm" | "kg";
-//       rating: number;
-//       chambers: PackedChamberRow[];
-//       totalBags: number;
-//     }>();
+  //   const groupedPackages = useMemo(() => {
+  //     const map = new Map<string, {
+  //       size: number;
+  //       unit: "gm" | "kg";
+  //       rating: number;
+  //       chambers: PackedChamberRow[];
+  //       totalBags: number;
+  //     }>();
 
-//     packedRows.forEach(row => {
-//       const sizeKey = `${row.size}-${row.unit}`;
+  //     packedRows.forEach(row => {
+  //       const sizeKey = `${row.size}-${row.unit}`;
 
-//       if (selectedSizeKeys.size === 0) return;
-//       if (!selectedSizeKeys.has(sizeKey)) return;
+  //       if (selectedSizeKeys.size === 0) return;
+  //       if (!selectedSizeKeys.has(sizeKey)) return;
 
-//       const ratingForPackage = getRatingForPackage(
-//         product.id,
-//         row.size,
-//         row.unit
-//       );
+  //       const ratingForPackage = getRatingForPackage(
+  //         product.id,
+  //         row.size,
+  //         row.unit
+  //       );
 
-//       const selectedRating = ratingForPackage.rating;
-//       const packageKey = `${row.size}-${row.unit}-${selectedRating}`;
+  //       const selectedRating = ratingForPackage.rating;
+  //       const packageKey = `${row.size}-${row.unit}-${selectedRating}`;
 
-//       if (!map.has(packageKey)) {
-//         map.set(packageKey, {
-//           size: row.size,
-//           unit: row.unit,
-//           rating: selectedRating,
-//           chambers: [],
-//           totalBags: 0,
-//         });
-//       }
+  //       if (!map.has(packageKey)) {
+  //         map.set(packageKey, {
+  //           size: row.size,
+  //           unit: row.unit,
+  //           rating: selectedRating,
+  //           chambers: [],
+  //           totalBags: 0,
+  //         });
+  //       }
 
-//       const pkg = map.get(packageKey)!;
+  //       const pkg = map.get(packageKey)!;
 
-//       const rating = getSelectedRating(product.id, pkg.size, pkg.unit);
+  //       const rating = getSelectedRating(product.id, pkg.size, pkg.unit);
 
-// const availableChambers = (stock?.chambers ?? []).filter(
-//   ch => ch.rating === rating
-// );
-//       const existingChamber = pkg.chambers.find(
-//         ch => ch.chamberId === row.chamberId
-//       );
+  // const availableChambers = (stock?.chambers ?? []).filter(
+  //   ch => ch.rating === rating
+  // );
+  //       const existingChamber = pkg.chambers.find(
+  //         ch => ch.chamberId === row.chamberId
+  //       );
 
-//       if (existingChamber) {
-//         existingChamber.bags += row.bags;
-//         existingChamber.kg += row.kg;
-//       } else {
-//         pkg.chambers.push({ ...row });
-//       }
+  //       if (existingChamber) {
+  //         existingChamber.bags += row.bags;
+  //         existingChamber.kg += row.kg;
+  //       } else {
+  //         pkg.chambers.push({ ...row });
+  //       }
 
-//       pkg.totalBags += row.bags;
-//     });
+  //       pkg.totalBags += row.bags;
+  //     });
 
-//     return Array.from(map.values());
-//   }, [packedRows, selectedSizeKeys, ratingByProductSize]);
+  //     return Array.from(map.values());
+  //   }, [packedRows, selectedSizeKeys, ratingByProductSize]);
 
-const groupedPackages = useMemo(() => {
-  if (!stock) return [];
+  const groupedPackages = useMemo(() => {
+    if (!stock) return [];
 
-  const result: {
-    size: number;
-    unit: "gm" | "kg";
-    rating: number;
-    chambers: {
-      chamberId: string;
-      bags: number;
-    }[];
-    totalBags: number;
-  }[] = [];
+    const result: {
+      size: number;
+      unit: "gm" | "kg";
+      rating: number;
+      chambers: {
+        chamberId: string;
+        bags: number;
+      }[];
+      totalBags: number;
+    }[] = [];
 
-  for (const pkg of stock.packages ?? []) {
-    const sizeKey = `${pkg.size}-${pkg.unit}`;
-    if (!selectedSizeKeys.has(sizeKey)) continue;
+    for (const pkg of stock.packages ?? []) {
+      const sizeKey = `${pkg.size}-${pkg.unit}`;
+      if (!selectedSizeKeys.has(sizeKey)) continue;
 
-    const rating = getSelectedRating(product.id, pkg.size, pkg.unit);
+      const rating = getSelectedRating(product.id, pkg.size, pkg.unit);
 
-    const chambers = (stock.chambers ?? [])
-      .filter(ch => ch.rating === rating && Number(ch.bags) > 0)
-      .map(ch => ({
-        chamberId: ch.chamberId,
-        bags: Number(ch.bags),
-      }));
+      const chambers = (stock.chambers ?? [])
+        .filter((ch) => ch.rating === rating && Number(ch.bags) > 0)
+        .map((ch) => ({
+          chamberId: ch.chamberId,
+          bags: Number(ch.bags),
+        }));
 
-    const totalBags = chambers.reduce((s, c) => s + c.bags, 0);
+      const totalBags = chambers.reduce((s, c) => s + c.bags, 0);
 
-    if (totalBags === 0) continue;
+      if (totalBags === 0) continue;
 
-    result.push({
-      size: pkg.size,
-      unit: pkg.unit,
-      rating,
-      chambers,
-      totalBags,
-    });
-  }
+      result.push({
+        size: pkg.size,
+        unit: pkg.unit,
+        rating,
+        chambers,
+        totalBags,
+      });
+    }
 
-  return result;
-}, [stock, selectedSizeKeys, ratingByProductSize]);
+    return result;
+  }, [stock, selectedSizeKeys, ratingByProductSize]);
 
   return (
-    <ScrollView key={product?.product_name} contentContainerStyle={{ flexGrow: 1 }}
-      keyboardShouldPersistTaps="handled">
+    <ScrollView
+      key={product?.product_name}
+      contentContainerStyle={{ flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={[styles.card, isFirst && styles.firstCard]}>
         <Pressable style={styles.cardHeader} onPress={onPress}>
           <View style={styles.Hstack}>
@@ -350,7 +357,6 @@ const groupedPackages = useMemo(() => {
               </B4>
             </View>
             <View style={styles.selelctRow}>
-
               <Select
                 value="Select packaging"
                 showOptions={false}
@@ -365,7 +371,13 @@ const groupedPackages = useMemo(() => {
             <View style={[styles.Vstack, { gap: 12 }]}>
               <H3>Select Bags</H3>
               {groupedPackages.length === 0 ? (
-                <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                <View
+                  style={{
+                    flex: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
                   <EmptyState
                     stateData={{
                       title: "No package found",
@@ -379,31 +391,29 @@ const groupedPackages = useMemo(() => {
                   const ratingForPackage = getRatingForPackage(
                     product.id,
                     pkg.size,
-                    pkg.unit
+                    pkg.unit,
                   );
 
                   const selectedRating = pkg.rating;
 
-                 const RatingIcon = RatingIconMap[selectedRating] ?? FiveStarIcon;
-
+                  const RatingIcon =
+                    RatingIconMap[selectedRating] ?? FiveStarIcon;
 
                   const packageKey = `${pkg.size}-${pkg.unit}-${selectedRating}`;
                   const Icon = mapPackageIcon(pkg);
 
-                 const filteredChambers = pkg.chambers;
+                  const filteredChambers = pkg.chambers;
 
                   return (
                     <View key={packageKey} style={{ gap: 12 }}>
-
                       <View style={styles.packageRow}>
                         <View style={styles.row}>
                           <View style={styles.iconWrapper}>
-                            {Icon && <Icon size={28} color={getColor("green")} />}
+                            {Icon && (
+                              <Icon size={28} color={getColor("green")} />
+                            )}
                           </View>
-                          <B1>
-                            {`${pkg.size}${pkg.unit} (${pkg.totalBags})`}
-                          </B1>
-
+                          <B1>{`${pkg.size}${pkg.unit} (${pkg.totalBags})`}</B1>
                         </View>
                         <View style={styles.ratingRow}>
                           <Select
@@ -437,7 +447,7 @@ const groupedPackages = useMemo(() => {
                                     size: pkg.size,
                                     unit: pkg.unit,
                                   },
-                                }
+                                },
                               );
                             }}
                             legacy
@@ -455,7 +465,9 @@ const groupedPackages = useMemo(() => {
                       </View>
 
                       {filteredChambers.length === 0 ? (
-                        <View style={{ alignItems: "center", paddingVertical: 12 }}>
+                        <View
+                          style={{ alignItems: "center", paddingVertical: 12 }}
+                        >
                           <B4 color={getColor("green", 400)}>
                             No chambers available for this rating
                           </B4>
@@ -463,18 +475,19 @@ const groupedPackages = useMemo(() => {
                       ) : (
                         filteredChambers.map((row) => {
                           const globalChamber = globalChambers?.find(
-                            ch => ch.id === row.chamberId
+                            (ch) => ch.id === row.chamberId,
                           );
 
                           const usedBags =
-                            usedStock[product.id]?.[packageKey]?.usedBagsByChamber?.[row.chamberId] ?? 0;
+                            usedStock[product.id]?.[packageKey]
+                              ?.usedBagsByChamber?.[row.chamberId] ?? 0;
 
-                            const remaining = Math.max(row.bags - usedBags, 0);
+                          const remaining = Math.max(row.bags - usedBags, 0);
 
-                            const packetKg =
-                              pkg.unit === "gm" ? pkg.size / 1000 : pkg.size;
+                          const packetKg =
+                            pkg.unit === "gm" ? pkg.size / 1000 : pkg.size;
 
-                            const kg = remaining * packetKg;
+                          const kg = remaining * packetKg;
 
                           return (
                             <View
@@ -483,14 +496,22 @@ const groupedPackages = useMemo(() => {
                             >
                               <View style={styles.Hstack}>
                                 <View style={styles.iconWrapper}>
-                                  <ChamberIcon size={32} color={getColor("green")} />
+                                  <ChamberIcon
+                                    size={32}
+                                    color={getColor("green")}
+                                  />
                                 </View>
 
                                 <View>
                                   <B1>
-                                    {(globalChamber?.chamber_name ?? "Chamber").slice(0, 15)}…
+                                    {(
+                                      globalChamber?.chamber_name ?? "Chamber"
+                                    ).slice(0, 15)}
+                                    …
                                   </B1>
-                                  <B4>{kg} kg | {remaining} bags</B4>
+                                  <B4>
+                                    {kg} kg | {remaining} bags
+                                  </B4>
                                 </View>
                               </View>
 
@@ -502,21 +523,23 @@ const groupedPackages = useMemo(() => {
                                 post
                                 value={String(usedBags)}
                                 onChangeText={(text: string) =>
-                                  dispatch(setUsedBags({
-                                    productId: product.id,
-                                    packageKey,
-                                    chamberId: row.chamberId,
-                                    bags: Number(text) || 0,
-                                  }))
+                                  dispatch(
+                                    setUsedBags({
+                                      productId: product.id,
+                                      packageKey,
+                                      chamberId: row.chamberId,
+                                      bags: Number(text) || 0,
+                                    }),
+                                  )
                                 }
                               />
                             </View>
                           );
-                        }))}
+                        })
+                      )}
                     </View>
-                  )
-                }
-                )
+                  );
+                })
               )}
             </View>
           </View>
@@ -524,11 +547,9 @@ const groupedPackages = useMemo(() => {
       </View>
     </ScrollView>
   );
-
 };
 
 export default AddProductsForSell;
-
 
 const styles = StyleSheet.create({
   card: {

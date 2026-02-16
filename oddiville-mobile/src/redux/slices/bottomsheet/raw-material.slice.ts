@@ -8,7 +8,8 @@ export type sourceEnum =
   | "chamber"
   | "packaging"
   | "product-chamber"
-  | "export-chamber";
+  | "export-chamber"
+  | "export-status";
 interface RawMaterialState {
   selectedRawMaterials: RawMaterialProps[];
   source?: sourceEnum;
@@ -42,6 +43,8 @@ const RawMaterialSlice = createSlice({
       }
     },    
     setSource: (state, action: PayloadAction<sourceEnum>) => {
+      console.log("action.payload", action.payload);
+      
       state.source = action.payload;
     },
     setRawMaterials: (state, action: PayloadAction<RawMaterialProps[]>) => {

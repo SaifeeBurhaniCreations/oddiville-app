@@ -1,65 +1,69 @@
-import { useMemo } from 'react';
-import { useSelector } from 'react-redux';
-import { RootState } from '../redux/store';
-import { useChamber } from './useChambers';
-import { ChamberStock, ChamberStockPage, useChamberStock } from './useChamberStock';
-import { usePackageByName } from './Packages';
-import Carrot from '../assets/images/item-icons/Carrot.png';
-import { InfiniteData } from '@tanstack/query-core';
+import { useMemo } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "../redux/store";
+import { useChamber } from "./useChambers";
+import {
+  ChamberStock,
+  ChamberStockPage,
+  useChamberStock,
+} from "./useChamberStock";
+import { usePackageByName } from "./Packages";
+import Carrot from "../assets/images/item-icons/Carrot.png";
+import { InfiniteData } from "@tanstack/query-core";
 
 // Interfaces
 
 interface Chamber {
-    id: string;
-    chamber_name: string;
+  id: string;
+  chamber_name: string;
 }
 
 interface StockChamberEntry {
-    id: string;
-    quantity: number | string;
+  id: string;
+  quantity: number | string;
 }
 
 interface StockDataEntry {
-    product_name: string;
-    chamber: StockChamberEntry[];
+  product_name: string;
+  chamber: StockChamberEntry[];
 }
 
 interface PackageType {
-    size: string | number;
-    quantity: string | number;
-    unit: string;
+  size: string | number;
+  quantity: string | number;
+  unit: string;
 }
 
 interface PackageData {
-    product_name: string;
-    types: PackageType[];
+  product_name: string;
+  types: PackageType[];
 }
 
 // Return Types
 interface FormattedChamber {
-    id: string;
-    name: string;
-    stored_quantity: string;
-    quantity: string;
+  id: string;
+  name: string;
+  stored_quantity: string;
+  quantity: string;
 }
 
 interface FormattedPackage {
-    size: number;
-    stored_quantity: number;
-    unit: string;
-    quantity: string;
+  size: number;
+  stored_quantity: number;
+  unit: string;
+  quantity: string;
 }
 
 interface ProductItem {
-    name: string;
-    price: string;
-    chambers: FormattedChamber[];
-    image: any;
+  name: string;
+  price: string;
+  chambers: FormattedChamber[];
+  image: any;
 }
 
 export function useProductItems() {
   const selectedRm = useSelector(
-    (state: RootState) => state.product.rawMaterials
+    (state: RootState) => state.product.rawMaterials,
   );
 
   const {
@@ -76,7 +80,7 @@ export function useProductItems() {
     refetch: stockRefetch,
   } = useChamberStock();
 
-const stockData = stockQueryData ?? [];
+  const stockData = stockQueryData ?? [];
 
   const productItems = useMemo(() => {
     if (chamberLoading || stockLoading || !selectedRm?.length) return [];
@@ -85,9 +89,7 @@ const stockData = stockQueryData ?? [];
 
     return selectedRm
       .map((rm) => {
-        const stock = stockData.find(
-          (s) => s.product_name === rm
-        );
+        const stock = stockData.find((s) => s.product_name === rm);
 
         if (!stock) {
           console.warn("⚠️ Missing stock for raw material:", rm);
@@ -105,10 +107,9 @@ const stockData = stockQueryData ?? [];
           const qty = Number(entry.quantity) || 0;
 
           if (mergedChambers[entry.id]) {
-            mergedChambers[entry.id].stored_quantity =
-              String(
-                Number(mergedChambers[entry.id].stored_quantity) + qty
-              );
+            mergedChambers[entry.id].stored_quantity = String(
+              Number(mergedChambers[entry.id].stored_quantity) + qty,
+            );
           } else {
             mergedChambers[entry.id] = {
               id: entry.id,
@@ -127,13 +128,7 @@ const stockData = stockQueryData ?? [];
         };
       })
       .filter(Boolean);
-  }, [
-    selectedRm,
-    stockData,
-    chamberData,
-    chamberLoading,
-    stockLoading,
-  ]);
+  }, [selectedRm, stockData, chamberData, chamberLoading, stockLoading]);
 
   return {
     productItems,
@@ -156,7 +151,9 @@ function normalizeUnit(raw: string | null | undefined): Unit | null {
   return null;
 }
 
-function extractFirstNumber(s: string | number | null | undefined): number | null {
+function extractFirstNumber(
+  s: string | number | null | undefined,
+): number | null {
   if (s === null || s === undefined) return null;
   const str = String(s).trim();
   if (!str) return null;
@@ -179,8 +176,8 @@ type ProductPackageItem = {
   size: number | null;
   unit: Unit | null;
   stored_quantity: number | null;
-  quantity: string;     
-  rawSize?: string;     
+  quantity: string;
+  rawSize?: string;
   rawUnit?: string | null;
 };
 
@@ -191,18 +188,15 @@ type UseProductPackageResult = {
   refetch: () => void;
 };
 
-export function useProductPackage(): UseProductPackageResult { 
+export function useProductPackage(): UseProductPackageResult {
   const { productName: selectedProductName } = useSelector(
-    (state: RootState) => state.product
+    (state: RootState) => state.product,
   );
 
-const isValidProduct =
-  !!selectedProductName &&
-  selectedProductName !== "Select product";
+  const isValidProduct =
+    !!selectedProductName && selectedProductName !== "Select product";
 
-const productName = isValidProduct
-  ? selectedProductName
-  : null;
+  const productName = isValidProduct ? selectedProductName : null;
 
   const {
     data: packageData = { types: [] },
@@ -226,7 +220,7 @@ const productName = isValidProduct
 
       const unitFromPkgField = normalizeUnit(pkg.unit);
       const unitFromSizeString = extractUnitFromString(
-        pkg.size != null ? String(pkg.size) : undefined
+        pkg.size != null ? String(pkg.size) : undefined,
       );
 
       const unit = unitFromPkgField ?? unitFromSizeString ?? null;
@@ -251,13 +245,7 @@ const productName = isValidProduct
 }
 
 export function useRawMaterialByProduct(name: string | null) {
-  
-  const {
-    data,
-    refetch,
-    isFetching,
-    isLoading,
-  } = usePackageByName(name);
+  const { data, refetch, isFetching, isLoading } = usePackageByName(name);
 
   return {
     rawMaterials: data?.raw_materials ?? [],

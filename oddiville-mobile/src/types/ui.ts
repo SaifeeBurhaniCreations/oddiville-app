@@ -507,7 +507,7 @@ export interface ChipsProps {
 export interface ChipGroupProps {
   children?: ReactNode;
   data?: any[];
-  type?: "default" | "radio";
+  type?: "default" | "radio" | "multi";
   size?: "md" | "sm";
   isMultiple?: boolean;
   isActive?: boolean;

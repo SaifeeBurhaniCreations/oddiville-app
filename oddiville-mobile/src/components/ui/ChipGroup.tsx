@@ -30,23 +30,29 @@ const ChipGroup = ({
 
   if (!data) return <B4 style={style}>Nothing to show!</B4>;
 
-  const handleChipPress = (index: number) => {
-    if (type === "radio" && onChange) {
-      onChange(data[index].value ?? data[index]);
-    } else {
-      setActiveIndices((prev) => {
-        if (isMultiple) {
-          if (prev.includes(index)) {
-            return prev.filter((i) => i !== index);
-          } else {
-            return [...prev, index];
-          }
-        } else {
-          return prev.includes(index) ? [] : [index];
-        }
-      });
-    }
-  };
+const handleChipPress = (index: number) => {
+  const value = data[index].value ?? data[index];
+
+  if (type === "radio") {
+    onChange?.(value);
+    return;
+  }
+
+  if (Array.isArray(activeValue)) {
+    let next = new Set(activeValue);
+
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+
+    onChange?.([...next]);
+    return;
+  }
+
+  setActiveIndices(prev =>
+    prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+  );
+};
+
 
   const ChipComponent = type === "radio" ? RadioChip : Chip;
   const isSm = size === "sm";
@@ -63,7 +69,10 @@ const ChipGroup = ({
             !blockSelection &&
             (type === "radio"
               ? activeValue === value
-              : isClickable && activeIndices.includes(index));
+              : Array.isArray(activeValue)
+              ? activeValue.includes(value)
+              : isClickable && activeIndices.includes(index)
+              );
 
           const isDisabled = disabledValues.includes(value);
 

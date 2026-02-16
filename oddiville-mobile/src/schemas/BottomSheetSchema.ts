@@ -1062,6 +1062,15 @@ export const ExportDataOptionsBottomSheetConfigSchema = z.object({
   buttons: z.array(ButtonSchema).optional(),
 });
 
+export const SelectStatusBottomSheetConfigSchema = z.object({
+  sections: z.array(
+    z.discriminatedUnion("type", [
+      TitleWithDetailsCrossSection,
+      ProductCardSection,
+    ])
+  ),
+  buttons: z.array(ButtonSchema).optional(),
+});
 // ------------------- Type Inference ------------------- //
 
 export type OrderReadyBottomSheetConfig = z.infer<
@@ -1193,6 +1202,9 @@ export type ChooseExportFormatBottomSheetConfig = z.infer<
 export type ExportDataOptionsBottomSheetConfig = z.infer<
   typeof ExportDataOptionsBottomSheetConfigSchema
 >;
+export type SelectStatusBottomSheetConfig = z.infer<
+  typeof SelectStatusBottomSheetConfigSchema
+>;
 
 // ------------------- Central Schema Registry ------------------- //
 export const bottomSheetSchemas = {
@@ -1243,6 +1255,7 @@ export const bottomSheetSchemas = {
   "choose-export-type": ChooseExportTypeBottomSheetConfigSchema,
   "choose-export-format": ChooseExportFormatBottomSheetConfigSchema,
   "export-data-options": ExportDataOptionsBottomSheetConfigSchema,
+  "select-status": SelectStatusBottomSheetConfigSchema,
 } as const;
 
 export type BottomSheetSchemaKey = keyof typeof bottomSheetSchemas;

@@ -210,9 +210,21 @@ router.post("/order", async (req, res) => {
       }
     }
 
+    const rawMaterialRecord = await RawMaterialClient.findOne({
+  where: { name: raw_material_name }
+});
+
+if (!rawMaterialRecord) {
+  return res.status(400).json({ error: "Raw material not found" });
+}
+
+const raw_material_id = rawMaterialRecord.id;
+
+
     const newOrders = await Promise.all(
       vendorQuantities?.map(async (vend) => {
         const createdOrder = await RawMaterialOrderClient.create({
+          raw_material_id,  
           raw_material_name,
           vendor: vend.name,
           quantity_ordered: Number(vend.quantity),

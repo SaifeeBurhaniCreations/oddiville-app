@@ -49,7 +49,7 @@ const StockDetail = () => {
   const [searchValue, setSearchValue] = useState("");
 
   const { chamber: selectedChamber } = useSelector(
-    (state: RootState) => state.chamber
+    (state: RootState) => state.chamber,
   );
   const { data: chamberData } = useChamberByName(selectedChamber);
   const chamberId = chamberData?.id;
@@ -79,9 +79,7 @@ const StockDetail = () => {
   if (stock.category === "material" && !Array.isArray(stock.packaging)) {
     const materialPackaging = stock.packaging as Packaging;
 
-    const currentChamber = stock.chamber.find(
-      (ch) => ch.id === chamberId
-    );
+    const currentChamber = stock.chamber.find((ch) => ch.id === chamberId);
 
     if (!currentChamber) {
       return (
@@ -92,46 +90,39 @@ const StockDetail = () => {
     }
 
     const chamberRows = stock.chamber.filter(
-      (ch) =>
-        ch.id === chamberId &&
-        ch.rating === currentChamber.rating
+      (ch) => ch.id === chamberId && ch.rating === currentChamber.rating,
     );
 
     const chamberKg = chamberRows.reduce(
       (sum, ch) => sum + safeNumber(Number(ch.quantity)),
-      0
+      0,
     );
 
     const bagSizeKg = toKg(
       materialPackaging.size.value,
-      materialPackaging.size.unit as "kg" | "gm"
+      materialPackaging.size.unit as "kg" | "gm",
     );
 
-    const chamberBags =
-      bagSizeKg > 0 ? Math.floor(chamberKg / bagSizeKg) : 0;
+    const chamberBags = bagSizeKg > 0 ? Math.floor(chamberKg / bagSizeKg) : 0;
 
-      const allowedUnits = ["kg", "gm", "qn", "unit"] as const;
+    const allowedUnits = ["kg", "gm", "qn", "unit"] as const;
 
-      type Unit = typeof allowedUnits[number];
+    type Unit = (typeof allowedUnits)[number];
 
-      const unit = allowedUnits.includes(
-        materialPackaging.size.unit as Unit
-      )
-        ? (materialPackaging.size.unit as Unit)
-        : undefined;
+    const unit = allowedUnits.includes(materialPackaging.size.unit as Unit)
+      ? (materialPackaging.size.unit as Unit)
+      : undefined;
 
-      const materialIcon = mapPackageIcon({
-        size: materialPackaging.size.value,
-        unit,
-      });
+    const materialIcon = mapPackageIcon({
+      size: materialPackaging.size.value,
+      unit,
+    });
 
     materialBlock = (
       <View style={{ gap: 8, marginBottom: 16 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
           <StarIcon color={getColor("green", 700)} size={16} />
-          <B4 style={{ fontWeight: "700" }}>
-            Rating: {currentChamber.rating}
-          </B4>
+          <B4 style={{ fontWeight: "700" }}>Rating: {currentChamber.rating}</B4>
         </View>
 
         <ChamberCard
@@ -140,7 +131,7 @@ const StockDetail = () => {
           category="material"
           description={`${chamberKg} kg`}
           plainDescription
-          onPressOverride={() => { }}
+          onPressOverride={() => {}}
           leadingIcon={materialIcon}
         />
       </View>
@@ -154,18 +145,17 @@ const StockDetail = () => {
     if (!packedItems || !product_name) return [];
 
     return packedItems
-      .filter(item => item.product_name === product_name)
-      .flatMap(item =>
+      .filter((item) => item.product_name === product_name)
+      .flatMap((item) =>
         item.storage
-          .filter(s => s.chamberId === chamberId)
-          .map(s => {
+          .filter((s) => s.chamberId === chamberId)
+          .map((s) => {
             const packetKg =
               item.packet.unit === "gm"
                 ? item.packet.size / 1000
                 : item.packet.size;
 
-            const totalPackets =
-              s.bagsStored * item.packet.packetsPerBag;
+            const totalPackets = s.bagsStored * item.packet.packetsPerBag;
 
             return {
               key: `${item.id}-${item.skuId}-${s.chamberId}`,
@@ -178,7 +168,7 @@ const StockDetail = () => {
                 unit: item.packet.unit,
               }),
             };
-          })
+          }),
       );
   }, [packedItems, product_name, chamberId]);
 
@@ -187,9 +177,7 @@ const StockDetail = () => {
       <View style={{ gap: 12 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
           <StarIcon color={getColor("green", 700)} size={16} />
-          <B4 style={{ fontWeight: "700" }}>
-            Packed in this chamber
-          </B4>
+          <B4 style={{ fontWeight: "700" }}>Packed in this chamber</B4>
         </View>
 
         {packedByChamber.map((pkg) => (
@@ -200,7 +188,7 @@ const StockDetail = () => {
             category="packed"
             description={`${pkg.bags} bags | ${pkg.packets} packs | ${pkg.totalKg} kg`}
             plainDescription
-            onPressOverride={() => { }}
+            onPressOverride={() => {}}
             leadingIcon={pkg.icon}
           />
         ))}
@@ -208,44 +196,44 @@ const StockDetail = () => {
     ) : null;
 
   return (
-      <Require anyOf={["production", "package", "sales"]}>
-    <View style={styles.rootContainer}>
-      <PageHeader page="Chamber" />
+    <Require anyOf={["production", "package", "sales"]}>
+      <View style={styles.rootContainer}>
+        <PageHeader page="Chamber" />
 
-      <View style={styles.wrapper}>
-        <View style={styles.paddingTLR16}>
-          <BackButton label="Chambers" backRoute="chambers" />
-        </View>
-
-        <View style={styles.flexGrow}>
-          <View style={styles.searchinputWrapper}>
-            <SearchWithFilter
-              placeholder="Search by product name"
-              value={searchValue}
-              cross
-              onChangeText={setSearchValue}
-              onClear={() => setSearchValue("")}
-            />
+        <View style={styles.wrapper}>
+          <View style={styles.paddingTLR16}>
+            <BackButton label="Chambers" backRoute="chambers" />
           </View>
 
-          <ScrollView
-            refreshControl={
-              <RefreshControl
-                refreshing={isFetching || packedLoading}
-                onRefresh={refetch}
+          <View style={styles.flexGrow}>
+            <View style={styles.searchinputWrapper}>
+              <SearchWithFilter
+                placeholder="Search by product name"
+                value={searchValue}
+                cross
+                onChangeText={setSearchValue}
+                onClear={() => setSearchValue("")}
               />
-            }
-          >
-            {materialBlock}
-            {packedBlock}
+            </View>
 
-            {!materialBlock && !packedBlock && (
-              <EmptyState stateData={emptyStateData} />
-            )}
-          </ScrollView>
+            <ScrollView
+              refreshControl={
+                <RefreshControl
+                  refreshing={isFetching || packedLoading}
+                  onRefresh={refetch}
+                />
+              }
+            >
+              {materialBlock}
+              {packedBlock}
+
+              {!materialBlock && !packedBlock && (
+                <EmptyState stateData={emptyStateData} />
+              )}
+            </ScrollView>
+          </View>
         </View>
       </View>
-    </View>
     </Require>
   );
 };

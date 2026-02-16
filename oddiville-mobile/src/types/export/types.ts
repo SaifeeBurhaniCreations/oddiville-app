@@ -10,9 +10,11 @@ export interface ExportFiltersState {
 
   chamberIds: string[];
 
-  lanes: string[];
-  status: string[];
+  laneIds: string[];
 
+  selectAllLanes: boolean;
+
+  status: string[];
   vendors: string[];
   materials: string[];
 }

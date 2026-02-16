@@ -7,10 +7,17 @@ import {
   AddProductPackageForm,
 } from "../components/ui/bottom-sheet/InputWithSelectComponent";
 import { useGlobalFormValidator } from "../sbc/form/globalFormInstance";
-import { useCreatePackage, useAddPackageType, useIncreasePackageQuantity } from "./Packages";
+import {
+  useCreatePackage,
+  useAddPackageType,
+  useIncreasePackageQuantity,
+} from "./Packages";
 import { useUpdateOrder } from "./dispatchOrder";
 import { AddPackageQuantityForm } from "../components/ui/bottom-sheet/InputComponent";
-import { resetChamber, setIsChamberSelected } from "../redux/slices/chamber.slice";
+import {
+  resetChamber,
+  setIsChamberSelected,
+} from "../redux/slices/chamber.slice";
 import { StoreChambersForm } from "../components/ui/bottom-sheet/AddonInputComponent";
 import { useChamber } from "./useChambers";
 import {
@@ -40,22 +47,22 @@ import * as IntentLauncher from "expo-intent-launcher";
 import { useToast } from "@/src/context/ToastContext";
 
 type BottomSheetActionResult = boolean | void;
-type BottomSheetAction = () => BottomSheetActionResult | Promise<BottomSheetActionResult>;
+type BottomSheetAction = () =>
+  | BottomSheetActionResult
+  | Promise<BottomSheetActionResult>;
 
 export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const toast = useToast();
 
-  const source = useSelector(
-    (state: RootState) => state.rawMaterial.source
-  );
+  const source = useSelector((state: RootState) => state.rawMaterial.source);
   const { packages } = useSelector(
-    (state: RootState) => state.packageSizePackaging
+    (state: RootState) => state.packageSizePackaging,
   );
   const productName = useSelector(
-    (state: RootState) => state.productionBegins.productName
+    (state: RootState) => state.productionBegins.productName,
   );
   const metaBottomSheet = useSelector(
-    (state: RootState) => state.bottomSheet.meta
+    (state: RootState) => state.bottomSheet.meta,
   );
 
   const dispatch = useDispatch<AppDispatch>();
@@ -67,9 +74,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const completeProduction = useCompleteProduction();
   const { data: chambers } = useChamber();
 
-const { product } = useSelector(
-  (state: RootState) => state.storeProduct
-);
+  const { product } = useSelector((state: RootState) => state.storeProduct);
 
   const { data: chambersY } = useChamber();
   const { data: stocksY } = useChamberStock();
@@ -87,13 +92,13 @@ const { product } = useSelector(
 
   function getRemainingChamberQuantities(
     chambersY: Chamber[] | undefined,
-    stocksY: ChamberGoods[] | undefined
+    stocksY: ChamberGoods[] | undefined,
   ) {
     return (chambersY ?? []).map((chamber) => {
       const quantities = (stocksY ?? []).flatMap((stock) =>
         stock.chamber
           ?.filter((ch) => ch.id === chamber.id)
-          ?.map((ch) => parseFloat(ch.quantity))
+          ?.map((ch) => parseFloat(ch.quantity)),
       );
       const totalOccupied = quantities.reduce((acc, val) => acc + val, 0);
       const remaining = chamber.capacity - totalOccupied;
@@ -109,35 +114,32 @@ const { product } = useSelector(
   }
 
   const productPackageForm = useGlobalFormValidator<AddProductPackageForm>(
-    "add-product-package"
+    "add-product-package",
   );
 
   const packageSizeForm =
     useGlobalFormValidator<AddPackageSizeForm>("add-package-size");
 
   const packageQuantityForm = useGlobalFormValidator<AddPackageQuantityForm>(
-    "add-package-quantity"
+    "add-package-quantity",
   );
-const {
-  errors: storeErrors,
-} = useGlobalFormValidator<StoreChambersForm>("store-chambers");
+  const { errors: storeErrors } =
+    useGlobalFormValidator<StoreChambersForm>("store-chambers");
 
   // const storeQuantityForm =
   //   useGlobalFormValidator<StoreMaterialForm>("store-product");
 
-type SupervisorProductionForm = {
-  packaging_size: string;
-  packaging_type: string;
-  discard_quantity?: number;
-};
+  type SupervisorProductionForm = {
+    packaging_size: string;
+    packaging_type: string;
+    discard_quantity?: number;
+  };
 
-const supervisorProductionForm =
-  useGlobalFormValidator<SupervisorProductionForm>(
-    "supervisor-production"
-  );
+  const supervisorProductionForm =
+    useGlobalFormValidator<SupervisorProductionForm>("supervisor-production");
 
-const storeChambersForm =
-  useGlobalFormValidator<StoreChambersForm>("store-chambers");
+  const storeChambersForm =
+    useGlobalFormValidator<StoreChambersForm>("store-chambers");
 
   const chamberSummaries = getRemainingChamberQuantities(chambersY, stocksY);
 
@@ -159,7 +161,7 @@ const storeChambersForm =
       ? "No chamber data available"
       : undefined;
 
-const actions: Record<string, BottomSheetAction> = {
+  const actions: Record<string, BottomSheetAction> = {
     "add-raw-material": () => {
       if (!meta?.id) {
         console.warn("No ID for this action");
@@ -380,82 +382,86 @@ const actions: Record<string, BottomSheetAction> = {
       }
     },
 
-   "store-product": async () => {
-  if (!meta?.id) {
-    console.warn("No ID for this action");
-    return false;
-  }
+    "store-product": async () => {
+      if (!meta?.id) {
+        console.warn("No ID for this action");
+        return false;
+      }
 
-  // 🔹 validate chambers
-  const chamberResult = storeChambersForm.validateForm();
-  if (!chamberResult.success) {
-    toast.error("Please fill chamber quantity and rating");
-    return false;
-  }
+      // 🔹 validate chambers
+      const chamberResult = storeChambersForm.validateForm();
+      if (!chamberResult.success) {
+        toast.error("Please fill chamber quantity and rating");
+        return false;
+      }
 
-  // 🔹 validate ratings explicitly
-  const invalidRating = Object.values(chamberResult.data).some(
-    (c: any) => c.quantity > 0 && c.rating === 0
-  );
-  if (invalidRating) {
-    toast.error("Please select rating for all chambers");
-    return false;
-  }
+      // 🔹 validate ratings explicitly
+      const invalidRating = Object.values(chamberResult.data).some(
+        (c: any) => c.quantity > 0 && c.rating === 0,
+      );
+      if (invalidRating) {
+        toast.error("Please select rating for all chambers");
+        return false;
+      }
 
-  // 🔹 validate packaging
-  const productionResult = supervisorProductionForm.validateForm();
-  if (!productionResult.success) {
-    toast.error("Please fill packaging size");
-    return false;
-  }
+      // 🔹 validate packaging
+      const productionResult = supervisorProductionForm.validateForm();
+      if (!productionResult.success) {
+        toast.error("Please fill packaging size");
+        return false;
+      }
 
-  const producedTotal = Number(product?.quantity ?? 0);
-  const storedTotal = Object.values(chamberResult.data).reduce(
-    (sum, c) => sum + Number(c.quantity || 0),
-    0
-  );
+      const producedTotal = Number(product?.quantity ?? 0);
+      const storedTotal = Object.values(chamberResult.data).reduce(
+        (sum, c) => sum + Number(c.quantity || 0),
+        0,
+      );
 
-  const payload = {
-    packaging_size: Number(productionResult.data.packaging_size),
-    packaging_type: productionResult.data.packaging_type,
-    wastage_quantity: Math.max(producedTotal - storedTotal, 0),
-    end_time: new Date(),
-    chambers: Object.entries(chamberResult.data)
-      .map(([name, value]) => {
-        const chamber = chambers?.find(c => c.chamber_name === name);
-        return chamber
-          ? { id: chamber.id, quantity: value.quantity, rating: value.rating }
-          : null;
-      })
-      .filter(Boolean),
-  };
+      const payload = {
+        packaging_size: Number(productionResult.data.packaging_size),
+        packaging_type: productionResult.data.packaging_type,
+        wastage_quantity: Math.max(producedTotal - storedTotal, 0),
+        end_time: new Date(),
+        chambers: Object.entries(chamberResult.data)
+          .map(([name, value]) => {
+            const chamber = chambers?.find((c) => c.chamber_name === name);
+            return chamber
+              ? {
+                  id: chamber.id,
+                  quantity: value.quantity,
+                  rating: value.rating,
+                }
+              : null;
+          })
+          .filter(Boolean),
+      };
 
-  try {
-    dispatch(setProductionLoading(true));
+      try {
+        dispatch(setProductionLoading(true));
 
-    await completeProduction.mutateAsync({
-      id: meta.id,
-      data: payload,
-    });
+        await completeProduction.mutateAsync({
+          id: meta.id,
+          data: payload,
+        });
 
-    dispatch(clearChambers());
-    dispatch(resetProductStore());
-    dispatch(chamberRatingReset());
-    dispatch(chamberReset());
-    dispatch(clearUnit());
+        dispatch(clearChambers());
+        dispatch(resetProductStore());
+        dispatch(chamberRatingReset());
+        dispatch(chamberReset());
+        dispatch(clearUnit());
 
-    storeChambersForm.resetForm();
-    supervisorProductionForm.resetForm();
+        storeChambersForm.resetForm();
+        supervisorProductionForm.resetForm();
 
-    goTo("production");
-    return true;
-  } catch (err) {
-    toast.error("Failed to complete production. Please try again.");
-    return false;
-  } finally {
-    dispatch(setProductionLoading(false));
-  }
-},
+        goTo("production");
+        return true;
+      } catch (err) {
+        toast.error("Failed to complete production. Please try again.");
+        return false;
+      } finally {
+        dispatch(setProductionLoading(false));
+      }
+    },
 
     "ship-order": () => {
       if (!meta?.id) {
@@ -530,14 +536,11 @@ const actions: Record<string, BottomSheetAction> = {
       try {
         const contentUri = await FileSystem.getContentUriAsync(uri);
 
-        await IntentLauncher.startActivityAsync(
-          "android.intent.action.VIEW",
-          {
-            data: contentUri,
-            flags: 1,
-            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          }
-        );
+        await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
+          data: contentUri,
+          flags: 1,
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
       } catch (e) {
         toast.info("Install Google Sheets or Excel to preview files directly");
 
@@ -553,12 +556,21 @@ const actions: Record<string, BottomSheetAction> = {
     },
 
     "add-dispatch-product": () => {
-      if (meta?.id) {}
+      if (meta?.id) {
+      }
       dispatch(closeBottomSheet());
     },
 
     "add-vendor": () => {
-      if (meta?.id) {}
+      if (meta?.id) {
+      }
+      dispatch(closeBottomSheet());
+    },
+
+    "choose-export-status": () => {
+      if (meta?.id) {
+      }
+      
       dispatch(closeBottomSheet());
     },
 
@@ -571,15 +583,15 @@ const actions: Record<string, BottomSheetAction> = {
     },
   };
 
-const runAction = async (key?: string): Promise<boolean> => {
-  if (!key || !actions[key]) return true;
+  const runAction = async (key?: string): Promise<boolean> => {
+    if (!key || !actions[key]) return true;
 
-  const result = await actions[key]();
+    const result = await actions[key]();
 
-  if (result === false) return false;
+    if (result === false) return false;
 
-  return true;
-};
+    return true;
+  };
 
   return { runAction };
 };

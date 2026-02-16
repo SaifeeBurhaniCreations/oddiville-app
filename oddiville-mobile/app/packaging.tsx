@@ -53,11 +53,11 @@ const PackagingScreen = () => {
   const DryChambers = DryChambersRaw || [];
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const isProductLoading = useSelector(
-    (state: RootState) => state.product.isProductLoading
+    (state: RootState) => state.product.isProductLoading,
   );
 
   const productPackageForm = useGlobalFormValidator<AddProductPackageForm>(
-    "add-product-package"
+    "add-product-package",
   );
 
   const [isLoading, setIsLoading] = useState(false);
@@ -68,7 +68,6 @@ const PackagingScreen = () => {
   }, [packageData]);
 
   const handleOpenAddNewPackage = async () => {
-
     const addProductPackage = {
       sections: [
         {
@@ -140,7 +139,7 @@ const PackagingScreen = () => {
     await validateAndSetData(
       "temp123",
       "add-product-package",
-      addProductPackage
+      addProductPackage,
     );
     setIsLoading(false);
   };
@@ -154,10 +153,7 @@ const PackagingScreen = () => {
         <View
           style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}
         >
-          <BackButton
-            label="Package"
-            backRoute={"package"}
-          />
+          <BackButton label="Package" backRoute={"package"} />
 
           <Button variant="outline" size="md" onPress={handleOpenAddNewPackage}>
             Add package

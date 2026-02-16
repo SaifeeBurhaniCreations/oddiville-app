@@ -46,10 +46,7 @@ const PackageSizeChooseComponent = ({
           const unit = item.unit as Unit | undefined;
 
           if (!size || !unit) {
-            console.warn(
-              "[PackageSizeChooseComponent] Invalid item:",
-              item
-            );
+            console.warn("[PackageSizeChooseComponent] Invalid item:", item);
             return null;
           }
 
@@ -57,11 +54,9 @@ const PackageSizeChooseComponent = ({
 
           const isSelected =
             data.source === "dispatch"
-              ? (selected as DispatchPackageSize[]).some(
-                  (s) => s.key === key
-                )
+              ? (selected as DispatchPackageSize[]).some((s) => s.key === key)
               : (selected as PackageSize[]).some(
-                  (s) => s.rawSize === item.name
+                  (s) => s.rawSize === item.name,
                 );
 
           return (
@@ -86,7 +81,7 @@ const PackageSizeChooseComponent = ({
                     toggleDispatchPackageSize({
                       productId: data.productId,
                       pkg: dispatchPkg,
-                    })
+                    }),
                   );
 
                   dispatch(setSource("dispatch"));
@@ -112,9 +107,7 @@ const PackageSizeChooseComponent = ({
             >
               <Checkbox checked={isSelected} />
 
-              <View style={styles.icon}>
-                {getIcon(item.icon)}
-              </View>
+              <View style={styles.icon}>{getIcon(item.icon)}</View>
 
               <SubHeading>
                 {item.name}

@@ -43,7 +43,12 @@ import { resolveAccess } from "@/src/utils/policiesUtils";
 import { removeProduct } from "@/src/redux/slices/multiple-product.slice";
 import { usePackedItems } from "@/src/hooks/packing/getPackedItemsEvent";
 import { useToast } from "@/src/context/ToastContext";
-import { PackedChamberRow, PackedItemEvent, RMConsumption, UIPackingItem } from "@/src/types/domain/packing/packing.types";
+import {
+  PackedChamberRow,
+  PackedItemEvent,
+  RMConsumption,
+  UIPackingItem,
+} from "@/src/types/domain/packing/packing.types";
 import Chip from "../Chip";
 import BoxIcon from "../../icons/common/BoxIcon";
 import { useChamber } from "@/src/hooks/useChambers";
@@ -61,7 +66,7 @@ export interface SelectedRawMaterial {
 
 const getRatingForChamber = (
   rm: RMConsumption | undefined,
-  chamberId: string
+  chamberId: string,
 ): number | null => {
   if (!rm) return null;
 
@@ -76,19 +81,16 @@ const getRatingForChamber = (
 };
 
 export const normalizePackedItemsToUI = (
-  items: PackedItemEvent[]
+  items: PackedItemEvent[],
 ): UIPackingItem[] => {
-
   if (!Array.isArray(items)) return [];
 
   return items.flatMap((e) => {
     const packetKg =
-      e.packet.unit === "gm"
-        ? e.packet.size / 1000
-        : e.packet.size;
+      e.packet.unit === "gm" ? e.packet.size / 1000 : e.packet.size;
 
     return (e.storage ?? [])
-      .filter(s => Number(s.bagsStored) > 0)
+      .filter((s) => Number(s.bagsStored) > 0)
       .map((s) => {
         const bags = Number(s.bagsStored);
 
@@ -100,20 +102,19 @@ export const normalizePackedItemsToUI = (
           bags,
           kg: bags * packetKg,
 
-            rating: e.rating ?? 5,
+          rating: e.rating ?? 5,
         };
       });
   });
 };
 
-
 const buildPackedChamberRows = (
-  items: UIPackingItem[] = []
+  items: UIPackingItem[] = [],
 ): PackedChamberRow[] => {
-  return items.map(item => ({
+  return items.map((item) => ({
     size: item.size,
     unit: item.unit,
-    rating: item.rating,       
+    rating: item.rating,
     chamberId: item.chamberId,
     bags: Number(item.bags || 0),
     kg: Number(item.kg || 0),
@@ -148,38 +149,38 @@ const CreateFromStorage = ({
 
   const { values, setField, errors } = controlledForm;
 
-const packingItems = useMemo(() => {
-  return normalizePackedItemsToUI(packedItemsDataNew ?? []);
-}, [packedItemsDataNew]);
+  const packingItems = useMemo(() => {
+    return normalizePackedItemsToUI(packedItemsDataNew ?? []);
+  }, [packedItemsDataNew]);
 
-const { data: chamberStocks } = useChamberStock();
+  const { data: chamberStocks } = useChamberStock();
 
-const chamberStockIndex = useMemo(() => {
-  const map = new Map<
-    string,
-    {
-      packages: any[];
-      chambers: {
-        chamberId: string;
-        rating: number;
-        bags: number;
-      }[];
-    }
-  >();
+  const chamberStockIndex = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        packages: any[];
+        chambers: {
+          chamberId: string;
+          rating: number;
+          bags: number;
+        }[];
+      }
+    >();
 
-  (chamberStocks ?? []).forEach(cs => {
-    map.set(cs.product_name, {
-      packages: cs.packages ?? [],
-      chambers: (cs.chamber ?? []).map(ch => ({
-        chamberId: ch.id,
-        rating: Number(ch.rating),
-        bags: Number(ch.quantity),
-      })),
+    (chamberStocks ?? []).forEach((cs) => {
+      map.set(cs.product_name, {
+        packages: cs.packages ?? [],
+        chambers: (cs.chamber ?? []).map((ch) => ({
+          chamberId: ch.id,
+          rating: Number(ch.rating),
+          bags: Number(ch.quantity),
+        })),
+      });
     });
-  });
 
-  return map;
-}, [chamberStocks]);
+    return map;
+  }, [chamberStocks]);
 
   useEffect(() => {
     if (values.products?.length && openTab === null) {
@@ -364,7 +365,7 @@ const chamberStockIndex = useMemo(() => {
                 Products
               </Select>
 
-                            {/* <View
+              {/* <View
                               style={[
                                 styles.centeredChips,
                                 {
@@ -382,17 +383,15 @@ const chamberStockIndex = useMemo(() => {
                                 ))
                               }
                             </View> */}
-              
             </View>
 
             {values.products?.length > 0 ? (
               values.products?.map((value, index) => {
-                
-              const productPackingItems = packingItems.filter(
-                p => p.productName === value.product_name
-              );
+                const productPackingItems = packingItems.filter(
+                  (p) => p.productName === value.product_name,
+                );
 
-              const chamberRows = buildPackedChamberRows(productPackingItems);
+                const chamberRows = buildPackedChamberRows(productPackingItems);
 
                 return (
                   <AddProductsForSell
@@ -534,7 +533,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     gap: 8,
   },
-    centeredChips: {
+  centeredChips: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
@@ -543,5 +542,4 @@ const styles = StyleSheet.create({
     borderBottomColor: getColor("green", 100),
     paddingBottom: 24,
   },
-
 });

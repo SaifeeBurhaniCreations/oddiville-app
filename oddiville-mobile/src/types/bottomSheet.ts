@@ -65,7 +65,8 @@ export type BottomSheetActionKey =
   | "add-dispatch-product"
   | "add-vendor"
   | "export-open"
-  | "export-share";
+  | "export-share"
+  | "choose-export-status";
   
 // ButtonConfig interface
 export interface ButtonConfig {

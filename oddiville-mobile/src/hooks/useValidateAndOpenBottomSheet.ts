@@ -1,34 +1,51 @@
-import { useDispatch, useSelector } from 'react-redux';
-import { openBottomSheet } from '@/src/redux/slices/bottomsheet.slice';
-import { BottomSheetSchemaKey, bottomSheetSchemas, UpcomingOrderBottomSheetConfig } from '@/src/schemas/BottomSheetSchema';
-import { queryClient } from '@/src/lib/react-query';
-import { getBottomSheetQueryOptions } from './queries/getBottomSheetQueryOptions';
-import { formatDistanceToNow } from 'date-fns';
-import { getBottomSheetActions } from '../utils/bottomSheetActions';
-import { ButtonConfig } from '../types';
-import { RootState } from '../redux/store';
-import { countries } from '../constants/countries';
-import { Chamber, useDryChambers } from './useChambers';
+import { useDispatch, useSelector } from "react-redux";
+import { openBottomSheet } from "@/src/redux/slices/bottomsheet.slice";
+import {
+  BottomSheetSchemaKey,
+  bottomSheetSchemas,
+  UpcomingOrderBottomSheetConfig,
+} from "@/src/schemas/BottomSheetSchema";
+import { queryClient } from "@/src/lib/react-query";
+import { getBottomSheetQueryOptions } from "./queries/getBottomSheetQueryOptions";
+import { formatDistanceToNow } from "date-fns";
+import { getBottomSheetActions } from "../utils/bottomSheetActions";
+import { ButtonConfig } from "../types";
+import { RootState } from "../redux/store";
+import { countries } from "../constants/countries";
+import { Chamber, useDryChambers } from "./useChambers";
 
 const useValidateAndOpenBottomSheet = () => {
   const dispatch = useDispatch();
-  const { packages } = useSelector((state: RootState) => state.packageSizePackaging);
+  const { packages } = useSelector(
+    (state: RootState) => state.packageSizePackaging,
+  );
 
   const { product } = useSelector((state: RootState) => state.storeProduct);
-  const selectedChambers = useSelector((state: RootState) => state.rawMaterial.selectedChambers);
-    const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
+  const selectedChambers = useSelector(
+    (state: RootState) => state.rawMaterial.selectedChambers,
+  );
+  const packageTypeProduction = useSelector(
+    (state: RootState) => state.packageTypeProduction.selectedPackageType,
+  );
 
-  const { data: DryChambersRaw } = useDryChambers()
+  const { data: DryChambersRaw } = useDryChambers();
   const DryChambers = DryChambersRaw || [];
 
   const editOrder = {
     sections: [
       {
-        type: 'header',
-        data: { label: 'Edit order', title: "Vikram Patel", value: formatDistanceToNow(new Date(Date.now() - 1 * 60 * 1000), { addSuffix: true }), icon: 'calendar' },
+        type: "header",
+        data: {
+          label: "Edit order",
+          title: "Vikram Patel",
+          value: formatDistanceToNow(new Date(Date.now() - 1 * 60 * 1000), {
+            addSuffix: true,
+          }),
+          icon: "calendar",
+        },
       },
       {
-        type: 'data',
+        type: "data",
         data: [
           {
             title: "New detail",
@@ -39,8 +56,8 @@ const useValidateAndOpenBottomSheet = () => {
                     label: "Address",
                     value: "18, Commercial Street, Bangalore – 560001",
                     icon: "location",
-                  }
-                ]
+                  },
+                ],
               },
               {
                 row_2: [
@@ -48,8 +65,8 @@ const useValidateAndOpenBottomSheet = () => {
                     label: "Product",
                     value: "French fries",
                     icon: "box",
-                  }
-                ]
+                  },
+                ],
               },
               {
                 row_3: [
@@ -57,8 +74,8 @@ const useValidateAndOpenBottomSheet = () => {
                     label: "Est dispatch date",
                     value: "Jun 12, 2025",
                     icon: "calendar-check",
-                  }
-                ]
+                  },
+                ],
               },
               {
                 row_4: [
@@ -66,8 +83,8 @@ const useValidateAndOpenBottomSheet = () => {
                     label: "Chambers",
                     value: "1(20), 2(50), 6(10)",
                     icon: "chamber",
-                  }
-                ]
+                  },
+                ],
               },
               {
                 row_5: [
@@ -75,8 +92,8 @@ const useValidateAndOpenBottomSheet = () => {
                     label: "Package",
                     value: "500gm(60), 250gm(80), 1kg(10)",
                     icon: "package",
-                  }
-                ]
+                  },
+                ],
               },
             ],
           },
@@ -89,8 +106,8 @@ const useValidateAndOpenBottomSheet = () => {
                     label: "Address",
                     value: "18, Commercial Street, Bangalore – 560001",
                     icon: "location",
-                  }
-                ]
+                  },
+                ],
               },
               {
                 row_2: [
@@ -98,8 +115,8 @@ const useValidateAndOpenBottomSheet = () => {
                     label: "Product",
                     value: "French fries",
                     icon: "box",
-                  }
-                ]
+                  },
+                ],
               },
               {
                 row_3: [
@@ -107,8 +124,8 @@ const useValidateAndOpenBottomSheet = () => {
                     label: "Est dispatch date",
                     value: "Jun 12, 2025",
                     icon: "calendar-check",
-                  }
-                ]
+                  },
+                ],
               },
               {
                 row_4: [
@@ -116,8 +133,8 @@ const useValidateAndOpenBottomSheet = () => {
                     label: "Chambers",
                     value: "1(20), 2(50), 6(10)",
                     icon: "chamber",
-                  }
-                ]
+                  },
+                ],
               },
               {
                 row_5: [
@@ -125,28 +142,40 @@ const useValidateAndOpenBottomSheet = () => {
                     label: "Package",
                     value: "500gm(60), 250gm(80), 1kg(10)",
                     icon: "package",
-                  }
-                ]
+                  },
+                ],
               },
             ],
           },
         ],
       },
-    ]
-  }
+    ],
+  };
 
   const cancelOrder = {
     sections: [
       {
-        type: 'header',
-        data: { label: 'Cancel order', title: "Vikram Patel", value: formatDistanceToNow(new Date(Date.now() - 1 * 60 * 1000), { addSuffix: true }), icon: 'calendar', description: "18, Commercial Street, Bangalore – 560001" },
+        type: "header",
+        data: {
+          label: "Cancel order",
+          title: "Vikram Patel",
+          value: formatDistanceToNow(new Date(Date.now() - 1 * 60 * 1000), {
+            addSuffix: true,
+          }),
+          icon: "calendar",
+          description: "18, Commercial Street, Bangalore – 560001",
+        },
       },
       {
-        type: 'description',
-        data: { title: 'Reason', description: 'Due to some reason vendors cancelled the order.Due to some reason vendors cancelled the order.Due to some reason vendors cancelled the order.' }
+        type: "description",
+        data: {
+          title: "Reason",
+          description:
+            "Due to some reason vendors cancelled the order.Due to some reason vendors cancelled the order.Due to some reason vendors cancelled the order.",
+        },
       },
       {
-        type: 'product-details',
+        type: "product-details",
         data: [
           {
             title: "Product detail",
@@ -163,7 +192,7 @@ const useValidateAndOpenBottomSheet = () => {
                     value: "4 product",
                     icon: "box",
                   },
-                ]
+                ],
               },
               {
                 row_2: [
@@ -177,233 +206,314 @@ const useValidateAndOpenBottomSheet = () => {
                     value: "Nov 8, 2024",
                     icon: "calendar-check",
                   },
-                ]
+                ],
               },
             ],
             fileName: "example_challan.pdf",
           },
         ],
-
       },
       {
-        type: 'truck-full-details',
+        type: "truck-full-details",
         data: {
           title: "Truck Detail",
           driverName: "Rajesh Sharma",
-          driverImage: "https://0b8cc32c66c8.ngrok-free.app/driver-image/driver-1.png",
+          driverImage:
+            "https://0b8cc32c66c8.ngrok-free.app/driver-image/driver-1.png",
           number: "MP09 AB 1234",
           type: "Chota hathi",
           date_title: "Arrival date",
           arrival_date: "Dec 8, 2024",
           agency: "Hans travels",
-        }
+        },
       },
       {
-        type: 'product-list-accordian',
+        type: "product-list-accordian",
         data: {
           label: "Products",
           products: [
             {
               title: "Mango",
-              image: "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
+              image:
+                "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
               packages: [
-                { size: 500, unit: 'gm', quantity: '' },
-                { size: 250, unit: 'gm', quantity: '' },
-                { size: 10, unit: 'kg', quantity: '' },
+                { size: 500, unit: "gm", quantity: "" },
+                { size: 250, unit: "gm", quantity: "" },
+                { size: 10, unit: "kg", quantity: "" },
               ],
               chambers: [
-                { id: '8d8ac610-566d-4ef0-9c22-186b2a5ed793', name: 'Chamber 1', quantity: '300' }
+                {
+                  id: "8d8ac610-566d-4ef0-9c22-186b2a5ed793",
+                  name: "Chamber 1",
+                  quantity: "300",
+                },
               ],
               description: "80 Kg in 3 chambers",
               packagesSentence: "150 package of 500gm, 250gm & 1kg",
               weight: "80 Kg",
-              price: "10 Lakh"
+              price: "10 Lakh",
             },
             {
               title: "Momos",
-              image: "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
+              image:
+                "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
               packages: [
-                { size: 500, unit: 'gm', quantity: '' },
-                { size: 250, unit: 'gm', quantity: '' },
-                { size: 10, unit: 'kg', quantity: '' },
+                { size: 500, unit: "gm", quantity: "" },
+                { size: 250, unit: "gm", quantity: "" },
+                { size: 10, unit: "kg", quantity: "" },
               ],
               chambers: [
-                { id: '8d8ac610-566d-4ef0-9c22-186b2a5ed793', name: 'Chamber 1', quantity: '300' }
+                {
+                  id: "8d8ac610-566d-4ef0-9c22-186b2a5ed793",
+                  name: "Chamber 1",
+                  quantity: "300",
+                },
               ],
               description: "80 Kg in 3 chambers",
               packagesSentence: "150 package of 500gm, 250gm & 1kg",
               weight: "80 Kg",
-              price: "10 Lakh"
+              price: "10 Lakh",
             },
             {
               title: "Mango",
-              image: "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
+              image:
+                "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
               packages: [
-                { size: 500, unit: 'gm', quantity: '' },
-                { size: 250, unit: 'gm', quantity: '' },
-                { size: 10, unit: 'kg', quantity: '' },
+                { size: 500, unit: "gm", quantity: "" },
+                { size: 250, unit: "gm", quantity: "" },
+                { size: 10, unit: "kg", quantity: "" },
               ],
               chambers: [
-                { id: '8d8ac610-566d-4ef0-9c22-186b2a5ed793', name: 'Chamber 1', quantity: '300' }
+                {
+                  id: "8d8ac610-566d-4ef0-9c22-186b2a5ed793",
+                  name: "Chamber 1",
+                  quantity: "300",
+                },
               ],
               description: "80 Kg in 3 chambers",
               packagesSentence: "150 package of 500gm, 250gm & 1kg",
               weight: "80 Kg",
-              price: "10 Lakh"
+              price: "10 Lakh",
             },
             {
               title: "Momos",
-              image: "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
+              image:
+                "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
               packages: [
-                { size: 500, unit: 'gm', quantity: '' },
-                { size: 250, unit: 'gm', quantity: '' },
-                { size: 10, unit: 'kg', quantity: '' },
+                { size: 500, unit: "gm", quantity: "" },
+                { size: 250, unit: "gm", quantity: "" },
+                { size: 10, unit: "kg", quantity: "" },
               ],
               chambers: [
-                { id: '8d8ac610-566d-4ef0-9c22-186b2a5ed793', name: 'Chamber 1', quantity: '300' }
+                {
+                  id: "8d8ac610-566d-4ef0-9c22-186b2a5ed793",
+                  name: "Chamber 1",
+                  quantity: "300",
+                },
               ],
               description: "80 Kg in 3 chambers",
               packagesSentence: "150 package of 500gm, 250gm & 1kg",
               weight: "80 Kg",
-              price: "10 Lakh"
+              price: "10 Lakh",
             },
             {
               title: "Mango",
-              image: "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
+              image:
+                "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
               packages: [
-                { size: 500, unit: 'gm', quantity: '' },
-                { size: 250, unit: 'gm', quantity: '' },
-                { size: 10, unit: 'kg', quantity: '' },
+                { size: 500, unit: "gm", quantity: "" },
+                { size: 250, unit: "gm", quantity: "" },
+                { size: 10, unit: "kg", quantity: "" },
               ],
               chambers: [
-                { id: '8d8ac610-566d-4ef0-9c22-186b2a5ed793', name: 'Chamber 1', quantity: '300' }
+                {
+                  id: "8d8ac610-566d-4ef0-9c22-186b2a5ed793",
+                  name: "Chamber 1",
+                  quantity: "300",
+                },
               ],
               description: "80 Kg in 3 chambers",
               packagesSentence: "150 package of 500gm, 250gm & 1kg",
               weight: "80 Kg",
-              price: "10 Lakh"
+              price: "10 Lakh",
             },
             {
               title: "Momos",
-              image: "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
+              image:
+                "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
               packages: [
-                { size: 500, unit: 'gm', quantity: '' },
-                { size: 250, unit: 'gm', quantity: '' },
-                { size: 10, unit: 'kg', quantity: '' },
+                { size: 500, unit: "gm", quantity: "" },
+                { size: 250, unit: "gm", quantity: "" },
+                { size: 10, unit: "kg", quantity: "" },
               ],
               chambers: [
-                { id: '8d8ac610-566d-4ef0-9c22-186b2a5ed793', name: 'Chamber 1', quantity: '300' }
+                {
+                  id: "8d8ac610-566d-4ef0-9c22-186b2a5ed793",
+                  name: "Chamber 1",
+                  quantity: "300",
+                },
               ],
               description: "80 Kg in 3 chambers",
               packagesSentence: "150 package of 500gm, 250gm & 1kg",
               weight: "80 Kg",
-              price: "10 Lakh"
+              price: "10 Lakh",
             },
             {
               title: "Mango",
-              image: "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
+              image:
+                "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
               packages: [
-                { size: 500, unit: 'gm', quantity: '' },
-                { size: 250, unit: 'gm', quantity: '' },
-                { size: 10, unit: 'kg', quantity: '' },
+                { size: 500, unit: "gm", quantity: "" },
+                { size: 250, unit: "gm", quantity: "" },
+                { size: 10, unit: "kg", quantity: "" },
               ],
               chambers: [
-                { id: '8d8ac610-566d-4ef0-9c22-186b2a5ed793', name: 'Chamber 1', quantity: '300' }
+                {
+                  id: "8d8ac610-566d-4ef0-9c22-186b2a5ed793",
+                  name: "Chamber 1",
+                  quantity: "300",
+                },
               ],
               description: "80 Kg in 3 chambers",
               packagesSentence: "150 package of 500gm, 250gm & 1kg",
               weight: "80 Kg",
-              price: "10 Lakh"
+              price: "10 Lakh",
             },
             {
               title: "Momos",
-              image: "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
+              image:
+                "https://0b8cc32c66c8.ngrok-free.app/products/product-1.png",
               packages: [
-                { size: 500, unit: 'gm', quantity: '' },
-                { size: 250, unit: 'gm', quantity: '' },
-                { size: 10, unit: 'kg', quantity: '' },
+                { size: 500, unit: "gm", quantity: "" },
+                { size: 250, unit: "gm", quantity: "" },
+                { size: 10, unit: "kg", quantity: "" },
               ],
               chambers: [
-                { id: '8d8ac610-566d-4ef0-9c22-186b2a5ed793', name: 'Chamber 1', quantity: '300' }
+                {
+                  id: "8d8ac610-566d-4ef0-9c22-186b2a5ed793",
+                  name: "Chamber 1",
+                  quantity: "300",
+                },
               ],
               description: "80 Kg in 3 chambers",
               packagesSentence: "150 package of 500gm, 250gm & 1kg",
               weight: "80 Kg",
-              price: "10 Lakh"
+              price: "10 Lakh",
             },
-          ]
-        }
+          ],
+        },
       },
-    ]
-  }
+    ],
+  };
 
   const packageComesToEnd = {
     sections: [
       {
-        type: 'header',
-        data: { label: 'Package comes to end', title: "250gm package", value: formatDistanceToNow(new Date(Date.now() - 1 * 60 * 1000), { addSuffix: true }), icon: 'calendar', description: 'India | 200 left' },
+        type: "header",
+        data: {
+          label: "Package comes to end",
+          title: "250gm package",
+          value: formatDistanceToNow(new Date(Date.now() - 1 * 60 * 1000), {
+            addSuffix: true,
+          }),
+          icon: "calendar",
+          description: "India | 200 left",
+        },
       },
       {
-        type: 'input',
+        type: "input",
         data: {
-          placeholder: 'Enter counts', label: 'Add package', keyboardType: 'number-pad'
+          placeholder: "Enter counts",
+          label: "Add package",
+          keyboardType: "number-pad",
         },
       },
     ],
     buttons: [
-      { text: 'Update package', variant: 'fill', color: 'green', alignment: "full", disabled: false },
+      {
+        text: "Update package",
+        variant: "fill",
+        color: "green",
+        alignment: "full",
+        disabled: false,
+      },
     ],
-  }
+  };
 
   const verifyMaterial = {
     sections: [
       {
-        type: 'header',
-        data: { label: 'Verify material', title: "Corn", value: formatDistanceToNow(new Date(Date.now() - 1 * 60 * 1000), { addSuffix: true }), icon: 'calendar' },
+        type: "header",
+        data: {
+          label: "Verify material",
+          title: "Corn",
+          value: formatDistanceToNow(new Date(Date.now() - 1 * 60 * 1000), {
+            addSuffix: true,
+          }),
+          icon: "calendar",
+        },
       },
       {
-        type: 'image-full-width',
-        data: { imageUrl: "https://0b8cc32c66c8.ngrok-free.app/sample-/sample-1.png" },
+        type: "image-full-width",
+        data: {
+          imageUrl: "https://0b8cc32c66c8.ngrok-free.app/sample-/sample-1.png",
+        },
       },
       {
-        type: 'rating',
+        type: "rating",
         data: { label: "Rating", selected: 0 },
       },
       {
-        type: 'data-accordian',
+        type: "data-accordian",
         data: [
           {
-            title: "Product detail", details: [
+            title: "Product detail",
+            details: [
               { label: "Order", value: "6 Tons", icon: "database" },
-              { label: "Recieved", value: "5 Tons", icon: "database" }
+              { label: "Recieved", value: "5 Tons", icon: "database" },
             ],
             fileName: "example_challan.pdf",
           },
           {
-            title: "Vendor detail", details: [
+            title: "Vendor detail",
+            details: [
               { label: "Name", value: "Vikram Patel", icon: "user" },
-              { label: "Address", value: "18, Commercial Street, Bangalore – 560001", icon: "location" },
-              { label: "Arrival date", value: "Jun 12, 2025", icon: "calendar-check" },
+              {
+                label: "Address",
+                value: "18, Commercial Street, Bangalore – 560001",
+                icon: "location",
+              },
+              {
+                label: "Arrival date",
+                value: "Jun 12, 2025",
+                icon: "calendar-check",
+              },
             ],
           },
           {
             title: "Truck detail",
             detailsA: [
               { label: "Name", value: "Rajesh sharma", icon: "user-square" },
-              { label: "Type", value: "Eicher", icon: "truck" }
+              { label: "Type", value: "Eicher", icon: "truck" },
             ],
             detailsB: [
               { label: "Truck no", value: "MP09 BB 1234", icon: "truck-num" },
-              { label: "Weight", value: "2 Tons", icon: "clock" }
+              { label: "Weight", value: "2 Tons", icon: "clock" },
             ],
           },
         ],
       },
     ],
     buttons: [
-      { text: 'Verify', variant: 'fill', color: 'green', alignment: "full", disabled: false },
+      {
+        text: "Verify",
+        variant: "fill",
+        color: "green",
+        alignment: "full",
+        disabled: false,
+      },
     ],
-  }
+  };
 
   const filter = {
     sections: [
@@ -420,46 +530,68 @@ const useValidateAndOpenBottomSheet = () => {
               text: "Rating pending",
               isChecked: true,
             },
-          ]
-        }
+          ],
+        },
       },
       {
-        type: 'optionList',
+        type: "optionList",
         data: {
           isCheckEnable: false,
-          options: ["sample", "production"]
-        }
+          options: ["sample", "production"],
+        },
       },
     ],
     buttons: [
-      { text: 'Cancel', variant: 'outline', color: 'green', alignment: "half", disabled: false, actionKey: "cancel" },
-      { text: 'Clear', variant: 'fill', color: 'green', alignment: "half", disabled: false, actionKey: 'clear-filter' },
+      {
+        text: "Cancel",
+        variant: "outline",
+        color: "green",
+        alignment: "half",
+        disabled: false,
+        actionKey: "cancel",
+      },
+      {
+        text: "Clear",
+        variant: "fill",
+        color: "green",
+        alignment: "half",
+        disabled: false,
+        actionKey: "clear-filter",
+      },
     ],
-  }
+  };
 
   const supervisorProduction = {
     sections: [
       {
-        type: 'title-with-details-cross',
+        type: "title-with-details-cross",
         data: {
-          title: 'Store material', description: "Pick chambers to store your materials in", details: { label: "Quantity", value: `${product?.quantity} ${product?.unit}`, icon: "database" }
+          title: "Store material",
+          description: "Pick chambers to store your materials in",
+          details: {
+            label: "Quantity",
+            value: `${product?.quantity} ${product?.unit}`,
+            icon: "database",
+          },
         },
       },
       {
-        type: 'select',
+        type: "select",
         data: {
-          placeholder: 'Select chambers', label: "Select chambers", key: "supervisor-production"
+          placeholder: "Select chambers",
+          label: "Select chambers",
+          key: "supervisor-production",
         },
       },
-      ...selectedChambers.map(chamberName => ({
-        type: 'input-with-select',
-        conditionKey: 'hideUntilChamberSelected',
+      ...selectedChambers.map((chamberName) => ({
+        type: "input-with-select",
+        conditionKey: "hideUntilChamberSelected",
         hasUniqueProp: {
-          identifier: 'addonInputQuantity',
-          key: 'label'
+          identifier: "addonInputQuantity",
+          key: "label",
         },
         data: {
-          placeholder: 'Qty.',
+          placeholder: "Qty.",
           label: chamberName,
           label_second: "Rating",
           value: "",
@@ -471,171 +603,213 @@ const useValidateAndOpenBottomSheet = () => {
         },
       })),
       {
-          type: "input-with-select",
-          data: {
-            placeholder: "Enter Size in kg",
-            label: "Size (Kg)",
-            placeholder_second: "Choose type",
-            label_second: "Type",
-            alignment: "half",
-            value: packageTypeProduction ?? "bag",
-            key: "select-package-type",
-            formField_1: "packaging_size",
-            source: "supervisor-production",
-            source2: "product-package",
-            keyboardType: "number-pad",
-
-          },
-        },
-      {
-        type: 'addonInput',
-        conditionKey: 'hideUntilChamberSelected',
+        type: "input-with-select",
         data: {
-          placeholder: 'Enter quantity',
+          placeholder: "Enter Size in kg",
+          label: "Size (Kg)",
+          placeholder_second: "Choose type",
+          label_second: "Type",
+          alignment: "half",
+          value: packageTypeProduction ?? "bag",
+          key: "select-package-type",
+          formField_1: "packaging_size",
+          source: "supervisor-production",
+          source2: "product-package",
+          keyboardType: "number-pad",
+        },
+      },
+      {
+        type: "addonInput",
+        conditionKey: "hideUntilChamberSelected",
+        data: {
+          placeholder: "Enter quantity",
           label: "Discard quantity",
           value: "",
           addonText: "Kg",
           formField: "discard_quantity",
-            keyboardType: "number-pad",
-
+          keyboardType: "number-pad",
         },
-      }
+      },
     ],
     buttons: [
-      { text: 'Cancel', variant: 'outline', color: 'green', alignment: "half", disabled: false },
-      { text: 'Store', variant: 'fill', color: 'green', alignment: "half", disabled: false, actionKey: 'store-product' },
+      {
+        text: "Cancel",
+        variant: "outline",
+        color: "green",
+        alignment: "half",
+        disabled: false,
+      },
+      {
+        text: "Store",
+        variant: "fill",
+        color: "green",
+        alignment: "half",
+        disabled: false,
+        actionKey: "store-product",
+      },
     ],
-  }
+  };
 
   const fillPackage = {
     sections: [
       {
-        type: 'title-with-details-cross',
+        type: "title-with-details-cross",
         data: {
-          title: 'Add package count', description: `${packages?.weight} • ${packages?.quantity} count`, details: { icon: "pencil" }
+          title: "Add package count",
+          description: `${packages?.weight} • ${packages?.quantity} count`,
+          details: { icon: "pencil" },
         },
       },
       {
-        type: 'input',
+        type: "input",
         data: {
-          placeholder: 'Enter counts', label: 'Add package', keyboardType: 'number-pad'
+          placeholder: "Enter counts",
+          label: "Add package",
+          keyboardType: "number-pad",
         },
       },
     ],
     buttons: [
-      { text: 'Add', variant: 'fill', color: 'green', alignment: "full", disabled: false },
+      {
+        text: "Add",
+        variant: "fill",
+        color: "green",
+        alignment: "full",
+        disabled: false,
+      },
     ],
-  }
+  };
 
   const addProductPackage = {
     sections: [
       {
-        type: 'title-with-details-cross',
+        type: "title-with-details-cross",
         data: {
           title: "Add Packing Material",
         },
       },
-            {
-          type: "input-with-select",
-          data: {
-            placeholder: "Enter Product",
-            label: "Product name",
-            placeholder_second: "Enter RM",
-            label_second: "Raw Material",
-            alignment: "half",
-            key: "add-raw-material",
-            formField_1: "product_name",
-            source: "add-product-package",
-            source2: "product-package",
-            keyboardType: "default",
-          },
+      {
+        type: "input-with-select",
+        data: {
+          placeholder: "Enter Product",
+          label: "Product name",
+          placeholder_second: "Enter RM",
+          label_second: "Raw Material",
+          alignment: "half",
+          key: "add-raw-material",
+          formField_1: "product_name",
+          source: "add-product-package",
+          source2: "product-package",
+          keyboardType: "default",
         },
-        {
-          type: "input-with-select",
-          data: {
-            placeholder: "Enter SKU",
-            label: "Packing Size",
-            key: "package-weight",
-            formField_1: "size",
-            label_second: "Unit",
-            keyboardType: "number-pad",
-            source: "add-product-package",
-          },
+      },
+      {
+        type: "input-with-select",
+        data: {
+          placeholder: "Enter SKU",
+          label: "Packing Size",
+          key: "package-weight",
+          formField_1: "size",
+          label_second: "Unit",
+          keyboardType: "number-pad",
+          source: "add-product-package",
         },
-                {
-          type: "input",
-          data: {
-            placeholder: "Enter counts",
-            label: "No. of Pouches",
-            keyboardType: "number-pad",
-            formField: "quantity",
-          },
+      },
+      {
+        type: "input",
+        data: {
+          placeholder: "Enter counts",
+          label: "No. of Pouches",
+          keyboardType: "number-pad",
+          formField: "quantity",
         },
+      },
       {
         type: "select",
         data: {
           placeholder: "Select Chamber",
           label: "Select Chamber",
           options: DryChambers.map((dch: Chamber) => dch.chamber_name),
-          key: "product-package"
+          key: "product-package",
         },
       },
-     {
-          type: "file-upload",
-          data: {
-            label: "Upload pouch image",
-            uploadedTitle: "Uploaded pouch image",
-            title: "Upload pouch image",
-            key: "package-image",
-          },
+      {
+        type: "file-upload",
+        data: {
+          label: "Upload pouch image",
+          uploadedTitle: "Uploaded pouch image",
+          title: "Upload pouch image",
+          key: "package-image",
         },
-        {
-          type: "file-upload",
-          data: {
-            label: "Upload packed image",
-            uploadedTitle: "Uploaded packed image",
-            title: "Upload packed image",
-            key: "image",
-          },
+      },
+      {
+        type: "file-upload",
+        data: {
+          label: "Upload packed image",
+          uploadedTitle: "Uploaded packed image",
+          title: "Upload packed image",
+          key: "image",
         },
+      },
     ],
     buttons: [
-      { text: 'Add package', variant: 'fill', color: 'green', alignment: "full", disabled: false, actionKey: "add-product-package" },
+      {
+        text: "Add package",
+        variant: "fill",
+        color: "green",
+        alignment: "full",
+        disabled: false,
+        actionKey: "add-product-package",
+      },
     ],
-  }
+  };
 
   const addPackage = {
     sections: [
       {
-        type: 'title-with-details-cross',
+        type: "title-with-details-cross",
         data: {
-          title: 'Add new size',
+          title: "Add new size",
         },
       },
       {
-        type: 'input-with-select',
+        type: "input-with-select",
         data: {
-          placeholder: 'Enter title', label: 'Package title', key: "package-weight", formField_1: "size", label_second: 'Unit', source: "add-package",
-            keyboardType: 'default',
-
+          placeholder: "Enter title",
+          label: "Package title",
+          key: "package-weight",
+          formField_1: "size",
+          label_second: "Unit",
+          source: "add-package",
+          keyboardType: "default",
         },
       },
       {
-        type: 'input',
+        type: "input",
         data: {
-          placeholder: 'Enter counts', label: 'Add package', keyboardType: 'number-pad', formField: "quantity"
+          placeholder: "Enter counts",
+          label: "Add package",
+          keyboardType: "number-pad",
+          formField: "quantity",
         },
       },
     ],
     buttons: [
-      { text: 'Add size', variant: 'fill', color: 'green', alignment: "full", disabled: false, actionKey: "add-package" },
+      {
+        text: "Add size",
+        variant: "fill",
+        color: "green",
+        alignment: "full",
+        disabled: false,
+        actionKey: "add-package",
+      },
     ],
-  }
+  };
 
   const packageWeight = {
     sections: [
       {
-        type: 'manageAction',
+        type: "manageAction",
         data: [
           {
             title: "Gram",
@@ -659,21 +833,20 @@ const useValidateAndOpenBottomSheet = () => {
           },
         ],
       },
-
-    ]
-  }
+    ],
+  };
 
   const rating = {
     sections: [
       {
-        type: 'manageAction',
+        type: "manageAction",
         data: [
-          { title: '5', actionKey: '5' },
-          { title: '4', actionKey: '4' },
-          { title: '3', actionKey: '3' },
-          { title: '2', actionKey: '2' },
-          { title: '1', actionKey: '1' },
-        ]
+          { title: "5", actionKey: "5" },
+          { title: "4", actionKey: "4" },
+          { title: "3", actionKey: "3" },
+          { title: "2", actionKey: "2" },
+          { title: "1", actionKey: "1" },
+        ],
       },
     ],
   };
@@ -681,52 +854,60 @@ const useValidateAndOpenBottomSheet = () => {
   const choosePackaging = {
     sections: [
       {
-        type: 'title-with-details-cross',
+        type: "title-with-details-cross",
         data: {
-          title: 'Packaging size'
+          title: "Packaging size",
         },
       },
       {
-        type: 'search',
-        data: { searchTerm: '', placeholder: "Search size", searchType: "add-package" }
+        type: "search",
+        data: {
+          searchTerm: "",
+          placeholder: "Search size",
+          searchType: "add-package",
+        },
       },
       {
-        type: 'package-size-choose-list',
+        type: "package-size-choose-list",
         data: {
           list: [
-          { name: '10gm', icon: "paper-roll", isChecked: false, },
-          { name: '50gm', icon: "paper-roll", isChecked: false, },
-          { name: '100gm', icon: "paper-roll", isChecked: false, },
-          { name: '200gm', icon: "paper-roll", isChecked: false, },
-          { name: '250gm', icon: "paper-roll", isChecked: false, },
-          { name: '500gm', icon: "bag", isChecked: false, },
-          { name: '1kg', icon: "bag", isChecked: false, },
-          { name: '1.5kg', icon: "bag", isChecked: false, },
-          { name: '2kg', icon: "bag", isChecked: false, },
-          { name: '5kg', icon: "big-bag", isChecked: false, },
-          { name: '10kg', icon: "big-bag", isChecked: false, },
-          { name: '30kg', icon: "big-bag", isChecked: false, },
-        ],
-        source: "package"
-        }
+            { name: "10gm", icon: "paper-roll", isChecked: false },
+            { name: "50gm", icon: "paper-roll", isChecked: false },
+            { name: "100gm", icon: "paper-roll", isChecked: false },
+            { name: "200gm", icon: "paper-roll", isChecked: false },
+            { name: "250gm", icon: "paper-roll", isChecked: false },
+            { name: "500gm", icon: "bag", isChecked: false },
+            { name: "1kg", icon: "bag", isChecked: false },
+            { name: "1.5kg", icon: "bag", isChecked: false },
+            { name: "2kg", icon: "bag", isChecked: false },
+            { name: "5kg", icon: "big-bag", isChecked: false },
+            { name: "10kg", icon: "big-bag", isChecked: false },
+            { name: "30kg", icon: "big-bag", isChecked: false },
+          ],
+          source: "package",
+        },
       },
     ],
     buttons: [
-      { text: 'Add', variant: 'fill', color: 'green', alignment: "full", disabled: false, actionKey: "add-package-by-product" },
+      {
+        text: "Add",
+        variant: "fill",
+        color: "green",
+        alignment: "full",
+        disabled: false,
+        actionKey: "add-package-by-product",
+      },
     ],
-  }
+  };
 
   const vehicleType = {
     sections: [
       {
-        type: 'optionList',
+        type: "optionList",
         data: {
           isCheckEnable: false,
-          options: [
-            "Eicher",
-            "Chota hathi",
-          ]
-        }
+          options: ["Eicher", "Chota hathi"],
+        },
       },
     ],
   };
@@ -737,13 +918,19 @@ const useValidateAndOpenBottomSheet = () => {
         type: "optionList",
         data: {
           isCheckEnable: false,
-          options: ["Dashboard", "Chamber", "Production", "Raw Material", "Dispatch"],
-          key: "choose-export-type"
+          options: [
+            "Dashboard",
+            "Chamber",
+            "Production",
+            "Raw Material",
+            "Dispatch",
+          ],
+          key: "choose-export-type",
         },
       },
     ],
   };
-  
+
   const chooseExportFormat = {
     sections: [
       {
@@ -760,14 +947,11 @@ const useValidateAndOpenBottomSheet = () => {
   const role = {
     sections: [
       {
-        type: 'optionList',
+        type: "optionList",
         data: {
           isCheckEnable: false,
-          options: [
-            "admin",
-            "supervisor",
-          ]
-        }
+          options: ["admin", "supervisor"],
+        },
       },
     ],
   };
@@ -775,31 +959,30 @@ const useValidateAndOpenBottomSheet = () => {
   const ImagePreview = {
     sections: [
       {
-        type: 'title-with-details-cross',
+        type: "title-with-details-cross",
         data: {
-          title: 'Example_challan'
+          title: "Example_challan",
         },
       },
       {
-        type: 'image-preview',
+        type: "image-preview",
         data: {
-          imageUri: ""
-        }
+          imageUri: "",
+        },
       },
-
-    ]
-  }
+    ],
+  };
 
   const UserAction = {
     sections: [
       {
-        type: 'title-with-details-cross',
+        type: "title-with-details-cross",
         data: {
-          title: 'User Actions'
+          title: "User Actions",
         },
       },
       {
-        type: 'optionList',
+        type: "optionList",
         data: {
           isCheckEnable: false,
           options: [
@@ -807,89 +990,105 @@ const useValidateAndOpenBottomSheet = () => {
             "Delete User",
             // "Change Password",
           ],
-          key: "user-action"
-        }
+          key: "user-action",
         },
-    ]
-  }
+      },
+    ],
+  };
 
   const storageRmRating = {
     sections: [
       {
-        type: 'title-with-details-cross',
+        type: "title-with-details-cross",
         data: {
-          title: 'Select rating'
+          title: "Select rating",
         },
       },
       {
-        type: 'storage-rm-rating',
+        type: "storage-rm-rating",
         data: [
           {
-          rating: "5",
-          message: "Excellent",
-        },
-        {
-          rating: "4",
-          message: "Good",
-        },
-        {
-          rating: "3",
-          message: "Neutral",
-        },
-        {
-          rating: "2",
-          message: "Poor",
-        },
-        {
-          rating: "1",
-          message: "Very poor",
-        },
-        ]
+            rating: "5",
+            message: "Excellent",
+          },
+          {
+            rating: "4",
+            message: "Good",
+          },
+          {
+            rating: "3",
+            message: "Neutral",
+          },
+          {
+            rating: "2",
+            message: "Poor",
+          },
+          {
+            rating: "1",
+            message: "Very poor",
+          },
+        ],
       },
-    ]
-  }
+    ],
+  };
 
   const selectPolicies = {
     sections: [
       {
-        type: 'title-with-details-cross',
+        type: "title-with-details-cross",
         data: {
-          title: 'Select policies'
+          title: "Select policies",
         },
       },
       {
-        type: 'policies-card',
+        type: "policies-card",
         data: [
-         { name: 'Purchase-view', description: 'Source raw materials' },
-         { name: 'Purchase-edit', description: 'Source raw materials' },
-         { name: 'Production', description: 'Convert materials into frozen goods' },
-         { name: 'Package', description: 'Pack and label products for delivery' },
-         { name: 'Sales-view', description: 'View sales' },
-         { name: 'Sales-edit', description: 'Edit sales' },
-         { name: 'Trucks', description: 'Manage trucks' },
-         { name: 'Labours', description: 'Manage labours' },
-        ]
+          { name: "Purchase-view", description: "Source raw materials" },
+          { name: "Purchase-edit", description: "Source raw materials" },
+          {
+            name: "Production",
+            description: "Convert materials into frozen goods",
+          },
+          {
+            name: "Package",
+            description: "Pack and label products for delivery",
+          },
+          { name: "Sales-view", description: "View sales" },
+          { name: "Sales-edit", description: "Edit sales" },
+          { name: "Trucks", description: "Manage trucks" },
+          { name: "Labours", description: "Manage labours" },
+        ],
       },
     ],
     buttons: [
-      { text: 'Cancel', variant: 'outline', color: 'green', alignment: "half", disabled: false, actionKey: 'cancel-policies' },
-      { text: 'Select', variant: 'fill', color: 'green', alignment: "half", disabled: false, actionKey: 'select-policies' },
+      {
+        text: "Cancel",
+        variant: "outline",
+        color: "green",
+        alignment: "half",
+        disabled: false,
+        actionKey: "cancel-policies",
+      },
+      {
+        text: "Select",
+        variant: "fill",
+        color: "green",
+        alignment: "half",
+        disabled: false,
+        actionKey: "select-policies",
+      },
     ],
-  }
+  };
 
-    const selectPackageType = {
+  const selectPackageType = {
     sections: [
       {
-        type: 'optionList',
+        type: "optionList",
         data: {
           isCheckEnable: false,
-          options: [
-            "pouch",
-            "bag",
-            "box",
-          ],
-          key: "select-package-type"
-        }
+          options: ["pouch", "bag", "box"],
+          key: "select-package-type",
+        },
       },
     ],
   };
@@ -966,9 +1165,53 @@ const useValidateAndOpenBottomSheet = () => {
     ],
   };
 
-  const validateAndSetData = async (id: string, type: BottomSheetSchemaKey, overrideConfig?: any) => {
+  const exportStatusOptions = {
+    sections: [
+      {
+        type: "title-with-details-cross",
+        data: {
+          title: "Select Chambers",
+        },
+      },
+      {
+        type: "productCard",
+        data: [
+          { name: "Pending", image: "clock" },
+          { name: "In-queue", image: "clock" },
+          { name: "In-progress", image: "clock" },
+          { name: "Completed", image: "clock" },
+        ],
+      },
+    ],
+    buttons: [
+      {
+        text: "Cancel",
+        variant: "outline",
+        color: "green",
+        alignment: "half",
+        disabled: false,
+        actionKey: "cancel",
+      },
+      {
+        text: "select",
+        variant: "fill",
+        color: "green",
+        alignment: "half",
+        disabled: false,
+        actionKey: "choose-export-status",
+      },
+    ],
+  }
+
+  const validateAndSetData = async (
+    id: string,
+    type: BottomSheetSchemaKey,
+    overrideConfig?: any,
+  ) => {
     if (!type || !(type in bottomSheetSchemas)) {
-      console.log(`[validateAndSetData] No bottom sheet configured for type: ${type}`);
+      console.log(
+        `[validateAndSetData] No bottom sheet configured for type: ${type}`,
+      );
       return;
     }
 
@@ -1051,6 +1294,9 @@ const useValidateAndOpenBottomSheet = () => {
         case "export-data-options":
           data = exportDataOptions;
           break;
+        case "select-status":
+          data = exportStatusOptions;
+          break;
       }
     }
 
@@ -1063,7 +1309,7 @@ const useValidateAndOpenBottomSheet = () => {
         try {
           data = await queryClient.fetchQuery(queryOptions);
         } catch (error) {
-          console.error('Failed to fetch bottom sheet data:', error);
+          console.error("Failed to fetch bottom sheet data:", error);
           return;
         }
       }
@@ -1072,7 +1318,7 @@ const useValidateAndOpenBottomSheet = () => {
     const validationResult = schema.safeParse(data);
 
     if (!validationResult.success) {
-      console.error('Validation failed:', validationResult.error.errors);
+      console.error("Validation failed:", validationResult.error.errors);
       return;
     }
 
@@ -1080,10 +1326,12 @@ const useValidateAndOpenBottomSheet = () => {
 
     const parsedData = validationResult.data as UpcomingOrderBottomSheetConfig;
 
-    const enhancedButtons = (parsedData?.buttons as ButtonConfig[] || []).map((btn, idx: number) => ({
-      ...btn,
-      actionKey: currentActionsType[idx] || undefined,
-    })) as ButtonConfig[];
+    const enhancedButtons = ((parsedData?.buttons as ButtonConfig[]) || []).map(
+      (btn, idx: number) => ({
+        ...btn,
+        actionKey: currentActionsType[idx] || undefined,
+      }),
+    ) as ButtonConfig[];
 
     dispatch(
       // @ts-ignore

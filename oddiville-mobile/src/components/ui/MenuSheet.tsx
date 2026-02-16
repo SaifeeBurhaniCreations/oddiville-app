@@ -24,7 +24,7 @@ import {
   PRODUCTION_MENU_ITEMS,
   PURCHASE_MENU_ITEMS,
   TRUCKS_MENU_ITEMS,
-LABOURS_MENU_ITEMS,
+  LABOURS_MENU_ITEMS,
 } from "@/src/constants/MenuItems";
 import MenuCard from "./MenuCard";
 import LogoutIcon from "../icons/menu/LogoutIcon";
@@ -36,7 +36,11 @@ import { clearAdmin } from "@/src/redux/slices/admin.slice";
 import { useAuth } from "@/src/context/AuthContext";
 import { closeFab } from "@/src/redux/slices/fab.Slice";
 import { useRouter } from "expo-router";
-import { canView, isSingleModuleUser, resolveAccess } from "@/src/utils/policiesUtils";
+import {
+  canView,
+  isSingleModuleUser,
+  resolveAccess,
+} from "@/src/utils/policiesUtils";
 
 const user1 = require("@/src/assets/images/users/user-1.png");
 
@@ -50,7 +54,7 @@ const MenuSheet = () => {
 
   const { logout, role } = useAuth();
   const currentView = useSelector(
-    (state: RootState) => state.changeView.viewIs
+    (state: RootState) => state.changeView.viewIs,
   );
 
   const dispatch = useDispatch();
@@ -80,7 +84,7 @@ const MenuSheet = () => {
           return true;
         }
         return false;
-      }
+      },
     );
 
     return () => backHandler.remove();
@@ -107,19 +111,19 @@ const MenuSheet = () => {
   const access = resolveAccess(admin && admin?.role, admin && admin?.policies);
 
   const canPurchase = canView(access.purchase);
-const canSales = canView(access.sales);
-const canProduction = canView(access.production);
-const canPackage = canView(access.package);
-const canTrucks = canView(access.trucks);
-const canLabours = canView(access.labours);
+  const canSales = canView(access.sales);
+  const canProduction = canView(access.production);
+  const canPackage = canView(access.package);
+  const canTrucks = canView(access.trucks);
+  const canLabours = canView(access.labours);
 
-// behaviour
-const onlyPurchaseUser = isSingleModuleUser(access, "purchase");
-const onlySalesUser = isSingleModuleUser(access, "sales");
-const onlyProductionUser = isSingleModuleUser(access, "production");
-const onlyPackageUser = isSingleModuleUser(access, "package");
-const onlyTrucksUser = isSingleModuleUser(access, "trucks");
-const onlyLaboursUser = isSingleModuleUser(access, "labours");
+  // behaviour
+  const onlyPurchaseUser = isSingleModuleUser(access, "purchase");
+  const onlySalesUser = isSingleModuleUser(access, "sales");
+  const onlyProductionUser = isSingleModuleUser(access, "production");
+  const onlyPackageUser = isSingleModuleUser(access, "package");
+  const onlyTrucksUser = isSingleModuleUser(access, "trucks");
+  const onlyLaboursUser = isSingleModuleUser(access, "labours");
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {isOpen && (
@@ -133,7 +137,7 @@ const onlyLaboursUser = isSingleModuleUser(access, "labours");
       >
         <View style={styles.headerContainer}>
           {Array.from({ length: 6 }, (_, index) =>
-            renderHexagonRow(index, MenuSheetWidth)
+            renderHexagonRow(index, MenuSheetWidth),
           )}
           <View
             style={[
@@ -190,56 +194,93 @@ const onlyLaboursUser = isSingleModuleUser(access, "labours");
             </View>
           </View>
 
-<ScrollView contentContainerStyle={styles.contentContainer}>
-  <View style={styles.navigationContainer}>
+          <ScrollView contentContainerStyle={styles.contentContainer}>
+            <View style={styles.navigationContainer}>
+              {/* Admin */}
+              {access.isFullAccess &&
+                MENU_ITEMS.map((item) => (
+                  <MenuCard
+                    key={item.name}
+                    item={item}
+                    onPress={handleMenuPress}
+                  />
+                ))}
 
-    {/* Admin */}
-    {access.isFullAccess &&
-      MENU_ITEMS.map((item) => (
-        <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
-      ))}
+              {/* Operator roles */}
+              {!access.isFullAccess &&
+                !onlyPurchaseUser &&
+                !onlySalesUser &&
+                !onlyProductionUser &&
+                !onlyPackageUser &&
+                !onlyTrucksUser &&
+                !onlyLaboursUser && (
+                  <>
+                    {(canProduction || canPackage || canSales) &&
+                      CHAMBERS_MENU_ITEMS.map((item) => (
+                        <MenuCard
+                          key={item.name}
+                          item={item}
+                          onPress={handleMenuPress}
+                        />
+                      ))}
 
-    {/* Operator roles */}
-    {!access.isFullAccess && !onlyPurchaseUser && !onlySalesUser && !onlyProductionUser && !onlyPackageUser && !onlyTrucksUser && !onlyLaboursUser && (
-      <>
-        {(canProduction || canPackage || canSales) &&
-          CHAMBERS_MENU_ITEMS.map((item) => (
-            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
-          ))}
+                    {canPurchase &&
+                      PURCHASE_MENU_ITEMS.map((item) => (
+                        <MenuCard
+                          key={item.name}
+                          item={item}
+                          onPress={handleMenuPress}
+                        />
+                      ))}
 
-        {canPurchase &&
-          PURCHASE_MENU_ITEMS.map((item) => (
-            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
-          ))}
+                    {canProduction &&
+                      PRODUCTION_MENU_ITEMS.map((item) => (
+                        <MenuCard
+                          key={item.name}
+                          item={item}
+                          onPress={handleMenuPress}
+                        />
+                      ))}
 
-        {canProduction &&
-          PRODUCTION_MENU_ITEMS.map((item) => (
-            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
-          ))}
+                    {canPackage &&
+                      PACKAGE_MENU_ITEMS.map((item) => (
+                        <MenuCard
+                          key={item.name}
+                          item={item}
+                          onPress={handleMenuPress}
+                        />
+                      ))}
 
-        {canPackage &&
-          PACKAGE_MENU_ITEMS.map((item) => (
-            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
-          ))}
+                    {canSales &&
+                      DISPATCH_MENU_ITEMS.map((item) => (
+                        <MenuCard
+                          key={item.name}
+                          item={item}
+                          onPress={handleMenuPress}
+                        />
+                      ))}
 
-        {canSales &&
-          DISPATCH_MENU_ITEMS.map((item) => (
-            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
-          ))}
+                    {canTrucks &&
+                      TRUCKS_MENU_ITEMS.map((item) => (
+                        <MenuCard
+                          key={item.name}
+                          item={item}
+                          onPress={handleMenuPress}
+                        />
+                      ))}
 
-        {canTrucks &&
-          TRUCKS_MENU_ITEMS.map((item) => (
-            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
-          ))}
-
-        {canLabours &&
-          LABOURS_MENU_ITEMS.map((item) => (
-            <MenuCard key={item.name} item={item} onPress={handleMenuPress} />
-          ))}
-      </>
-    )}
-  </View>
-</ScrollView>
+                    {canLabours &&
+                      LABOURS_MENU_ITEMS.map((item) => (
+                        <MenuCard
+                          key={item.name}
+                          item={item}
+                          onPress={handleMenuPress}
+                        />
+                      ))}
+                  </>
+                )}
+            </View>
+          </ScrollView>
 
           <TouchableOpacity
             activeOpacity={0.7}

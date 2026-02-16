@@ -22,6 +22,8 @@ import UserSquareIcon from '../components/icons/page/UserSquareIcon';
 import BagIcon from '../components/icons/packaging/BagIcon';
 import BigBagIcon from '../components/icons/packaging/BigBagIcon';
 import FileIcon from '../components/icons/common/FileIcon';
+import { ALLOWED_ICONS } from '../constants/allowedIcons';
+import { IconKey } from '../lookups/icons';
 
 export function getIcon(iconName: DataAccordianEnum) {
     switch (iconName) {
@@ -75,3 +77,7 @@ export function getIcon(iconName: DataAccordianEnum) {
             return null;
     }
 };
+
+
+export const isAllowedIcon = (iconKey: string): iconKey is IconKey =>
+  ALLOWED_ICONS.includes(iconKey as IconKey);

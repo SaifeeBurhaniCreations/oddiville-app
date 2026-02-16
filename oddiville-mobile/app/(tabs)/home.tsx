@@ -9,7 +9,10 @@ import { StyleSheet, View } from "react-native";
 import { useAdmin } from "@/src/hooks/useAdmin";
 import { useEffect, useMemo, useRef, useState } from "react";
 import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
-import { BottomSheetSchemaKey, FilterEnum } from "@/src/schemas/BottomSheetSchema";
+import {
+  BottomSheetSchemaKey,
+  FilterEnum,
+} from "@/src/schemas/BottomSheetSchema";
 import Loader from "@/src/components/ui/Loader";
 import { actionableButtons } from "@/src/lookups/actionableButtons";
 import * as SecureStore from "expo-secure-store";
@@ -32,7 +35,7 @@ import { FilterNode } from "@/src/redux/slices/bottomsheet/filters.slice";
 import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
 const informativeNotificationsDataFormatter = (
-  data: AdminNotification[]
+  data: AdminNotification[],
 ): ActivityProps[] =>
   data.map((val: any) => ({
     id: val.id ?? "unknown",
@@ -47,7 +50,7 @@ const informativeNotificationsDataFormatter = (
   }));
 
 const actionableNotificationsDataFormatter = (
-  data: AdminNotification[]
+  data: AdminNotification[],
 ): ActivityProps[] =>
   data.map((val: any) => ({
     id: val.id ?? "unknown",
@@ -70,7 +73,7 @@ const actionableNotificationsDataFormatter = (
   }));
 
 const todaysNotificationsDataFormatter = (
-  data: AdminNotification[]
+  data: AdminNotification[],
 ): ActivityProps[] =>
   data.map((val: any) => ({
     id: val.id ?? "unknown",
@@ -84,22 +87,22 @@ const todaysNotificationsDataFormatter = (
     color: val.color,
   }));
 
-  const MAX_LOCAL_FILTER = 100;
+const MAX_LOCAL_FILTER = 100;
 
 const HomeScreen = () => {
-    const nestedFilters = useSelector((state: RootState) => state.filter.filters);
-  
-    const { role, policies } = useAuth();
-  
-    const safeRole = role ?? "guest";
-    const safePolicies = policies ?? [];
-    const access = resolveAccess(safeRole, safePolicies);
-  
+  const nestedFilters = useSelector((state: RootState) => state.filter.filters);
+
+  const { role, policies } = useAuth();
+
+  const safeRole = role ?? "guest";
+  const safePolicies = policies ?? [];
+  const access = resolveAccess(safeRole, safePolicies);
+
   const [isLoading, setIsLoading] = useState(false);
-  const [username, setUsername] = useState<string | null>(null);    
+  const [username, setUsername] = useState<string | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastType, setToastType] = useState<"success" | "error" | "info">(
-    "info"
+    "info",
   );
   const [toastMessage, setToastMessage] = useState("");
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
@@ -141,7 +144,7 @@ const HomeScreen = () => {
     informativeNotificationsDataFormatter(informativenotifications);
 
   const formatedActionableNotifications = actionableNotificationsDataFormatter(
-    actionablenotifications
+    actionablenotifications,
   );
   const formatedTodaysNotifications =
     todaysNotificationsDataFormatter(todaysnotifications);
@@ -167,70 +170,68 @@ const HomeScreen = () => {
   }, []);
 
   if (!access.isFullAccess) {
-  return null;
-}
+    return null;
+  }
   const handleOpen = async (id: string, type: BottomSheetSchemaKey) => {
     setIsLoading(true);
     await validateAndSetData(id, type);
     setIsLoading(false);
   };
 
-const filtersApplied = useMemo(() => {
-  const hasValue = (node?: FilterNode): boolean => {
-    if (!node) return false;
-    if (node.value != null) return true;
-    return Object.values(node.children ?? {}).some(hasValue);
-  };
+  const filtersApplied = useMemo(() => {
+    const hasValue = (node?: FilterNode): boolean => {
+      if (!node) return false;
+      if (node.value != null) return true;
+      return Object.values(node.children ?? {}).some(hasValue);
+    };
 
-  const result = Object.values(nestedFilters).some(hasValue);
+    const result = Object.values(nestedFilters).some(hasValue);
 
-  return result;
-}, [nestedFilters]);
+    return result;
+  }, [nestedFilters]);
 
   const filters = useMemo(
     () => flattenFilters(nestedFilters) as Record<FilterEnum, string[]>,
-    [nestedFilters]
+    [nestedFilters],
   );
 
-const filteredNotifications = useMemo(() => {
-  if (!filtersApplied) return formatedInformativeNotifications;
+  const filteredNotifications = useMemo(() => {
+    if (!filtersApplied) return formatedInformativeNotifications;
 
-  const slice = formatedInformativeNotifications.slice(0, MAX_LOCAL_FILTER);
-  return filterItems(slice, filters, filterHandlers);
-}, [formatedInformativeNotifications, filters, filtersApplied]);
+    const slice = formatedInformativeNotifications.slice(0, MAX_LOCAL_FILTER);
+    return filterItems(slice, filters, filterHandlers);
+  }, [formatedInformativeNotifications, filters, filtersApplied]);
 
-const informativeListData = useMemo(() => {
-  return filtersApplied
-    ? filteredNotifications
-    : formatedInformativeNotifications;
-}, [filtersApplied, filteredNotifications, formatedInformativeNotifications]);
+  const informativeListData = useMemo(() => {
+    return filtersApplied
+      ? filteredNotifications
+      : formatedInformativeNotifications;
+  }, [filtersApplied, filteredNotifications, formatedInformativeNotifications]);
 
-const canPaginateInformative = !filtersApplied;
+  const canPaginateInformative = !filtersApplied;
 
-const hasShownFilterToast = useRef(false);
+  const hasShownFilterToast = useRef(false);
 
-useEffect(() => {
-  if (!filtersApplied) {
-    hasShownFilterToast.current = false;
-    return;
-  }
+  useEffect(() => {
+    if (!filtersApplied) {
+      hasShownFilterToast.current = false;
+      return;
+    }
 
-  if (
-    formatedInformativeNotifications.length > MAX_LOCAL_FILTER &&
-    !hasShownFilterToast.current
-  ) {
-    showToast("info", "Refine filters or scroll to load more results");
-    hasShownFilterToast.current = true;
-  }
-}, [filtersApplied, formatedInformativeNotifications.length]);
+    if (
+      formatedInformativeNotifications.length > MAX_LOCAL_FILTER &&
+      !hasShownFilterToast.current
+    ) {
+      showToast("info", "Refine filters or scroll to load more results");
+      hasShownFilterToast.current = true;
+    }
+  }, [filtersApplied, formatedInformativeNotifications.length]);
 
-
-
-useEffect(() => {
-  if (formatedInformativeNotifications.length > 200) {
-    showToast("error", "Too many notifications to filter");
-  }
-}, [formatedInformativeNotifications.length]);
+  useEffect(() => {
+    if (formatedInformativeNotifications.length > 200) {
+      showToast("error", "Too many notifications to filter");
+    }
+  }, [formatedInformativeNotifications.length]);
 
   const handleSearchFilter = () => {
     setIsLoading(true);
@@ -253,19 +254,19 @@ useEffect(() => {
           color="green"
           style={styles.flexGrow}
         >
-        <View style={[styles.flexGrow, {flexDirection: "column"}]}>
-                  <View style={styles.searchinputWrapper}>
-          <SearchWithFilter
-            placeholder={"Search activities"}
-            value={""}
-            cross={true}
-            onFilterPress={handleSearchFilter}
-            onSubmitEditing={() => {}}
-            onChangeText={(text) => () => {}}
-            onClear={() => () => {}}
-          />
-        </View>
-           {/* <ActivitesFlatList
+          <View style={[styles.flexGrow, { flexDirection: "column" }]}>
+            <View style={styles.searchinputWrapper}>
+              <SearchWithFilter
+                placeholder={"Search activities"}
+                value={""}
+                cross={true}
+                onFilterPress={handleSearchFilter}
+                onSubmitEditing={() => {}}
+                onChangeText={(text) => () => {}}
+                onClear={() => () => {}}
+              />
+            </View>
+            {/* <ActivitesFlatList
             isVirtualised={true}
             onPress={handleOpen}
             fetchMore={() => {
@@ -279,27 +280,26 @@ useEffect(() => {
             extraData={formatedInformativeNotifications}
             refetch={refetchInformative}
           /> */}
-          <ActivitesFlatList
-            isVirtualised={true}
-            onPress={handleOpen}
-            fetchMore={() => {
-              if (
-                canPaginateInformative &&
-                hasNextInformativePage &&
-                !isFetchingNextInformativePage
-              ) {
-                fetchNextInformativePage();
-              }
-            }}
-            hasMore={canPaginateInformative && hasNextInformativePage}
-            activities={informativeListData}
-            isLoading={isFetchingInformativeNotifications}
-            listKey={"recent_activities"}
-            extraData={informativeListData}
-            refetch={refetchInformative}
-          />
-
-   </View>
+            <ActivitesFlatList
+              isVirtualised={true}
+              onPress={handleOpen}
+              fetchMore={() => {
+                if (
+                  canPaginateInformative &&
+                  hasNextInformativePage &&
+                  !isFetchingNextInformativePage
+                ) {
+                  fetchNextInformativePage();
+                }
+              }}
+              hasMore={canPaginateInformative && hasNextInformativePage}
+              activities={informativeListData}
+              isLoading={isFetchingInformativeNotifications}
+              listKey={"recent_activities"}
+              extraData={informativeListData}
+              refetch={refetchInformative}
+            />
+          </View>
           <ActivitesFlatList
             isVirtualised={true}
             onPress={handleOpen}
@@ -333,7 +333,7 @@ useEffect(() => {
 
       <BottomSheet color="green" />
 
-       {(isLoading ||
+      {(isLoading ||
         isFetchingInformativeNotifications ||
         isFetchingActionableNotifications ||
         isFetchingTodaysNotifications) && <OverlayLoader />}
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     backgroundColor: getColor("green", 500, 0.05),
     zIndex: 2,
   },
-    searchinputWrapper: {
+  searchinputWrapper: {
     height: 44,
     marginTop: 16,
   },

@@ -29,29 +29,27 @@ const StorageRMRatingComponent = ({
 
   const mode = meta?.mode as RatingMode | undefined;
 
-const intent = meta?.intent;
+  const intent = meta?.intent;
 
-const handleSelect = (selectedRating: number) => {
-  const rating = {
-    rating: selectedRating,
-    message: ratingToMessageMap[selectedRating],
-  };
+  const handleSelect = (selectedRating: number) => {
+    const rating = {
+      rating: selectedRating,
+      message: ratingToMessageMap[selectedRating],
+    };
 
-  switch (intent) {
-    case "PACKED_PRODUCT_RATING":
-      dispatch(
-        setPackageProductRating(rating)
-      );
-      break;
+    switch (intent) {
+      case "PACKED_PRODUCT_RATING":
+        dispatch(setPackageProductRating(rating));
+        break;
 
-    case "PACKING_RM_FILTER_RATING":
-      dispatch(
-        setRatingForRM({
-          rawMaterial: meta?.id!.split(":")[0],
-          rating,
-        })
-      );
-      break;
+      case "PACKING_RM_FILTER_RATING":
+        dispatch(
+          setRatingForRM({
+            rawMaterial: meta?.id!.split(":")[0],
+            rating,
+          }),
+        );
+        break;
 
       case "DISPATCH_PACKAGE_RATING": {
         if (!meta?.data) {
@@ -67,17 +65,17 @@ const handleSelect = (selectedRating: number) => {
             size,
             unit,
             rating,
-          })
+          }),
         );
         break;
       }
 
-    default:
-      console.warn("Unknown rating intent", meta);
-  }
+      default:
+        console.warn("Unknown rating intent", meta);
+    }
 
-  dispatch(closeBottomSheet());
-};
+    dispatch(closeBottomSheet());
+  };
 
   const ratingToMessageMap: Record<number, string> = {
     5: "Excellent",
@@ -108,9 +106,7 @@ const handleSelect = (selectedRating: number) => {
             <View style={[styles.row, styles.justifyBetween]}>
               <View style={[styles.row, styles.gap12]}>
                 {Icon && <Icon />}
-                <H4 color={getColor("green", 700)}>
-                  {item.message}
-                </H4>
+                <H4 color={getColor("green", 700)}>{item.message}</H4>
               </View>
 
               <View style={[styles.row, styles.gap12]}>

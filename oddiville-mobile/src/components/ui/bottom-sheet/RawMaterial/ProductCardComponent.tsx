@@ -12,6 +12,9 @@ import {
   toggleChambers,
   toggleRawMaterial,
 } from "@/src/redux/slices/bottomsheet/raw-material.slice";
+import { isAllowedIcon } from "@/src/utils/iconUtils";
+import { ICON_MAP } from "@/src/lookups/icons";
+import { ExportStatus, toggleStatus } from "@/src/redux/slices/export/export-status.slice";
 
 const toRawMaterial = (it: any): RawMaterialProps => ({
   id: it.id ?? `${it.name}-${Math.random().toString(36).slice(2, 9)}`,
@@ -27,8 +30,12 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ data }) => {
   const dispatch = useDispatch();
 
   const { selectedRawMaterials, selectedChambers, source } = useSelector(
-    (state: RootState) => state.rawMaterial
+    (state: RootState) => state.rawMaterial,
   );
+
+  const selectedStatuses = useSelector(
+  (state: RootState) => state.exportStatus.selectedStatuses
+);
 
   const isSelected = (name: string) => {
     if (source === "chamber") {
@@ -37,6 +44,8 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ data }) => {
       return selectedChambers?.some((item) => item === name);
     } else if (source === "product-chamber") {
       return selectedChambers?.some((item) => item === name);
+    } else if (source === "export-status") {
+      return selectedStatuses?.some((item) => item === name);
     } else {
       return selectedRawMaterials?.some((item) => item.name === name);
     }
@@ -46,7 +55,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ data }) => {
     item: { name: string; description?: string; id?: string } & Record<
       string,
       any
-    >
+    >,
   ) => {
     if (source === "chamber") {
       dispatch(toggleChambers(item.name));
@@ -57,6 +66,9 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ data }) => {
       dispatch(toggleChambers(item.name));
     } else if (source === "product-chamber") {
       dispatch(toggleChambers(item.name));
+    } else if (source === "export-status") {
+      
+      dispatch(toggleStatus(item.name as ExportStatus));
     } else {
       const rawMaterial = toRawMaterial(item);
       dispatch(toggleRawMaterial(rawMaterial));
@@ -67,12 +79,12 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ data }) => {
   return (
     <View style={styles.listContainer}>
       {data?.map((item, index) => {
-         const { image, isCustomImage } = getImageSource({
-  image: item.image,
-  options: {
-    isChamberItem: source === "chamber" || source === "product-chamber",
-  },
-});
+        const { image, isCustomImage } = getImageSource({
+          image: item.image,
+          options: {
+            isChamberItem: source === "chamber" || source === "product-chamber",
+          },
+        });
         return (
           <Pressable
             style={styles.card}
@@ -82,22 +94,29 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ data }) => {
             <View style={styles.titleWithImageSection}>
               <View
                 style={[
-                  styles.imageWrapper,
+                  styles.imageWrapper, styles.iconWrapper,
                   isCustomImage && styles.productImage,
                 ]}
               >
-                <CustomImage
-                  src={image}
-                  resizeMode="contain"
-                  width="100%"
-                  height="100%"
-                />
+                {isAllowedIcon(item.image) ? (
+                  (() => {
+                    const Icon = ICON_MAP[item.image];
+                    return <Icon color={getColor("green")} size={20} />;
+                  })()
+                ) : ( 
+                  <CustomImage
+                    src={image}
+                    resizeMode="contain"
+                    width="100%"
+                    height="100%"
+                  />
+                )}
               </View>
 
               <View>
                 <H4>{item.name}</H4>
-                <C1 color={getColor("green", 400)}>{item.description}</C1>
-              </View>
+                {item.description && <C1 color={getColor("green", 400)}>{item.description}</C1>}
+              </View> 
             </View>
             <Checkbox
               checked={isSelected(item.name)}
@@ -130,7 +149,11 @@ const styles = StyleSheet.create({
     height: 32,
     justifyContent: "center",
     alignItems: "center",
-
+  },
+  iconWrapper: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: getColor("green", 500, 0.1),
   },
   productImage: {
     backgroundColor: getColor("green", 300),

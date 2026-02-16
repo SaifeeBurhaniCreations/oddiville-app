@@ -43,7 +43,11 @@ import { useFrozenChambers } from "@/src/hooks/useChambers";
 // 8. Assets
 // No items of this type
 
-import { PRODUCTION_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
+import {
+  PRODUCTION_BACK_ROUTES,
+  resolveBackRoute,
+  resolveDefaultRoute,
+} from "@/src/utils/backRouteUtils";
 import { RefreshControl } from "react-native-gesture-handler";
 import { useToast } from "@/src/context/ToastContext";
 import { useOverlayLoader } from "@/src/context/OverlayLoaderContext";
@@ -81,18 +85,22 @@ const ProductionCompleteScreen = () => {
   const loader = useOverlayLoader();
 
   const selectedChambers = useSelector(
-    (state: RootState) => state.rawMaterial.selectedChambers
+    (state: RootState) => state.rawMaterial.selectedChambers,
   );
-  const { data: frozenChambers, isLoading: frozenLoading, refetch: frozenChambersRefetch, isFetching: frozenChambersFetching } =
-    useFrozenChambers();
+  const {
+    data: frozenChambers,
+    isLoading: frozenLoading,
+    refetch: frozenChambersRefetch,
+    isFetching: frozenChambersFetching,
+  } = useFrozenChambers();
   const { isLoading: productionLoading } = useSelector(
-    (state: RootState) => state.production
+    (state: RootState) => state.production,
   );
 
   const dispatch = useDispatch();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const [existingImage, setExistingImage] = useState<string[]>([]);
-const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const { id } = useParams("production-start", "id");
   const updateProduction = useUpdateProduction();
@@ -100,11 +108,17 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const { data: productionData } = useProductionById(id!);
   const rawOrderId = productionData?.raw_material_order_id;
   const { data: rawMaterialOrderData } = useRawMaterialOrderById(rawOrderId);
-    const packageTypeProduction = useSelector((state: RootState) => state.packageTypeProduction.selectedPackageType);
+  const packageTypeProduction = useSelector(
+    (state: RootState) => state.packageTypeProduction.selectedPackageType,
+  );
 
   const { goTo } = useAppNavigation();
 
-  const { data: lanesRaw = [], refetch: lanesRefetch, isFetching: lanesLoading } = useLanes();
+  const {
+    data: lanesRaw = [],
+    refetch: lanesRefetch,
+    isFetching: lanesLoading,
+  } = useLanes();
   const formattedLanes = lanesRaw.map((lane: any) => ({
     ...lane,
     value: lane.id,
@@ -114,7 +128,6 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const disabledLaneIds = formattedLanes
     .filter((lane: any) => !!lane.production_id && lane.production_id !== id)
     .map((lane: any) => lane.value);
-
 
   const orderDetail: OrderProps = useMemo(() => {
     return {
@@ -137,7 +150,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
           value: rawMaterialOrderData?.order_date
             ? formatDate(
                 new Date(rawMaterialOrderData.order_date),
-                "MMM d, yyyy"
+                "MMM d, yyyy",
               )
             : "--",
         },
@@ -146,7 +159,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
           value: rawMaterialOrderData?.arrival_date
             ? formatDate(
                 new Date(rawMaterialOrderData.arrival_date),
-                "MMM d, yyyy"
+                "MMM d, yyyy",
               )
             : "--",
         },
@@ -179,18 +192,15 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
       {
         validateOnChange: true,
         debounce: 300,
-      }
+      },
     );
 
-const loading =
-  updateProduction.isPending ||
-  productionLoading ||
-  frozenLoading;
+  const loading =
+    updateProduction.isPending || productionLoading || frozenLoading;
 
-useEffect(() => {
-  loader.bind(loading);
-}, [loading]);
-
+  useEffect(() => {
+    loader.bind(loading);
+  }, [loading]);
 
   useEffect(() => {
     if (!productionData) return;
@@ -201,7 +211,6 @@ useEffect(() => {
   }, [productionData]);
 
   const openBottomSheet = () => {
-    
     const supervisorProduction = {
       sections: [
         {
@@ -221,8 +230,8 @@ useEffect(() => {
           data: {
             placeholder: "Select chambers",
             label: "Select chambers",
-            options: frozenChambers.map(fc => fc.chamber_name),
-            key: "supervisor-production"
+            options: frozenChambers.map((fc) => fc.chamber_name),
+            key: "supervisor-production",
           },
         },
         ...selectedChambers.map((chamberName) => ({
@@ -245,7 +254,7 @@ useEffect(() => {
             keyboardType: "number-pad",
           },
         })),
-          {
+        {
           type: "input-with-select",
           data: {
             placeholder: "Enter Size in kg",
@@ -296,9 +305,9 @@ useEffect(() => {
 
     dispatch(setCurrentProduct(productionData));
 
-if (id) {
-  validateAndSetData(id, "supervisor-production", supervisorProduction);
-}
+    if (id) {
+      validateAndSetData(id, "supervisor-production", supervisorProduction);
+    }
   };
 
   const buildFormData = useCallback((form: DuringProduction) => {
@@ -327,52 +336,63 @@ if (id) {
     return formData;
   }, []);
 
+  const saved = async () => {
+    const result = validateForm();
+    if (!result.success) return;
 
-const saved = async () => {
-  const result = validateForm();
-  if (!result.success) return;
+    const formData = buildFormData(result.data);
 
-  const formData = buildFormData(result.data);
-
-  updateProduction.mutate(
-    { id: id!, data: formData },
-    {
-      onSuccess: () => {
-        setHasUnsavedChanges(false);
-        goTo("production");
-        resetForm();
+    updateProduction.mutate(
+      { id: id!, data: formData },
+      {
+        onSuccess: () => {
+          setHasUnsavedChanges(false);
+          goTo("production");
+          resetForm();
+        },
+        onError: () => {
+          toast.error("Failed to update production");
+        },
       },
-      onError: () => {
-        toast.error("Failed to update production");
-      },
-    }
+    );
+  };
+
+  const isStarted = productionData?.start_time !== null;
+
+  const canStart = !isStarted;
+
+  const canSave =
+    isStarted &&
+    hasUnsavedChanges &&
+    !updateProduction.isPending &&
+    !productionLoading;
+
+  const canComplete =
+    isStarted &&
+    !hasUnsavedChanges &&
+    !updateProduction.isPending &&
+    !productionLoading;
+
+  const backRoute = resolveBackRoute(
+    caps.access,
+    PRODUCTION_BACK_ROUTES,
+    resolveDefaultRoute(caps.access),
   );
-};
-
-const isStarted = productionData?.start_time !== null;
-
-const canStart = !isStarted;
-
-const canSave =
-  isStarted &&
-  hasUnsavedChanges &&
-  !updateProduction.isPending &&
-  !productionLoading;
-
-const canComplete =
-  isStarted &&
-  !hasUnsavedChanges &&
-  !updateProduction.isPending &&
-  !productionLoading;
-
-    const backRoute = resolveBackRoute(caps.access, PRODUCTION_BACK_ROUTES, resolveDefaultRoute(caps.access));
 
   return (
     <View style={styles.pageContainer}>
       <PageHeader page={"Production"} />
 
       <View style={styles.wrapper}>
-        <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={lanesLoading} onRefresh={lanesRefetch} />}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={lanesLoading}
+              onRefresh={lanesRefetch}
+            />
+          }
+        >
           <View style={[styles.VStack, styles.gap16]}>
             <BackButton label="Production Complete" backRoute={backRoute} />
 
@@ -388,10 +408,10 @@ const canComplete =
                   type="radio"
                   data={formattedLanes}
                   activeValue={value}
-                 onChange={(selectedLaneId) => {
-                  onChange(selectedLaneId);
-                  setHasUnsavedChanges(true);
-                }}
+                  onChange={(selectedLaneId) => {
+                    onChange(selectedLaneId);
+                    setHasUnsavedChanges(true);
+                  }}
                   disabledValues={disabledLaneIds}
                 >
                   Select lane
@@ -401,38 +421,37 @@ const canComplete =
 
             <FormField name="sample_images" form={{ values, setField, errors }}>
               {({ value = [], onChange }) => (
-                  <FileUploadGallery
-                    fileStates={[
-                      Array.isArray(value) ? value : [],
-                      (files) => {
-                        onChange(files);
-                        setHasUnsavedChanges(true);
-                      },
-                    ]}
-                    existingStates={[existingImage, setExistingImage]}
-                    maxImage={10}
-                  >
-                    Capture photo
-                  </FileUploadGallery>
+                <FileUploadGallery
+                  fileStates={[
+                    Array.isArray(value) ? value : [],
+                    (files) => {
+                      onChange(files);
+                      setHasUnsavedChanges(true);
+                    },
+                  ]}
+                  existingStates={[existingImage, setExistingImage]}
+                  maxImage={10}
+                >
+                  Capture photo
+                </FileUploadGallery>
               )}
             </FormField>
-            
           </View>
         </ScrollView>
         <View style={styles.buttonContainer}>
-            <Button
-              onPress={saved}
-              disabled={updateProduction.isPending || (!canStart && !canSave)}
-              variant="outline"
-            >
-              {updateProduction.isPending
-                ? isStarted
-                  ? "Saving..."
-                  : "Starting..."
-                : isStarted
+          <Button
+            onPress={saved}
+            disabled={updateProduction.isPending || (!canStart && !canSave)}
+            variant="outline"
+          >
+            {updateProduction.isPending
+              ? isStarted
+                ? "Saving..."
+                : "Starting..."
+              : isStarted
                 ? "Save"
                 : "Start"}
-            </Button>
+          </Button>
           <Button
             onPress={openBottomSheet}
             disabled={!canComplete}
@@ -442,7 +461,6 @@ const canComplete =
               ? "Production completing..."
               : "Production completed"}
           </Button>
-
         </View>
       </View>
       <BottomSheet color="green" />

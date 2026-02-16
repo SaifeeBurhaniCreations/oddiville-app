@@ -28,14 +28,13 @@ const ItemCard = ({
   meta,
   onActionPress,
 }: ItemCardData) => {
-
   const { goTo } = useAppNavigation();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const dispatch = useDispatch();
   const bottomSheetMeta = useSelector(
-    (state: RootState) => state.bottomSheet.meta
+    (state: RootState) => state.bottomSheet.meta,
   );
- 
+
   const handlePress = () => {
     switch (mode) {
       case "production":
@@ -54,7 +53,7 @@ const ItemCard = ({
             date: "today",
             mode: meta?.mode,
           }),
-          "packing-summary"
+          "packing-summary",
         );
 
         dispatch(
@@ -63,7 +62,7 @@ const ItemCard = ({
             mode: "event",
             mainSelection: undefined,
             subSelection: undefined,
-          })
+          }),
         );
         break;
 
@@ -107,27 +106,27 @@ const ItemCard = ({
       }
 
       /* -------- IN PROGRESS -------- */
-     case "production":
-  return (
-    <View style={styles.detailsContainer}>
-      {weight && (
-        <View style={styles.ratingContainer}>
-          <DatabaseIcon size={12} />
-          <C1>{weight}</C1>
-        </View>
-      )}
+      case "production":
+        return (
+          <View style={styles.detailsContainer}>
+            {weight && (
+              <View style={styles.ratingContainer}>
+                <DatabaseIcon size={12} />
+                <C1>{weight}</C1>
+              </View>
+            )}
 
-      {lane && (
-        <>
-          <View style={styles.separator} />
-          <View style={styles.ratingContainer}>
-            <LaneIcon />
-            <C1>{lane}</C1>
-          </View>
-        </>
-      )}
+            {lane && (
+              <>
+                <View style={styles.separator} />
+                <View style={styles.ratingContainer}>
+                  <LaneIcon />
+                  <C1>{lane}</C1>
+                </View>
+              </>
+            )}
 
-      {rating && (
+            {rating && (
               <>
                 <View style={styles.separator} />
                 <View style={styles.ratingContainer}>
@@ -136,8 +135,8 @@ const ItemCard = ({
                 </View>
               </>
             )}
-    </View>
-  );
+          </View>
+        );
 
       /* -------- COMPLETED -------- */
       case "production-completed":
@@ -150,15 +149,15 @@ const ItemCard = ({
               </View>
             )}
 
-             {lane && (
-        <>
-          <View style={styles.separator} />
-          <View style={styles.ratingContainer}>
-            <LaneIcon />
-            <C1>{lane}</C1>
-          </View>
-        </>
-      )}
+            {lane && (
+              <>
+                <View style={styles.separator} />
+                <View style={styles.ratingContainer}>
+                  <LaneIcon />
+                  <C1>{lane}</C1>
+                </View>
+              </>
+            )}
 
             {rating && (
               <>

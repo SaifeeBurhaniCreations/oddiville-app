@@ -221,7 +221,9 @@ const PageHeader = ({ page }: { page: string }) => {
 
   const notificationCount = total.toString();
   const badgeLabel =
-    parseInt(notificationCount) > 99 ? "99+" : notificationCount.toString().padStart(2, "0");
+    parseInt(notificationCount) > 99
+      ? "99+"
+      : notificationCount.toString().padStart(2, "0");
 
   const isWelcome = page === "Welcome";
 
@@ -247,27 +249,28 @@ const PageHeader = ({ page }: { page: string }) => {
       )}
 
       <View style={styles.headerRow}>
-        {role === "admin" || role === "superadmin" && (
-          <Pressable style={styles.iconContainer} onPress={() => goTo("home")}>
-            <HomeLightIcon size={24} />
-            {parseInt(notificationCount) > 0 && (
-              <View style={styles.badgeContainer}>
-                <B6 style={styles.badgeText}>{badgeLabel}</B6>
-              </View>
-            )}
-          </Pressable>
-        )}
+        {role === "admin" ||
+          (role === "superadmin" && (
+            <Pressable
+              style={styles.iconContainer}
+              onPress={() => goTo("home")}
+            >
+              <HomeLightIcon size={24} />
+              {parseInt(notificationCount) > 0 && (
+                <View style={styles.badgeContainer}>
+                  <B6 style={styles.badgeText}>{badgeLabel}</B6>
+                </View>
+              )}
+            </Pressable>
+          ))}
 
         <H1 color={getColor("light")} style={styles.headerText}>
           {page}
         </H1>
 
-        {!isWelcome && (
-          caps.isSingleOperator ? (
-            <Pressable
-              onPress={handleLogout}
-              style={styles.iconContainer}
-            >
+        {!isWelcome &&
+          (caps.isSingleOperator ? (
+            <Pressable onPress={handleLogout} style={styles.iconContainer}>
               <LogoutIcon size={24} color={getColor("light")} />
             </Pressable>
           ) : (
@@ -277,8 +280,7 @@ const PageHeader = ({ page }: { page: string }) => {
             >
               <UserCircleIcon color={getColor("light")} />
             </Pressable>
-          )
-        )}
+          ))}
       </View>
     </View>
   );

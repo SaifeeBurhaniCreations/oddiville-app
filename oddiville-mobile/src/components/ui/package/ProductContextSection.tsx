@@ -27,18 +27,21 @@ type Props = {
   setIsCurrentProduct: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-const ProductContextSection = ({ setIsLoading, form, setIsCurrentProduct }: Props) => {
-
+const ProductContextSection = ({
+  setIsLoading,
+  form,
+  setIsCurrentProduct,
+}: Props) => {
   const dispatch = useDispatch();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
 
   const productRating = useSelector(
-    (state: RootState) => state.packageProductRating.packageProductRating
+    (state: RootState) => state.packageProductRating.packageProductRating,
   );
 
-const selectedProductName = useSelector(
-  (state: RootState) => state.product.productName
-);
+  const selectedProductName = useSelector(
+    (state: RootState) => state.product.productName,
+  );
 
   const { rawMaterials, isLoading: rmLoading } =
     useRawMaterialByProduct(selectedProductName);
@@ -67,7 +70,7 @@ const selectedProductName = useSelector(
     form.setField("product.productName", selectedProductName);
   }, [selectedProductName, form.setField, dispatch]);
 
-      // Sync PRODUCT RATING
+  // Sync PRODUCT RATING
   useEffect(() => {
     if (!productRating?.rating) return;
 
@@ -117,43 +120,41 @@ const selectedProductName = useSelector(
             {
               sections: [
                 {
-                  type: 'title-with-details-cross',
+                  type: "title-with-details-cross",
                   data: {
-                    title: 'Select rating'
+                    title: "Select rating",
                   },
                 },
                 {
-                  type: 'storage-rm-rating',
+                  type: "storage-rm-rating",
                   data: [
                     {
-                    rating: "5",
-                    message: "Excellent",
-                  },
-                  {
-                    rating: "4",
-                    message: "Good",
-                  },
-                  {
-                    rating: "3",
-                    message: "Neutral",
-                  },
-                  {
-                    rating: "2",
-                    message: "Poor",
-                  },
-                  {
-                    rating: "1",
-                    message: "Very poor",
-                  },
-                  ]
+                      rating: "5",
+                      message: "Excellent",
+                    },
+                    {
+                      rating: "4",
+                      message: "Good",
+                    },
+                    {
+                      rating: "3",
+                      message: "Neutral",
+                    },
+                    {
+                      rating: "2",
+                      message: "Poor",
+                    },
+                    {
+                      rating: "1",
+                      message: "Very poor",
+                    },
+                  ],
                 },
               ],
-                intent: "PACKED_PRODUCT_RATING",
-            }
+              intent: "PACKED_PRODUCT_RATING",
+            },
           );
-        }
-       
-        }
+        }}
         hasError={form.hasError("product.finalRating")}
         errorMessage={form.getError("product.finalRating")}
       />

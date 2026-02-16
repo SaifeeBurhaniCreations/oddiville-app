@@ -27,25 +27,28 @@ import { useUpdateUser, useUserByUsername } from "@/src/hooks/user";
 import { selectRole } from "@/src/redux/slices/select-role";
 import ChipGroup from "@/src/components/ui/ChipGroup";
 import { allowedPolicies } from "@/src/constants/allowedPolicies";
-import { clearPolicies, setPolicies } from "@/src/redux/slices/bottomsheet/policies.slice";
+import {
+  clearPolicies,
+  setPolicies,
+} from "@/src/redux/slices/bottomsheet/policies.slice";
 import { useAuth } from "@/src/context/AuthContext";
 import { resolveAccess } from "@/src/utils/policiesUtils";
 import { useToast } from "@/src/context/ToastContext";
 
 const EditUserScreen = () => {
-    const { role, policies } = useAuth();
-    const toast = useToast();
-    const safeRole = role ?? "guest";
-    const safePolicies = policies ?? [];
-    const access = resolveAccess(safeRole, safePolicies);
-    
+  const { role, policies } = useAuth();
+  const toast = useToast();
+  const safeRole = role ?? "guest";
+  const safePolicies = policies ?? [];
+  const access = resolveAccess(safeRole, safePolicies);
+
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const selectedRole = useSelector(
-    (state: RootState) => state.selectRole.selectedRole
+    (state: RootState) => state.selectRole.selectedRole,
   );
 
   const { selectedPolicies, isSelectionDone } = useSelector(
-    (state: RootState) => state.policies
+    (state: RootState) => state.policies,
   );
 
   const dispatch = useDispatch();
@@ -56,7 +59,7 @@ const EditUserScreen = () => {
   const updateUserMutation = useUpdateUser();
   const [toastVisible, setToastVisible] = useState(false);
   const [toastType, setToastType] = useState<"success" | "error" | "info">(
-    "info"
+    "info",
   );
   const [toastMessage, setToastMessage] = useState("");
   const {
@@ -99,27 +102,27 @@ const EditUserScreen = () => {
           validate: (role) => ["admin", "supervisor"].includes(role),
         },
       ],
-     policies: [
-  {
-    type: "custom",
-    message: "Policies required!",
-    validate: (policies) =>
-      Array.isArray(policies) && policies.length > 0,
-  },
-  {
-    type: "custom",
-    message: "Policies must be purchase, production, packaging or sales!",
-    validate: (policies) => {
-      if (!Array.isArray(policies)) return false;
-      return policies.every((p) => allowedPolicies.includes(p));
-    },
-  },
-],
+      policies: [
+        {
+          type: "custom",
+          message: "Policies required!",
+          validate: (policies) =>
+            Array.isArray(policies) && policies.length > 0,
+        },
+        {
+          type: "custom",
+          message: "Policies must be purchase, production, packaging or sales!",
+          validate: (policies) => {
+            if (!Array.isArray(policies)) return false;
+            return policies.every((p) => allowedPolicies.includes(p));
+          },
+        },
+      ],
     },
     {
       validateOnChange: true,
       debounce: 300,
-    }
+    },
   );
   const isEdit = Boolean(username);
 
@@ -139,21 +142,20 @@ const EditUserScreen = () => {
     });
     dispatch(selectRole(user.role));
 
-  dispatch(
-    setPolicies(
-      (user.policies ?? []).map((p: string) => ({
-        name: p,
-      }))
-    )
-  );
-
+    dispatch(
+      setPolicies(
+        (user.policies ?? []).map((p: string) => ({
+          name: p,
+        })),
+      ),
+    );
   }, [isEdit, userLoading, user]);
 
   useEffect(() => {
-  if (!username) {
-    dispatch(clearPolicies());
-  }
-}, [username]);
+    if (!username) {
+      dispatch(clearPolicies());
+    }
+  }, [username]);
 
   useEffect(() => {
     if (selectedRole && values.role !== selectedRole) {
@@ -175,9 +177,9 @@ const EditUserScreen = () => {
     }
   }, [isSelectionDone, selectedPolicies, setField, values.policies]);
 
-    if (!access.isFullAccess) {
-      return null;
-    }
+  if (!access.isFullAccess) {
+    return null;
+  }
 
   const handleSubmit = async () => {
     try {
@@ -195,21 +197,20 @@ const EditUserScreen = () => {
           { username, data: result.data },
           {
             onSuccess: (updatedUser) => {
-              toast.success(`User '${updatedUser.name}' successfully updated!`
-              );
+              toast.success(`User '${updatedUser.name}' successfully updated!`);
               // console.log("updated", updatedUser);
             },
             onError: (err: any) => {
               console.error("update failed", err);
             },
-          }
+          },
         );
       } else {
         await addUsers({
           ...result.data,
           username: result.data.username.toLowerCase(),
         });
-        dispatch(clearPolicies())
+        dispatch(clearPolicies());
       }
       goTo("user");
     } catch (error: any) {
@@ -293,7 +294,7 @@ const EditUserScreen = () => {
             )}
           </FormField>
 
-          <View style={{flexDirection: "column", gap: 8}}>
+          <View style={{ flexDirection: "column", gap: 8 }}>
             <FormField name="policies" form={{ values, setField, errors }}>
               {({ value, onChange, error }) => (
                 <Select
@@ -301,10 +302,7 @@ const EditUserScreen = () => {
                   options={[]}
                   onPress={async () => {
                     setLoading(true);
-                    await validateAndSetData(
-                      "policies",
-                      "select-policies"
-                    );
+                    await validateAndSetData("policies", "select-policies");
                     setLoading(false);
                   }}
                   showOptions={false}
@@ -316,7 +314,9 @@ const EditUserScreen = () => {
               )}
             </FormField>
 
-            {isSelectionDone && <ChipGroup blockSelection={true} data={selectedPolicies || []} />}
+            {isSelectionDone && (
+              <ChipGroup blockSelection={true} data={selectedPolicies || []} />
+            )}
           </View>
 
           <FormField name="phone" form={{ values, setField, errors }}>
@@ -350,7 +350,6 @@ const EditUserScreen = () => {
           </View>
         )}
       </KeyboardAvoidingView>
-    
     </View>
   );
 };

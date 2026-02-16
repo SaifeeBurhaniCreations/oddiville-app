@@ -1,56 +1,67 @@
 // 1. React and React Native core
-import React, { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useMemo, useState } from "react";
+import { StyleSheet, View } from "react-native";
 
 // 2. Third-party dependencies
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector } from "react-redux";
 
 // 3. Project components
-import BackButton from '@/src/components/ui/Buttons/BackButton';
-import PageHeader from '@/src/components/ui/PageHeader';
-import Button from '@/src/components/ui/Buttons/Button';
+import BackButton from "@/src/components/ui/Buttons/BackButton";
+import PageHeader from "@/src/components/ui/PageHeader";
+import Button from "@/src/components/ui/Buttons/Button";
 import PackagingSizeCard from "@/src/components/ui/Packaging/PackgingSizeCard";
-import BottomSheet from '@/src/components/ui/BottomSheet';
-import Loader from '@/src/components/ui/Loader';
-import EmptyState from '@/src/components/ui/EmptyState';
+import BottomSheet from "@/src/components/ui/BottomSheet";
+import Loader from "@/src/components/ui/Loader";
+import EmptyState from "@/src/components/ui/EmptyState";
 
 // 4. Project hooks
-import useValidateAndOpenBottomSheet from '@/src/hooks/useValidateAndOpenBottomSheet';
-import { useParams } from '@/src/hooks/useParams';
-import { usePackageById, usePackageSocketSync } from '@/src/hooks/Packages';
+import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomSheet";
+import { useParams } from "@/src/hooks/useParams";
+import { usePackageById, usePackageSocketSync } from "@/src/hooks/Packages";
 
 // 5. Project constants/utilities
-import { getColor } from '@/src/constants/colors';
-import { chunkCards } from '@/src/utils/arrayUtils';
-import { formatPackageParams } from '@/src/constants/Packets';
-import { getEmptyStateData, PackageIconInput } from '@/src/utils/common';
-import { PackageIconKey, setPackageSize } from '@/src/redux/slices/package-size.slice';
-import { setCurrentProductId } from '@/src/redux/slices/current-product.slice';
-import { sortBy } from '@/src/utils/numberUtils';
+import { getColor } from "@/src/constants/colors";
+import { chunkCards } from "@/src/utils/arrayUtils";
+import { formatPackageParams } from "@/src/constants/Packets";
+import { getEmptyStateData, PackageIconInput } from "@/src/utils/common";
+import {
+  PackageIconKey,
+  setPackageSize,
+} from "@/src/redux/slices/package-size.slice";
+import { setCurrentProductId } from "@/src/redux/slices/current-product.slice";
+import { sortBy } from "@/src/utils/numberUtils";
 
 // 6. Types
-import { RootState } from '@/src/redux/store';
+import { RootState } from "@/src/redux/store";
 
 // 7. Schemas
 // No items of this type
 
-// 8. Assets 
+// 8. Assets
 // No items of this type
 
-import { useAuth } from '@/src/context/AuthContext';
-import { resolveAccess } from '@/src/utils/policiesUtils';
-import { PACKAGE_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
-import { getTareWeight, parseWeightBoth } from '@/src/utils/packing/weightutils';
+import { useAuth } from "@/src/context/AuthContext";
+import { resolveAccess } from "@/src/utils/policiesUtils";
+import {
+  PACKAGE_BACK_ROUTES,
+  resolveBackRoute,
+  resolveDefaultRoute,
+} from "@/src/utils/backRouteUtils";
+import {
+  getTareWeight,
+  parseWeightBoth,
+} from "@/src/utils/packing/weightutils";
 import PaperRollIcon from "@/src/components/icons/packaging/PaperRollIcon";
 import BagIcon from "@/src/components/icons/packaging/BagIcon";
 import BigBagIcon from "@/src/components/icons/packaging/BigBagIcon";
-import OverlayLoader from '@/src/components/ui/OverlayLoader';
+import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
-
-export const PACKAGE_ICON_MAP: Record<PackageIconKey, React.ComponentType<any>> =
-{
+export const PACKAGE_ICON_MAP: Record<
+  PackageIconKey,
+  React.ComponentType<any>
+> = {
   "paper-roll": PaperRollIcon,
-  "bag": BagIcon,
+  bag: BagIcon,
   "big-bag": BigBagIcon,
 };
 
@@ -61,9 +72,7 @@ export const mapPackageIconKey = (item: PackageIconInput): PackageIconKey => {
   if (Number.isNaN(size)) return "bag";
 
   const grams =
-    item.unit === "kg" ? size * 1000 :
-    item.unit === "gm" ? size :
-    0;
+    item.unit === "kg" ? size * 1000 : item.unit === "gm" ? size : 0;
 
   if (grams <= 250) return "paper-roll";
   if (grams <= 500) return "bag";
@@ -71,95 +80,105 @@ export const mapPackageIconKey = (item: PackageIconInput): PackageIconKey => {
 };
 
 const PackagingDetailsScreen = () => {
-    usePackageSocketSync();
+  usePackageSocketSync();
   const { role, policies } = useAuth();
 
   const safeRole = role ?? "guest";
   const safePolicies = policies ?? [];
   const access = resolveAccess(safeRole, safePolicies);
-  
-  const { id: packageId, name: packageName } = useParams('packaging-details', 'id', "name");
-  const { data: packageData, isFetching: packageLoading } = usePackageById(packageId!);
-  const isLoadingPackage = useSelector((state: RootState) => state.fillPackage.isLoading);
-  const isLoadingPackageSize = useSelector((state: RootState) => state.packageSizePackaging.isLoadingPackageSize);
+
+  const { id: packageId, name: packageName } = useParams(
+    "packaging-details",
+    "id",
+    "name",
+  );
+  const { data: packageData, isFetching: packageLoading } = usePackageById(
+    packageId!,
+  );
+  const isLoadingPackage = useSelector(
+    (state: RootState) => state.fillPackage.isLoading,
+  );
+  const isLoadingPackageSize = useSelector(
+    (state: RootState) => state.packageSizePackaging.isLoadingPackageSize,
+  );
 
   const packages = useMemo(() => {
     return formatPackageParams({ types: packageData?.types });
   }, [packageData]);
 
-const uiPackages = useMemo(() => {
-  if (!packages) return [];
+  const uiPackages = useMemo(() => {
+    if (!packages) return [];
 
-  return packages.map((pkg) => {
-    const qtyKg = Number(pkg.quantity) || 0;
+    return packages.map((pkg) => {
+      const qtyKg = Number(pkg.quantity) || 0;
 
-    const { value: sizeValue, unit: sizeUnit } = parseWeightBoth(pkg.weight);
+      const { value: sizeValue, unit: sizeUnit } = parseWeightBoth(pkg.weight);
 
-    const tare = getTareWeight("pouch", sizeValue, sizeUnit);
-    const packetCount =
-      tare > 0 ? Math.floor((qtyKg * 1000) / tare) : 0;
+      const tare = getTareWeight("pouch", sizeValue, sizeUnit);
+      const packetCount = tare > 0 ? Math.floor((qtyKg * 1000) / tare) : 0;
 
-    return {
-      ...pkg,
-      quantityKg: qtyKg,
-      displayQuantity: String(packetCount),
-    };
-  });
-}, [packages]);
+      return {
+        ...pkg,
+        quantityKg: qtyKg,
+        displayQuantity: String(packetCount),
+      };
+    });
+  }, [packages]);
 
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
 
   const handleOpen = (id: string) => {
-    const match = packages?.find(pkg => pkg.weight === id);
+    const match = packages?.find((pkg) => pkg.weight === id);
     if (!match) return;
 
     const { value, unit } = parseWeightBoth(match.weight);
     const tare = getTareWeight("pouch", value, unit);
 
     const qtyKg = Number(match.quantity) || 0;
-    const packetCount =
-      tare > 0 ? Math.floor((qtyKg * 1000) / tare) : 0;
+    const packetCount = tare > 0 ? Math.floor((qtyKg * 1000) / tare) : 0;
 
-        dispatch(setPackageSize({
-          ...match,
-            iconKey: mapPackageIconKey({
-            size: value,
-            unit,
-            // rawSize: match.weight,
-          }),
-          id: packageId,
-        }));
+    dispatch(
+      setPackageSize({
+        ...match,
+        iconKey: mapPackageIconKey({
+          size: value,
+          unit,
+          // rawSize: match.weight,
+        }),
+        id: packageId,
+      }),
+    );
 
     const fillPackage = {
       sections: [
         {
-          type: 'title-with-details-cross',
+          type: "title-with-details-cross",
           data: {
-            title: 'Add package count',
+            title: "Add package count",
             description: `${match.weight} • ${packetCount} packets`,
-            details: { icon: "pencil" }
+            details: { icon: "pencil" },
           },
         },
         {
-          type: 'input',
+          type: "input",
           data: {
-            placeholder: 'Enter counts',
-            label: 'Add package',
-            keyboardType: 'number-pad',
-            formField: "quantity"
+            placeholder: "Enter counts",
+            label: "Add package",
+            keyboardType: "number-pad",
+            formField: "quantity",
           },
         },
       ],
       buttons: [
         {
-          text: 'Add',
-          variant: 'fill',
-          color: 'green',
+          text: "Add",
+          variant: "fill",
+          color: "green",
           alignment: "full",
           disabled: false,
-          actionKey: "add-package-quantity"
+          actionKey: "add-package-quantity",
         },
       ],
     };
@@ -178,49 +197,61 @@ const uiPackages = useMemo(() => {
 
   const emptyStateData = getEmptyStateData("packaging-details");
 
-  const backRoute = resolveBackRoute(access, PACKAGE_BACK_ROUTES, resolveDefaultRoute(access));
+  const backRoute = resolveBackRoute(
+    access,
+    PACKAGE_BACK_ROUTES,
+    resolveDefaultRoute(access),
+  );
   // console.log("uiPackages", JSON.stringify(uiPackages, null, 2));
-  
+
   return (
     <View style={styles.pageContainer}>
-      <PageHeader page={'SKU'} />
+      <PageHeader page={"SKU"} />
       <View style={styles.wrapper}>
-        <View style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}>
+        <View
+          style={[styles.HStack, styles.justifyBetween, styles.alignCenter]}
+        >
           <BackButton
             label={packageName ? packageName : "UnTitled"}
             backRoute={backRoute}
           />
 
-          <Button variant='outline' size='md' onPress={handleOpenAddNewSize}>
+          <Button variant="outline" size="md" onPress={handleOpenAddNewSize}>
             Add new size
           </Button>
         </View>
 
         <View style={styles.cardList}>
-          {!uiPackages ? ( <OverlayLoader />) : uiPackages?.length > 0 ? (
-            chunkCards(sortBy([...uiPackages], "weight"), 2).map((pair, index) => (
-              <View key={index} style={styles.cardRow}>
-                {pair.map((item, i) => (
-                  <View key={i} style={styles.cardWrapper}>
-                    <PackagingSizeCard
-                      icon={item.icon ? item.icon : BagIcon}
-                      weight={item.weight || ""}
-                      quantity={item.displayQuantity || ""}
-                      disabled={item.disabled || false}
-                      onPress={() => handleOpen(item?.weight)}
-                    />
-                  </View>
-                ))}
-                {pair?.length === 1 && <View style={styles.cardWrapper} />}
-              </View>
-            ))
+          {!uiPackages ? (
+            <OverlayLoader />
+          ) : uiPackages?.length > 0 ? (
+            chunkCards(sortBy([...uiPackages], "weight"), 2).map(
+              (pair, index) => (
+                <View key={index} style={styles.cardRow}>
+                  {pair.map((item, i) => (
+                    <View key={i} style={styles.cardWrapper}>
+                      <PackagingSizeCard
+                        icon={item.icon ? item.icon : BagIcon}
+                        weight={item.weight || ""}
+                        quantity={item.displayQuantity || ""}
+                        disabled={item.disabled || false}
+                        onPress={() => handleOpen(item?.weight)}
+                      />
+                    </View>
+                  ))}
+                  {pair?.length === 1 && <View style={styles.cardWrapper} />}
+                </View>
+              ),
+            )
           ) : (
             <EmptyState stateData={emptyStateData} />
           )}
         </View>
 
-        <BottomSheet color='green' />
-          {(isLoadingPackageSize || isLoadingPackage || packageLoading) && <OverlayLoader /> }
+        <BottomSheet color="green" />
+        {(isLoadingPackageSize || isLoadingPackage || packageLoading) && (
+          <OverlayLoader />
+        )}
       </View>
     </View>
   );
@@ -231,14 +262,14 @@ export default PackagingDetailsScreen;
 const styles = StyleSheet.create({
   pageContainer: {
     flex: 1,
-    backgroundColor: getColor('green', 500),
+    backgroundColor: getColor("green", 500),
     position: "relative",
   },
   wrapper: {
     flex: 1,
     flexDirection: "column",
     gap: 24,
-    backgroundColor: getColor('light', 200),
+    backgroundColor: getColor("light", 200),
     borderTopStartRadius: 16,
     borderTopEndRadius: 16,
     padding: 16,
@@ -248,22 +279,22 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: getColor('green', 500, 0.1),
+    backgroundColor: getColor("green", 500, 0.1),
     zIndex: 2,
   },
   content: {
     flexDirection: "column",
     gap: 16,
-    height: "100%"
+    height: "100%",
   },
   HStack: {
-    flexDirection: "row"
+    flexDirection: "row",
   },
   justifyBetween: {
     justifyContent: "space-between",
   },
   alignCenter: {
-    alignItems: "center"
+    alignItems: "center",
   },
   gap8: {
     gap: 8,

@@ -8,16 +8,22 @@ import UserIcon from "@/src/components/icons/page/UserIcon";
 import TruckIcon from "@/src/components/icons/page/TruckIcon";
 import MaleIcon from "../components/icons/common/MaleIcon";
 import FemaleIcon from "../components/icons/common/FemaleIcon";
+import ClockIcon from "../components/icons/common/ClockIcon";
+
+import { IconProps } from "@/src/types";
 
 export const ICON_MAP = {
-    cash: CashIcon,
-    database: DatabaseIcon,
-    box: BoxIcon,
-    phone: PhoneIcon,
-    warehouse: WarehouseIcon,
-    store: StoreIcon,
-    user: UserIcon,
-    truck: TruckIcon,
-    male: MaleIcon,
-    female: FemaleIcon,
-};
+  cash: CashIcon,
+  database: DatabaseIcon,
+  box: BoxIcon,
+  phone: PhoneIcon,
+  warehouse: WarehouseIcon,
+  store: StoreIcon,
+  user: UserIcon,
+  truck: TruckIcon,
+  male: MaleIcon,
+  female: FemaleIcon,
+  clock: ClockIcon,
+} as const satisfies Record<string, React.FC<IconProps>>;
+
+export type IconKey = keyof typeof ICON_MAP;

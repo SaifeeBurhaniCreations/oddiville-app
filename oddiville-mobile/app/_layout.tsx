@@ -1,5 +1,5 @@
 import "@/global.css";
-import 'react-native-gesture-handler';
+import "react-native-gesture-handler";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider, useSelector } from "react-redux";
 import { RootState, store } from "@/src/redux/store";
@@ -16,7 +16,7 @@ import { Slot } from "expo-router";
 import { isFabRoute } from "@/src/utils/userUtils";
 import Fab from "@/src/components/ui/Fab";
 import MenuSheet from "@/src/components/ui/MenuSheet";
-import Toast from 'react-native-toast-message';
+import Toast from "react-native-toast-message";
 import { toastConfig } from "@/src/components/ui/ToastConfig";
 import { StyleSheet } from "react-native";
 import { setupQueryPersistence } from "@/src/lib/react-query/persist";
@@ -95,7 +95,8 @@ export default function RootLayout() {
     return <LoaderScreen />;
   }
 
-  const statusBarHeight = Platform.OS === 'android' ? RNStatusBar.currentHeight : 44;
+  const statusBarHeight =
+    Platform.OS === "android" ? RNStatusBar.currentHeight : 44;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -115,22 +116,32 @@ export default function RootLayout() {
         <Provider store={store}>
           <MultiToggleProvider>
             <OverlayLoaderProvider>
-            <ToastProvider>
-            <SocketProvider url={apiUrl}>
-                <AuthProvider>
-                  <View style={{ flex: 1, backgroundColor: getColor("light", 200) }}>
-                    <View style={{ height: statusBarHeight, backgroundColor: getColor("green", 500) }} />
-                    <StatusBar style="light" translucent />
-                    
-                    <InnerLayout />
+              <ToastProvider>
+                <SocketProvider url={apiUrl}>
+                  <AuthProvider>
+                    <View
+                      style={{
+                        flex: 1,
+                        backgroundColor: getColor("light", 200),
+                      }}
+                    >
+                      <View
+                        style={{
+                          height: statusBarHeight,
+                          backgroundColor: getColor("green", 500),
+                        }}
+                      />
+                      <StatusBar style="light" translucent />
 
-                    <MenuSheet />
-                    <Toast config={toastConfig} />
-                    <BottomSheet color="green" />
-                  </View>
-                </AuthProvider>
-            </SocketProvider>
-            </ToastProvider>
+                      <InnerLayout />
+
+                      <MenuSheet />
+                      <Toast config={toastConfig} />
+                      <BottomSheet color="green" />
+                    </View>
+                  </AuthProvider>
+                </SocketProvider>
+              </ToastProvider>
             </OverlayLoaderProvider>
           </MultiToggleProvider>
         </Provider>
@@ -142,15 +153,15 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   layout: {
     flex: 1,
-    position: 'relative',
+    position: "relative",
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: getColor('green', 500, 0.1),
+    backgroundColor: getColor("green", 500, 0.1),
     zIndex: 2,
   },
   fabContainer: {
-    position: 'absolute',
+    position: "absolute",
     right: 0,
     bottom: 0,
     zIndex: 3,

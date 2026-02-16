@@ -53,11 +53,7 @@ const PackageSectionHeader = ({
   >
     <H3>Package</H3>
     {canEdit && (
-      <Button
-        variant="outline"
-        size="md"
-        onPress={onAdd}
-      >
+      <Button variant="outline" size="md" onPress={onAdd}>
         Add package
       </Button>
     )}
@@ -73,13 +69,12 @@ const PackingListingSection = ({
   setSearchText: (text: string) => void;
   setIsLoading: (isLoading: boolean) => void;
 }) => {
-
   // custom hooks start
   const caps = useAppCapabilities();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const { isProductLoading } = useSelector((state: RootState) => state.product);
   const productPackageForm = useGlobalFormValidator<AddProductPackageForm>(
-    "add-product-package"
+    "add-product-package",
   );
 
   const { data: DryChambersRaw } = useDryChambers();
@@ -143,7 +138,6 @@ const PackingListingSection = ({
             label_second: "Unit",
             keyboardType: "number-pad",
             source: "add-product-package",
-
           },
         },
         {
@@ -164,9 +158,7 @@ const PackingListingSection = ({
             options:
               DryChambers.length === 0
                 ? []
-                : DryChambers.map(
-                  (dch: DryChambersTypes) => dch.chamber_name
-                ),
+                : DryChambers.map((dch: DryChambersTypes) => dch.chamber_name),
             key: "product-package",
           },
         },
@@ -205,7 +197,7 @@ const PackingListingSection = ({
     await validateAndSetData(
       "temp123",
       "add-product-package",
-      addProductPackage
+      addProductPackage,
     );
     setIsLoading(false);
   };
@@ -222,15 +214,13 @@ const PackingListingSection = ({
           value={searchText}
           onChangeText={(text: string) => setSearchText(text)}
           placeholder={"Search by product name"}
-          onFilterPress={() => { }}
+          onFilterPress={() => {}}
         />
       </View>
       <FlatList
         style={{ flex: 1, paddingHorizontal: 16 }}
         data={formattedData}
-        keyExtractor={(item, index) =>
-          item.id?.toString() ?? index.toString()
-        }
+        keyExtractor={(item, index) => item.id?.toString() ?? index.toString()}
         renderItem={({ item }) => (
           <View style={{ marginBottom: 20 }}>
             <PackageCard
@@ -260,13 +250,12 @@ const PackingListingSection = ({
           </View>
         }
       />
-      {(isProductLoading) && <OverlayLoader />}
-
+      {isProductLoading && <OverlayLoader />}
     </View>
-  )
-}
+  );
+};
 
-export default PackingListingSection
+export default PackingListingSection;
 
 const styles = StyleSheet.create({
   HStack: {
@@ -286,4 +275,4 @@ const styles = StyleSheet.create({
     marginVertical: 16,
     paddingHorizontal: 16,
   },
-})
+});

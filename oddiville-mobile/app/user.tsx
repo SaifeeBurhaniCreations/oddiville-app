@@ -25,20 +25,20 @@ import { resolveAccess } from "@/src/utils/policiesUtils";
 import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
 const UserScreen = () => {
-      const { role, policies } = useAuth();
-    
-      const safeRole = role ?? "guest";
-      const safePolicies = policies ?? [];
-      const access = resolveAccess(safeRole, safePolicies);
-    
+  const { role, policies } = useAuth();
+
+  const safeRole = role ?? "guest";
+  const safePolicies = policies ?? [];
+  const access = resolveAccess(safeRole, safePolicies);
+
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const { goTo } = useAppNavigation();
   const username = useSelector(
-    (state: RootState) => state.bottomSheet.meta?.id
+    (state: RootState) => state.bottomSheet.meta?.id,
   );
 
   const showDeletePopup = useSelector(
-    (state: RootState) => state.deletePopup.showDeletePopup
+    (state: RootState) => state.deletePopup.showDeletePopup,
   );
 
   const {
@@ -67,7 +67,7 @@ const UserScreen = () => {
             (u.name ?? "").toLowerCase().includes(s) ||
             (u.username ?? "").toLowerCase().includes(s) ||
             (u.email ?? "").toLowerCase().includes(s) ||
-            (u.phone ?? "").toLowerCase().includes(s)
+            (u.phone ?? "").toLowerCase().includes(s),
         )
       : sortedUser;
 
@@ -85,9 +85,9 @@ const UserScreen = () => {
     }));
   }, [rawUsers, debouncedSearch]);
 
-    if (!access.isFullAccess) {
-  return null;
-}
+  if (!access.isFullAccess) {
+    return null;
+  }
 
   const handleSearchFilter = () => {
     runFilter({
