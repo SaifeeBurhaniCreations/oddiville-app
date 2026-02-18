@@ -41,22 +41,22 @@ const toProduction = (payload: any): Production | null => {
 export function useProduction() {
   const queryClient = useQueryClient();
   useEffect(() => {
-   const listener = (payload: any) => {
-     const updated = toProduction(payload);
-     if (!updated?.id) return;
+    const listener = (payload: any) => {
+      const updated = toProduction(payload);
+      if (!updated?.id) return;
 
-     queryClient.setQueryData<Production[]>(["production"], (old = []) => {
-       const exists = old.some((p) => p.id === updated.id);
+      queryClient.setQueryData<Production[]>(["production"], (old = []) => {
+        const exists = old.some((p) => p.id === updated.id);
 
-       if (!exists) {
-         return [{ ...updated }, ...old];
-       }
+        if (!exists) {
+          return [{ ...updated }, ...old];
+        }
 
-       return old.map((p) => (p.id === updated.id ? { ...updated } : p));
-     });
+        return old.map((p) => (p.id === updated.id ? { ...updated } : p));
+      });
 
-     queryClient.setQueryData(["production", updated.id], { ...updated });
-   };
+      queryClient.setQueryData(["production", updated.id], { ...updated });
+    };
 
     socket.on("production:receive", listener);
     socket.on("production:status-changed", listener);
@@ -73,9 +73,9 @@ export function useProduction() {
       const response = await fetchProduction();
       return response?.data || [];
     }),
-    staleTime: 1000 * 60 * 60,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+staleTime: 5 * 1000,
+refetchOnWindowFocus: true,
+refetchOnMount: "always",
   });
 }
 
@@ -101,9 +101,8 @@ export function useProductionById(id: string | null) {
     }),
     enabled: !!id,
     initialData,
-    staleTime: 1000 * 60 * 60,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   useEffect(() => {
@@ -135,23 +134,22 @@ export function useStartProduction() {
       const response = await startProduction({ id, data });
       return { ...response.data };
     },
-    onSuccess: (updatedProduction, variables) => {
-      if (!updatedProduction?.id) return;
+    onSuccess: (createdProduction) => {
+      if (!createdProduction?.id) return;
 
-      queryClient.setQueryData(["production"], (oldData: any[] = []) => {
-        const index = oldData.findIndex(
-          (item) => item.id === updatedProduction.id
-        );
-        if (index !== -1) {
-          const newData = [...oldData];
-          newData[index] = updatedProduction;
-          return newData;
-        } else {
-          return [...oldData, updatedProduction];
-        }
+      queryClient.setQueryData<Production[]>(["production"], (old = []) => {
+        const exists = old.some((p) => p.id === createdProduction.id);
+        if (exists)
+          return old.map((p) =>
+            p.id === createdProduction.id ? createdProduction : p,
+          );
+        return [createdProduction, ...old];
       });
 
-      queryClient.setQueryData(["production", variables.id], updatedProduction);
+      queryClient.setQueryData(
+        ["production", createdProduction.id],
+        createdProduction,
+      );
     },
   });
 }
@@ -169,7 +167,7 @@ export function useUpdateProduction() {
 
       queryClient.setQueryData(["production"], (oldData: any[] = []) => {
         const index = oldData.findIndex(
-          (item) => item.id === updatedProduction.id
+          (item) => item.id === updatedProduction.id,
         );
         if (index !== -1) {
           const newData = [...oldData];
@@ -225,7 +223,7 @@ export function useCompleteProduction() {
           return oldLanes.map((lane) =>
             lane.id === production.lane
               ? { ...lane, production_id: null }
-              : lane
+              : lane,
           );
         });
       }
@@ -233,7 +231,7 @@ export function useCompleteProduction() {
       if (updatedStock) {
         queryClient.setQueryData(["chamber-stock"], (oldStocks: any[] = []) => {
           const index = oldStocks.findIndex(
-            (item) => item.id === updatedStock.id
+            (item) => item.id === updatedStock.id,
           );
           if (index !== -1) {
             const newStocks = [...oldStocks];
@@ -246,7 +244,7 @@ export function useCompleteProduction() {
 
         queryClient.setQueryData(
           ["chamber-stock", updatedStock.id],
-          updatedStock
+          updatedStock,
         );
       }
 

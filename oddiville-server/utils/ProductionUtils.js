@@ -221,7 +221,6 @@ async function updateChamberStocks(
   const newChamberData = chambers.map((c) => ({
     id: c.id,
     quantity: String(c.quantity),
-    rating: String(c.rating),
   }));
 
   const chamberMap = new Map(chamberInstances.map((c) => [String(c.id), c]));
@@ -245,17 +244,24 @@ async function updateChamberStocks(
   const incomingPackaging =
     buildChamberStockPackagingFromProduction(production);
 
-  let stock = await chamberStockClient.findOne({
-    where: { product_name, category: "material" },
-    transaction: opts.tx,
-    lock: opts.tx ? opts.tx.LOCK.UPDATE : undefined,
-  });
+    const productionRating = normalizeRating(chambers[0]?.rating);
+
+let stock = await chamberStockClient.findOne({
+  where: {
+    product_name,
+    category: "material",
+    rating: productionRating
+  },
+  transaction: opts.tx,
+  lock: opts.tx ? opts.tx.LOCK.UPDATE : undefined,
+});
 
   if (!stock) {
     stock = await chamberStockClient.create(
       {
         product_name,
         category: "material",
+        rating: productionRating,
         unit,
         packaging: incomingPackaging,
         chamber: newChamberData,
@@ -280,13 +286,11 @@ if (index >= 0) {
   );
 
   if (incomingRating !== null) {
-    chambersList[index].rating = incomingRating;
   }
 } else {
   chambersList.push({
     id: c.id,
     quantity: String(c.quantity),
-    rating: incomingRating ?? "5",
   });
 }
     }

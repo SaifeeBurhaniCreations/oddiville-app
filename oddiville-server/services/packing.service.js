@@ -73,7 +73,7 @@ class PackingService {
       }
 
       /* ---------- Deduct materials ---------- */
-      await this.deductRawMaterialStock(rmConsumption, t);
+      await this.deductRawMaterialStock(rmConsumption, product.finalRating, t);
 
       /* ---------- Deduct packaging ---------- */
       await this.deductPackaging(packagingPlan, product.productName, t);
@@ -89,7 +89,11 @@ class PackingService {
 
   static async applyChamberStockDelta(productName, finalRating, sku, t) {
     let stock = await ChamberStock.findOne({
-      where: { product_name: productName, category: "packed" },
+      where: {
+        product_name: productName,
+        category: "packed",
+        rating: finalRating
+      },
       transaction: t,
       lock: t.LOCK.UPDATE,
     });
@@ -97,27 +101,25 @@ class PackingService {
     const kgPerOutputBag = this.kgPerOutputBag(sku.packet);
 
     if (!stock) {
-      stock = await ChamberStock.create(
-        {
-          product_name: productName,
-          category: "packed",
-          unit: "kg",
+      stock = await ChamberStock.create({
+        product_name: productName,
+        category: "packed",
+        rating: finalRating,
+        unit: "kg",
+        chamber: sku.storage.map((s) => ({
+          id: String(s.chamberId),
+          quantity: String(kgPerOutputBag * s.bagsStored),
+        })),
 
-         chamber: sku.storage.map((s) => ({
-        id: String(s.chamberId),
-        quantity: String(kgPerOutputBag * s.bagsStored),
-        rating: String(finalRating),
-      })),
-
-          packaging: null,
-          packages: [
-            {
-              size: sku.packet.size,
-              unit: sku.packet.unit,
-              quantity: String(kgPerOutputBag * sku.bagsProduced),
-            },
-          ],
-        },
+        packaging: null,
+        packages: [
+          {
+            size: sku.packet.size,
+            unit: sku.packet.unit,
+            quantity: String(kgPerOutputBag * sku.bagsProduced),
+          },
+        ],
+      },
         { transaction: t },
       );
 
@@ -135,13 +137,13 @@ class PackingService {
 
       const chamberId = String(s.chamberId);
 
+      stock.chamber = stock.chamber || [];
       let target = stock.chamber.find((c) => String(c.id) === chamberId);
 
       if (!target) {
         target = {
           id: chamberId,
           quantity: "0",
-          rating: String(finalRating),
         };
         stock.chamber.push(target);
       }
@@ -164,45 +166,53 @@ class PackingService {
     await stock.save({ transaction: t });
   }
 
-  static async deductRawMaterialStock(rmConsumption, transaction) {
+  static async deductRawMaterialStock(rmConsumption, rating, transaction) {
     for (const [rmName, chambers] of Object.entries(rmConsumption)) {
       const stock = await ChamberStock.findOne({
-        where: { product_name: rmName, category: "material" },
+        where: {
+          product_name: rmName,
+          category: "material",
+          rating
+        },
         transaction,
         lock: transaction.LOCK.UPDATE,
       });
 
-      if (!stock) continue;
-
-      const kgPerBag =
-      stock.packaging?.size?.unit === "kg"
-        ? Number(stock.packaging.size.value)
-        : null;
-
-    if (!kgPerBag) {
-      throw new Error(
-        `Invalid packaging size for raw material ${rmName}`
-      );
-    }
-
-    stock.chamber = stock.chamber.map((c) => {
-      const used = chambers[c.id];
-      if (!used || used.outer_used <= 0) return c;
-
-      const usedKg = Number(used.outer_used) * kgPerBag;
-      if (usedKg > Number(c.quantity)) {
-        throw new Error(
-          `RM over-consumption detected for ${rmName} in chamber ${c.id}`
-        );
+      if (!stock) {
+        throw new Error(`Material stock not found for ${rmName} rating ${rating}`);
       }
 
-      return {
-        ...c,
-        quantity: String(
-          Math.max(0, Number(c.quantity) - usedKg)
-        ),
-      };
-    });
+      const kgPerBag =
+        stock.packaging?.size?.unit === "kg"
+          ? Number(stock.packaging.size.value)
+          : null;
+
+      if (!kgPerBag) {
+        throw new Error(
+          `Invalid packaging size for raw material ${rmName}`
+        );
+      }
+      
+      stock.chamber = stock.chamber || [];
+
+      stock.chamber = stock.chamber.map((c) => {
+        const used = chambers[c.id];
+        if (!used || used.outer_used <= 0) return c;
+
+        const usedKg = Number(used.outer_used) * kgPerBag;
+        if (usedKg > Number(c.quantity)) {
+          throw new Error(
+            `RM over-consumption detected for ${rmName} in chamber ${c.id}`
+          );
+        }
+
+        return {
+          ...c,
+          quantity: String(
+            Math.max(0, Number(c.quantity) - usedKg)
+          ),
+        };
+      });
 
       await stock.save({ transaction });
     }

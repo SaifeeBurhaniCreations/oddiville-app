@@ -37,6 +37,14 @@ const Button = ({
     return <B4>Invalid Props!</B4>;
   }
 
+  const sizeLoaderMap: Record<"sm" | "md" | "lg" | "xl" | "icon", number> = {
+    "sm": 16,
+    "md": 24,
+    "lg": 28,
+    "xl": 48,
+    "icon": 24,
+  }
+
   const safeVariant: Variant = variant;
 
   const getVariantStyles = () => {
@@ -91,7 +99,7 @@ const Button = ({
         {children}
       </B2>
       {postIcon && <View style={styles.iconContainer}>{postIcon}</View>}
-      {loading && <Loader color={variant === "fill" ? "light" : "green"} />}
+      {loading && <Loader size={sizeLoaderMap[size]} color={variant === "fill" ? "light" : "green"} />}
     </View>
   );
 

@@ -198,12 +198,17 @@ module.exports = (sequelize, Sequelize) => {
           },
         },
       },
+      rating: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    },
     },
     {
       timestamps: true,
       indexes: [
         { fields: ["product_name"] },
         { fields: ["category", "createdAt"] },
+        { fields: ["product_name", "category", "rating"], unique: true },
       ],
       validate: {
         packagesOnlyForPacked() {

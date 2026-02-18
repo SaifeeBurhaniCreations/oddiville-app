@@ -809,7 +809,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ color }) => {
           onPressOut={handlePressOut}
           color={btn.color}
           variant={btn.variant}
-          disabled={baseDisabled}
+          disabled={baseDisabled || productionLoading && btn.actionKey === "store-product"}
+          size="md"
           loading={productionLoading && btn.actionKey === "store-product"}
           onPress={async () => {
             if (!btn.actionKey) return;

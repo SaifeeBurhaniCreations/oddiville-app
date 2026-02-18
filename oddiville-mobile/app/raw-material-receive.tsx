@@ -52,8 +52,6 @@ import { OrderProps, RawMaterialOrderProps, RootStackParamList } from "@/src/typ
 import { formatDateForDisplay } from "@/src/utils/dateUtils";
 import { hasUrlField, isChallanObject } from "@/src/utils/urlUtils";
 import { queryClient } from "@/src/lib/react-query";
-import { useAuth } from '@/src/context/AuthContext';
-import { resolveAccess } from '@/src/utils/policiesUtils';
 import { PURCHASE_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src/utils/backRouteUtils';
 import OverlayLoader from "@/src/components/ui/OverlayLoader";
 import { useToast } from "@/src/context/ToastContext";
