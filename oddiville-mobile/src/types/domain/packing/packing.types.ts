@@ -134,7 +134,7 @@ export type PackagingPlanValidation = {
 };
 
 export type RawMaterialConsumptionPayload = {
-  [rmName: string]: {
+  [rmId: string]: {
     [chamberId: string]: {
       outer_used: number;
       rating: number;

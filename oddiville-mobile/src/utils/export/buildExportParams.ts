@@ -14,7 +14,8 @@ export const buildExportParams = (type: ExportType, filters: ExportFiltersState)
         params.append("chamberIds", filters.chamberIds.join(","));
     }
 
-    if (filters.lanes.length) params.append("lanes", filters.lanes.join(","));
+    if (filters.laneIds.length) params.append("laneIds", filters.laneIds.join(","));
+
     if (filters.status.length) params.append("status", filters.status.join(","));
     if (filters.vendors.length)
         params.append("vendors", filters.vendors.join(","));

@@ -50,45 +50,92 @@ const useManageServices = () => {
 
    
     useEffect(() => {
-        setFilteredData(serviceData);
+        setFilteredData(groupDryItems(serviceData));
         if (serviceData) {
             setIsLoading(false);
         }
     }, [serviceData]);
 
+const groupDryItems = (data) => {
+    const map = new Map();
 
-    const handleFilter = (chamberName) => {
-        setFilteredData(
-            chamberName === "All"
-                ? serviceData
-                : serviceData.filter((item) => item?.chamber_name === chamberName)
-        );
-    };
-
-    const handleDeleteClick = (service) => {
-        setSelectedService(service);
-        setShowModal(true);
-    };
-
-    const handleDelete = async () => {
-        if (!selectedService?.id) return;
-        setIsLoading(true); 
-        try {
-            const response = await removeService(selectedService.id);
-            if (response.status === 200) {
-               
-                dispatch(handleRemoveData(selectedService.id)); 
-                toast.success("Item deleted successfully!");
-                setShowModal(false);
-            } else {
-                toast.error("Failed to delete service");
-            }
-        } catch (error) {
-            console.error("Error deleting service:", error);
-            toast.error("Error deleting service");
-        } 
+    data.forEach((item) => {
         
-    };
+        let key = undefined;
+        if(item.product_name) {
+            key = `${item.product_name}_${item.size}_${item.unit}`;
+        } else {
+            key = `${item.item_name}_${item.id}`;
+        }
+
+        if (!map.has(key)) {
+            map.set(key, {
+                groupKey: key,
+                product_name: item.product_name ? item.product_name : item.item_name,
+                size: item.size,
+                unit: item.unit,
+                warehouse_date: item.warehoused_date,
+                ratings: [],
+            });
+        }
+
+        map.get(key).ratings.push({
+            rating: item.rating,
+            quantity: item.quantity,
+            chamber_name: item.chamber_name,
+            id: item.id,
+        });
+    });
+
+    const result = Array.from(map.values());
+
+    result.forEach(group => {
+        group.ratings.sort((a, b) => Number(b.rating) - Number(a.rating));
+    });
+
+    return result;
+};
+
+const handleFilter = (chamberName) => {
+    if (chamberName === "All") {
+        setFilteredData(groupDryItems(serviceData));
+        return;
+    }
+
+    const filtered = serviceData.filter((item) => {
+        if (!item?.chamber_name) return false;
+        return item.chamber_name === chamberName;
+    });
+
+    setFilteredData(groupDryItems(filtered));
+};
+
+const handleDelete = async () => {
+    if (!selectedService?.id) return;
+    setIsLoading(true);
+
+    try {
+        const response = await removeService(selectedService.id);
+
+        if (response.status === 200) {
+            dispatch(handleRemoveData(selectedService.id));
+            toast.success("Item deleted successfully!");
+            setShowModal(false);
+        } else {
+            toast.error("Failed to delete service");
+        }
+    } catch (error) {
+        console.error("Error deleting service:", error);
+        toast.error("Error deleting service");
+    } finally {
+        setIsLoading(false); 
+    }
+};
+
+const handleDeleteClick = (ratingLot) => {
+    setSelectedService(ratingLot);
+    setShowModal(true);
+};
 
     return {
         isLoading,
@@ -99,6 +146,7 @@ const useManageServices = () => {
         handleFilter,
         handleDeleteClick,
         handleDelete,
+        handleDeleteClick,
         setShowModal,
     };
 };

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
    Types
 ====================================================== */
 type rmMeta = {
-  rmName: string;
+  rmId: string;
   chambers: {
     chamberId: string;
     rating: number;
@@ -17,7 +17,7 @@ type PackingForm = {
     finalRating: number;
   };
  rmInputs: {
-    [rmName: string]: {
+    [rmId: string]: {
       [chamberId: string]: number;
     };
   };
@@ -25,7 +25,7 @@ type PackingForm = {
   rmMeta: rmMeta[]
 
   rmConsumption: {
-    [rmName: string]: {
+    [rmId: string]: {
       [chamberId: string]: {
         outer_used: number;
         rating: number;
@@ -49,7 +49,7 @@ export type CreatePackingEventDTO = {
     finalRating: number;
   };
   rmConsumption: {
-    [rmName: string]: {
+    [rmId: string]: {
       [chamberId: string]: {
         outer_used: number;
         rating: number;
@@ -73,7 +73,7 @@ type InternalPackingForm = {
     finalRating: number;
   };
 rmInputs: {
-  [rmName: string]: {
+  [rmId: string]: {
     [chamberId: string]: number;
   };
 };
@@ -98,7 +98,7 @@ export type PackingFormController = {
   hasError: (path: string) => boolean;
   getError: (path: string) => string | undefined;
   setField: (path: string, value: any) => void;
-  setRMInput: (rmName: string, chamberId: string, value: number) => void;
+  setRMInput: (rmId: string, chamberId: string, value: number) => void;
   setRMMeta: (meta: rmMeta[]) => void;
   validateForm: () => ValidationResult;
   resetForm: () => void;
@@ -106,6 +106,7 @@ export type PackingFormController = {
   canSubmit: boolean;
   setPackagingPlan: (plan: PackagingPlanItem[]) => void;
   getErrors: () => Record<string, string>;
+  removePackagingPlan: (packageKey: string) => void;
 };
 
 export type PackingSubmitPayload = CreatePackingEventDTO;
@@ -261,13 +262,13 @@ return true;
   }, []);
 
 const setRMInput = useCallback(
-  (rmName: string, chamberId: string, value: number) => {
+  (rmId: string, chamberId: string, value: number) => {
     setValues(prev => ({
       ...prev,
       rmInputs: {
         ...prev.rmInputs,
-        [rmName]: {
-          ...(prev.rmInputs?.[rmName] || {}),
+        [rmId]: {
+          ...(prev.rmInputs?.[rmId] || {}),
           [chamberId]: value,
         },
       },
@@ -290,6 +291,15 @@ const setRMInput = useCallback(
     }));
   }, []);
 
+    const removePackagingPlan = useCallback((packageKey: string) => {
+    setValues(prev => ({
+      ...prev,
+      packagingPlan: prev.packagingPlan.filter(
+        p => `${p.packet.size}-${p.packet.unit}` !== packageKey
+      )
+    }));
+  }, []);
+
   const controller = useMemo(
     () => ({
       values,
@@ -306,6 +316,7 @@ const setRMInput = useCallback(
       setRMInput,
       setRMMeta,
       setPackagingPlan,
+       removePackagingPlan,
     }),
     [
       values,
@@ -322,6 +333,7 @@ const setRMInput = useCallback(
       setRMInput,
       setRMMeta,
       setPackagingPlan,
+      removePackagingPlan,
     ]
   );
 
@@ -355,37 +367,6 @@ function validateField(path: string, value: any): string | null {
    Helpers
 ====================================================== */
 
-function sumConsumedKg(
-  rmConsumption: PackingForm["rmConsumption"],
-  rmMeta: rmMeta[]
-) {
-  let totalKg = 0;
-
-  rmMeta.forEach((rm) => {
-    const chambers = rmConsumption[rm.rmName];
-    if (!chambers) return;
-
-    Object.values(chambers).forEach((c) => {
-      totalKg += Number(c.outer_used || 0); 
-    });
-  });
-
-  return totalKg;
-}
-
-function sumProducedKg(plan: PackagingPlanItem[]) {
-  return plan.reduce((sum, p) => {
-    const packetKg =
-      p.packet.unit === "gm"
-        ? p.packet.size / 1000
-        : p.packet.size;
-
-    const kgPerBag = packetKg * p.packet.packetsPerBag;
-    return sum + kgPerBag * p.bagsProduced;
-  }, 0);
-}
-
-
 function buildRMConsumption(
   rmMeta: rmMeta[],
   rmInputs: PackingForm["rmInputs"]
@@ -393,7 +374,7 @@ function buildRMConsumption(
   const result: PackingForm["rmConsumption"] = {};
 
   rmMeta.forEach((rm) => {
-    const rmInputForRM = rmInputs[rm.rmName];
+    const rmInputForRM = rmInputs[rm.rmId];
     if (!rmInputForRM) return;
 
     const chambers: Record<
@@ -412,7 +393,7 @@ function buildRMConsumption(
     });
 
     if (Object.keys(chambers).length > 0) {
-      result[rm.rmName] = chambers;
+      result[rm.rmId] = chambers;
     }
   });
 

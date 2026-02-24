@@ -5,8 +5,8 @@ export function formatDate(date) {
         const dateObj = new Date(date);
         if (isNaN(dateObj.getTime())) return '-';
         
-        const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
-        return new Intl.DateTimeFormat('en-US', options).format(dateObj);
+        const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+        return new Intl.DateTimeFormat('en-IN', options).format(dateObj);
     } catch (error) {
         return '-';
     }

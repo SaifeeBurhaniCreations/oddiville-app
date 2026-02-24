@@ -136,10 +136,6 @@ const ChamberDetailed = ({
 
         const disabled = totalQuantity <= 0;
 
-        const ratingStrings = chamberEntries
-          .map((c) => c.rating)
-          .filter(Boolean);
-
         const isOtherCategory = item.category === "other";
         const isMaterialCategory = item.category === "material";
         const isPackedCategory = item.category === "packed";
@@ -147,17 +143,14 @@ const ChamberDetailed = ({
         const matchedPackageImage =
           packageImageMap[normalize(item.product_name)] || "";
 
-        const ratingDisplay = isOtherCategory
-          ? (ratingStrings[0] ?? "N/A")
-          : ratingStrings.length
-            ? `★ ${
-                ratingStrings.length > 1
-                  ? `${Math.min(...ratingStrings.map(Number))} - ${Math.max(
-                      ...ratingStrings.map(Number),
-                    )}`
-                  : ratingStrings[0]
-              }`
-            : "";
+          const ratingValue = item.rating;
+
+       const ratingDisplay =
+          ratingValue != null
+            ? `★ ${ratingValue}`
+            : isOtherCategory
+              ? "N/A"
+              : "";
 
         const href: keyof RootStackParamList | undefined = isOtherCategory
           ? "other-products-detail"
@@ -184,7 +177,7 @@ const ChamberDetailed = ({
           id: item.id,
           name: item.product_name,
           description: `${totalQuantity} ${item.unit}`,
-          quantity: `${totalQuantity}${item.unit}`,
+          quantity: `${totalQuantity}${item.unit} | ${ratingDisplay}`,
           rating: ratingDisplay,
 
           category: item.category,
@@ -195,7 +188,7 @@ const ChamberDetailed = ({
           chambers: isOtherCategory ? item.chamber : chamberEntries,
 
           detailByRating: chamberEntries.map((c) => ({
-            rating: c.rating,
+            rating: String(item.rating),
             quantity: `${c.quantity}${item.unit}`,
           })),
 

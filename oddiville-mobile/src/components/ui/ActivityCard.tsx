@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { getColor } from "@/src/constants/colors";
-import { ActivityCardProps, ButtonActionType } from "@/src/types";
+import { ActivityCardProps, ButtonActionType, IconKey } from "@/src/types";
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import * as SecureStore from "expo-secure-store";
 
@@ -17,6 +17,7 @@ import { useMarkNotificationRead } from "@/src/hooks/useNotifications";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/src/redux/store";
 import { updateBottomSheetMeta } from "@/src/redux/slices/bottomsheet.slice";
+import { ICON_MAP } from "@/src/lookups/icons";
 
 const ActivityCard = ({
   activity,
@@ -108,6 +109,11 @@ const ActivityCard = ({
   const willButtonDisabled =
     metaData && metaData.disableButton && metaData.disableButton === true;
 
+  const SideDetailsIconComponent =
+    sideDetails && sideDetails.iconKey && sideDetails.iconKey in ICON_MAP
+      ? ICON_MAP[sideDetails.iconKey as IconKey]
+      : null;
+
   return (
     <Pressable style={styles.container} onPress={handleCardPress}>
       <BgSvg style={styles.cardBackgroundImage} />
@@ -148,7 +154,9 @@ const ActivityCard = ({
             </View>
             {sideDetails && (
               <View style={styles.detailRow}>
-                {sideDetails.icon}
+
+                {SideDetailsIconComponent && <SideDetailsIconComponent />}
+
                 <H5>{sideDetails.name}:</H5>
                 <B4>{sideDetails.value}</B4>
               </View>
@@ -163,67 +171,80 @@ const ActivityCard = ({
 
           {activity && dispatchDetails && dispatchDetails?.length > 0 && (
             <View style={styles.dispatchSection}>
-              {dispatchDetails?.map((detail, idx) => (
-                <React.Fragment key={idx}>
-                  <View style={styles.helperItem}>
-                    {idx % 2 === 0 ? (
-                      <>
-                        <View
-                          style={[
-                            styles.dispatchIcon,
-                            styles.dispatchIconActive,
-                          ]}
-                        >
-                          {detail.icon}
-                        </View>
-                        <B5 color={getColor("green", 700)}>{detail.value}</B5>
-                      </>
-                    ) : (
-                      <>
-                        <B5 color={getColor("green", 700)}>{detail.value}</B5>
-                        <View
-                          style={[
-                            styles.dispatchIcon,
-                            dateDifference?.toLowerCase().includes("left")
-                              ? styles.dispatchIconInActive
-                              : styles.dispatchIconActive,
-                          ]}
-                        >
-                          {detail.icon}
-                        </View>
-                      </>
-                    )}
-                  </View>
-                  {idx < dispatchDetails?.length - 1 && (
-                    <View style={styles.dispatchDateLayout}>
-                      <View style={styles.dispatchDateHyphen} />
-                      <View style={styles.dispatchDateDifferencer}>
-                        <SubHeadingV3 color={getColor("green")}>
-                          {dateDifference}
-                        </SubHeadingV3>
-                      </View>
-                      <View style={styles.dispatchDateHyphen} />
+              {dispatchDetails?.map((detail, idx) => {
+                const DetailsIconComponent =
+                  detail && detail.iconKey && detail.iconKey in ICON_MAP
+                    ? ICON_MAP[detail.iconKey as IconKey]
+                    : null;
+                return (
+                  <React.Fragment key={idx}>
+                    <View style={styles.helperItem}>
+                      {idx % 2 === 0 ? (
+                        <>
+                          <View
+                            style={[
+                              styles.dispatchIcon,
+                              styles.dispatchIconActive,
+                            ]}
+                          >
+                            {DetailsIconComponent && <DetailsIconComponent />}
+                          </View>
+                          <B5 color={getColor("green", 700)}>{detail.value}</B5>
+                        </>
+                      ) : (
+                        <>
+                          <B5 color={getColor("green", 700)}>{detail.value}</B5>
+                          <View
+                            style={[
+                              styles.dispatchIcon,
+                              dateDifference?.toLowerCase().includes("left")
+                                ? styles.dispatchIconInActive
+                                : styles.dispatchIconActive,
+                            ]}
+                          >
+                            {DetailsIconComponent && <DetailsIconComponent />}
+                          </View>
+                        </>
+                      )}
                     </View>
-                  )}
-                </React.Fragment>
-              ))}
+                    {idx < dispatchDetails?.length - 1 && (
+                      <View style={styles.dispatchDateLayout}>
+                        <View style={styles.dispatchDateHyphen} />
+                        <View style={styles.dispatchDateDifferencer}>
+                          <SubHeadingV3 color={getColor("green")}>
+                            {dateDifference}
+                          </SubHeadingV3>
+                        </View>
+                        <View style={styles.dispatchDateHyphen} />
+                      </View>
+                    )}
+                  </React.Fragment>
+                )
+              })}
             </View>
           )}
 
           {isBottomDetails && (
             <View style={[styles.twoColumnRow, styles.border]}>
-              {bottomDetails.map((item, i) => (
-                <React.Fragment key={i}>
-                  <View style={styles.detailRow}>
-                    {item.icon}
-                    <H5>{item.name}:</H5>
-                    <B4>{item.value}</B4>
-                  </View>
-                  {i < bottomDetails?.length - 1 && (
-                    <View style={styles.separator} />
-                  )}
-                </React.Fragment>
-              ))}
+              {bottomDetails.map((item, i) => {
+                const ItemIconComponent =
+                  item && item.iconKey && item.iconKey in ICON_MAP
+                    ? ICON_MAP[item.iconKey as IconKey]
+                    : null;
+                return (
+                  <React.Fragment key={i}>
+                    <View style={styles.detailRow}>
+                      {ItemIconComponent && <ItemIconComponent />}
+
+                      <H5>{item.name}:</H5>
+                      <B4>{item.value}</B4>
+                    </View>
+                    {i < bottomDetails?.length - 1 && (
+                      <View style={styles.separator} />
+                    )}
+                  </React.Fragment>
+                )
+              })}
             </View>
           )}
         </View>

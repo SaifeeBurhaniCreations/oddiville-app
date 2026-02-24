@@ -40,7 +40,6 @@ import { clearAllFilters } from "../redux/slices/bottomsheet/filters.slice";
 import { setSelectionDone } from "../redux/slices/bottomsheet/policies.slice";
 import { useImageStore } from "../stores/useImageStore";
 import { setIsChoosingChambers } from "../redux/slices/bottomsheet/product-package-chamber.slice";
-import { getTareWeight } from "../utils/packing/weightutils";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import * as IntentLauncher from "expo-intent-launcher";
@@ -177,14 +176,10 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
     "add-product-package": async () => {
       try {
         const quantityNumber = Number(productPackageForm.values.quantity);
-        const pkgSize = Number(productPackageForm.values.size);
-        const pkgUnit = productPackageForm.values.unit;
-        const tare = getTareWeight("pouch", pkgSize, pkgUnit);
-        const quantityKg = (quantityNumber * tare) / 1000;
 
         const productPackagePayload = {
           ...productPackageForm.values,
-          quantity: String(quantityKg.toFixed(3)),
+          quantity: String(quantityNumber),
         };
 
         const result = productPackageForm.validateForm(productPackagePayload);
@@ -269,15 +264,11 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
         const [id, product_name] = meta.id.split(":");
 
         const count = Number(packageSizeForm.values.quantity);
-        const pkgSize = Number(packageSizeForm.values.size);
-        const pkgUnit = packageSizeForm.values.unit;
-
-        const tare = getTareWeight("pouch", pkgSize, pkgUnit);
-        const quantityKg = (count * tare) / 1000;
 
         const result = packageSizeForm.validateForm({
           ...packageSizeForm.values,
-          quantity: String(quantityKg.toFixed(3)),
+          quantity: String(count)
+
         });
 
         if (!result.success) return;
@@ -296,7 +287,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
               product_name,
               size: result.data.size,
               unit,
-              quantity: String(quantityKg.toFixed(3)),
+             quantity: String(count)
             },
           },
           {
@@ -325,11 +316,9 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
         const { number, unit } = splitValueAndUnit(weight);
 
         const count = Number(packageQuantityForm.values.quantity);
-        const tare = getTareWeight("pouch", number, unit as "kg" | "gm");
-        const quantityKg = (count * tare) / 1000;
 
         const result = packageQuantityForm.validateForm({
-          quantity: String(quantityKg.toFixed(3)),
+          quantity: String(count)
         });
 
         if (!result.success) return;
@@ -340,7 +329,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
             data: {
               size: String(number),
               unit: unit as "kg" | "gm" | null,
-              quantity: String(quantityKg.toFixed(3)),
+              quantity: String(count)
             },
           },
           {

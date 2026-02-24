@@ -11,6 +11,7 @@ import FemaleIcon from "../components/icons/common/FemaleIcon";
 import ClockIcon from "../components/icons/common/ClockIcon";
 
 import { IconProps } from "@/src/types";
+import Calendar12Icon from "../components/icons/page/Calendar12Icon";
 
 export const ICON_MAP = {
   cash: CashIcon,
@@ -24,6 +25,7 @@ export const ICON_MAP = {
   male: MaleIcon,
   female: FemaleIcon,
   clock: ClockIcon,
+  calendar: Calendar12Icon,
 } as const satisfies Record<string, React.FC<IconProps>>;
 
 export type IconKey = keyof typeof ICON_MAP;

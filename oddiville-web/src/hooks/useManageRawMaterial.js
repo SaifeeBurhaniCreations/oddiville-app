@@ -196,6 +196,7 @@ const useManageRawMaterial = () => {
     e.preventDefault();
 
     const validationResult = validateClientForm();
+    
     if (!validationResult.success) {
       toast.error("Please correct the client details errors.");
       return;
@@ -205,37 +206,38 @@ const useManageRawMaterial = () => {
       toast.error("Please add at least one product before saving.");
       return;
     }
-
+    
+    
     setIsLoading(true);
-
+    
     try {
       /* =====================
-         1️⃣ UPDATE DATA ONLY
-         ===================== */
+      1️⃣ UPDATE DATA ONLY
+      ===================== */
       const submitValues = validationResult.data;
       const dataPayload = new FormData();
-
+      
       dataPayload.append("name", submitValues.name);
       dataPayload.append("company", submitValues.company);
       dataPayload.append("address", submitValues.address);
       dataPayload.append("phone", submitValues.phone);
-
+      
       const finalProducts = productList
-        .filter(p => !p._isDeleted)
-        .map(({ _rowId, _isNew, _isDeleted, _serverId, sample_image_file, ...rest }) => ({
-          ...rest,
-          id: _serverId ?? undefined,
-          ...(sample_image_file ? { sample_image: undefined } : {}),
-        }));
-
+      .filter(p => !p._isDeleted)
+      .map(({ _rowId, _isNew, _isDeleted, _serverId, sample_image_file, ...rest }) => ({
+        ...rest,
+        id: _serverId ?? undefined,
+        ...(sample_image_file ? { sample_image: undefined } : {}),
+      }));
+      
       const deletedIds = productList
-        .filter(p => p._isDeleted && p._serverId)
-        .map(p => p._serverId);
-
+      .filter(p => p._isDeleted && p._serverId)
+      .map(p => p._serverId);
+      
       dataPayload.append("deleted_products", JSON.stringify(deletedIds));
-
+      
       // dataPayload.append("products", JSON.stringify(finalProducts));
-
+      
       let visibleIndex = 0;
 
       productList.forEach((product) => {
@@ -264,6 +266,7 @@ const useManageRawMaterial = () => {
 
       const isEditPage = Boolean(currentId && currentId !== "undefined");
 
+
       if (isEditPage) {
         await modify({ formData: dataPayload, id: currentId });
         toast.success("Updated successfully!");
@@ -273,7 +276,7 @@ const useManageRawMaterial = () => {
 
       }
 
-      navigate("/raw-material-other");
+      // navigate("/raw-material-other");
     } catch (error) {
       toast.error("Error while saving client.");
       console.error(error);
@@ -360,12 +363,14 @@ const useManageRawMaterial = () => {
     [productList]
   );
 
-  useEffect(() => {
-    if (!productList.length) return;
-    if (editingRowId) return;
+useEffect(() => {
+  if (!id) return; 
+  if (!productList.length) return;
+  if (editingRowId) return;
 
-    handleEditProduct(productList[0]._rowId);
-  }, [productList]);
+  handleEditProduct(productList[0]._rowId);
+}, [productList, id]);
+
 
   const productdata = {
     chambers: chambers?.filter((c) => c.tag === "frozen"),

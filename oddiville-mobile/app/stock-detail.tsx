@@ -22,27 +22,7 @@ import { B4 } from "@/src/components/typography/Typography";
 import { RootState } from "@/src/redux/store";
 import { safeNumber, toKg } from "@/src/utils/chamberstock/stockUtils";
 import Require from "@/src/components/authentication/Require";
-
-type PackedItemStorage = {
-  chamberId: string;
-  bagsStored: number;
-  chamberName?: string;
-};
-
-type PackedItemEvent = {
-  id: string;
-  product_name: string;
-  sku_id: string;
-  sku_label: string;
-  packet: {
-    size: number;
-    unit: "gm" | "kg";
-    packetsPerBag: number;
-  };
-  bags_produced: number;
-  total_packets: number;
-  storage: PackedItemStorage[];
-};
+import ChamberIcon from "@/src/components/icons/common/ChamberIcon";
 
 const StockDetail = () => {
   const { product_name } = useParams("stock-detail", "product_name");
@@ -60,101 +40,72 @@ const StockDetail = () => {
 
   const { data: packedItems, isLoading: packedLoading } = usePackedItems();
 
-  const stock = chamberStock?.[0];
   const emptyStateData = getEmptyStateData("no-stock-detail");
 
-  if (!stock || !chamberId) {
-    return (
-      <View style={styles.center}>
-        <EmptyState stateData={emptyStateData} />
-      </View>
-    );
-  }
+  /* MATERIAL */
+  const materialBlock = useMemo(() => {
+    if (!chamberStock || !chamberId) return null;
 
-  /* =========================
-     MATERIAL (chamber stock)
-     ========================= */
-  let materialBlock = null;
+    const materialStocks = chamberStock.filter((s) => s.category === "material");
 
-  if (stock.category === "material" && !Array.isArray(stock.packaging)) {
-    const materialPackaging = stock.packaging as Packaging;
+    const blocks = materialStocks
+      .map((stock) => {
+        const chamberEntry = stock.chamber?.find((ch) => ch.id === chamberId);
+        if (!chamberEntry) return null;
 
-    const currentChamber = stock.chamber.find((ch) => ch.id === chamberId);
+        const packaging = stock.packaging as Packaging;
+        if (!packaging) return null;
 
-    if (!currentChamber) {
-      return (
-        <View style={styles.center}>
-          <EmptyState stateData={emptyStateData} />
-        </View>
-      );
-    }
+        const chamberKg = safeNumber(Number(chamberEntry.quantity));
 
-    const chamberRows = stock.chamber.filter(
-      (ch) => ch.id === chamberId && ch.rating === currentChamber.rating,
-    );
+        const bagSizeKg = toKg(
+          packaging.size.value,
+          packaging.size.unit as "kg" | "gm",
+        );
 
-    const chamberKg = chamberRows.reduce(
-      (sum, ch) => sum + safeNumber(Number(ch.quantity)),
-      0,
-    );
+        const chamberBags = bagSizeKg > 0 ? Math.floor(chamberKg / bagSizeKg) : 0;
+const looseKg = bagSizeKg > 0 ? +(chamberKg % bagSizeKg).toFixed(2) : 0;
 
-    const bagSizeKg = toKg(
-      materialPackaging.size.value,
-      materialPackaging.size.unit as "kg" | "gm",
-    );
+        const materialIcon = mapPackageIcon({
+          size: packaging.size.value,
+          unit: packaging.size.unit as any,
+        });
 
-    const chamberBags = bagSizeKg > 0 ? Math.floor(chamberKg / bagSizeKg) : 0;
+        return (
+          <View key={stock.id} style={{ gap: 8, marginBottom: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <StarIcon color={getColor("green", 700)} size={16} />
+              <B4 style={{ fontWeight: "700" }}>Rating: {stock.rating}</B4>
+            </View>
 
-    const allowedUnits = ["kg", "gm", "qn", "unit"] as const;
+            <ChamberCard
+              id={stock.id}
+              name={`${chamberBags} ${packaging.type}${looseKg ? ` (+ ${looseKg} kg)` : ""}`}
+              category="material"
+              description={`${chamberKg} kg`}
+              plainDescription
+              onPressOverride={() => {}}
+              leadingIcon={materialIcon}
+            />
+          </View>
+        );
+      })
+      .filter(Boolean);
 
-    type Unit = (typeof allowedUnits)[number];
+    return blocks.length ? <View style={{ gap: 12 }}>{blocks}</View> : null;
+  }, [chamberStock, chamberId]);
 
-    const unit = allowedUnits.includes(materialPackaging.size.unit as Unit)
-      ? (materialPackaging.size.unit as Unit)
-      : undefined;
+  /* PACKED (event based) */
+  const packedBlock = useMemo(() => {
+    if (!packedItems || !product_name || !chamberId) return null;
 
-    const materialIcon = mapPackageIcon({
-      size: materialPackaging.size.value,
-      unit,
-    });
-
-    materialBlock = (
-      <View style={{ gap: 8, marginBottom: 16 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <StarIcon color={getColor("green", 700)} size={16} />
-          <B4 style={{ fontWeight: "700" }}>Rating: {currentChamber.rating}</B4>
-        </View>
-
-        <ChamberCard
-          id={chamberId}
-          name={`${chamberBags} ${materialPackaging.type}`}
-          category="material"
-          description={`${chamberKg} kg`}
-          plainDescription
-          onPressOverride={() => {}}
-          leadingIcon={materialIcon}
-        />
-      </View>
-    );
-  }
-
-  /* =========================
-     PACKED (event based)
-     ========================= */
-  const packedByChamber = useMemo(() => {
-    if (!packedItems || !product_name) return [];
-
-    return packedItems
+    const items = packedItems
       .filter((item) => item.product_name === product_name)
       .flatMap((item) =>
         item.storage
           .filter((s) => s.chamberId === chamberId)
           .map((s) => {
-            const packetKg =
-              item.packet.unit === "gm"
-                ? item.packet.size / 1000
-                : item.packet.size;
-
+            const packetKg = item.packet.unit === "gm" ? item.packet.size / 1000 : item.packet.size;
             const totalPackets = s.bagsStored * item.packet.packetsPerBag;
 
             return {
@@ -163,24 +114,21 @@ const StockDetail = () => {
               bags: s.bagsStored,
               packets: totalPackets,
               totalKg: totalPackets * packetKg,
-              icon: mapPackageIcon({
-                size: item.packet.size,
-                unit: item.packet.unit,
-              }),
+              icon: mapPackageIcon({ size: item.packet.size, unit: item.packet.unit }),
             };
           }),
       );
-  }, [packedItems, product_name, chamberId]);
 
-  const packedBlock =
-    stock.category === "packed" && packedByChamber.length > 0 ? (
+    if (!items.length) return null;
+
+    return (
       <View style={{ gap: 12 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <StarIcon color={getColor("green", 700)} size={16} />
+          <ChamberIcon color={getColor("green", 700)} size={16} />
           <B4 style={{ fontWeight: "700" }}>Packed in this chamber</B4>
         </View>
 
-        {packedByChamber.map((pkg) => (
+        {items.map((pkg) => (
           <ChamberCard
             key={pkg.key}
             id={pkg.key}
@@ -193,7 +141,16 @@ const StockDetail = () => {
           />
         ))}
       </View>
-    ) : null;
+    );
+  }, [packedItems, product_name, chamberId]);
+
+  if (!chamberId) {
+    return (
+      <View style={styles.center}>
+        <EmptyState stateData={emptyStateData} />
+      </View>
+    );
+  }
 
   return (
     <Require anyOf={["production", "package", "sales"]}>
@@ -218,18 +175,13 @@ const StockDetail = () => {
 
             <ScrollView
               refreshControl={
-                <RefreshControl
-                  refreshing={isFetching || packedLoading}
-                  onRefresh={refetch}
-                />
+                <RefreshControl refreshing={isFetching || packedLoading} onRefresh={refetch} />
               }
             >
               {materialBlock}
               {packedBlock}
 
-              {!materialBlock && !packedBlock && (
-                <EmptyState stateData={emptyStateData} />
-              )}
+              {!materialBlock && !packedBlock && <EmptyState stateData={emptyStateData} />}
             </ScrollView>
           </View>
         </View>

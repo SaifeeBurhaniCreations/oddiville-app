@@ -21,17 +21,15 @@ const storageSlice = createSlice({
   name: "storage",
   initialState,
   reducers: {
-    setRatingForRM: (
-      state,
-      action: PayloadAction<{
-        rawMaterial: string;
-        rating: RatingFilter;
-      }>
-    ) => {
-      state.ratingByRM[action.payload.rawMaterial] =
-        action.payload.rating;
-    },
-
+setRatingForRM: (
+  state,
+  action: PayloadAction<{
+    rawMaterialId: string;
+    rating: RatingFilter;
+  }>
+) => {
+  state.ratingByRM[action.payload.rawMaterialId] = action.payload.rating;
+},
     clearRatings: (state) => {
       state.ratingByRM = {};
     },

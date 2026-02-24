@@ -19,8 +19,6 @@ import EmptyState from "@/src/components/ui/EmptyState";
 import ChamberCard from "@/src/components/ui/ChamberCardComp";
 import { useDryChamberSummary } from "@/src/hooks/dryChamber";
 import BackButton from "@/src/components/ui/Buttons/BackButton";
-import { useAuth } from "@/src/context/AuthContext";
-import { resolveAccess } from "@/src/utils/policiesUtils";
 import {
   CHAMBERS_BACK_ROUTES,
   resolveBackRoute,
@@ -36,7 +34,7 @@ const chamberSize = screenWidth / 2 - 30;
 
 const ChamberScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
-  
+
   const caps = useAppCapabilities();
 
   const {
@@ -49,152 +47,144 @@ const ChamberScreen = () => {
     isFetching: stockLoading,
     refetch: refetchStocks,
   } = useChamberStock();
-  const { summaries = [] } = useDryChamberSummary();
+  const { summaries = [], refetch: refetchDrySummary } = useDryChamberSummary();
 
   const stockData: ChamberStock[] = data ?? [];
+  
+const frozenStockMap = useMemo(() => {
+  const map = new Map<string, number>();
 
-  const parsedChambers = useMemo(() => {
-    if (!chambersData || !stockData) return [];
+  (stockData ?? []).forEach((stockItem: ChamberStock) => {
+    (stockItem.chamber ?? []).forEach((c: ChamberEntry) => {
+      const prev = map.get(c.id) || 0;
+      map.set(c.id, prev + Number(parseFloat(c.quantity || "0") || 0));
+    });
+  });
 
-    const summaryMap = new Map<string, { totalQuantity: number }>(
-      (summaries ?? []).map((s) => [
-        String(s.chamberId),
-        { totalQuantity: s.totalQuantity },
-      ])
-    );
+  return map;
+}, [stockData]);
 
-    return chambersData.map(
-      (chamber: {
-        id: string;
-        chamber_name: string;
-        capacity: number;
-        tag?: string;
-      }) => {
-        const chamberId = chamber.id;
+const parsedChambers = useMemo(() => {
+  if (!chambersData) return [];
 
-        const relatedStocks = stockData?.filter(
-          (stockItem: { chamber: { id: string }[] }) =>
-            stockItem.chamber?.some((c) => c.id === chamberId)
-        );
+  const summaryMap = new Map<string, number>(
+    (summaries ?? []).map((s) => [String(s.chamberId), s.totalQuantity])
+  );
 
-        const filledFromStocks = (relatedStocks ?? []).reduce((sum: number, stockItem: ChamberStock) => {
+  return chambersData.map((chamber) => {
+    const chamberId = chamber.id;
 
-            const chamberSum = (stockItem.chamber ?? [])
-              .filter((c: ChamberEntry) => c.id === chamberId)
-              .reduce(
-                (acc, c) => acc + Number(parseFloat(c.quantity || "0") || 0),
-                0
-              );
-            return sum + chamberSum;
-          },
-          0
-        );
+    const filledFromStocks = frozenStockMap.get(chamberId) ?? 0;
+    const filledFromSummary = summaryMap.get(chamberId) ?? null;
 
-        const summary = summaryMap.get(String(chamberId));
-        const filledFromSummary = summary
-          ? Number(summary.totalQuantity || 0)
-          : null;
+    let filled: number;
 
-        const useSummary = chamber.tag === "dry" && filledFromSummary !== null;
-        const filled = useSummary ? filledFromSummary : filledFromStocks;
+    if (chamber.tag === "dry") {
+      filled = filledFromSummary ?? 0;
+    } else {
+      filled = filledFromStocks;
+    }
 
-        return {
-          id: chamberId,
-          name: chamber.chamber_name,
-          capacity: chamber.capacity,
-          filled,
-          _filledFromStocks: filledFromStocks,
-          _filledFromSummary: filledFromSummary,
-          tag: chamber.tag,
-        };
-      }
-    );
-  }, [chambersData, stockData, summaries]);
+    return {
+      id: chamberId,
+      name: chamber.chamber_name,
+      capacity: chamber.capacity,
+      filled,
+      tag: chamber.tag,
+    };
+  });
+}, [chambersData, frozenStockMap, summaries]);
 
   const emptyStateData = getEmptyStateData("no-chamber-stock");
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await Promise.all([refetchChambers?.(), refetchStocks?.()]);
-    } catch (e) {}
+      await Promise.all([
+        refetchChambers?.(),
+        refetchStocks?.(),
+        refetchDrySummary?.()
+      ]);
+
+    } catch (e) { }
     setRefreshing(false);
-  }, [refetchChambers, refetchStocks]);
+  }, [refetchChambers, refetchStocks, refetchDrySummary]);
+
 
   const canAccessChambers =
-  caps.production.view ||
-  caps.package.view ||
-  caps.sales.view ||
-  caps.isAdmin;
+    caps.production.view ||
+    caps.package.view ||
+    caps.sales.view ||
+    caps.isAdmin;
 
-if (!canAccessChambers) return <NoAccess />;
+  if (!canAccessChambers) return <NoAccess />;
 
-const backRoute = resolveBackRoute(
-  caps.access,
-  CHAMBERS_BACK_ROUTES,
-  resolveDefaultRoute(caps.access)
-);
+  const backRoute = resolveBackRoute(
+    caps.access,
+    CHAMBERS_BACK_ROUTES,
+    resolveDefaultRoute(caps.access)
+  );
 
   return (
-  <Require anyOf={["production", "package", "sales"]}>
+    <Require anyOf={["production", "package", "sales"]}>
       <View style={styles.rootContainer}>
-      <PageHeader page={"Chamber"} />
-      <View style={styles.wrapper}>
-        <View style={[styles.paddingTLR16]}>
-          <BackButton label="Chambers" backRoute={backRoute} />
-        </View>
-        <Tabs
-          tabTitles={["Overview", "Detail"]}
-          color="green"
-          style={[
-            styles.flexGrow,
-            { paddingTop: 16, flexDirection: "column", gap: 24 },
-          ]}
-        >
-          <View style={styles.flexGrow}>
-            <View style={[styles.flexGrow, styles.VStack]}>
-              {parsedChambers?.length === 0 && (
-                <View style={{ alignItems: "center" }}>
-                  <EmptyState stateData={emptyStateData} />
-                </View>
-              )}
-              <FlatList
-                data={parsedChambers}
-                renderItem={({ item }) => (
-                  <ChamberCard
-                    filled={item.filled}
-                    capacity={item.capacity}
-                    name={item.name}
-                  />
+        <PageHeader page={"Chamber"} />
+        <View style={styles.wrapper}>
+          <View style={[styles.paddingTLR16]}>
+            <BackButton label="Chambers" backRoute={backRoute} />
+          </View>
+          <Tabs
+            tabTitles={["Overview", "Detail"]}
+            color="green"
+            style={[
+              styles.flexGrow,
+              { paddingTop: 16, flexDirection: "column", gap: 24 },
+            ]}
+          >
+            <View style={styles.flexGrow}>
+              <View style={[styles.flexGrow, styles.VStack]}>
+                {parsedChambers?.length === 0 && (
+                  <View style={{ alignItems: "center" }}>
+                    <EmptyState stateData={emptyStateData} />
+                  </View>
                 )}
-                keyExtractor={(item) => item.id}
-                numColumns={2}
-                columnWrapperStyle={styles.row}
-                contentContainerStyle={styles.grid}
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                  <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                    colors={[getColor("green")]}
-                  />
-                }
-              />
+                <FlatList
+                  data={parsedChambers}
+                  renderItem={({ item }) => (
+                    <ChamberCard
+                      filled={item.filled}
+                      capacity={item.capacity}
+                      name={item.name}
+                    />
+                  )}
+                  keyExtractor={(item) => item.id}
+                  numColumns={2}
+                  columnWrapperStyle={styles.row}
+                  contentContainerStyle={styles.grid}
+                  showsVerticalScrollIndicator={false}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={refreshing}
+                      onRefresh={onRefresh}
+                      colors={[getColor("green")]}
+                    />
+                  }
+                />
+              </View>
             </View>
-          </View>
-          <View style={styles.flexGrow}>
-            <View style={[styles.flexGrow, styles.VStack]}>
-              <ChamberDetailed
-                chamberLoading={chambersLoading}
-                stockLoading={stockLoading}
-              />
+            <View style={styles.flexGrow}>
+              <View style={[styles.flexGrow, styles.VStack]}>
+                <ChamberDetailed
+                  chamberLoading={chambersLoading}
+                  stockLoading={stockLoading}
+                />
+              </View>
             </View>
-          </View>
-        </Tabs>
+          </Tabs>
+        </View>
+        {(chambersLoading || stockLoading) && <OverlayLoader />}
       </View>
-            {(chambersLoading || stockLoading) && <OverlayLoader />}
-    </View>
-</Require>
+    </Require>
   );
 };
 

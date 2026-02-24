@@ -1,6 +1,6 @@
 import { formatDate } from "date-fns";
 
-const ProductListTable = ({ productList, handleEditProduct, handleDeleteProduct }) => {
+const ProductListTable = ({ productList, handleEditProduct, handleDeleteProduct, getBanners }) => {
     if (productList.length === 0) return null;
 
     return (    
@@ -10,6 +10,7 @@ const ProductListTable = ({ productList, handleEditProduct, handleDeleteProduct 
                 <table className="table table-bordered table-hover align-middle">
                     <thead className="table-light">
                         <tr>
+                            <th>Image</th>
                             <th>Name</th>
                             <th>Dispatch Date</th>
                             <th>Rent/Kg</th>
@@ -19,7 +20,10 @@ const ProductListTable = ({ productList, handleEditProduct, handleDeleteProduct 
                     </thead>
                     <tbody>
                         {productList.map((prod, i) => (
-                            <tr key={i}>
+                            <tr key={prod._rowId}>
+                                <td className="d-flex justify-content-center">
+                                    <img src={getBanners || "/assets/img/png/fallback_img.png"} alt="product" width={48} height={48} />
+                                </td>
                                 <td>
                                     <span className="font-weight-bold">{prod.product_name}</span>
                                 </td>
@@ -35,13 +39,13 @@ const ProductListTable = ({ productList, handleEditProduct, handleDeleteProduct 
                                 <td>
                                     <button 
                                         className="btn btn-sm btn-warning me-2" 
-                                        onClick={() => handleEditProduct(i)}
+                                        onClick={() => handleEditProduct(prod._rowId)}
                                     >
                                         Edit
                                     </button>
                                     <button 
                                         className="btn btn-sm btn-danger" 
-                                        onClick={() => handleDeleteProduct(i)}
+                                        onClick={() => handleDeleteProduct(prod._rowId)}
                                     >
                                         Delete
                                     </button>

@@ -37,7 +37,7 @@ module.exports = (sequelize, Sequelize) => {
       },
       est_delivered_date: {
         type: Sequelize.DATE,
-        allowNull: false,
+        allowNull: true,
       },
       delivered_date: {
         type: Sequelize.DATE,
@@ -59,38 +59,6 @@ module.exports = (sequelize, Sequelize) => {
       truck_details: {
         type: Sequelize.JSONB,
         allowNull: true,
-        validate: {
-          isValidTruckDetails(value) {
-            if (value == null) return;
-
-            const requiredFields = [
-              "agency_name",
-              "driver_name",
-              "phone",
-              "type",
-              "number",
-            ];
-
-            for (const field of requiredFields) {
-              if (!(field in value)) {
-                throw new Error(
-                  `Truck detail missing required field: ${field}`
-                );
-              }
-            }
-
-            if (typeof value.agency_name !== "string")
-              throw new Error("agency_name must be a string");
-            if (typeof value.driver_name !== "string")
-              throw new Error("driver_name must be a string");
-            if (typeof value.phone !== "string")
-              throw new Error("phone must be a string");
-            if (typeof value.type !== "string")
-              throw new Error("type must be a string");
-            if (typeof value.number !== "string")
-              throw new Error("number must be a string");
-          },
-        },
       },
       dispatched_items: {
         type: Sequelize.JSONB,
@@ -106,7 +74,34 @@ module.exports = (sequelize, Sequelize) => {
         { fields: ["createdAt"] },
         { fields: ["status", "dispatch_date"] },
         { fields: ["city", "status"] },
-      ]
+      ],
+      hooks: {
+  beforeValidate(instance) {
+    const td = instance.truck_details || {};
+
+    instance.truck_details = {
+      driver_name: td.driver_name ?? null,
+
+      // accept both formats safely
+      truck_number: td.truck_number ?? td.number ?? null,
+      truck_type: td.truck_type ?? td.type ?? null,
+      truck_phone: td.truck_phone ?? td.phone ?? null,
+      truck_agency_name: td.truck_agency_name ?? td.agency_name ?? null,
+
+      truck_weight: td.truck_weight ?? null,
+      tare_weight: td.tare_weight ?? null,
+
+      challan:
+        td.challan && typeof td.challan === "object"
+          ? {
+              url: td.challan.url ?? null,
+              key: td.challan.key ?? null,
+            }
+          : null,
+    };
+  },
+},
+
     }
 
   );

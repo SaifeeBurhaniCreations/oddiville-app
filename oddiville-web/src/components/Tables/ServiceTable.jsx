@@ -3,6 +3,8 @@ import { NavLink } from "react-router-dom";
 import Spinner from "@/components/Spinner/Spinner"; 
 import { formatDate } from "@/util/formatDate"; 
 
+const formatKg = (val) => Number(Number(val || 0).toFixed(2));
+
 const TableWrapper = ({ children }) => (
     <table className="table align-items-center mb-0">
         <thead>
@@ -20,53 +22,70 @@ const TableWrapper = ({ children }) => (
 );
 
 const renderTableRows = (filteredData, handleDeleteClick) => {
-    return filteredData.map((service, ind) => (
-        <tr key={ind}>
-            <td>
-                <img
-                    src={service?.sample_image?.url || "/assets/img/png/fallback_img.png"}
-                    className="avatar avatar-lg"
-                    alt="banner"
-                />
-            </td>
-            <td>
-                <p className="text-xl font-weight-bold mb-0">{service.item_name.split(":")[0]}</p>
-                <p className="text-xs text-secondary mb-0">{service.description}</p>
-            </td>
-            <td className="text-center">
-                <span className="text-secondary text-xs font-weight-bold">
-                    {service?.chamber_name || "N/A"}
-                </span>
-            </td>
-            <td className="text-center">
-                <span className="text-secondary text-xs font-weight-bold">
-                    {`${service.item_name.split(":")[1] ?? service?.quantity_unit} Kg` || "N/A"}
-                </span>
-            </td>
-            <td className="text-center">
-                <span className="text-secondary text-xs font-weight-bold">
-                    {formatDate(service?.warehoused_date)}
-                </span>
-            </td>
-            <td>
-                <div className="d-flex">
-                    <NavLink
-                        to={`/update-item/${service?.id}`}
-                        className="btn m-0 btn-link text-info font-weight-bold text-xs"
-                    >
-                        Edit
-                    </NavLink>
-                    <button
-                        className="btn btn-link text-danger text-gradient px-3 mb-0"
-                        onClick={() => handleDeleteClick(service)}
-                    >
-                        <i className="far fa-trash-alt me-2" /> Delete
-                    </button>
-                </div>
-            </td>
-        </tr>
-    ));
+    const rows = [];
+
+    filteredData.forEach((group, groupIndex) => {
+
+        // rows.push(
+        //     <tr key={`group-${groupIndex}`} className="table-secondary">
+        //         <td colSpan={6}>
+        //             <strong>
+        //                 {group.product_name} ({group.size} {group.unit})
+        //             </strong>
+        //         </td>
+        //     </tr>
+        // );
+
+        // RATING ROWS
+        group.ratings.forEach((rating, ratingIndex) => {
+            rows.push(
+                <tr key={rating.id}>
+                    <td>
+                        <img
+                            src={"/assets/img/png/fallback_img.png"}
+                            className="avatar avatar-lg"
+                            alt="item"
+                        />
+                    </td>
+
+                    <td>
+                        <p className="text-sm font-weight-bold mb-0">
+                            {group.product_name} ({group.size} {group.unit})
+                        </p>
+                        {/* <p className="text-sm font-weight-bold mb-0">
+                            ⭐ Rating {rating.rating}
+                        </p> */}
+                    </td>
+
+                    <td className="text-center">
+                        {rating.chamber_name || "N/A"}
+                    </td>
+
+                    <td className="text-center">
+                        {formatKg(rating.quantity)} Kg
+                    </td>
+
+                    <td className="text-center">
+                        {formatDate(group.warehouse_date) ?? "—"}
+                    </td>
+
+                    <td>
+                        <button
+                            className="btn btn-link text-danger text-gradient px-3 mb-0"
+                            onClick={() => handleDeleteClick(rating)}
+                        >
+                            <i className="far fa-trash-alt me-2" />
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            );
+        });
+    });
+
+    return rows;
 };
+
 
 const ServiceTable = ({ filteredData, isLoading, handleDeleteClick }) => {
     
@@ -75,7 +94,7 @@ const ServiceTable = ({ filteredData, isLoading, handleDeleteClick }) => {
         return (
             <TableWrapper>
                 <tr>
-                    <td colSpan={5} className="text-center py-5">
+                    <td colSpan={6} className="text-center py-5">
                         <Spinner />
                         <p className="mt-2 text-secondary">Fetching data...</p>
                     </td>
@@ -89,7 +108,7 @@ const ServiceTable = ({ filteredData, isLoading, handleDeleteClick }) => {
         return (
             <TableWrapper>
                 <tr>
-                    <td colSpan={5} className="text-center py-5">
+                    <td colSpan={6} className="text-center py-5">
                         No data available
                     </td>
                 </tr>

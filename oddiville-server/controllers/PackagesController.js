@@ -8,7 +8,15 @@ const {
   sequelize,
 } = require("../models");
 const { uploadToS3, deleteFromS3 } = require("../services/s3Service");
+const { getTareWeight } = require("../constants/tareWeight"); 
 const upload = require("../middlewares/upload");
+
+const normalizeSize = (v) => String(v).trim();
+const normalizeUnit = (v) => String(v).trim().toLowerCase();
+const normalizeProduct = (v) => String(v).trim().toLowerCase();
+
+const pouchKey = (product, size, unit) =>
+  `${String(product).trim().toLowerCase()}:${normalizeSize(size)}${normalizeUnit(unit)}`;
 
 // GET all packages
 router.get("/", async (req, res) => {
@@ -18,8 +26,8 @@ router.get("/", async (req, res) => {
 
   if (search) {
     whereClause.product_name = {
-      [Op.iLike]: `%${search}%`,
-    };
+  [Op.iLike]: `%${normalizeProduct(search)}%`,
+};
   }
   try {
     const packages = await Packages.findAll({
@@ -49,7 +57,7 @@ router.get("/product/:productName", async (req, res) => {
 }
 
 const pkg = await Packages.findOne({
-  where: { product_name: productName },
+  where: { product_name: normalizeProduct(productName) },
   raw: true,
 });
 
@@ -98,238 +106,190 @@ router.post(
       if (typeof raw_materials === "string") raw_materials = JSON.parse(raw_materials);
       if (typeof types === "string") types = JSON.parse(types);
 
-      if (!product_name || !chamber_name)
-        return res.status(400).json({ error: "product_name and chamber_name are required" });
-
-      if (!Array.isArray(raw_materials) || !raw_materials.length)
-        return res.status(400).json({ error: "raw_materials must be array" });
-
-      if (!Array.isArray(types) || !types.length)
-        return res.status(400).json({ error: "types must be array" });
-
-      product_name = product_name.trim();
+      product_name = normalizeProduct(product_name);
       chamber_name = chamber_name.trim();
 
-      if (req.files?.image?.[0]) {
-        uploadedImage = await uploadToS3({
-          file: req.files.image[0],
-          folder: "packages",
-        });
-      }
+      /* ---------- SAVE ORIGINAL POUCH COUNTS ---------- */
+      const pouchCounts = {};
+      types.forEach(tp => {
+        const key = `${String(tp.size).trim()}${String(tp.unit).trim().toLowerCase()}`;
+pouchCounts[key] = Number(tp.quantity);
+      });
 
-      if (req.files?.package_image?.[0]) {
-        uploadedPackageImage = await uploadToS3({
-          file: req.files.package_image[0],
-          folder: "packages",
-        });
-      }
+      /* ---------- CONVERT TO KG FOR PLASTIC ---------- */
+      types = types.map(tp => {
+        const tare = getTareWeight({ type: "pouch", size: tp.size, unit: tp.unit });
+        const kg = (Number(tp.quantity) * tare) / 1000;
+        return { size: normalizeSize(tp.size), unit: normalizeUnit(tp.unit), quantity: kg.toFixed(3) };
+      });
+
+      if (req.files?.image?.[0])
+        uploadedImage = await uploadToS3({ file: req.files.image[0], folder: "packages" });
+
+      if (req.files?.package_image?.[0])
+        uploadedPackageImage = await uploadToS3({ file: req.files.package_image[0], folder: "packages" });
 
       const result = await sequelize.transaction(async (t) => {
-        let pkg;
 
-        try {
-          pkg = await Packages.create(
-            {
-              product_name,
-              raw_materials,
-              types,
-              chamber_name,
-              image: uploadedImage && {
-                url: uploadedImage.url,
-                key: uploadedImage.key,
-              },
-              package_image: uploadedPackageImage && {
-                url: uploadedPackageImage.url,
-                key: uploadedPackageImage.key,
-              },
+        const pkg = await Packages.create({
+          product_name,
+          raw_materials,
+          types,
+          chamber_name,
+          image: uploadedImage && { url: uploadedImage.url, key: uploadedImage.key },
+          package_image: uploadedPackageImage && { url: uploadedPackageImage.url, key: uploadedPackageImage.key },
+        }, { transaction: t });
+
+        const chamber = await ChambersClient.findOne({ where: { chamber_name }, transaction: t });
+        if (!chamber) throw new Error("Chamber not found");
+
+        /* ---------- CREATE DRYWAREHOUSE POUCH COUNT ---------- */
+        for (const tp of types) {
+          const key = `${String(tp.size).trim()}${String(tp.unit).trim().toLowerCase()}`;
+const count = pouchCounts[key] || 0;
+          const item_name = pouchKey(product_name, tp.size, tp.unit);
+
+          const [dryItem, created] = await DryWarehouseClient.findOrCreate({
+            where: { item_name },
+            defaults: {
+              item_name,
+              warehoused_date: new Date(),
+              description: `${product_name} ${tp.size}${tp.unit} pouch`,
+              chamber_id: chamber.id,
+              quantity: count,
+              unit: "pcs",
+              unit_weight_grams: getTareWeight({ type: "pouch", size: tp.size, unit: tp.unit })
             },
-            { transaction: t }
-          );
-        } catch (err) {
-          if (err.name === "SequelizeUniqueConstraintError") {
-            const e = new Error("Package already exists for this chamber");
-            e.status = 409;
-            throw e;
+            transaction: t,
+            lock: t.LOCK.UPDATE
+          });
+
+          if (!created) {
+            dryItem.quantity = Number(dryItem.quantity) + count;
+            await dryItem.save({ transaction: t });
           }
-          throw err;
         }
-
-        const chamber = await ChambersClient.findOne({
-          where: { chamber_name },
-          transaction: t,
-        });
-
-        if (!chamber) {
-          const e = new Error("Chamber not found");
-          e.status = 400;
-          throw e;
-        }
-
-        const firstType = types[0];
-        const item_name = `${product_name}:${firstType.size}`;
-        const quantityNum = parseFloat(firstType.quantity) || 0;
-
-        await DryWarehouseClient.findOrCreate({
-          where: { item_name },
-          defaults: {
-            warehoused_date: new Date(),
-            description: `${product_name} Packaging`,
-            chamber_id: chamber.id,
-            quantity_unit: quantityNum,
-            unit: "kg",
-            sample_image: uploadedImage
-              ? { url: uploadedImage.url, key: uploadedImage.key }
-              : null,
-          },
-          transaction: t,
-        });
 
         return pkg;
       });
 
-      return res.status(201).json(result);
-
-    } catch (error) {
-      if (uploadedImage?.key) await deleteFromS3(uploadedImage.key);
-      if (uploadedPackageImage?.key) await deleteFromS3(uploadedPackageImage.key);
-
-      console.error(error);
-
-      return res.status(error.status || 500).json({
-        error: error.message || "Internal server error",
-      });
+      res.status(201).json(result);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
     }
   }
 );
 
 router.patch("/:id/add-type", async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { id } = req.params;
     const { product_name, size, unit, quantity } = req.body;
-    
-    const io = req.app.get("io");
-    if (!product_name || !size || quantity == null) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
 
-    const pkg = await Packages.findByPk(id);
-    if (!pkg) return res.status(404).json({ error: "Package not found" });
+    if (!size || quantity == null || !unit)
+      throw new Error("Missing required fields");
 
     const numericQty = parseFloat(quantity);
-    if (isNaN(numericQty)) {
-      return res.status(400).json({ error: "Invalid quantity" });
-    }
+    if (isNaN(numericQty)) throw new Error("Invalid quantity");
 
-    const normalizedUnit = unit === "null" ? null : unit;
+    const pkg = await Packages.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
+    if (!pkg) throw new Error("Package not found");
 
-    // PACKAGES LOGIC
-    const types = Array.isArray(pkg.types) ? [...pkg.types] : [];
+    let types = Array.isArray(pkg.types) ? [...pkg.types] : [];
 
-    const exists = types.find(
-      (t) =>
-        String(t.size) === String(size) &&
-        (t.unit ?? null) === normalizedUnit
-    );
+    const exists = types.find(t =>
+  normalizeSize(t.size) === normalizeSize(size) &&
+  normalizeUnit(t.unit) === normalizeUnit(unit)
+);
 
-    if (exists) {
-      return res.status(409).json({
-        error: "Type already exists. Use increase-quantity route."
-      });
-    }
+    if (exists) throw new Error("Type already exists. Use increase-quantity route.");
 
-    types.push({
-      size: String(size),
-      unit: normalizedUnit,
-      quantity: numericQty.toString(),
-    });
+    const tare = getTareWeight({ type: "pouch", size, unit });
+const kg = (numericQty * tare) / 1000;
 
-    pkg.types = [...types];
-    pkg.changed("types", true);
-    await pkg.save();
+types.push({ size: normalizeSize(size), unit: normalizeUnit(unit), quantity: kg.toFixed(3) });
 
-    io.emit("package:updated", { id: pkg.id });
+    pkg.types = types;
+    await pkg.save({ transaction: t });
 
-    // DRY WAREHOUSE
     const chamber = await ChambersClient.findOne({
-      where: { chamber_name: pkg.chamber_name }
+      where: { chamber_name: pkg.chamber_name },
+      transaction: t
     });
 
-    if (!chamber) {
-      return res.status(400).json({ error: "Chamber not found" });
-    }
+    if (!chamber) throw new Error("Chamber not found");
 
-    const itemName = `${product_name}:${size}`;
+    const itemName = pouchKey(pkg.product_name, size, unit);
 
-    const [dryItem] = await DryWarehouseClient.findOrCreate({
+    const [dryItem, created] = await DryWarehouseClient.findOrCreate({
       where: { item_name: itemName },
       defaults: {
         item_name: itemName,
         warehoused_date: new Date(),
-        description: `${product_name} ${size}${normalizedUnit ?? ""}`,
+        description: `${product_name} ${size}${unit}`,
         chamber_id: chamber.id,
-        quantity_unit: "0",
-        unit: "kg"
-      }
+        quantity: numericQty,
+        unit: "pcs",
+        unit_weight_grams: getTareWeight({ type: "pouch", size, unit })
+      },
+      transaction: t,
+      lock: t.LOCK.UPDATE
     });
 
-    const currentQty = parseFloat(dryItem.quantity_unit || "0");
-    dryItem.quantity_unit = (currentQty + numericQty).toString();
-    await dryItem.save();
+    if (!created) {
+      dryItem.quantity = Number(dryItem.quantity) + numericQty;
+      await dryItem.save({ transaction: t });
+    }
 
+    await t.commit();
     return res.json({ success: true, pkg, dryItem });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    await t.rollback();
+    return res.status(400).json({ error: err.message });
   }
 });
 
 router.patch("/:id/increase-quantity", async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { id } = req.params;
     const { size, unit, quantity } = req.body;
-      const io = req.app.get("io");
-    if (!size || quantity == null) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
 
-    const pkg = await Packages.findByPk(id);
-    if (!pkg) return res.status(404).json({ error: "Package not found" });
+    if (!size || !unit || quantity == null)
+      throw new Error("Missing required fields");
 
     const numericQty = parseFloat(quantity);
-    if (isNaN(numericQty)) {
-      return res.status(400).json({ error: "Invalid quantity" });
-    }
+    if (isNaN(numericQty)) throw new Error("Invalid quantity");
 
-    // PACKAGES LOGIC
-    const types = Array.isArray(pkg.types) ? [...pkg.types] : [];
+    const pkg = await Packages.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
+    if (!pkg) throw new Error("Package not found");
 
-    const typeIndex = types.findIndex(
-      (t) => t.size === size && t.unit === unit
-    );
+    let types = Array.isArray(pkg.types) ? [...pkg.types] : [];
 
-    if (typeIndex === -1) {
-      return res.status(404).json({
-        error: "Type not found. Use add-type route."
-      });
-    }
-    
-    const prevQty = parseFloat(types[typeIndex].quantity || "0");
-    types[typeIndex].quantity = (prevQty + numericQty).toString();
-    console.log("types[typeIndex].quantity", types[typeIndex].quantity);
+    const index = types.findIndex(t => normalizeSize(t.size) === normalizeSize(size) &&
+normalizeUnit(t.unit) === normalizeUnit(unit)
+);
+    if (index === -1) throw new Error("Type not found");
 
-    pkg.types = [...types];
-    pkg.changed("types", true);
-    await pkg.save();
+    const tare = getTareWeight({ type: "pouch", size, unit });
+const addedKg = (numericQty * tare) / 1000;
 
-    io.emit("package:updated", { id: pkg.id });
+types[index].quantity =
+  (parseFloat(types[index].quantity) + addedKg).toFixed(3);
 
-    // DRY WAREHOUSE
+    pkg.types = types;
+    await pkg.save({ transaction: t });
+
     const chamber = await ChambersClient.findOne({
-      where: { chamber_name: pkg.chamber_name }
+      where: { chamber_name: pkg.chamber_name },
+      transaction: t
     });
 
-    const itemName = `${pkg.product_name}:${size}`;
+    if (!chamber) throw new Error("Chamber not found");
+
+    const itemName = pouchKey(pkg.product_name, size, unit);
 
     const [dryItem] = await DryWarehouseClient.findOrCreate({
       where: { item_name: itemName },
@@ -337,108 +297,194 @@ router.patch("/:id/increase-quantity", async (req, res) => {
         item_name: itemName,
         warehoused_date: new Date(),
         chamber_id: chamber.id,
-        quantity_unit: "0",
-        unit: "kg"
-      }
+        quantity: 0,
+        unit: "pcs",
+        unit_weight_grams: getTareWeight({ type: "pouch", size, unit })
+      },
+      transaction: t,
+      lock: t.LOCK.UPDATE
     });
 
-    const currentQty = parseFloat(dryItem.quantity_unit || "0");
-    dryItem.quantity_unit = (currentQty + numericQty).toString();
-    await dryItem.save();
+    dryItem.quantity = Number(dryItem.quantity) + numericQty;
+    await dryItem.save({ transaction: t });
 
-    // package-id:send
-
+    await t.commit();
     return res.json({ success: true, pkg, dryItem });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    await t.rollback();
+    return res.status(400).json({ error: err.message });
   }
 });
 
-// DELETE package
 router.delete("/delete/:id", async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { id } = req.params;
-    const pkg = await Packages.findByPk(id);
-    if (!pkg) return res.status(404).json({ error: "Package not found." });
-    if (pkg.image) {
-      await deleteFromS3(pkg.image.key);
-    }
-    if (pkg.package_image) {
-      await deleteFromS3(pkg.package_image.key);
+
+    const pkg = await Packages.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
+    if (!pkg) throw new Error("Package not found");
+
+    // Prevent deletion if pouch stock exists
+    for (const tp of pkg.types || []) {
+      const itemName = pouchKey(pkg.product_name, tp.size, tp.unit);
+
+      const dry = await DryWarehouseClient.findOne({
+        where: { item_name: itemName },
+        transaction: t,
+        lock: t.LOCK.UPDATE
+      });
+
+      if (dry && Number(dry.quantity) > 0) {
+        throw new Error(
+          `Cannot delete package. Stock still exists for ${tp.size}${tp.unit}`
+        );
+      }
+
+      // safe to delete empty SKU
+      await DryWarehouseClient.destroy({
+        where: { item_name: itemName },
+        transaction: t
+      });
     }
 
-    await pkg.destroy();
-    return res.status(200).json({ message: "Package deleted successfully." });
-  } catch (error) {
-    console.error("Error deleting package:", error.message);
-    return res.status(500).json({ error: "Internal server error." });
+    // delete images
+    if (pkg.image) await deleteFromS3(pkg.image.key);
+    if (pkg.package_image) await deleteFromS3(pkg.package_image.key);
+
+    await pkg.destroy({ transaction: t });
+
+    await t.commit();
+    res.json({ message: "Package deleted safely" });
+
+  } catch (err) {
+    await t.rollback();
+    res.status(400).json({ error: err.message });
   }
 });
 
 router.patch("/replace/type/:id", async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { id } = req.params;
-    const { size, unit, quantity } = req.body;
+    const { size, unit, actual_quantity, reason = "manual adjustment" } = req.body;
 
-    const pkg = await Packages.findByPk(id);
-    if (!pkg) return res.status(404).json({ error: "Package not found." });
+    if (actual_quantity == null)
+      throw new Error("actual_quantity required");
 
-    const numericQuantity = parseFloat(quantity);
-    if (isNaN(numericQuantity)) {
-      return res
-        .status(400)
-        .json({ error: "quantity must be a valid number." });
-    }
+    const pkg = await Packages.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
+    if (!pkg) throw new Error("Package not found");
 
-    let existingTypes = Array.isArray(pkg.types) ? [...pkg.types] : [];
-    const index = existingTypes.findIndex(
-      (t) => t.size === size && t.unit === unit
-    );
+    const itemName = pouchKey(pkg.product_name, size, unit);
 
-    if (index !== -1) {
-      existingTypes[index].quantity = numericQuantity.toString();
-    } else {
-      existingTypes.push({ size, unit, quantity: numericQuantity.toString() });
-    }
+    const dry = await DryWarehouseClient.findOne({
+      where: { item_name: itemName },
+      transaction: t,
+      lock: t.LOCK.UPDATE
+    });
 
-    pkg.types = existingTypes;
-    await pkg.save();
+    if (!dry) throw new Error("Dry warehouse entry missing");
 
-    return res.status(200).json(pkg);
-  } catch (error) {
-    console.error("Dangerous replace error:", error.message);
-    return res.status(500).json({ error: "Internal server error." });
+    const systemQty = Number(dry.quantity);
+    const physicalQty = Number(actual_quantity);
+    const diff = physicalQty - systemQty;
+
+    let types = Array.isArray(pkg.types) ? [...pkg.types] : [];
+const index = types.findIndex(t => normalizeSize(t.size) === normalizeSize(size) &&
+normalizeUnit(t.unit) === normalizeUnit(unit)
+);
+
+if (index === -1)
+  throw new Error("SKU not found in package");
+
+const tare = getTareWeight({ type: "pouch", size, unit });
+const kg = (physicalQty * tare) / 1000;
+
+types[index].quantity = kg.toFixed(3);
+
+pkg.types = types;
+await pkg.save({ transaction: t });
+
+    dry.quantity = physicalQty;
+    await dry.save({ transaction: t });
+
+    console.log("STOCK ADJUSTMENT", {
+      product: pkg.product_name,
+      size,
+      unit,
+      before: systemQty,
+      after: physicalQty,
+      change: diff,
+      reason
+    });
+
+    await t.commit();
+    res.json({
+      message: "Stock adjusted",
+      before: systemQty,
+      after: physicalQty,
+      change: diff
+    });
+
+  } catch (err) {
+    await t.rollback();
+    res.status(400).json({ error: err.message });
   }
 });
 
 router.patch("/delete/type/:id", async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { id } = req.params;
     const { size, unit } = req.body;
 
-    const pkg = await Packages.findByPk(id);
-    if (!pkg) return res.status(404).json({ error: "Package not found." });
+    const pkg = await Packages.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
+    if (!pkg) throw new Error("Package not found");
 
-    let existingTypes = Array.isArray(pkg.types) ? [...pkg.types] : [];
-    const filteredTypes = existingTypes.filter(
-      (t) => !(t.size === size && t.unit === unit)
-    );
+    const itemName = pouchKey(pkg.product_name, size, unit);
 
-    if (filteredTypes.length === existingTypes.length) {
-      return res
-        .status(404)
-        .json({ error: "Type with matching size and unit not found." });
-    }
+    const dry = await DryWarehouseClient.findOne({
+      where: { item_name: itemName },
+      transaction: t,
+      lock: t.LOCK.UPDATE
+    });
 
-    pkg.types = filteredTypes;
-    await pkg.save();
+    if (dry && Number(dry.quantity) > 0)
+      throw new Error("Cannot delete SKU while physical stock exists.");
 
-    return res.status(200).json(pkg);
-  } catch (error) {
-    console.error("Dangerous delete error:", error.message);
-    return res.status(500).json({ error: "Internal server error." });
+const used = await ChamberStockClient.findAll({
+  where: { product_name: pkg.product_name },
+  transaction: t,
+  lock: t.LOCK.UPDATE
+});
+
+const usedAnywhere = used.some(stock =>
+  stock.packages?.some(p =>
+    normalizeSize(p.size) === normalizeSize(size) &&
+    normalizeUnit(p.unit) === normalizeUnit(unit)
+  )
+);
+
+if (usedAnywhere)
+  throw new Error("Cannot delete SKU already used in production history");
+
+    pkg.types = pkg.types.filter(t => !(normalizeSize(t.size) === normalizeSize(size) &&
+normalizeUnit(t.unit) === normalizeUnit(unit)
+));
+    await pkg.save({ transaction: t });
+
+    await DryWarehouseClient.destroy({
+  where: { item_name: itemName },
+  transaction: t
+});
+
+
+    await t.commit();
+    res.json(pkg);
+
+  } catch (err) {
+    await t.rollback();
+    res.status(400).json({ error: err.message });
   }
 });
 

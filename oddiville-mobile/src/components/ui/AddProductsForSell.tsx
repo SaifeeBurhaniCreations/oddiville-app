@@ -71,12 +71,13 @@ const AddProductsForSell = ({
   onPress?: () => void;
   onRemove?: () => void;
   chamberStockIndex: Map<
-    string,
-    {
-      packages: any[];
-      chambers: { chamberId: string; rating: number; bags: number }[];
-    }
-  >;
+  string,
+  {
+    rating: number;
+    packages: any[];
+    chambers: { chamberId: string; bags: number }[];
+  }
+>;
   controlledForm: ControlledFormProps<OrderStorageForm>;
   [key: string]: any;
 }) => {
@@ -84,8 +85,6 @@ const AddProductsForSell = ({
   const dispatch = useDispatch();
 
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
-  // const packedRows = packingItems;
-  // console.log("chamberStockIndex", JSON.stringify(chamberStockIndex.get(product.product_name), null, 2));
 
   const stock = chamberStockIndex.get(product.product_name);
 
@@ -117,38 +116,18 @@ const AddProductsForSell = ({
     return ratingByProductSize?.[productId]?.[key]?.rating ?? 5;
   };
 
-  // const packageOptions = useMemo(() => {
-  //   const map = new Map<string, {
-  //     size: number;
-  //     unit: "gm" | "kg";
-  //     bags: number;
-  //   }>();
-
-  //   packedRows.forEach(row => {
-  //     const key = `${row.size}-${row.unit}`;
-  //     if (!map.has(key)) {
-  //       map.set(key, {
-  //         size: row.size,
-  //         unit: row.unit,
-  //         bags: 0,
-  //       });
-  //     }
-  //     map.get(key)!.bags += row.bags;
-  //   });
-
-  //   return Array.from(map.values());
-  // }, [packedRows]);
   const packageOptions = useMemo(() => {
-    if (!stock?.packages) return [];
+  if (!stock?.packages) return [];
 
-    return stock.packages.map((pkg) => ({
-      size: pkg.size,
-      unit: pkg.unit,
-      bags: stock.chambers
-        .filter((ch) => ch.rating != null)
-        .reduce((sum, ch) => sum + Number(ch.bags || 0), 0),
-    }));
-  }, [stock]);
+  const totalBags = (stock.chambers ?? [])
+    .reduce((sum, ch) => sum + Number(ch.bags || 0), 0);
+
+  return stock.packages.map((pkg) => ({
+    size: pkg.size,
+    unit: pkg.unit,
+    bags: totalBags,
+  }));
+}, [stock]);
 
   const usedStock = useSelector((s: RootState) => s.usedDispatchPkg);
 
@@ -207,106 +186,43 @@ const AddProductsForSell = ({
     2: TwoStarIcon,
     1: OneStarIcon,
   };
-  //   const groupedPackages = useMemo(() => {
-  //     const map = new Map<string, {
-  //       size: number;
-  //       unit: "gm" | "kg";
-  //       rating: number;
-  //       chambers: PackedChamberRow[];
-  //       totalBags: number;
-  //     }>();
 
-  //     packedRows.forEach(row => {
-  //       const sizeKey = `${row.size}-${row.unit}`;
+const groupedPackages = useMemo(() => {
+  if (!stock) return [];
 
-  //       if (selectedSizeKeys.size === 0) return;
-  //       if (!selectedSizeKeys.has(sizeKey)) return;
+  const result = [];
 
-  //       const ratingForPackage = getRatingForPackage(
-  //         product.id,
-  //         row.size,
-  //         row.unit
-  //       );
+  for (const pkg of stock.packages ?? []) {
+    const sizeKey = `${pkg.size}-${pkg.unit}`;
+    if (!selectedSizeKeys.has(sizeKey)) continue;
 
-  //       const selectedRating = ratingForPackage.rating;
-  //       const packageKey = `${row.size}-${row.unit}-${selectedRating}`;
+    const selectedRating = getSelectedRating(product.id, pkg.size, pkg.unit);
 
-  //       if (!map.has(packageKey)) {
-  //         map.set(packageKey, {
-  //           size: row.size,
-  //           unit: row.unit,
-  //           rating: selectedRating,
-  //           chambers: [],
-  //           totalBags: 0,
-  //         });
-  //       }
+    // DO NOT REMOVE PACKAGE
+    const chambers =
+      Number(stock.rating) === Number(selectedRating)
+        ? (stock.chambers ?? [])
+            .filter((ch) => Number(ch.bags) > 0)
+            .map((ch) => ({
+              chamberId: ch.chamberId,
+              bags: Number(ch.bags),
+            }))
+        : [];
 
-  //       const pkg = map.get(packageKey)!;
+    const totalBags = chambers.reduce((s, c) => s + c.bags, 0);
 
-  //       const rating = getSelectedRating(product.id, pkg.size, pkg.unit);
+    result.push({
+      size: pkg.size,
+      unit: pkg.unit,
+      rating: selectedRating,
+      chambers,
+      totalBags,
+      hasStock: totalBags > 0,
+    });
+  }
 
-  // const availableChambers = (stock?.chambers ?? []).filter(
-  //   ch => ch.rating === rating
-  // );
-  //       const existingChamber = pkg.chambers.find(
-  //         ch => ch.chamberId === row.chamberId
-  //       );
-
-  //       if (existingChamber) {
-  //         existingChamber.bags += row.bags;
-  //         existingChamber.kg += row.kg;
-  //       } else {
-  //         pkg.chambers.push({ ...row });
-  //       }
-
-  //       pkg.totalBags += row.bags;
-  //     });
-
-  //     return Array.from(map.values());
-  //   }, [packedRows, selectedSizeKeys, ratingByProductSize]);
-
-  const groupedPackages = useMemo(() => {
-    if (!stock) return [];
-
-    const result: {
-      size: number;
-      unit: "gm" | "kg";
-      rating: number;
-      chambers: {
-        chamberId: string;
-        bags: number;
-      }[];
-      totalBags: number;
-    }[] = [];
-
-    for (const pkg of stock.packages ?? []) {
-      const sizeKey = `${pkg.size}-${pkg.unit}`;
-      if (!selectedSizeKeys.has(sizeKey)) continue;
-
-      const rating = getSelectedRating(product.id, pkg.size, pkg.unit);
-
-      const chambers = (stock.chambers ?? [])
-        .filter((ch) => ch.rating === rating && Number(ch.bags) > 0)
-        .map((ch) => ({
-          chamberId: ch.chamberId,
-          bags: Number(ch.bags),
-        }));
-
-      const totalBags = chambers.reduce((s, c) => s + c.bags, 0);
-
-      if (totalBags === 0) continue;
-
-      result.push({
-        size: pkg.size,
-        unit: pkg.unit,
-        rating,
-        chambers,
-        totalBags,
-      });
-    }
-
-    return result;
-  }, [stock, selectedSizeKeys, ratingByProductSize]);
+  return result;
+}, [stock, selectedSizeKeys, ratingByProductSize]);
 
   return (
     <ScrollView
@@ -370,7 +286,7 @@ const AddProductsForSell = ({
 
             <View style={[styles.Vstack, { gap: 12 }]}>
               <H3>Select Bags</H3>
-              {groupedPackages.length === 0 ? (
+              {selectedSizeKeys.size === 0 ? (
                 <View
                   style={{
                     flex: 1,
@@ -380,8 +296,8 @@ const AddProductsForSell = ({
                 >
                   <EmptyState
                     stateData={{
-                      title: "No package found",
-                      description: "Select sizes",
+                      title: "No Stock found",
+                      description: "of this SKU",
                     }}
                     compact
                   />
@@ -465,13 +381,21 @@ const AddProductsForSell = ({
                       </View>
 
                       {filteredChambers.length === 0 ? (
-                        <View
-                          style={{ alignItems: "center", paddingVertical: 12 }}
-                        >
-                          <B4 color={getColor("green", 400)}>
-                            No chambers available for this rating
-                          </B4>
-                        </View>
+                       <View
+                  style={{
+                    flex: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <EmptyState
+                    stateData={{
+                      title: "No stock found",
+                      description: "in any chambers",
+                    }}
+                    compact
+                  />
+                </View>
                       ) : (
                         filteredChambers.map((row) => {
                           const globalChamber = globalChambers?.find(

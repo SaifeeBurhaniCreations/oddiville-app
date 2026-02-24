@@ -1,10 +1,12 @@
 import useChamberManagement from "@/hooks/useChamberManagement";
-const ItemFormFields = ({ form, chambers }) => {
+import { DRY_ITEM_UNITS } from "../../constants/dry-items-units";
+import { COUNTABLE_UNITS } from "../../constants/countable-units";
+const ItemFormFields = ({ form }) => {
   const { chambersList } = useChamberManagement();
 
   return (
     <div className="row g-3">
-      <div className="form-floating ">
+      <div className="">
         <input
           type="text"
           value={form.values.item_name}
@@ -19,6 +21,7 @@ const ItemFormFields = ({ form, chambers }) => {
           <div className="text-danger mt-1">{form.errors.item_name}</div>
         )}
       </div>
+      
       <div className="form-floating ">
         <input
           type="text"
@@ -29,21 +32,73 @@ const ItemFormFields = ({ form, chambers }) => {
           }`}
           placeholder="Enter Description"
         />
+        
         <label className="form-label">Service Description</label>
         {form.errors.description && (
           <div className="text-danger mt-1">{form.errors.description}</div>
         )}
       </div>
+            <div className="">
+        <label className="form-label">Item Quantity</label>
+        <input
+          type="text"
+          value={form.values.quantity}
+          onChange={(e) => form.setField("quantity", e.target.value)}
+          className={`form-control ${
+            form.errors.quantity ? "is-invalid" : ""
+          }`}
+          placeholder="Enter Quantity"
+        />
+        {form.errors.quantity && (
+          <div className="text-danger mt-1">{form.errors.quantity}</div>
+        )}
+      </div>
+           <div className="">
+        <label className="form-label">Select Unit</label>
+        <select
+          value={form.values.unit || ""}
+          onChange={(e) => form.setField("unit", e.target.value)}
+          className={`form-select ${
+            form.errors.unit ? "is-invalid" : ""
+          }`}
+        >
+          <option value="">Select Unit</option>
+
+           {DRY_ITEM_UNITS.map((item) =>
+            <option value={item.value} key={item.value}>
+                {item.label}
+              </option>
+          )}
+        </select>
+        {form.errors.unit && (
+          <div className="text-danger mt-1">{form.errors.unit}</div>
+        )}
+      </div>
+
+{COUNTABLE_UNITS.includes(form.values.unit) &&   <div className="">
+        <label className="form-label">Weight of ONE item (grams)
+Example: 1 wooden table = 1kg
+</label>
+
+        <input
+          type="text"
+          value={form.values.unit_weight_grams}
+          onChange={(e) => form.setField("unit_weight_grams", e.target.value)}
+          className={`form-control ${
+            form.errors.unit_weight_grams ? "is-invalid" : ""
+          }`}
+          placeholder="Enter Weight per unit"
+        />
+        {form.errors.unit_weight_grams && (
+          <div className="text-danger mt-1">{form.errors.unit_weight_grams}</div>
+        )}
+      </div>}
+    
+
       <div className="">
         <input
           type="date"
-          value={
-            form.values.warehoused_date
-              ? new Date(form.values.warehoused_date)
-                  .toISOString()
-                  .split("T")[0]
-              : ""
-          }
+         value={form.values.warehoused_date || ""}
           onChange={(e) => form.setField("warehoused_date", e.target.value)}
           className={`form-control ${
             form.errors.warehoused_date ? "is-invalid" : ""
@@ -51,21 +106,6 @@ const ItemFormFields = ({ form, chambers }) => {
         />
         {form.errors.warehoused_date && (
           <div className="text-danger mt-1">{form.errors.warehoused_date}</div>
-        )}
-      </div>
-      <div className="form-floating ">
-        <input
-          type="text"
-          value={form.values.quantity_unit}
-          onChange={(e) => form.setField("quantity_unit", e.target.value)}
-          className={`form-control ${
-            form.errors.quantity_unit ? "is-invalid" : ""
-          }`}
-          placeholder="Enter Quantity Unit"
-        />
-        <label className="form-label">Item Quantity Unit</label>
-        {form.errors.quantity_unit && (
-          <div className="text-danger mt-1">{form.errors.quantity_unit}</div>
         )}
       </div>
       <div className="">
@@ -77,12 +117,12 @@ const ItemFormFields = ({ form, chambers }) => {
             form.errors.chamber_id ? "is-invalid" : ""
           }`}
         >
-          <option value="">Select Category</option>
+          <option value="">Select Chamber</option>
 
-          {chambersList.current?.map((category, index) =>
-            category.tag === "dry" ? (
-              <option value={category.chamber_id} key={index}>
-                {category.chamber_name}
+          {chambersList.current?.map((chamber) =>
+            chamber.tag === "dry" ? (
+              <option value={chamber.id} key={chamber.id}>
+                {chamber.chamber_name}
               </option>
             ) : null
           )}
@@ -91,6 +131,7 @@ const ItemFormFields = ({ form, chambers }) => {
           <div className="text-danger mt-1">{form.errors.chamber_id}</div>
         )}
       </div>
+ 
     </div>
   );
 };

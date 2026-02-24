@@ -26,12 +26,14 @@ const StorageRMRatingComponent = ({
 }) => {
   const dispatch = useDispatch();
   const meta = useSelector((state: RootState) => state.bottomSheet.meta);
-
+  
   const mode = meta?.mode as RatingMode | undefined;
+
 
   const intent = meta?.intent;
 
   const handleSelect = (selectedRating: number) => {
+
     const rating = {
       rating: selectedRating,
       message: ratingToMessageMap[selectedRating],
@@ -44,11 +46,11 @@ const StorageRMRatingComponent = ({
 
       case "PACKING_RM_FILTER_RATING":
         dispatch(
-          setRatingForRM({
-            rawMaterial: meta?.id!.split(":")[0],
-            rating,
-          }),
-        );
+  setRatingForRM({
+    rawMaterialId: meta?.data?.rmId!,
+    rating,
+  }),
+);
         break;
 
       case "DISPATCH_PACKAGE_RATING": {

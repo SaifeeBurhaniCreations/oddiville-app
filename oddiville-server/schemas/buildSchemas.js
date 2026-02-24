@@ -111,6 +111,16 @@ function buildOrderSchemas({ order, chambers, currentUser, packages }) {
     products: mapOrderProducts(order),
   };
 
+  console.log("order ready", JSON.stringify({
+      ...base,
+      "Product Details": getProductDetailsSection(
+        order,
+        productDetails,
+        totalQuantity,
+        { key: "created", value: currentUser?.name ?? "N/A" },
+      ),
+    }, null, 2));
+  
   return {
     "order-ready": {
       ...base,

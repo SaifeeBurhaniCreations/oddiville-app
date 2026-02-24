@@ -22,6 +22,7 @@ import {
 import * as FileSystem from "expo-file-system/legacy";
 import { Lane } from "@/src/types/lanes.dto";
 import { useLanes } from "@/src/hooks/useFetchData";
+import { useChamber } from "@/src/hooks/useChambers";
 
 function resolveLaneIds(filters: ExportFiltersState, lanes: Lane[]) {
   if (filters.selectAllLanes) {
@@ -32,8 +33,12 @@ function resolveLaneIds(filters: ExportFiltersState, lanes: Lane[]) {
 
 const ExportData = () => {
   const dispatch = useDispatch();
-  const { meta } = useSelector((state: RootState) => state.bottomSheet);
+  const { selectedChambers } = useSelector(
+    (state: RootState) => state.rawMaterial,
+  );
+
   const { data: lanes } = useLanes();
+  const { data: chambers } = useChamber();
 
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const { type, loading, previewCount } = useSelector(
@@ -55,23 +60,39 @@ const ExportData = () => {
   // console.log("filters", filters);
 
   useEffect(() => {
-    if (!type || !lanes) return;
+    if (!type) return;
+
+    if (type === "production" && !lanes) return;
+    if (type === "chamber" && !chambers) return;
 
     const timeout = setTimeout(async () => {
-      const payload = {
-        ...filters,
-        lanes: resolveLaneIds(filters, lanes),
-      };
+      let payload: ExportFiltersState;
+
+      if (type === "production" || type === "dashboard") {
+        payload = {
+          ...filters,
+          laneIds: resolveLaneIds(filters, lanes!),
+        };
+      } else if (type === "chamber") {
+        const chamberIds = chambers!
+          .filter((c) => selectedChambers.includes(c.chamber_name))
+          .map((c) => c.id);
+
+        payload = {
+          ...filters,
+          chamberIds,
+        };
+      } else {
+        payload = filters;
+      }
 
       const data = await fetchExportRowsCount(type, payload);
 
       dispatch(setPreviewCount(data.count));
-
-      setPreviewCount(data.count);
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [type, filters]);
+  }, [type, filters, lanes, chambers, selectedChambers]);
 
   const FilterComp = type ? FILTER_COMPONENTS[type] : null;
 
@@ -80,15 +101,30 @@ const ExportData = () => {
   };
 
   const handleExport = async () => {
-    if (!type || previewCount === 0 || !lanes) return;
+    if (!type || previewCount === 0) return;
 
     try {
       dispatch(setLoading(true));
 
-      const payload = {
-        ...filters,
-        lanes: resolveLaneIds(filters, lanes),
-      };
+      let payload: ExportFiltersState;
+
+      if (type === "production" || type === "dashboard") {
+        payload = {
+          ...filters,
+          laneIds: resolveLaneIds(filters, lanes!),
+        };
+      } else if (type === "chamber") {
+        const chamberIds = chambers!
+          .filter((c) => selectedChambers.includes(c.chamber_name))
+          .map((c) => c.id);
+
+        payload = {
+          ...filters,
+          chamberIds,
+        };
+      } else {
+        payload = filters;
+      }
       const uri = await downloadExportFile(type, payload);
 
       const fileName = uri.split("/").pop()!;
@@ -194,24 +230,24 @@ const ExportData = () => {
       <PageHeader page="Export Reports" />
 
       <View style={styles.wrapper}>
-       <ScrollView>
-        <View style={styles.body}>
-           <View style={styles.header}>
-            <H3>Report Type: </H3>
+        <ScrollView>
+          <View style={styles.body}>
+            <View style={styles.header}>
+              <H3>Report Type: </H3>
 
-            <View style={{ flex: 1 }}>
-              <Select
-                value={type || "Select type"}
-                options={[]}
-                onPress={handlePress}
-                showOptions={false}
-              />
+              <View style={{ flex: 1 }}>
+                <Select
+                  value={type || "Select type"}
+                  options={[]}
+                  onPress={handlePress}
+                  showOptions={false}
+                />
+              </View>
             </View>
-          </View>
 
-          {FilterComp && <FilterComp state={filters} setState={setFilters} />}
-        </View>
-       </ScrollView>
+            {FilterComp && <FilterComp state={filters} setState={setFilters} />}
+          </View>
+        </ScrollView>
         <View style={styles.footer}>
           {type && (
             <Alert

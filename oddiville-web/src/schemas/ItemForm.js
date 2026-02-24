@@ -24,7 +24,9 @@ export const initialValues = {
   chamber_id: "",
   warehoused_date: "",
   description: "",
-  quantity_unit: "",
+  quantity: "",
+  unit: "",
+  unit_weight_grams: "",
   sample_image: "",
 };
 
@@ -45,14 +47,41 @@ export const validationRules = {
     },
   ],
   description: [{ type: "required", message: "Description is required" }],
-  quantity_unit: [{ type: "required", message: "Quantity required" }],
+  quantity: [
+  { type: "required", message: "Quantity required" },
+  {
+    type: "custom",
+    message: "Quantity must be a number",
+    validate: (v) => !isNaN(Number(v))
+  }
+],
+
+  unit: [{ type: "required", message: "Unit required" }],
+  unit_weight_grams: [
+  {
+    type: "custom",
+    message: "Weight per unit required for count units",
+    validate: (value, data) => {
+  const countUnits = ["pcs","box","set","roll","bundle","pack"];
+
+  if (countUnits.includes(data.unit)) {
+    if (!value) return false;
+    if (isNaN(Number(value))) return false;
+    if (Number(value) <= 0) return false;
+  }
+  return true;
+}
+  }
+],
   sample_image: [
     {
       type: "custom",
       message: "Image is required",
       validate: (value) => {
-        // Check if value exists
         if (!value) return false;
+
+        if (typeof value === "object" && value.url) return true;
+
         if (value instanceof File) return true;
         if (value instanceof FileList && value.length > 0) return true;
         if (Array.isArray(value) && value.length > 0) return true;

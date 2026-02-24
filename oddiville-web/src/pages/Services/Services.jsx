@@ -14,8 +14,8 @@ const Services = () => {
         showModal,
         selectedService,
         handleFilter,
-        handleDeleteClick,
         handleDelete,
+        handleDeleteClick,
         setShowModal,
     } = useManageServices();
 

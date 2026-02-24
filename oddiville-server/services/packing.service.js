@@ -4,6 +4,7 @@ const {
   DryWarehouse,
   Packages,
   sequelize,
+  Sequelize,
 } = require("../models");
 
 const { getTareWeight } = require("../constants/tareWeight");
@@ -13,13 +14,17 @@ function mergePackedPackages(existing, incoming) {
   const copy = [...existing];
 
   const idx = copy.findIndex(
-    (p) => String(p.size) === String(incoming.size) && p.unit === incoming.unit,
+    (p) =>
+      String(p.size) === String(incoming.size) &&
+      p.unit === incoming.unit
   );
 
   if (idx >= 0) {
     copy[idx] = {
       ...copy[idx],
-      quantity: Number(copy[idx].quantity) + Number(incoming.quantity),
+      quantity: (
+        Number(copy[idx].quantity) + Number(incoming.quantity)
+      ).toFixed(3),
     };
   } else {
     copy.push({ ...incoming });
@@ -73,7 +78,7 @@ class PackingService {
       }
 
       /* ---------- Deduct materials ---------- */
-      await this.deductRawMaterialStock(rmConsumption, product.finalRating, t);
+      await this.deductRawMaterialStock(rmConsumption, t);
 
       /* ---------- Deduct packaging ---------- */
       await this.deductPackaging(packagingPlan, product.productName, t);
@@ -95,7 +100,7 @@ class PackingService {
         rating: finalRating
       },
       transaction: t,
-      lock: t.LOCK.UPDATE,
+      lock: Sequelize.Transaction.LOCK.UPDATE,
     });
 
     const kgPerOutputBag = this.kgPerOutputBag(sku.packet);
@@ -108,7 +113,7 @@ class PackingService {
         unit: "kg",
         chamber: sku.storage.map((s) => ({
           id: String(s.chamberId),
-          quantity: String(kgPerOutputBag * s.bagsStored),
+          quantity: (kgPerOutputBag * s.bagsStored).toFixed(3),
         })),
 
         packaging: null,
@@ -116,7 +121,8 @@ class PackingService {
           {
             size: sku.packet.size,
             unit: sku.packet.unit,
-            quantity: String(kgPerOutputBag * sku.bagsProduced),
+            quantity: (kgPerOutputBag * sku.bagsProduced).toFixed(3),
+
           },
         ],
       },
@@ -129,7 +135,7 @@ class PackingService {
     stock.packages = mergePackedPackages(stock.packages || [], {
       size: sku.packet.size,
       unit: sku.packet.unit,
-      quantity: String(kgPerOutputBag * sku.bagsProduced),
+      quantity: (kgPerOutputBag * sku.bagsProduced).toFixed(3),
     });
 
     for (const s of sku.storage) {
@@ -148,7 +154,7 @@ class PackingService {
         stock.chamber.push(target);
       }
 
-      target.quantity = String(Number(target.quantity) + addedKg);
+      target.quantity = (Number(target.quantity) + addedKg).toFixed(3);
     }
 
     stock.packed_ref = {
@@ -166,123 +172,139 @@ class PackingService {
     await stock.save({ transaction: t });
   }
 
-  static async deductRawMaterialStock(rmConsumption, rating, transaction) {
-    for (const [rmName, chambers] of Object.entries(rmConsumption)) {
-      const stock = await ChamberStock.findOne({
-        where: {
-          product_name: rmName,
-          category: "material",
-          rating
-        },
-        transaction,
-        lock: transaction.LOCK.UPDATE,
-      });
+static async deductRawMaterialStock(rmConsumption, transaction) {
 
-      if (!stock) {
-        throw new Error(`Material stock not found for ${rmName} rating ${rating}`);
-      }
+  for (const rm of rmConsumption) {
 
-      const kgPerBag =
-        stock.packaging?.size?.unit === "kg"
-          ? Number(stock.packaging.size.value)
-          : null;
+    const { rmId, rating, sourceChambers } = rm;
 
-      if (!kgPerBag) {
+    const stock = await ChamberStock.findOne({
+      where: {
+        id: rmId,
+        category: "material",
+        rating
+      },
+      transaction,
+      lock: Sequelize.Transaction.LOCK.UPDATE,
+    });
+
+    if (!stock)
+      throw new Error(`Material stock not found for RM ${rmId} rating ${rating}`);
+
+    const kgPerBag =
+      stock.packaging?.size?.unit === "kg"
+        ? Number(stock.packaging.size.value)
+        : null;
+
+    if (!kgPerBag)
+      throw new Error(`Invalid packaging size for raw material ${rmId}`);
+
+    stock.chamber = stock.chamber.map((c) => {
+
+      const used = sourceChambers.find(s => String(s.chamberId) === String(c.id));
+      if (!used) return c;
+
+      const usedKg = Number(used.containersUsed) * kgPerBag;
+
+      if (usedKg > Number(c.quantity)) {
         throw new Error(
-          `Invalid packaging size for raw material ${rmName}`
+          `RM over-consumption detected for ${rmId} in chamber ${c.id}`
         );
       }
-      
-      stock.chamber = stock.chamber || [];
 
-      stock.chamber = stock.chamber.map((c) => {
-        const used = chambers[c.id];
-        if (!used || used.outer_used <= 0) return c;
+      return {
+        ...c,
+        quantity: Math.max(0, Number(c.quantity) - usedKg).toFixed(3),
+      };
+    });
 
-        const usedKg = Number(used.outer_used) * kgPerBag;
-        if (usedKg > Number(c.quantity)) {
-          throw new Error(
-            `RM over-consumption detected for ${rmName} in chamber ${c.id}`
-          );
-        }
+    await stock.save({ transaction });
+  }
+}
 
-        return {
-          ...c,
-          quantity: String(
-            Math.max(0, Number(c.quantity) - usedKg)
-          ),
-        };
-      });
+static async deductPackaging(packagingPlan, productName, t) {
 
-      await stock.save({ transaction });
-    }
+  const pkgRow = await Packages.findOne({
+    where: { product_name: productName },
+    transaction: t,
+    lock: Sequelize.Transaction.LOCK.UPDATE,
+  });
+
+  if (!pkgRow || !Array.isArray(pkgRow.types))
+    throw new Error("Package master not configured");
+
+  let simulatedTypes = JSON.parse(JSON.stringify(pkgRow.types));
+
+  const pouchRequirements = {};
+  const plasticRequirements = {};
+
+  for (const sku of packagingPlan) {
+
+    const itemName = `${productName}:${sku.packet.size}${sku.packet.unit}`;
+
+    pouchRequirements[itemName] =
+      (pouchRequirements[itemName] || 0) + sku.totalPacketsProduced;
+
+    const tare = getTareWeight({
+      type: "pouch",
+      size: sku.packet.size,
+      unit: sku.packet.unit,
+    });
+
+    const usedKg = (sku.totalPacketsProduced * tare) / 1000;
+
+    const plasticKey = `${sku.packet.size}${sku.packet.unit}`;
+    plasticRequirements[plasticKey] =
+      (plasticRequirements[plasticKey] || 0) + usedKg;
   }
 
-  static async deductPackaging(packagingPlan, productName, t) {
-    for (const sku of packagingPlan) {
-      const tare = getTareWeight({
-        type: "pouch",
-        size: sku.packet.size,
-        unit: sku.packet.unit,
-      });
+  for (const [itemName, totalRequired] of Object.entries(pouchRequirements)) {
 
-      const usedKg = (sku.totalPacketsProduced * tare) / 1000;
+    const dry = await DryWarehouse.findOne({
+      where: { item_name: itemName, unit: "pcs" },
+      transaction: t,
+      lock: Sequelize.Transaction.LOCK.UPDATE,
+    });
 
-      /* ---------- Dry Warehouse ---------- */
-      const dry = await DryWarehouse.findOne({
-        where: {
-          item_name: `${productName}:${sku.packet.size}`,
-          unit: "kg",
-        },
-        transaction: t,
-        lock: t.LOCK.UPDATE,
-      });
+    if (!dry)
+      throw new Error(`Pouch stock not found for ${itemName}`);
 
-      if (!dry || Number(dry.quantity_unit) < usedKg) {
-        throw new Error("Insufficient packaging stock");
-      }
-
-      dry.quantity_unit = String(Number(dry.quantity_unit) - usedKg);
-      await dry.save({ transaction: t });
-
-      /* ---------- Packages table ---------- */
-      const pkgRow = await Packages.findOne({
-        where: { product_name: productName },
-        transaction: t,
-        lock: t.LOCK.UPDATE,
-      });
-
-      if (!pkgRow || !Array.isArray(pkgRow.types)) {
-        throw new Error("Package master not configured");
-      }
-
-      pkgRow.types = pkgRow.types.map((tp) => {
-        if (String(tp.size) !== String(sku.packet.size)) return tp;
-
-        const tare = getTareWeight({
-          type: "pouch",
-          size: tp.size,
-          unit: tp.unit,
-        });
-
-        const usedKg = (sku.totalPacketsProduced * tare) / 1000;
-        const available = Number(tp.quantity);
-
-        if (available < usedKg) {
-          throw new Error(
-            `Insufficient package stock for ${tp.size}${tp.unit}`,
-          );
-        }
-
-        return {
-          ...tp,
-          quantity: (available - usedKg).toFixed(3),
-        };
-      });
-
-      await pkgRow.save({ transaction: t });
-    }
+    if (Number(dry.quantity) < totalRequired)
+      throw new Error(`Insufficient pouches for ${itemName}`);
   }
+
+  simulatedTypes = simulatedTypes.map(tp => {
+
+    const key = `${tp.size}${tp.unit}`;
+    const requiredKg = plasticRequirements[key] || 0;
+
+    if (requiredKg === 0) return tp;
+
+    if (Number(tp.quantity) < requiredKg)
+      throw new Error(`Insufficient plastic for ${tp.size}${tp.unit}`);
+
+    return {
+      ...tp,
+      quantity: (Number(tp.quantity) - requiredKg).toFixed(3),
+    };
+  });
+
+  for (const [itemName, totalRequired] of Object.entries(pouchRequirements)) {
+
+    const dry = await DryWarehouse.findOne({
+      where: { item_name: itemName, unit: "pcs" },
+      transaction: t,
+      lock: Sequelize.Transaction.LOCK.UPDATE,
+    });
+
+    dry.quantity = Number(dry.quantity) - totalRequired;
+    await dry.save({ transaction: t });
+  }
+
+  pkgRow.types = simulatedTypes;
+  await pkgRow.save({ transaction: t });
+}
+
 }
 
 module.exports = PackingService;

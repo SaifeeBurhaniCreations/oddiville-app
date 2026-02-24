@@ -86,8 +86,19 @@ router.post("/create", safeRoute(async (req, res) => {
       usedBagsByProduct,
     } = req.body;
 
+    /* -------------------- Global -------------------- */
+
+    let parsedETD = null;
+
+if (est_delivered_date) {
+  const d = new Date(est_delivered_date);
+  if (!isNaN(d.getTime())) {
+    parsedETD = d;
+  }
+}
     /* -------------------- Packages Fetching -------------------- */
     const productNames = products.map(p => p.product_name);
+
 
     const packages = await packagesClient.findAll({
       where: { product_name: productNames },
@@ -109,28 +120,36 @@ router.post("/create", safeRoute(async (req, res) => {
       const productUsage = usedBagsByProduct[productId];
       const productName = productId.split("::")[0];
 
-      const stock = await stockClient.findOne({
-        where: { product_name: productName },
-        transaction: t,
-        lock: t.LOCK.UPDATE,
-      });
-
-      if (!stock) {
-        throw new Error(`Stock not found for productId ${productId}`);
-      }
-
-      if (!Array.isArray(stock.chamber)) {
-        throw new Error(`Invalid chamber data for productId ${productId}`);
-      }
-
       for (const packageKey of Object.keys(productUsage)) {
         const usage = productUsage[packageKey];
         const { byChamber = {}, packet, totalBags = 0 } = usage;
 
+        const expectedRating = Number(packageKey.split("-")[2]);
+
+        
+        const stock = await stockClient.findOne({
+          where: {
+            product_name: productName,
+            rating: expectedRating,
+          },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+        if (!stock) {
+          throw new Error(
+            `Stock not found for ${productName} with rating ${expectedRating}`
+          );
+        }
+
+        if (!Array.isArray(stock.chamber)) {
+          throw new Error(`Invalid chamber data for ${productName}`);
+        }
+
         const packetsToDeduct =
           Number(totalBags) * Number(packet?.packetsPerBag || 1);
 
-        /* -------------------- PACKET DEDUCTION -------------------- */
+        /* -------- PACKET DEDUCTION -------- */
         if (Array.isArray(stock.packages) && packet) {
           const pkgIndex = stock.packages.findIndex(
             (p) =>
@@ -152,23 +171,17 @@ router.post("/create", safeRoute(async (req, res) => {
           }
         }
 
-        /* -------------------- CHAMBER DEDUCTION -------------------- */
-        const expectedRating = Number(packageKey.split("-")[2]);
-
+        /* -------- CHAMBER DEDUCTION -------- */
         for (const chamberId of Object.keys(byChamber)) {
           const bagsToDeduct = Number(byChamber[chamberId]);
           if (!bagsToDeduct || bagsToDeduct <= 0) continue;
 
           const chamberIndex = stock.chamber.findIndex(
-            (c) =>
-              String(c.id) === String(chamberId) &&
-              Number(c.rating) === expectedRating
+            (c) => String(c.id) === String(chamberId)
           );
 
           if (chamberIndex === -1) {
-            throw new Error(
-              `Chamber ${chamberId} with rating ${expectedRating} not found`
-            );
+            throw new Error(`Chamber ${chamberId} not found`);
           }
 
           const oldQty = Number(stock.chamber[chamberIndex].quantity || 0);
@@ -182,15 +195,18 @@ router.post("/create", safeRoute(async (req, res) => {
           stock.chamber[chamberIndex].quantity =
             String(oldQty - bagsToDeduct);
         }
-      }
 
-      await stockClient.update(
-        {
+        const updateData = {
           chamber: stock.chamber,
-          packages: stock.packages,
-        },
-        { where: { id: stock.id }, transaction: t }
-      );
+        };
+
+        if (stock.category === "packed") {
+          updateData.packages = stock.packages;
+        }
+
+       stock.set(updateData);
+          await stock.save({ transaction: t });
+      }
     }
 
     /* -------------------- CREATE ORDER -------------------- */
@@ -202,7 +218,7 @@ router.post("/create", safeRoute(async (req, res) => {
         country: country?.label || country,
         city,
         status: "pending",
-        est_delivered_date,
+          est_delivered_date: parsedETD,
         products: products.map((p) => ({
           id: p.id,
           product_name: p.product_name,

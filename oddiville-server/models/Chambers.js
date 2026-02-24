@@ -7,7 +7,11 @@ module.exports = (sequelize, Sequelize) => {
     },
     chamber_name: {
       type: Sequelize.STRING,
-      allowNull: false
+      allowNull: false,
+      set(value) {
+  this.setDataValue("chamber_name", value.trim().toLowerCase());
+}
+
     },
     capacity: {
       type: Sequelize.INTEGER,
@@ -24,17 +28,24 @@ module.exports = (sequelize, Sequelize) => {
     timestamps: true,
 
     indexes: [
-      { fields: ["chamber_name"] },    
+      {
+  unique: true,
+  fields: ["chamber_name"]
+},   
       { fields: ["tag"] },             // dry/frozen filter
     ]
   }
 );
 
   Chamber.associate = (db) => {
-    Chamber.hasMany(db.DryWarehouse, {
-      foreignKey: "chamber_id",
-      as: "dryWarehouses"
-    });
+   Chamber.hasMany(db.DryWarehouse, {
+  foreignKey: "chamber_id",
+  as: "dryWarehouses",
+  onDelete: "RESTRICT",
+  onUpdate: "CASCADE",
+  hooks: true
+});
+
   };
 
   return Chamber;

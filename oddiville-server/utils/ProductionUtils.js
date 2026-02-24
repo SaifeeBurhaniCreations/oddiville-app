@@ -27,7 +27,6 @@ const normalizeRating = (r) => {
   return s === "" ? null : s;
 };
 
-
 function buildChamberStockPackagingFromProduction(production) {
   return {
     size: {
@@ -60,7 +59,7 @@ function mergeChamberStockPackaging(existing, incoming) {
 
 async function uploadNewImages(files) {
   return Promise.all(
-    files.map((file) => uploadToS3({file, folder: "production"}))
+    files.map((file) => uploadToS3({ file, folder: "production" }))
   );
 }
 
@@ -114,7 +113,7 @@ async function updateProductionRecord(id, updatedFields) {
 
 async function createAndSendProductionStartNotification(productionData, lane) {
   const { id, product_name, quantity, unit } = productionData;
-   const laneName = lane?.name ?? null;
+  const laneName = lane?.name ?? null;
   const description = [`${quantity}${unit ?? ""}`.trim(), laneName].filter(Boolean);
   dispatchAndSendNotification({
     type: "production-start",
@@ -244,17 +243,17 @@ async function updateChamberStocks(
   const incomingPackaging =
     buildChamberStockPackagingFromProduction(production);
 
-    const productionRating = normalizeRating(chambers[0]?.rating);
+  const productionRating = normalizeRating(production.rating);
 
-let stock = await chamberStockClient.findOne({
-  where: {
-    product_name,
-    category: "material",
-    rating: productionRating
-  },
-  transaction: opts.tx,
-  lock: opts.tx ? opts.tx.LOCK.UPDATE : undefined,
-});
+  let stock = await chamberStockClient.findOne({
+    where: {
+      product_name,
+      category: "material",
+      rating: productionRating
+    },
+    transaction: opts.tx,
+    lock: opts.tx ? opts.tx.LOCK.UPDATE : undefined,
+  });
 
   if (!stock) {
     stock = await chamberStockClient.create(
@@ -275,24 +274,20 @@ let stock = await chamberStockClient.findOne({
 
     for (const c of chambers) {
       const index = chambersList.findIndex(
-  (item) => String(item.id) === String(c.id)
-);
+        (item) => String(item.id) === String(c.id)
+      );
 
-const incomingRating = normalizeRating(c.rating);
+      if (index >= 0) {
+        chambersList[index].quantity = String(
+          Number(chambersList[index].quantity) + Number(c.quantity)
+        );
 
-if (index >= 0) {
-  chambersList[index].quantity = String(
-    Number(chambersList[index].quantity) + Number(c.quantity)
-  );
-
-  if (incomingRating !== null) {
-  }
-} else {
-  chambersList.push({
-    id: c.id,
-    quantity: String(c.quantity),
-  });
-}
+      } else {
+        chambersList.push({
+          id: c.id,
+          quantity: String(c.quantity),
+        });
+      }
     }
 
     const updatedPackaging = mergeChamberStockPackaging(

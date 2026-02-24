@@ -6,9 +6,12 @@ module.exports = (sequelize, Sequelize) => {
       primaryKey: true
     },
     item_name: {
-      type: Sequelize.STRING,
-      allowNull: false
-    },
+    type: Sequelize.STRING,
+    allowNull: false,
+    set(value) {
+      this.setDataValue("item_name", value.trim().toLowerCase());
+    }
+  },
     warehoused_date: {
       type: Sequelize.DATE,
       allowNull: false
@@ -21,19 +24,47 @@ module.exports = (sequelize, Sequelize) => {
       allowNull: true
     },
     chamber_id: {
-      type: Sequelize.UUID  
+      type: Sequelize.UUID,
+      allowNull: false
     },
-    quantity_unit: {
-      type: Sequelize.STRING
+    quantity: {
+      type: Sequelize.DECIMAL(12, 3),
+      allowNull: false,
+      defaultValue: 0
     },
-    unit: {
-      type: Sequelize.STRING
+
+unit: {
+  type: Sequelize.ENUM("kg", "gm", "pcs", "roll", "box", "set"),
+  allowNull: false,
+  set(value) {
+    this.setDataValue("unit", value.trim().toLowerCase());
+  }
+},
+
+    unit_weight_grams: {
+      type: Sequelize.DECIMAL(10, 3),
+      allowNull: true,
+      validate: {
+        validWeightForUnit() {
+          if (["pcs", "box", "set", "roll"].includes(this.unit)) {
+            if (this.unit_weight_grams == null) {
+              throw new Error("unit_weight_grams required for count-based units");
+            }
+          } else {
+            if (this.unit_weight_grams != null) {
+              throw new Error("unit_weight_grams only allowed for count-based units");
+            }
+          }
+        }
+      }
     }
   }, {
     timestamps: true,
 
     indexes: [
+      { fields: ["item_name"] },
       { fields: ["chamber_id", "warehoused_date"] },
+      {unique: true, fields: ["item_name", "chamber_id", "unit"]}
     ],
     hooks: {
       async beforeDestroy(item) {
@@ -46,10 +77,12 @@ module.exports = (sequelize, Sequelize) => {
   );
 
   DryWarehouse.associate = (db) => {
-    DryWarehouse.belongsTo(db.Chambers, {
-      foreignKey: "chamber_id",
-      as: "chamber"
-    });
+ DryWarehouse.belongsTo(db.Chambers, {
+  foreignKey: "chamber_id",
+  as: "chamber",
+  onDelete: "RESTRICT",
+  onUpdate: "CASCADE"
+});
   };
 
   return DryWarehouse;

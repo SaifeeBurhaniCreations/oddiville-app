@@ -41,7 +41,7 @@ export function useRawMaterialConsumption(rmUsed: ChamberStock[]) {
 
     rmUsed.forEach((rm) => {
       const ids = new Set(rm.chamber.map((ch) => String(ch.id)));
-      map.set(rm.product_name, ids);
+      map.set(rm.id, ids);
     });
 
     return map;
@@ -53,9 +53,8 @@ export function useRawMaterialConsumption(rmUsed: ChamberStock[]) {
       const next = { ...prev };
 
       rmUsed.forEach((rm) => {
-        if (next[rm.product_name] == null) {
-          next[rm.product_name] = DEFAULT_CONTAINER_SIZE.value;
-          changed = true;
+        if (next[rm.id] == null) {
+          next[rm.id] = DEFAULT_CONTAINER_SIZE.value;
         }
       });
 
@@ -67,10 +66,11 @@ export function useRawMaterialConsumption(rmUsed: ChamberStock[]) {
   const rmConsumption = useMemo(() => {
     return rmUsed
       .map((rm) => {
-        const chamberIds =
-          chamberIdsByRM.get(rm.product_name) ?? new Set<string>();
 
-        const rmInputs = containerInputByChamber[rm.product_name] || {};
+        const chamberIds =
+        chamberIdsByRM.get(rm.id) ?? new Set<string>();
+
+      const rmInputs = containerInputByChamber[rm.id] || {};
 
         const rmPackaging =
           rm.packaging && !Array.isArray(rm.packaging) ? rm.packaging : null;
@@ -107,7 +107,7 @@ export function useRawMaterialConsumption(rmUsed: ChamberStock[]) {
         return {
           rmId: rm.id,
           rmName: rm.product_name,
-          rating: ratingByRM[rm.product_name]?.rating ?? 5,
+          rating: ratingByRM[rm.id]?.rating ?? rm.rating ?? 5,
           sourceChambers,
         };
       })
@@ -123,11 +123,11 @@ export function useRawMaterialConsumption(rmUsed: ChamberStock[]) {
   /* Handlers */
 
   const setChamberInput = useCallback(
-    (rmName: string, chamberId: string, value: number) => {
+    (rmId: string, chamberId: string, value: number) => {
       setContainerInputByChamber((prev) => ({
         ...prev,
-        [rmName]: {
-          ...(prev[rmName] || {}),
+        [rmId]: {
+          ...(prev[rmId] || {}),
           [chamberId]: value,
         },
       }));

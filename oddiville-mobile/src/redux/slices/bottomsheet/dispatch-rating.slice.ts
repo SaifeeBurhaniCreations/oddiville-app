@@ -52,22 +52,14 @@ const DispatchRatingSlice = createSlice({
       state.ratingByProductSize[productId][key] = rating;
     },
 
-    clearRatingForProductSize: (
-      state,
-      action: PayloadAction<{
-        productId: string;
-        size: number;
-        unit: "gm" | "kg";
-      }>,
-    ) => {
-      const key = getProductSizeKey(
-        action.payload.productId,
-        action.payload.size,
-        action.payload.unit,
-      );
+    clearRatingForProductSize: (state, action) => {
+  const { productId, size, unit } = action.payload;
+  const key = `${size}-${unit}`;
 
-      delete state.ratingByProductSize[key];
-    },
+  if (state.ratingByProductSize[productId]) {
+    delete state.ratingByProductSize[productId][key];
+  }
+},
 
     clearAllRatings: (state) => {
       state.ratingByProductSize = {};

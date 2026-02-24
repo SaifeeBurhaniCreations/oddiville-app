@@ -46,7 +46,6 @@ import { useToast } from "@/src/context/ToastContext";
 import {
   PackedChamberRow,
   PackedItemEvent,
-  RMConsumption,
   UIPackingItem,
 } from "@/src/types/domain/packing/packing.types";
 import Chip from "../Chip";
@@ -63,22 +62,6 @@ type ControlledFormProps<T> = {
 export interface SelectedRawMaterial {
   name: string;
 }
-
-const getRatingForChamber = (
-  rm: RMConsumption | undefined,
-  chamberId: string,
-): number | null => {
-  if (!rm) return null;
-
-  for (const rmEntry of Object.values(rm)) {
-    const chamber = rmEntry[chamberId];
-    if (chamber?.rating != null) {
-      return chamber.rating;
-    }
-  }
-
-  return null;
-};
 
 export const normalizePackedItemsToUI = (
   items: PackedItemEvent[],
@@ -157,27 +140,27 @@ const CreateFromStorage = ({
 
   const chamberStockIndex = useMemo(() => {
     const map = new Map<
-      string,
-      {
-        packages: any[];
-        chambers: {
-          chamberId: string;
-          rating: number;
-          bags: number;
-        }[];
-      }
-    >();
+  string,
+  {
+    rating: number;
+    packages: any[];
+    chambers: {
+      chamberId: string;
+      bags: number;
+    }[];
+  }
+>();
 
     (chamberStocks ?? []).forEach((cs) => {
-      map.set(cs.product_name, {
-        packages: cs.packages ?? [],
-        chambers: (cs.chamber ?? []).map((ch) => ({
-          chamberId: ch.id,
-          rating: Number(ch.rating),
-          bags: Number(ch.quantity),
-        })),
-      });
-    });
+  map.set(cs.product_name, {
+    rating: Number(cs.rating), 
+    packages: cs.packages ?? [],
+    chambers: (cs.chamber ?? []).map((ch) => ({
+      chamberId: ch.id,
+      bags: Number(ch.quantity),
+    })),
+  });
+});
 
     return map;
   }, [chamberStocks]);

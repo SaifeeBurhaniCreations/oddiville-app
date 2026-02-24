@@ -50,9 +50,9 @@ export interface ChamberStock {
   image?: string | null;
   category: "material" | "other" | "packed";
   unit: string;
+  rating: number | string;
 
   packaging: Packaging | Packaging[];
-
   packages?: PackageItemLocal[] | null;
 
   chamber: Array<{

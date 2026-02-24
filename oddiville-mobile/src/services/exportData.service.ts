@@ -24,6 +24,7 @@ export const fetchExportRowsCount = async (
   type: ExportType,
   filters: ExportFiltersState,
 ): Promise<{ count: number }> => {
+
   const params = buildExportParams(type, filters);
 
   const res = await api.get(`/export/count?${params}`);

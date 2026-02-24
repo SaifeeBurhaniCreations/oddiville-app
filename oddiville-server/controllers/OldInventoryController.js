@@ -1091,6 +1091,8 @@ router.post(
     try {
       const body = req.body || {};
 
+      console.log("body", JSON.stringify(body, null, 2));
+      
       const hasDispatchOrder =
         body.dispatchOrder &&
         Array.isArray(body.dispatchOrder.rows) &&

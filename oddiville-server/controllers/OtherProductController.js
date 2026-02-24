@@ -33,7 +33,6 @@ function parseProductsFromMultipart(body) {
   return Object.values(products);
 }
 
-
 router.get("/", async (req, res) => {
   try {
     const clients = await thirdPartyClient.findAll();
@@ -122,17 +121,24 @@ router.post("/", upload.any({ limits: { files: 10 } }), async (req, res) => {
   let clientPlainResult = null;
 
   /* ------------------ PARSE PRODUCTS ------------------ */
-  let products = [];
-  try {
-    products = JSON.parse(req.body.products ?? "[]");
-    if (!Array.isArray(products)) products = [];
-  } catch (e) {
-    return res.status(400).json({ error: "Invalid products payload" });
-  }
+let products = req.body.products || [];
 
-  if (!products.length) {
-    return res.status(400).json({ error: "No products provided" });
-  }
+if (!Array.isArray(products)) {
+  products = [products];
+}
+
+console.log("req.files", req.files);
+
+
+return 
+products = products.map(p => ({
+  ...p,
+  selectedChambers: JSON.parse(p.selectedChambers || "[]")
+}));
+
+if (!products.length) {
+  return res.status(400).json({ error: "No products provided" });
+}
 
   try {
     /* ------------------ UPLOAD ALL PRODUCT IMAGES ------------------ */

@@ -76,6 +76,7 @@ const PackageScreen = () => {
   const [isCurrentProduct, setIsCurrentProduct] = useState<boolean>(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [overPackMap, setOverPackMap] = useState<Record<string, boolean>>({});
+  const [packingSession, setPackingSession] = useState(0);
 
   // derived variable
   const disableButton = Object.values(overPackMap).some(Boolean);
@@ -119,6 +120,8 @@ const PackageScreen = () => {
         dispatch(clearChambers());
         dispatch(clearRatings());
 
+        setPackingSession(prev => prev + 1);
+
         queryClient.invalidateQueries({
           queryKey: ["packageName", data.product.productName],
         });
@@ -160,7 +163,7 @@ const PackageScreen = () => {
       const kgPerBag = getRmKgPerBag(rm.packaging);
 
       const usedBags = Object.values(
-        form.values.rmInputs?.[rm.product_name] || {},
+        form.values.rmInputs?.[rm.id] || {},
       ).reduce((s, v) => s + Number(v || 0), 0);
 
       return sum + usedBags * kgPerBag;
@@ -215,7 +218,7 @@ const PackageScreen = () => {
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={{ flexGrow: 1, paddingBottom: 56 }}
               >
-                <View style={styles.storageColumn}>
+                <View key={packingSession} style={styles.storageColumn}>
                   <ProductContextSection
                     setIsLoading={setIsLoading}
                     form={form}

@@ -36,6 +36,7 @@ import { PRODUCTION_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@
 import { useToast } from '@/src/context/ToastContext';
 import OverlayLoader from '@/src/components/ui/OverlayLoader';
 import { useAppCapabilities } from '@/src/hooks/useAppCapabilities';
+import { useOverlayLoader } from '@/src/context/OverlayLoaderContext';
 
 type RNImageFile = {
     uri: string;
@@ -65,6 +66,7 @@ const ProductionStartScreen = () => {
     const { rmId: id } = useParams('raw-material-receive', 'rmId');
     const { goTo } = useAppNavigation();
     const adminData = useAdmin();
+    const loader = useOverlayLoader();
 
     const {
         data: productionData,
@@ -367,6 +369,9 @@ const ProductionStartScreen = () => {
     const isLoading = productFetching || dataFetching;
     const isFormDisabled = isLoading || isSubmitting || startProduction.isPending || !productionData;
 
+    useEffect(() => {
+        loader.bind(isLoading)
+    }, [isLoading])
     if (isProductionError && !productionData) {
         return (
             <View style={styles.pageContainer}>

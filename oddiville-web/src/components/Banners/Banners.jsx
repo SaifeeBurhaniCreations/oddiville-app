@@ -13,12 +13,17 @@ const Banners = ({
   const [banner, setBanner] = useState({ banner: null, preview: "" });
   const [typeCheckError, setTypeCheckError] = useState("");
 
-  useEffect(() => {
-  if (!getBanners) return;
+useEffect(() => {
+  if (!getBanners) {
+    setBanner({ banner: null, preview: "" });
+    return;
+  }
 
   setBanner({
     banner: null,
-    preview: typeof getBanners === "string" ? getBanners : getBanners?.url
+    preview: typeof getBanners === "string"
+      ? getBanners
+      : getBanners?.url
   });
 }, [getBanners]);
 

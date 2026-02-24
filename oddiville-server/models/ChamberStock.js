@@ -34,7 +34,8 @@ module.exports = (sequelize, Sequelize) => {
             }
 
             const validateOne = (pkg, index = null) => {
-              const prefix = index !== null ? `Packaging[${index}]` : "Packaging";
+              const prefix =
+                index !== null ? `Packaging[${index}]` : "Packaging";
 
               if (typeof pkg !== "object" || Array.isArray(pkg)) {
                 throw new Error(`${prefix} must be an object.`);
@@ -43,9 +44,11 @@ module.exports = (sequelize, Sequelize) => {
               const allowedKeys = ["size", "type", "count", "bags"];
               const keys = Object.keys(pkg);
 
-              const extra = keys.filter(k => !allowedKeys.includes(k));
+              const extra = keys.filter((k) => !allowedKeys.includes(k));
               if (extra.length) {
-                throw new Error(`${prefix} has invalid fields: ${extra.join(", ")}`);
+                throw new Error(
+                  `${prefix} has invalid fields: ${extra.join(", ")}`,
+                );
               }
 
               if (!pkg.size || typeof pkg.size !== "object") {
@@ -78,12 +81,13 @@ module.exports = (sequelize, Sequelize) => {
 
             if (this.category === "material") {
               if (Array.isArray(value)) {
-                throw new Error("Packaging must be an object for material items.");
+                throw new Error(
+                  "Packaging must be an object for material items.",
+                );
               }
               validateOne(value);
             }
-          }
-
+          },
         },
       },
       chamber: {
@@ -96,17 +100,17 @@ module.exports = (sequelize, Sequelize) => {
             }
 
             value.forEach((item, index) => {
-              const allowedKeys = ["id", "quantity", "rating"];
+              const allowedKeys = ["id", "quantity"];
               const itemKeys = Object.keys(item);
 
               const extraKeys = itemKeys.filter(
-                (k) => !allowedKeys.includes(k)
+                (k) => !allowedKeys.includes(k),
               );
               if (extraKeys.length > 0) {
                 throw new Error(
                   `Chamber[${index}] has invalid fields: ${extraKeys.join(
-                    ", "
-                  )}`
+                    ", ",
+                  )}`,
                 );
               }
 
@@ -114,18 +118,17 @@ module.exports = (sequelize, Sequelize) => {
               if (missingKeys.length > 0) {
                 throw new Error(
                   `Chamber[${index}] is missing required fields: ${missingKeys.join(
-                    ", "
-                  )}`
+                    ", ",
+                  )}`,
                 );
               }
 
               if (
                 typeof item.id !== "string" ||
-                typeof item.quantity !== "string" ||
-                typeof item.rating !== "string"
+                typeof item.quantity !== "string"
               ) {
                 throw new Error(
-                  `Chamber[${index}] fields must all be strings.`
+                  `Chamber[${index}] fields must all be strings.`,
                 );
               }
             });
@@ -150,7 +153,7 @@ module.exports = (sequelize, Sequelize) => {
               const extra = keys.filter((k) => !allowedKeys.includes(k));
               if (extra.length > 0) {
                 throw new Error(
-                  `Packages[${index}] has invalid fields: ${extra.join(", ")}`
+                  `Packages[${index}] has invalid fields: ${extra.join(", ")}`,
                 );
               }
 
@@ -159,9 +162,10 @@ module.exports = (sequelize, Sequelize) => {
               }
 
               if (pkg.quantity == null || isNaN(Number(pkg.quantity))) {
-                  throw new Error(`Packages[${index}].quantity must be numeric string.`);
-                }
-
+                throw new Error(
+                  `Packages[${index}].quantity must be numeric string.`,
+                );
+              }
             });
           },
         },
@@ -176,9 +180,11 @@ module.exports = (sequelize, Sequelize) => {
             const allowedKeys = ["lastPackedAt", "skus", "eventCount"];
             const keys = Object.keys(value);
 
-            const extra = keys.filter(k => !allowedKeys.includes(k));
+            const extra = keys.filter((k) => !allowedKeys.includes(k));
             if (extra.length > 0) {
-              throw new Error(`packed_ref has invalid fields: ${extra.join(", ")}`);
+              throw new Error(
+                `packed_ref has invalid fields: ${extra.join(", ")}`,
+              );
             }
 
             if (value.lastPackedAt && isNaN(Date.parse(value.lastPackedAt))) {
@@ -189,19 +195,16 @@ module.exports = (sequelize, Sequelize) => {
               throw new Error("packed_ref.skus must be an array");
             }
 
-            if (
-              value.eventCount != null &&
-              isNaN(Number(value.eventCount))
-            ) {
+            if (value.eventCount != null && isNaN(Number(value.eventCount))) {
               throw new Error("packed_ref.eventCount must be numeric");
             }
           },
         },
       },
       rating: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
-    },
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
     },
     {
       timestamps: true,
@@ -209,6 +212,10 @@ module.exports = (sequelize, Sequelize) => {
         { fields: ["product_name"] },
         { fields: ["category", "createdAt"] },
         { fields: ["product_name", "category", "rating"], unique: true },
+        {
+          fields: ["chamber"],
+          using: "gin",
+        },
       ],
       validate: {
         packagesOnlyForPacked() {
@@ -217,7 +224,7 @@ module.exports = (sequelize, Sequelize) => {
           }
         },
       },
-    }
+    },
   );
 
   return ChamberStock;

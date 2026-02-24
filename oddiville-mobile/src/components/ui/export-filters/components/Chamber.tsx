@@ -7,7 +7,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/src/redux/store";
 import { setSource } from "@/src/redux/slices/bottomsheet/raw-material.slice";
 import { getPlaceholder } from "@/src/utils/inputUtils";
-import { useChamber } from "@/src/hooks/useChambers";
 import { getColor } from "@/src/constants/colors";
 import ChamberIcon from "@/src/components/icons/common/ChamberIcon";
 import { B1 } from "@/src/components/typography/Typography";
@@ -18,7 +17,6 @@ const Chambers = ({ state, setState }: FilterComponentProps) => {
     (state: RootState) => state.rawMaterial,
   );
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
-  const { data: chambers } = useChamber();
 
   const handleSelect = () => {
     dispatch(setSource("export-chamber"));
@@ -45,14 +43,14 @@ const Chambers = ({ state, setState }: FilterComponentProps) => {
         Chambers
       </Select>
       {selectedChambers?.map((chamberName) => (
-        <View style={[styles.chamberCard, styles.borderBottom]}>
+        <View style={[styles.chamberCard, styles.borderBottom]} key={chamberName}>
           <View style={styles.Hstack}>
             <View style={styles.iconWrapper}>
               <ChamberIcon color={getColor("green")} size={32} />
             </View>
 
             <View style={styles.Vstack}>
-              <B1>{String(chamberName).slice(0, 48)}...</B1>
+              <B1>{String(chamberName).slice(0, 56)}...</B1>
             </View>
           </View>
         </View>

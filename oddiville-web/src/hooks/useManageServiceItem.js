@@ -29,35 +29,33 @@ const  useManageServiceItem = ({
   );
 
   useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const response = await fetchDryWarehouse();
-        dispatch(handleFetchCategory(response.data));
-      } catch (err) {
-        console.error("Failed to fetch categories", err);
-      }
-    }
-    fetchCategories();
-  }, [dispatch]);
-
-  useEffect(() => {
     if (id) {
       const data = serviceData?.find((s) => s.id === id);
       if (data) {
         form.setFields({
-          item_name: data.item_name,
-          chamber_id: data.chamber_id,
-          warehoused_date: data.warehoused_date,
-          description: data.description,
-          quantity_unit: data.quantity_unit,
-          sample_image: data.sample_image,
-        });
+  item_name: data.item_name,
+  chamber_id: data.chamber_id,
+  warehoused_date: data.warehoused_date?.split("T")[0], // important
+  description: data.description,
+  quantity: data.quantity,
+  unit: data.unit,
+  unit_weight_grams: data.unit_weight_grams,
+  sample_image: data.sample_image,
+});
         setFetchedBanners(data.sample_image);
       }
     }
   }, [id, serviceData]);
 
+  useEffect(() => {
+  const countUnits = ["pcs","box","set","roll","bundle","pack"];
+  if (!countUnits.includes(form.values.unit)) {
+    form.setField("unit_weight_grams", "");
+  }
+}, [form.values.unit]);
+
   const handleSubmit = async (e) => {
+    
     e.preventDefault();
     const result = form.validateForm();
     if (!result.success) return;
@@ -66,7 +64,9 @@ const  useManageServiceItem = ({
     formPayload.append("item_name", result.data.item_name);
     formPayload.append("chamber_id", result.data.chamber_id);
     formPayload.append("description", result.data.description);
-    formPayload.append("quantity_unit", result.data.quantity_unit);
+    formPayload.append("quantity", result.data.quantity);
+    formPayload.append("unit", result.data.unit);
+    formPayload.append("unit_weight_grams", result.data.unit_weight_grams);
     formPayload.append("warehoused_date", result.data.warehoused_date);
 
     if (banners) formPayload.append("sample_image", banners);
@@ -74,6 +74,7 @@ const  useManageServiceItem = ({
     setIsLoading(true);
     try {
       if (!id) {
+
         const response = await create(formPayload);
         if (response.status === 201) {
           dispatch(handlePostData(response.data));

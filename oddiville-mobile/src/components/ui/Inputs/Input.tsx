@@ -43,6 +43,7 @@ const Input = forwardRef<TextInput, InputProps>(
       inputStyle,
       wrapperStyle,
       style,
+      addonStyle,
       onIconPress,
       ...props
     }: InputProps,
@@ -108,7 +109,7 @@ const Input = forwardRef<TextInput, InputProps>(
       </B2>
     );
     const renderAddonMask = (text: string) => (
-      <B4 color={getColor("green", 400)} style={styles.addonMask}>
+      <B4 color={getColor("green", 400)} style={[styles.addonMask, addonStyle]}>
         {text}
       </B4>
     );

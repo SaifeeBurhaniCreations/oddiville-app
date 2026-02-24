@@ -3,28 +3,61 @@ const {
   DryWarehouse: DryWarehousesClient,
   Chambers: chamberClient,
 } = require("../../models");
-const { uploadToS3, deleteFromS3 } = require("../../services/s3Service");
+const { uploadToS3 } = require("../../services/s3Service");
 const upload = require("../../middlewares/upload");
 
-const { Op } = require("sequelize");
+const normalize = (s) => String(s || "").trim().toLowerCase();
+
+async function rebuildChamberItems(chamberId, transaction=null) {
+  const items = await DryWarehousesClient.findAll({
+    where: { chamber_id: chamberId },
+    attributes: ["id"],
+    raw: true,
+    transaction
+  });
+
+  await chamberClient.update(
+    { items: items.map(i => i.id) },
+    { where: { id: chamberId }, transaction }
+  );
+}
+    const COUNTABLE_UNITS = ["pcs","box","set","roll","bundle","pack"];
 
 // CREATE
 router.post("/", upload.single("sample_image"), async (req, res) => {
   try {
     const {
-      item_name,
-      warehoused_date,
-      description,
-      quantity_unit,
-      chamber_id,
-    } = req.body;
+  item_name,
+  warehoused_date,
+  description,
+  quantity,
+  chamber_id,
+  unit,
+  unit_weight_grams
+} = req.body;
 
-    if (!item_name || !warehoused_date || !chamber_id) {
-      return res.status(400).json({ error: "Missing required fields." });
+    if (!item_name || !warehoused_date || !chamber_id || !unit?.trim()) {
+      return res.status(400).json({ error: "item_name, date, chamber and unit required." });
     }
 
+    const normalizedUnit = normalize(unit);
+const normalizedName = normalize(item_name);
+
+const numericQty = Number(quantity);
+if (!Number.isFinite(numericQty) || numericQty <= 0)
+  return res.status(400).json({ error: "Quantity must be a valid positive number" });
+
+
+if (COUNTABLE_UNITS.includes(normalizedUnit)) {
+  if (!unit_weight_grams || Number(unit_weight_grams) <= 0) {
+    return res.status(400).json({
+      error: "unit_weight_grams required for count-based units"
+    });
+  }
+}
+
     const chamber = await chamberClient.findOne({
-      where: { chamber_name: chamber_id },
+      where: { id: chamber_id }
     });
 
     if (!chamber) {
@@ -35,28 +68,114 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
 
     let sample_image = null;
     if (req.file) {
-      const uploaded = await uploadToS3({file: req.file, folder: "warehouses/dry"});
+      const uploaded = await uploadToS3({ file: req.file, folder: "warehouses/dry" });
       sample_image = {
         url: uploaded.url,
         key: uploaded.key,
       };
     }
 
-    const newItem = await DryWarehousesClient.create({
-      item_name: item_name.trim(),
-      warehoused_date: new Date(warehoused_date),
-      description,
-      quantity_unit,
-      sample_image,
-      chamber_id: chamber.id,
+    const parsedDate = new Date(warehoused_date);
+    if (isNaN(parsedDate.getTime()))
+      return res.status(400).json({ error: "Invalid warehoused_date" });
+
+    const existing = await DryWarehousesClient.findOne({
+      where: {
+        item_name: normalizedName,
+        chamber_id: chamber.id,
+        unit: normalizedUnit
+
+      }
     });
 
-    const currentItems = chamber.items || [];
-    currentItems.push(newItem.id);
-    chamber.items = currentItems;
-    await chamber.save();
+    if (existing) {
 
-    res.status(201).json({ ...newItem, chamber_name: chamber.chamber_name });
+      const incomingWeight = COUNTABLE_UNITS.includes(normalizedUnit)
+  ? Number(unit_weight_grams)
+  : null;
+
+const existingWeight = existing.unit_weight_grams == null
+  ? null
+  : Number(existing.unit_weight_grams);
+
+if (existingWeight !== incomingWeight) {
+  return res.status(400).json({
+    error: "Same item exists with different unit weight"
+  });
+}
+
+  await existing.increment("quantity", {
+    by: numericQty,
+  });
+
+  await existing.reload();
+
+  return res.status(200).json({
+    message: "Stock increased",
+    data: existing
+  });
+}
+
+    let newItem;
+
+    try {
+      newItem = await DryWarehousesClient.create({
+  item_name: normalizedName,
+  warehoused_date: parsedDate,
+  description,
+  quantity: numericQty,
+  unit: normalizedUnit,
+  unit_weight_grams: COUNTABLE_UNITS.includes(normalizedUnit)
+    ? Number(unit_weight_grams)
+    : null,
+  sample_image,
+  chamber_id: chamber.id,
+});
+
+    } catch (err) {
+
+      if (err.name === "SequelizeUniqueConstraintError") {
+
+  const retry = await DryWarehousesClient.findOne({
+    where: {
+      item_name: normalizedName,
+      chamber_id: chamber.id,
+      unit: normalizedUnit
+    }
+  });
+
+const retryIncomingWeight = COUNTABLE_UNITS.includes(normalizedUnit)
+  ? Number(unit_weight_grams)
+  : null;
+
+const retryExistingWeight = retry.unit_weight_grams == null
+  ? null
+  : Number(retry.unit_weight_grams);
+
+if (retryExistingWeight !== retryIncomingWeight) {
+  return res.status(400).json({
+    error: "Same item exists with different unit weight"
+  });
+}
+
+  await retry.increment("quantity", { by: numericQty });
+  await retry.reload();
+
+  return res.status(200).json({
+    message: "Stock increased (race condition handled)",
+    data: retry
+  });
+}
+
+      throw err;
+    }
+
+    await rebuildChamberItems(chamber.id);
+
+    res.status(201).json({
+      ...newItem.toJSON(),
+      chamber_name: chamber.chamber_name
+    });
   } catch (error) {
     console.error("Create Dry Error:", error.message);
     res.status(500).json({ error: "Internal server error." });
@@ -75,7 +194,6 @@ router.get("/", async (req, res) => {
     const result = items.map((item) => ({
       ...item.toJSON(),
       chamber_name: item.chamber?.chamber_name,
-      chamber_id: undefined,
     }));
 
     res.status(200).json(result);
@@ -88,101 +206,65 @@ router.get("/", async (req, res) => {
 // GET /summary
 router.get("/summary", async (req, res) => {
   try {
-    const uniqueChambers = await DryWarehousesClient.findAll({
-      attributes: ["chamber_id"],
-      where: {
-        chamber_id: { [Op.ne]: null },
-      },
-      group: ["chamber_id"],
-      raw: true,
-    });
-
-    const rawIds = uniqueChambers
-      .map((r) => r.chamber_id)
-      .filter(Boolean)
-      .map(String);
-
-    if (rawIds.length === 0) {
-      return res.status(200).json({ summaries: [], totalChambers: 0 });
-    }
-
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-    const uuids = rawIds.filter((s) => uuidRegex.test(s));
-    const names = rawIds.filter((s) => !uuidRegex.test(s));
-
-    const chamberWhere = {};
-    const orClauses = [];
-    if (uuids.length > 0) orClauses.push({ id: uuids });
-    if (names.length > 0) orClauses.push({ chamber_name: names });
-
-    if (orClauses.length === 0) {
-      return res.status(200).json({ summaries: [], totalChambers: 0 });
-    }
 
     const chambers = await chamberClient.findAll({
-      where: { [Op.or]: orClauses },
       attributes: ["id", "chamber_name", "capacity"],
       raw: true,
     });
 
-    // map by both id and chamber_name so lookups work for either kind of chamber_id
-    const chamberMap = new Map();
-    for (const c of chambers) {
-      if (c.id != null) chamberMap.set(String(c.id), c);
-      if (c.chamber_name != null) chamberMap.set(String(c.chamber_name), c);
-    }
+    const chamberIds = chambers.map(c => c.id);
 
-    // get dry rows that reference any of the rawIds (these are strings as stored)
     const dryRows = await DryWarehousesClient.findAll({
-      where: { chamber_id: rawIds },
-      attributes: ["id", "chamber_id", "quantity_unit", "unit", "item_name"],
+      where: { chamber_id: chamberIds },
+      attributes: ["id", "chamber_id", "quantity", "unit", "item_name"],
       raw: true,
     });
 
-    const parseQuantity = (raw) => {
-      if (raw == null) return 0;
-      const s = String(raw).trim();
-      const cleaned = s.replace(/[^0-9.-]+/g, "");
-      const n = Number(cleaned);
-      return Number.isFinite(n) ? n : 0;
-    };
 
     const summariesMap = new Map();
+
     for (const row of dryRows) {
       const cid = String(row.chamber_id);
-      const q = parseQuantity(row.quantity_unit);
 
-      const cur = summariesMap.get(cid) ?? { totalQuantity: 0, itemsCount: 0 };
-      cur.totalQuantity += q;
-      cur.itemsCount += 1;
+      const cur = summariesMap.get(cid) ?? {
+        itemsCount: 0,
+        units: {}
+      };
+
+      const unit = row.unit || "unknown";
+
+      const slotUnits = ["pcs", "box", "set", "roll", "bundle", "pack"];
+
+      if (slotUnits.includes(unit) && Number(row.quantity) > 0)
+          cur.itemsCount += 1;
+
+      cur.units[unit] = (cur.units[unit] || 0) + Number(row.quantity || 0);
+
       summariesMap.set(cid, cur);
     }
 
-    const summaries = rawIds.map((cid) => {
-      const meta = chamberMap.get(cid);
-      const agg = summariesMap.get(cid) ?? { totalQuantity: 0, itemsCount: 0 };
+    const summaries = chambers.map((ch) => {
+      const cid = String(ch.id);
+      const agg = summariesMap.get(cid) ?? { units: {}, itemsCount: 0 };
+
+      const used = agg.itemsCount;
+      const capacity = ch.capacity || 0;
 
       return {
         chamberId: cid,
-        // prefer chamber_name from meta when available, otherwise null
-        chamberName: meta ? meta.chamber_name : null,
-        capacity: meta ? meta.capacity : null,
-        totalQuantity: agg.totalQuantity,
-        itemsCount: agg.itemsCount,
+        chamberName: ch.chamber_name,
+        capacity,
+        usedSlots: used,
+        occupancyPercent: capacity ? Math.round((used / capacity) * 100) : 0,
+        quantitiesByUnit: agg.units,
+        freeSlots: Math.max(capacity - used, 0)
       };
-    });
 
-    const grandTotal = summaries.reduce(
-      (acc, s) => acc + (s.totalQuantity || 0),
-      0
-    );
+    });
 
     return res.status(200).json({
       summaries,
       totalChambers: summaries.length,
-      grandTotal,
     });
   } catch (error) {
     console.error("Get DryWarehousesClient summary error:", error);
@@ -213,50 +295,116 @@ router.put("/:id", async (req, res) => {
     if (!existingItem) {
       return res.status(404).json({ error: "Item not found." });
     }
+    if (req.body.quantity !== undefined && Number(req.body.quantity) < 0)
+      return res.status(400).json({ error: "Quantity cannot be negative" });
+
+    if (req.body.item_name !== undefined && !req.body.item_name.trim())
+      return res.status(400).json({ error: "Item name cannot be empty" });
 
     const oldChamberId = existingItem.chamber_id;
 
-    const [count, [updatedItem]] = await DryWarehousesClient.update(req.body, {
-      where: { id },
-      returning: true,
-    });
-
-    if (count === 0) return res.status(404).json({ error: "Item not found." });
-
-    // If chamber_id is being changed or added
-    if (newChamberId !== undefined && newChamberId !== oldChamberId) {
-      // Remove item from the old chamber if it existed
-      if (oldChamberId) {
-        const oldChamber = await chamberClient.findOne({
-          where: { chamber_name: oldChamberId },
-        });
-        if (oldChamber) {
-          oldChamber.items = (oldChamber.items || []).filter(
-            (itemId) => itemId !== existingItem.id
-          );
-          await oldChamber.save();
-        } else {
-          console.warn(`Old Chamber with ID ${oldChamberId} not found.`);
-        }
-      }
-
-      // Add item to the new chamber if newChamberId is provided
-      if (newChamberId) {
-        const newChamber = await chamberClient.findOne({
-          where: { chamber_name: newChamberId },
-        });
-        if (newChamber) {
-          const currentItems = newChamber.items || [];
-          if (!currentItems.includes(updatedItem.id)) {
-            currentItems.push(updatedItem.id);
-          }
-          newChamber.items = currentItems;
-          await newChamber.save();
-        } else {
-          console.warn(`New Chamber with ID ${newChamberId} not found.`);
-        }
-      }
+    let newDate = existingItem.warehoused_date;
+    if (req.body.warehoused_date !== undefined) {
+      const d = new Date(req.body.warehoused_date);
+      if (isNaN(d.getTime()))
+        return res.status(400).json({ error: "Invalid warehoused_date" });
+      newDate = d;
     }
+
+    if (newChamberId !== undefined) {
+      const newChamberCheck = await chamberClient.findByPk(newChamberId);
+      if (!newChamberCheck)
+        return res.status(400).json({ error: "Target chamber does not exist" });
+    }
+
+    if (req.body.item_name && normalize(req.body.item_name) !== existingItem.item_name) {
+
+      const duplicate = await DryWarehousesClient.findOne({
+        where: {
+          item_name: normalize(req.body.item_name),
+          chamber_id: newChamberId ?? existingItem.chamber_id,
+          unit: req.body.unit ? normalize(req.body.unit).toLowerCase() : existingItem.unit
+        }
+      });
+
+if (duplicate) {
+
+await duplicate.increment("quantity", { by: existingItem.quantity });
+
+await existingItem.destroy();
+
+await rebuildChamberItems(duplicate.chamber_id);
+await rebuildChamberItems(existingItem.chamber_id);
+
+
+  return res.json({
+    message: "Items merged due to rename",
+    mergedInto: duplicate.id
+  });
+}
+
+    }
+
+    if (
+      req.body.unit &&
+      req.body.unit !== existingItem.unit &&
+      Number(existingItem.quantity) > 0
+    ) {
+      return res.status(400).json({
+        error: "Cannot change unit while stock exists"
+      });
+    }
+
+    const allowed = {};
+
+    if (req.body.item_name !== undefined)
+      allowed.item_name = normalize(req.body.item_name);
+
+    if (req.body.description !== undefined)
+      allowed.description = req.body.description;
+
+    // if (req.body.quantity !== undefined)
+    //   allowed.quantity = Number(req.body.quantity) || 0;
+
+    // use adjsut route 
+    if (req.body.quantity !== undefined)
+      return res.status(400).json({
+        error: "Direct quantity editing not allowed. Use stock adjustment."
+      });
+
+    if (req.body.unit !== undefined)
+      allowed.unit = normalize(req.body.unit);
+
+    allowed.warehoused_date = newDate;
+    allowed.chamber_id = newChamberId ?? existingItem.chamber_id;
+
+let count, updatedItem;
+
+try {
+  const result = await DryWarehousesClient.update(allowed, {
+    where: { id },
+    returning: true,
+  });
+
+  count = result[0];
+  updatedItem = result[1][0];
+
+} catch (err) {
+  if (err.name === "SequelizeUniqueConstraintError") {
+    return res.status(409).json({
+      error: "Item with same name, unit and chamber already exists"
+    });
+  }
+  throw err;
+}
+
+if (count === 0)
+  return res.status(404).json({ error: "Item not found." });
+
+if (newChamberId !== undefined && newChamberId !== oldChamberId) {
+  await rebuildChamberItems(oldChamberId);
+  await rebuildChamberItems(newChamberId);
+}
 
     res
       .status(200)
@@ -273,21 +421,17 @@ router.delete("/:id", async (req, res) => {
     const item = await DryWarehousesClient.findByPk(req.params.id);
     if (!item) return res.status(404).json({ error: "Item not found." });
 
-    if (item.sample_image?.key) {
-      await deleteFromS3(item.sample_image.key);
-    }
-
-    if (item.chamber_id) {
-      const chamber = await chamberClient.findOne({
-        where: { chamber_name: item.chamber_id },
+    if (Number(item.quantity) > 0)
+      return res.status(400).json({
+        error: "Cannot delete item with remaining stock. Set quantity to 0 first."
       });
-      if (chamber) {
-        chamber.items = (chamber.items || []).filter((id) => id !== item.id);
-        await chamber.save();
-      }
-    }
 
-    await item.destroy();
+await item.destroy();
+
+if (item.chamber_id) {
+  await rebuildChamberItems(item.chamber_id);
+}
+
     res.status(200).json({ message: "Deleted successfully", data: item });
   } catch (error) {
     console.error("Delete Dry Error:", error);

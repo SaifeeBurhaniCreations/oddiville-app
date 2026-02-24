@@ -234,6 +234,7 @@ export interface ActivityProps {
   identifier: BottomSheetSchemaKey | null;
   dispatchDetails?: SupervisorCardDetailsProps[];
   data?: any;
+  metaData?: any;
   params?: any;
   category?: "informative" | "actionable" | "today";
   color?: "red" | "yellow" | "green" | null;
@@ -409,6 +410,7 @@ export interface InputProps {
   onIconPress?: () => void;
   inputStyle?: any;
   style?: any;
+  addonStyle?: any;
   disabled?: boolean;
   wrapperStyle?: any;
 }

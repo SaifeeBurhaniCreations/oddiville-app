@@ -69,29 +69,22 @@ function useChambersByRM(
     const byRM = new Map<string, StockChamber[]>();
 
     rmUsed.forEach((stock) => {
-      if (!stock.product_name) return;
-
       const chambers: StockChamber[] = stock.chamber.map((ch) => ({
         id: String(ch.id),
         name: chamberNameMap.get(String(ch.id)) ?? "Unknown Chamber",
         quantity: Number(ch.quantity) || 0,
-        rating: Number(ch.rating),
+        rating: 0, 
       }));
 
-      byRM.set(stock.product_name, chambers);
+      byRM.set(stock.id, chambers); 
     });
 
     return byRM;
   }, [rmUsed, chamberNameMap]);
 }
 
-function filterVisibleChambers(
-  chambers: StockChamber[],
-  selectedRating: number,
-) {
-  return chambers.filter(
-    (ch) => ch.rating === selectedRating && ch.quantity > 0,
-  );
+function filterVisibleChambers(chambers: StockChamber[]) {
+  return chambers.filter((ch) => ch.quantity > 0);
 }
 
 const ChamberRow = memo(
@@ -110,12 +103,17 @@ const ChamberRow = memo(
   }) => {
     const toast = useToast();
 
-    const maxBags = Math.floor(chamber.quantity / rmPackaging.size.value);
+    const bagSize = rmPackaging.size.value;
+const totalKg = chamber.quantity;
 
-    const usedBags = value ?? 0;
+const maxBags = Math.floor(totalKg / bagSize);
 
-    const remainingBags = Math.max(maxBags - usedBags, 0);
-    const remainingKg = remainingBags * rmPackaging.size.value;
+const usedBags = value ?? 0;
+const usedKg = usedBags * bagSize;
+
+const remainingKg = Math.max(totalKg - usedKg, 0);
+const remainingBags = Math.floor(remainingKg / bagSize);
+const looseKg = +(remainingKg % bagSize).toFixed(2);
 
     return (
       <View style={[styles.chamberCard, styles.borderBottom]}>
@@ -126,14 +124,21 @@ const ChamberRow = memo(
 
           <View style={styles.Vstack}>
             <B1>{String(chamber.name).slice(0, 12)}…</B1>
-            <B4>
-              {remainingKg} kg | {remainingBags}{" "}
-              {remainingBags === 1 ? "bag" : "bags"}
-            </B4>
+<View>
+  <B4>
+    {remainingBags} {remainingBags === 1 ? "bag" : "bags"}
+    {looseKg > 0 ? ` + ${looseKg} kg` : ""}
+  </B4>
+
+  <B4 style={{ opacity: 0.6 }}>
+    {remainingKg} kg available
+  </B4>
+</View>
+
           </View>
         </View>
 
-        <View style={{ flex: 0.7 }}>
+        <View style={{ flex: 0.7, justifyContent: "center", height: 44 }}>
           <Input
             placeholder="Count"
             addonText="bags"
@@ -203,7 +208,7 @@ const RawMaterialConsumptionSection = ({
   const rmMeta = useMemo(
     () =>
       rmUsed.map((rm) => ({
-        rmName: rm.product_name,
+        rmId: rm.id,
         chambers: rm.chamber.map((ch) => ({
           chamberId: String(ch.id),
           rating: Number(ch.rating) || 5,
@@ -232,10 +237,8 @@ const RawMaterialConsumptionSection = ({
     return (
       <View style={[styles.rawMaterialColumn, styles.borderBottom]}>
         {rmUsed.map((rm) => {
-          const ratingForThisRM = ratingByRM[rm.product_name] ?? {
-            rating: 5,
-            message: "Excellent",
-          };
+          const ratingForThisRM =
+  ratingByRM[rm.id] ?? { rating: rm.rating ?? 5, message: "Excellent" };
 
           const selectedRating = ratingForThisRM.rating;
           const RatingIcon = RatingIconMap[selectedRating] ?? FiveStarIcon;
@@ -258,11 +261,13 @@ const RawMaterialConsumptionSection = ({
             );
           }
 
-          const rmChambers = chambersByRM.get(rm.product_name) || [];
-          const visibleChambers = filterVisibleChambers(
-            rmChambers,
-            selectedRating,
-          );
+            if ((ratingByRM[rm.id]?.rating ?? rm.rating ?? 5) !==         selectedRating) {
+                  return null;
+                }
+
+              const rmChambers = chambersByRM.get(rm.id) || [];
+              const visibleChambers = filterVisibleChambers(rmChambers);
+
 
           const isChambersEmpty = visibleChambers.length === 0;
 
@@ -287,9 +292,9 @@ const RawMaterialConsumptionSection = ({
                     preIcon={RatingIcon}
                     selectStyle={{ flex: 1 }}
                     onPress={() => {
-                      setEditingRM(rm.product_name);
+                      setEditingRM(rm.id)
                       validateAndSetData(
-                        `${rm.product_name}:${ratingForThisRM.rating}`,
+                        `${rm.id}:${ratingForThisRM.rating}`,
                         "storage-rm-rating",
                         {
                           sections: [
@@ -326,11 +331,12 @@ const RawMaterialConsumptionSection = ({
                             },
                           ],
                           intent: "PACKING_RM_FILTER_RATING",
+                          data: { rmId: rm.id },
                         },
                       );
                     }}
                   />
-                  {editingRM === rm.product_name ? (
+                  {editingRM === rm.id ? (
                     <ActionButton
                       icon={CrossIcon}
                       style={{ height: 42, width: 42 }}
@@ -347,13 +353,13 @@ const RawMaterialConsumptionSection = ({
                       disabled={isChambersEmpty}
                       onPress={() => {
                         if (isChambersEmpty) return;
-                        setEditingRM(rm.product_name);
+                        setEditingRM(rm.id)
                       }}
                     />
                   )}
                 </View>
 
-                {editingRM === rm.product_name && !isChambersEmpty && (
+                {editingRM === rm.id && !isChambersEmpty && (
                   <View>
                     <Input
                       placeholder="Packets per bag"
@@ -361,11 +367,11 @@ const RawMaterialConsumptionSection = ({
                       mask="addon"
                       post
                       keyboardType="numeric"
-                      value={String(packetsPerBagPerRM[rm.product_name] ?? "")}
+                      value={String(packetsPerBagPerRM[rm.id] ?? "")}
                       onChangeText={(text: string) =>
                         setPacketsPerBagPerRM((prev) => ({
                           ...prev,
-                          [rm.product_name]: Number(text) || 0,
+                          [rm.id]: Number(text) || 0,
                         }))
                       }
                     />
@@ -384,22 +390,22 @@ const RawMaterialConsumptionSection = ({
                 ) : (
                   visibleChambers.map((chamber) => (
                     <ChamberRow
-                      key={`${rm.product_name}-${chamber.id}`}
+                      key={`${rm.id}-${chamber.id}`}
                       chamber={chamber}
                       rmPackaging={rmPackaging}
                       value={
-                        containerInputByChamber[rm.product_name]?.[chamber.id]
+                        containerInputByChamber[rm.id]?.[chamber.id]
                       }
                       onChange={(chamberId, value) => {
-                        setChamberInput(rm.product_name, chamberId, value);
-                        form.setRMInput(rm.product_name, chamberId, value);
+                        setChamberInput(rm.id, chamberId, value);
+                        form.setRMInput(rm.id, chamberId, value);
 
                         if (value > 0) {
                           form.clearError("rm");
-                          form.clearError(`rm.${rm.product_name}`);
+                          form.clearError(`rm.${rm.id}`);
                         }
                       }}
-                      error={form.getError(`rm.${rm.product_name}`)}
+                      error={form.getError(`rm.${rm.id}`)}
                     />
                   ))
                 )}

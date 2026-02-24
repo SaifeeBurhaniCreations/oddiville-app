@@ -1,0 +1,1 @@
+export const COUNTABLE_UNITS = ["pcs","box","set","roll","bundle","pack"]

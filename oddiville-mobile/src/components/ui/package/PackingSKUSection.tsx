@@ -16,6 +16,7 @@ import EmptyState, { EmptyStateStyles } from "../EmptyState";
 import { sortByNumber } from "@/src/utils/numberUtils";
 import { PackingFormController } from "@/src/hooks/packing/usePackingForm";
 import { usePackageInputs } from "@/src/hooks/packing/usePackageInputs";
+import { removeSelectedSize } from "@/src/redux/slices/bottomsheet/package-size.slice";
 
 type Props = {
   setIsLoading: (v: boolean) => void;
@@ -102,7 +103,7 @@ const PackingSKUSection = ({
         rm.packaging?.size?.unit === "kg" ? Number(rm.packaging.size.value) : 0;
 
       const usedBags = Object.values(
-        form.values.rmInputs?.[rm.product_name] || {},
+        form.values.rmInputs?.[rm.id] || {},
       ).reduce((s, v) => s + Number(v || 0), 0);
 
       return sum + usedBags * kgPerBag;
@@ -154,9 +155,13 @@ const PackingSKUSection = ({
     return () => clearTimeout(timeout);
   }, [packages, packageInputs]);
 
-  const handleRemovePackage = (packageKey: string) => {
-    // dispatch();
-  };
+const handleRemovePackage = useCallback((packageKey: string) => {
+  dispatch(removeSelectedSize(packageKey));
+
+  removePackage(packageKey);
+
+  form.removePackagingPlan(packageKey);
+}, [dispatch, removePackage, form]);
 
   const handleTogglePackageSizeBottomSheet = useCallback(async () => {
     if (!productPackages) return;
