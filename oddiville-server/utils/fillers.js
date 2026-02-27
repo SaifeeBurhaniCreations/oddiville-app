@@ -86,8 +86,6 @@ function fillProductAddSchema(schema, filler) {
             section.data.title = filler?.title || "Untitled";
         }
 
-        // console.log(filler.optionList);
-
         // 🟦 OptionList
         if (section.type === "optionList" && Array.isArray(filler?.optionList)) {
             section.data.options = filler.optionList;
@@ -142,7 +140,6 @@ function fillWorkerSingleSchema(schema, filler) {
     for (const section of updatedSchema.sections) {
         // 🟦 HEADER
         if (section.type === "header" && typeof section.data === "object") {
-            console.log("filler?.createdAt", filler?.createdAt);
 
             section.data.title = filler?.title || "Untitled";
             section.data.value = filler?.createdAt || "";
@@ -747,7 +744,6 @@ function fillPackingSummarySchema(schema, filler, meta) {
                 ];
                 continue;
             }
-            // console.log("filler", JSON.stringify(filler));
 
             // 🟢 MODE HANDLING
             switch (mode) {
@@ -760,7 +756,6 @@ function fillPackingSummarySchema(schema, filler, meta) {
                     break;
 
                 case PACKING_MODES.SKU:
-                    console.log("filler.chambers", filler.chambers);
                     
                     section.data.title = "Storage by chamber";
 
@@ -800,8 +795,6 @@ function fillPackingSummarySchema(schema, filler, meta) {
         }
     }
 
-    console.log("updatedSchema", JSON.stringify(updatedSchema));
-    
     return updatedSchema;
 }
 
@@ -929,6 +922,32 @@ function fillMultipleProductCardSchema(schema, filler) {
     return updatedSchema;
 }
 
+
+function fillExportSelectProductSchema(schema, filler) {
+    filler = filler || {};
+    const updatedSchema = JSON.parse(JSON.stringify(schema));
+
+    for (const section of updatedSchema.sections) {
+
+        // 🟦 HEADER
+        if (section.type === "title-with-details-cross") {
+            section.data.title = filler.title || "Choose products";
+        }
+
+        // 🟦 PRODUCT CARD
+        if (section.type === "productCard" && Array.isArray(filler?.productCard)) {
+            section.data = filler.productCard.map(item => ({
+                name: item?.name || '',
+                image: item?.image || '',
+                description: item?.description || '',
+            }));
+        }
+
+    }
+
+    return updatedSchema;
+}
+
 module.exports = {
     fillRawMaterialSchema,
     fillLaneOccupiedSchema,
@@ -952,4 +971,5 @@ module.exports = {
     fillScheduledDateEventSchema,
     fillPackingSummarySchema,
     fillMultipleProductCardSchema,
+    fillExportSelectProductSchema,
 };

@@ -24,7 +24,6 @@ router.get("/all", async (req, res) => {
 router.post("/create", async (req, res) => {
   try {
     const contractors = req.body;
-console.log("POST /create called at", new Date());
 
     if (!Array.isArray(contractors) || contractors.length === 0) {
       return res.status(400).json({ error: "Contractors array is required." });

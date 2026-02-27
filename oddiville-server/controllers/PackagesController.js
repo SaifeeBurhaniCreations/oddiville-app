@@ -408,16 +408,6 @@ await pkg.save({ transaction: t });
     dry.quantity = physicalQty;
     await dry.save({ transaction: t });
 
-    console.log("STOCK ADJUSTMENT", {
-      product: pkg.product_name,
-      size,
-      unit,
-      before: systemQty,
-      after: physicalQty,
-      change: diff,
-      reason
-    });
-
     await t.commit();
     res.json({
       message: "Stock adjusted",

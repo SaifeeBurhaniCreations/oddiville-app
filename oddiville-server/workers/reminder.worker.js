@@ -1,8 +1,7 @@
-// workers/reminder.worker.js
 const { Worker } = require("bullmq");
 const { Calendar } = require("../models");
 const { dispatchAndSendNotification } = require("../utils/dispatchAndSendNotification");
-const connection = require("../devops/bullmqRedis");
+const connection = require("../devops/redis");
 
 new Worker(
   "calendar-reminder",

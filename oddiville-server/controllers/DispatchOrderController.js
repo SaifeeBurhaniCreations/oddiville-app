@@ -90,12 +90,12 @@ router.post("/create", safeRoute(async (req, res) => {
 
     let parsedETD = null;
 
-if (est_delivered_date) {
-  const d = new Date(est_delivered_date);
-  if (!isNaN(d.getTime())) {
-    parsedETD = d;
-  }
-}
+    if (est_delivered_date) {
+      const d = new Date(est_delivered_date);
+      if (!isNaN(d.getTime())) {
+        parsedETD = d;
+      }
+    }
     /* -------------------- Packages Fetching -------------------- */
     const productNames = products.map(p => p.product_name);
 
@@ -120,92 +120,106 @@ if (est_delivered_date) {
       const productUsage = usedBagsByProduct[productId];
       const productName = productId.split("::")[0];
 
+      // Group by rating first
+      const usageByRating = {};
+
       for (const packageKey of Object.keys(productUsage)) {
-        const usage = productUsage[packageKey];
-        const { byChamber = {}, packet, totalBags = 0 } = usage;
+        const rating = Number(packageKey.split("-")[2]);
+        if (!usageByRating[rating]) usageByRating[rating] = [];
+        usageByRating[rating].push(packageKey);
+      }
 
-        const expectedRating = Number(packageKey.split("-")[2]);
+      for (const rating of Object.keys(usageByRating)) {
 
-        
         const stock = await stockClient.findOne({
           where: {
             product_name: productName,
-            rating: expectedRating,
+            rating: Number(rating),
+            category: "packed"
           },
           transaction: t,
           lock: t.LOCK.UPDATE,
         });
 
         if (!stock) {
-          throw new Error(
-            `Stock not found for ${productName} with rating ${expectedRating}`
-          );
+          throw new Error(`Stock not found for ${productName} rating ${rating}`);
         }
 
-        if (!Array.isArray(stock.chamber)) {
-          throw new Error(`Invalid chamber data for ${productName}`);
-        }
+        const updatedChambers = [...stock.chamber];
+        const updatedPackages = [...stock.packages];
 
-        const packetsToDeduct =
-          Number(totalBags) * Number(packet?.packetsPerBag || 1);
+        for (const packageKey of usageByRating[rating]) {
+          const usage = productUsage[packageKey];
+          const { byChamber = {}, packet, totalBags = 0 } = usage;
 
-        /* -------- PACKET DEDUCTION -------- */
-        if (Array.isArray(stock.packages) && packet) {
-          const pkgIndex = stock.packages.findIndex(
-            (p) =>
+          const computedTotalBags = Object.values(byChamber)
+            .reduce((s, v) => s + Number(v || 0), 0);
+
+          if (computedTotalBags !== Number(totalBags)) {
+            throw new Error("Bag mismatch detected");
+          }
+
+          const pkgIndex = updatedPackages.findIndex(
+            p =>
               Number(p.size) === Number(packet.size) &&
               p.unit === packet.unit
           );
 
-          if (pkgIndex !== -1) {
-            const oldPackets = Number(stock.packages[pkgIndex].quantity || 0);
+          if (pkgIndex === -1) throw new Error("Package not found");
 
-            if (oldPackets < packetsToDeduct) {
-              throw new Error(
-                `Insufficient packets. Available: ${oldPackets}, Required: ${packetsToDeduct}`
-              );
-            }
+          const packetsPerBag = Number(updatedPackages[pkgIndex].packets_per_bag);
+          const packetsToDeduct = computedTotalBags * packetsPerBag;
 
-            stock.packages[pkgIndex].quantity =
-              String(oldPackets - packetsToDeduct);
-          }
-        }
+          const oldPackets = Number(updatedPackages[pkgIndex].quantity);
 
-        /* -------- CHAMBER DEDUCTION -------- */
-        for (const chamberId of Object.keys(byChamber)) {
-          const bagsToDeduct = Number(byChamber[chamberId]);
-          if (!bagsToDeduct || bagsToDeduct <= 0) continue;
-
-          const chamberIndex = stock.chamber.findIndex(
-            (c) => String(c.id) === String(chamberId)
-          );
-
-          if (chamberIndex === -1) {
-            throw new Error(`Chamber ${chamberId} not found`);
+          if (oldPackets < packetsToDeduct) {
+            throw new Error("Insufficient packets");
           }
 
-          const oldQty = Number(stock.chamber[chamberIndex].quantity || 0);
+          updatedPackages[pkgIndex].quantity =
+            String(oldPackets - packetsToDeduct);
 
-          if (oldQty < bagsToDeduct) {
-            throw new Error(
-              `Insufficient stock in chamber ${chamberId}. Available: ${oldQty}, Required: ${bagsToDeduct}`
+          // Deduct chambers
+          for (const chamberId of Object.keys(byChamber)) {
+            const bagsToDeduct = Number(byChamber[chamberId]);
+            if (!bagsToDeduct) continue;
+
+            const chamberIndex = updatedChambers.findIndex(
+              c => String(c.id) === String(chamberId)
             );
+
+            if (chamberIndex === -1)
+              throw new Error(`Chamber ${chamberId} not found`);
+
+            const oldQty = Number(updatedChambers[chamberIndex].quantity);
+
+            if (oldQty < bagsToDeduct)
+              throw new Error("Insufficient chamber stock");
+
+            updatedChambers[chamberIndex].quantity =
+              String(oldQty - bagsToDeduct);
           }
-
-          stock.chamber[chamberIndex].quantity =
-            String(oldQty - bagsToDeduct);
         }
 
-        const updateData = {
-          chamber: stock.chamber,
-        };
+        // SAVE ONCE
+        stock.set({
+          chamber: updatedChambers,
+          packages: updatedPackages
+        });
 
-        if (stock.category === "packed") {
-          updateData.packages = stock.packages;
-        }
+        const totalChamberBags = updatedChambers
+  .reduce((s, c) => s + Number(c.quantity || 0), 0);
 
-       stock.set(updateData);
-          await stock.save({ transaction: t });
+const totalPacketBags = updatedPackages
+  .reduce((s, p) => 
+    s + Math.floor(Number(p.quantity) / Number(p.packets_per_bag)), 
+  0);
+
+if (totalPacketBags < 0 || totalChamberBags < 0) {
+  throw new Error("Negative stock detected");
+}
+
+        await stock.save({ transaction: t });
       }
     }
 
@@ -218,7 +232,7 @@ if (est_delivered_date) {
         country: country?.label || country,
         city,
         status: "pending",
-          est_delivered_date: parsedETD,
+        est_delivered_date: parsedETD,
         products: products.map((p) => ({
           id: p.id,
           product_name: p.product_name,

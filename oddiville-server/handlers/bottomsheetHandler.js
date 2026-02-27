@@ -343,6 +343,18 @@ const handlers = {
     ctx.chamberStocks = chamberStocks;
   },
 
+  "select-export-product": async (ctx) => {
+    
+    const packingEvents = await PackingEventClient.findAll({
+      order: [["createdAt", "DESC"]],
+    });
+
+    const chamberStocks = await ChamberStockClient.findAll();
+
+    ctx.packingEvents = packingEvents;
+    ctx.chamberStocks = chamberStocks;
+  },
+
 };
 
 module.exports = { handlers }

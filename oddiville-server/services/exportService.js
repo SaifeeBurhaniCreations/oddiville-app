@@ -3,15 +3,64 @@ const { Op } = require("sequelize");
 const getDateRange = require("../utils/dateRange");
 const db = require("../models");
 const { sanitizeRow, applyColumnOrder } = require("../utils/export/sanitizeExportRows")
+const { Sequelize } = require("sequelize");
+
 const parseIds = (ids) =>
   ids ? ids.split(",").map((id) => id.trim()).filter(Boolean) : [];
+
+const PRODUCTION_REMOVE_FIELDS = [
+  "id",
+  "raw_material_order_id",
+  "unit",
+  "sample_images",
+  "lane_id",
+];
 
 const buildWhere = (query) => {
   const range = getDateRange(query.range, query.from, query.to);
 
-  return {
+  const where = {
     ...(range && { createdAt: { [Op.between]: range } }),
   };
+
+  // Lane filter
+  if (query.laneIds) {
+    const laneIds = Array.isArray(query.laneIds)
+      ? query.laneIds
+      : parseIds(query.laneIds);
+
+    if (laneIds.length > 0) {
+      where.lane_id = { [Op.in]: laneIds };
+    }
+  }
+
+  // Status filter
+if (query.status && query.status.length > 0) {
+  const statuses = Array.isArray(query.status)
+    ? query.status
+    : parseIds(query.status);
+
+  where.status = {
+    [Op.in]: statuses.map(s => s.toLowerCase()),
+  };
+}
+
+if (query.products && query.products.length > 0) {
+  const products = Array.isArray(query.products)
+    ? query.products
+    : parseIds(query.products);
+
+  where[Op.and] = products.map(name =>
+    Sequelize.literal(`
+      EXISTS (
+        SELECT 1 FROM jsonb_array_elements("DispatchOrders"."products") elem
+        WHERE elem->>'product_name' = '${name}'
+      )
+    `)
+  );
+}
+
+  return where;
 };
 
 const addSheet = (workbook, name, rows, extraRemove = [], chamberMap = {}) => {
@@ -199,14 +248,7 @@ for (const pack of packing) {
     "unit",
   ]);
 
-  addSheet(workbook, "Production", productions, [
-    "id",
-    "raw_material_order_id",
-    "unit",
-    "sample_images",
-    "lane_id",
-
-  ]);
+  addSheet(workbook, "Production", productions, PRODUCTION_REMOVE_FIELDS);
 
   addSheet(
     workbook,
@@ -296,15 +338,79 @@ async function exportChamber(query) {
 
 async function exportProduction(query) {
   const workbook = new ExcelJS.Workbook();
-  const rows = await db.Production.findAll({ where: buildWhere(query) });
-  addSheet(workbook, "Production", rows);
+
+  const rows = await db.Production.findAll({
+    where: buildWhere(query),
+    include: [{
+      model: db.Lanes,
+      as: "lane",
+      attributes: ["name"]
+    }]
+  });
+
+  addSheet(workbook, "Production", rows, PRODUCTION_REMOVE_FIELDS);
+
   return workbook;
 }
 
 async function exportDispatch(query) {
   const workbook = new ExcelJS.Workbook();
-  const rows = await db.DispatchOrder.findAll({ where: buildWhere(query) });
-  addSheet(workbook, "Dispatch", rows);
+  const where = buildWhere(query);
+
+  const dispatch = await db.DispatchOrder.findAll({ where });
+
+  const chambers = await db.Chambers.findAll({
+    attributes: ["id", "chamber_name"],
+  });
+
+  const chamberMap = Object.fromEntries(
+    chambers.map(c => [c.id, c.chamber_name])
+  );
+
+  addSheet(workbook, "Dispatch", dispatch, [
+    "id",
+    "sample_images",
+  ]);
+
+  const dispatchItemRows = [];
+
+  for (const order of dispatch) {
+    const customerName = order.customer_name;
+    const dispatched = order.dispatched_items || {};
+    const products = order.products || [];
+
+    const productMap = Object.fromEntries(
+      products.map(p => [p.id, p])
+    );
+
+    for (const productKey in dispatched) {
+      const productInfo = productMap[productKey] || {};
+      const productName = productInfo.product_name;
+      const rating = productInfo.rating;
+
+      const skuData = dispatched[productKey];
+
+      for (const skuKey in skuData) {
+        const item = skuData[skuKey];
+        const byChamber = item.byChamber || {};
+
+        for (const chamberId in byChamber) {
+          dispatchItemRows.push({
+            customer_name: customerName,
+            product_name: productName,
+            sku: skuKey,
+            rating,
+            chamber_name: chamberMap[chamberId] || "",
+            total_bags: item.totalBags,
+            total_packets: item.totalPackets,
+          });
+        }
+      }
+    }
+  }
+
+  addSheet(workbook, "Dispatch Items", dispatchItemRows);
+
   return workbook;
 }
 

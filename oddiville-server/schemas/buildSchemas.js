@@ -686,6 +686,15 @@ function buildUISchemas({
           image: "",
         })),
     },
+
+    "select-export-product": {
+       title: "Choose products",
+
+      productCard: chamberStocks.filter(stock => stock.category === "packed").map((stock) => ({
+        name: stock?.product_name || "Unnamed",
+        image: "box"
+      })),
+    }
   };
 }
 

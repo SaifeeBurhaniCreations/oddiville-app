@@ -1,3 +1,5 @@
+require("./workers/reminder.worker");
+
 const express = require("express");
 const http = require("http");
 const path = require("path");
@@ -7,7 +9,6 @@ const { Server } = require("socket.io");
 const redis = require('./devops/redis');
 const routes = require("./config/routes");
 const uploadErrorHandler = require("./middlewares/multerErrorHandler");
-
 const {
   Notifications,
   Production,
@@ -134,6 +135,13 @@ const PORT = process.env.PORT || 8022;
 
 (async function start() {
   try {
+    //     await sequelize.query(`
+    //   CREATE UNIQUE INDEX IF NOT EXISTS vendors_name_lower_unique
+    //   ON "Vendors" (LOWER(name));
+    // `);
+
+    // console.log("✅ Vendor lowercase unique index ensured");
+
     console.log("✅ Connected to Aiven PostgreSQL");
 
     if (process.env.SHOULD_SYNC === "true") {
@@ -143,7 +151,7 @@ const PORT = process.env.PORT || 8022;
       // await Chambers.sync({ force: true });
       // await Lanes.sync({ force: true });
 
-      // await ChamberStock.sync({ force: true });
+      await ChamberStock.sync({ alter: true });
       // await PackingEvent.sync({ force: true });
       // await TruckDetails.sync({ force: true });
       // await Notifications.sync({ force: true });
@@ -155,7 +163,7 @@ const PORT = process.env.PORT || 8022;
       // await Vendors.sync({ force: true });
       // await Packages.sync({ force: true });
       // await DryWarehouse.sync({ force: true });
-      await DispatchOrder.sync({ alter: true });
+      // await DispatchOrder.sync({ alter: true });
       // await Calendar.sync({ force: true });
       // await Contractor.sync({ force: true });
       console.log("✅ Synced DB with models");

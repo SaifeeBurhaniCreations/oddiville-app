@@ -173,7 +173,6 @@ router.post("/users", async (req, res) => {
 
     // const parsed = userSchema.parse(req.body);
     const parsed = req.body;
-    console.log("parsed", parsed);
 
     const existingUser = await adminClient.findOne({
       where: { username: parsed.username },

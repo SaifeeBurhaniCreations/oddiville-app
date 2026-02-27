@@ -22,26 +22,21 @@ function mergePackedPackages(existing, incoming) {
   if (idx >= 0) {
     copy[idx] = {
       ...copy[idx],
-      quantity: (
+      quantity: String(
         Number(copy[idx].quantity) + Number(incoming.quantity)
-      ).toFixed(3),
+      ),
     };
   } else {
-    copy.push({ ...incoming });
+    copy.push({
+      ...incoming,
+      quantity: String(incoming.quantity),
+    });
   }
 
   return copy;
 }
 
 class PackingService {
-  static packetKg(packet) {
-    return packet.unit === "gm" ? packet.size / 1000 : packet.size;
-  }
-
-  static kgPerOutputBag(packet) {
-    return this.packetKg(packet) * packet.packetsPerBag;
-  }
-
   static async execute(payload) {
     const t = await sequelize.transaction();
 
@@ -50,6 +45,11 @@ class PackingService {
       const events = [];
 
       // throw new Error("Debug stop here");
+
+      if (sku.totalPacketsProduced !==
+          sku.bagsProduced * sku.packet.packetsPerBag) {
+        throw new Error("Packet/bag mismatch in packing plan");
+      }
 
       for (const sku of packagingPlan) {
         const event = await PackingEvent.create(
@@ -103,59 +103,65 @@ class PackingService {
       lock: Sequelize.Transaction.LOCK.UPDATE,
     });
 
-    const kgPerOutputBag = this.kgPerOutputBag(sku.packet);
 
     if (!stock) {
       stock = await ChamberStock.create({
-        product_name: productName,
-        category: "packed",
-        rating: finalRating,
-        unit: "kg",
-        chamber: sku.storage.map((s) => ({
-          id: String(s.chamberId),
-          quantity: (kgPerOutputBag * s.bagsStored).toFixed(3),
-        })),
+  product_name: productName,
+  category: "packed",
+  rating: finalRating,
+  unit: "kg",
 
-        packaging: null,
-        packages: [
-          {
-            size: sku.packet.size,
-            unit: sku.packet.unit,
-            quantity: (kgPerOutputBag * sku.bagsProduced).toFixed(3),
+  // STORE BAGS
+  chamber: sku.storage.map((s) => ({
+    id: String(s.chamberId),
+    quantity: String(s.bagsStored),
+  })),
 
-          },
-        ],
-      },
-        { transaction: t },
-      );
+  packaging: null,
+
+  // STORE PACKETS
+  packages: [
+    {
+      size: sku.packet.size,
+      unit: sku.packet.unit,
+      quantity: Number(sku.totalPacketsProduced),
+      packets_per_bag: Number(sku.packet.packetsPerBag),
+    },
+  ],
+});
 
       return;
     }
 
     stock.packages = mergePackedPackages(stock.packages || [], {
-      size: sku.packet.size,
-      unit: sku.packet.unit,
-      quantity: (kgPerOutputBag * sku.bagsProduced).toFixed(3),
-    });
+  size: sku.packet.size,
+  unit: sku.packet.unit,
+  quantity: sku.totalPacketsProduced,
+  packets_per_bag: Number(sku.packet.packetsPerBag),
 
-    for (const s of sku.storage) {
-      const addedKg = kgPerOutputBag * s.bagsStored;
+});
 
-      const chamberId = String(s.chamberId);
+for (const s of sku.storage) {
+  const chamberId = String(s.chamberId);
 
-      stock.chamber = stock.chamber || [];
-      let target = stock.chamber.find((c) => String(c.id) === chamberId);
+  stock.chamber = stock.chamber || [];
 
-      if (!target) {
-        target = {
-          id: chamberId,
-          quantity: "0",
-        };
-        stock.chamber.push(target);
-      }
+  let target = stock.chamber.find(
+    (c) => String(c.id) === chamberId
+  );
 
-      target.quantity = (Number(target.quantity) + addedKg).toFixed(3);
-    }
+  if (!target) {
+    target = {
+      id: chamberId,
+      quantity: "0",
+    };
+    stock.chamber.push(target);
+  }
+
+  target.quantity = String(
+    Number(target.quantity) + Number(s.bagsStored)
+  );
+}
 
     stock.packed_ref = {
       lastPackedAt: new Date().toISOString(),

@@ -4,8 +4,12 @@ const { format } = require("date-fns");
 const {
   dispatchAndSendNotification,
 } = require("../utils/dispatchAndSendNotification");
-const { applyDispatchTransaction } = require("../services/applyDispatchTransaction");
+const {
+  applyDispatchTransaction,
+} = require("../services/applyDispatchTransaction");
 const safeRoute = require("../sbc/utils/safeRoute/index");
+    const { assertPositiveInteger } = require("../utils/inventoryInvariants");
+
 const {
   sequelize,
   RawMaterial: RawMaterialClient,
@@ -18,6 +22,7 @@ const {
   Packages: PackagesClient,
   PackingEvent: PackingEventClient,
 } = require("../models");
+const { Op } = require("sequelize");
 
 function fmt(dateStr) {
   if (!dateStr) return "--";
@@ -95,7 +100,7 @@ function stripUndefinedDeep(obj) {
     return Object.fromEntries(
       Object.entries(obj)
         .filter(([_, v]) => v !== undefined)
-        .map(([k, v]) => [k, stripUndefinedDeep(v)])
+        .map(([k, v]) => [k, stripUndefinedDeep(v)]),
     );
   }
   return obj;
@@ -356,18 +361,18 @@ function validateRMOs(rmos = []) {
     );
 
     [
-  "sample_quantity",
-  "quantity_ordered",
-  "quantity_received",
-  "price",
-].forEach((nk) => {
-  if (r[nk] != null && !Number.isFinite(Number(r[nk]))) {
-    issues.push({
-      path: `raw_material_orders[${i}].${nk}`,
-      error: "must be a number",
+      "sample_quantity",
+      "quantity_ordered",
+      "quantity_received",
+      "price",
+    ].forEach((nk) => {
+      if (r[nk] != null && !Number.isFinite(Number(r[nk]))) {
+        issues.push({
+          path: `raw_material_orders[${i}].${nk}`,
+          error: "must be a number",
+        });
+      }
     });
-  }
-});
   }
   return issues;
 }
@@ -421,23 +426,7 @@ function validateChamberStock(items = [], allowedChambers) {
         continue;
       }
 
-      if (
-        !it.packets_per_bag ||
-        !Number.isInteger(Number(it.packets_per_bag)) ||
-        Number(it.packets_per_bag) <= 0
-      ) {
-        issues.push({
-          path: `chamber_stock[${i}].chamber[${j}].packets_per_bag`,
-          error: "packets_per_bag must be a positive integer",
-        });
-      }
-
-      const allowedKeys = new Set([
-        "id",
-        "quantity",
-        "rating",
-        "packets_per_bag",
-      ]);
+      const allowedKeys = new Set(["id", "quantity"]);
 
       const extra = Object.keys(it).filter((k) => !allowedKeys.has(k));
       if (extra.length) {
@@ -447,7 +436,7 @@ function validateChamberStock(items = [], allowedChambers) {
         });
       }
 
-      ["id", "quantity", "rating"].forEach((k) => {
+      ["id", "quantity"].forEach((k) => {
         if (typeof it[k] !== "string" || !it[k].trim()) {
           issues.push({
             path: `chamber_stock[${i}].chamber[${j}].${k}`,
@@ -600,6 +589,13 @@ function validateDispatch(orders = []) {
           }
         }
       }
+    }
+
+    if (d.rating == null) {
+      issues.push({
+        path: `dispatch_orders[${i}].rating`,
+        error: "is required",
+      });
     }
   }
 
@@ -763,13 +759,13 @@ function normalizeRmoRow(row, topLevelRawMaterialChallan) {
       truck_number: truck_details_obj.truck_number ?? null,
       driver_name: truck_details_obj.driver_name ?? null,
       challan:
-  truck_details_obj.challan &&
-  (truck_details_obj.challan.url || truck_details_obj.challan.key)
-    ? {
-        url: truck_details_obj.challan.url ?? null,
-        key: truck_details_obj.challan.key ?? null,
-      }
-    : null,
+        truck_details_obj.challan &&
+        (truck_details_obj.challan.url || truck_details_obj.challan.key)
+          ? {
+              url: truck_details_obj.challan.url ?? null,
+              key: truck_details_obj.challan.key ?? null,
+            }
+          : null,
     },
     rating: toDecimalOrNull(row.rating),
     quantity_received: toDecimalOrNull(row.quantity_received),
@@ -809,42 +805,82 @@ function normalizeProductionRow(row) {
 }
 
 function normalizeChamberStockRow(row) {
-  const chamberArr =
-    Array.isArray(row.chamber) && row.chamber.length
-      ? row.chamber.map((it) => {
-          const bags =
-            it.bags ??
-            (it.packets != null && it.packets_per_bag
-              ? Number(it.packets) / Number(it.packets_per_bag)
-              : it.quantity);
+  if (!row || typeof row !== "object") return null;
 
-          return {
-            id: ensureString(it.id || it.chamber_name || it._id || it.name),
-            quantity: ensureString(bags ?? ""),
-            packets_per_bag: Number(it.packets_per_bag ?? 1),
-            rating: ensureString(it.rating ?? row.rating ?? ""),
-          };
-        })
-      : row.chamber_name
-        ? [
-            {
-              id: ensureString(row.chamber_name),
-              quantity: ensureString(row.bags ?? row.quantity ?? ""),
-              packets_per_bag: Number(row.packets_per_bag ?? 1),
-              rating: ensureString(row.rating ?? ""),
-            },
-          ]
-        : [];
+  const category = String(row.category || "").toLowerCase();
+
+  const normalized = {
+    id: row._id || uuid(),
+    product_name: ensureString(row.product_name),
+    category,
+    unit: ensureString(row.unit || "kg"),
+    rating: Number(row.rating),
+    chamber: Array.isArray(row.chamber)
+      ? row.chamber.map((ch) => ({
+          id: ensureString(ch.id).trim(),
+          quantity: ensureString(ch.quantity).trim(),
+        }))
+      : [],
+  };
+
+  if (category === "material") {
+    normalized.packaging = row.packaging || null;
+  }
+
+if (
+  category === "packed" &&
+  Array.isArray(row.packages) &&
+  Array.isArray(row.chamber)
+) {
+row.chamber.forEach((ch, i) => {
+  assertPositiveInteger(
+    ch.quantity,
+    "Bags",
+    `chamber[${i}].quantity`
+  );
+});
+
+row.packages.forEach((p, i) => {
+  assertPositiveInteger(
+    p.packets_per_bag,
+    "packets_per_bag",
+    `packages[${i}].packets_per_bag`
+  );
+});
+    const totalBags = Array.isArray(row.chamber)
+  ? row.chamber.reduce((s, ch) => s + Number(ch.quantity || 0), 0)
+  : 0;
+
+normalized.packages = row.packages.map((p, i) => {
+  if (!p.packets_per_bag)
+  throw new Error("packets_per_bag is required for packed category");
+  const packetsPerBag = Number(p.packets_per_bag || 1);
+
+  assertPositiveInteger(
+    packetsPerBag,
+    "packets_per_bag",
+    `packages[${i}].packets_per_bag`
+  );
+
+  const computedPackets = totalBags * packetsPerBag;
+
+  assertPositiveInteger(
+    computedPackets,
+    "packages.quantity",
+    `packages[${i}].quantity`
+  );
 
   return {
-    id: row._id || row.id || uuid(),
-    product_name: ensureString(row.product_name || ""),
-    category: ensureString(row.category || ""),
-    unit: ensureString(row.unit || ""),
-    rating: ensureString(row.rating ?? ""),
-    chamber: chamberArr,
-    clientId: row.clientId || null,
+    size: Number(p.size),
+    unit: ensureString(p.unit),
+    packets_per_bag: packetsPerBag,
+    quantity: computedPackets,
   };
+});
+
+  }
+
+  return normalized;
 }
 
 function normalizeDispatchRow(row) {
@@ -871,15 +907,15 @@ function normalizeDispatchRow(row) {
         ]
       : [];
 
-const packages = Array.isArray(row.packages)
-? row.packages.map((p) => ({
-product_name: ensureString(row.product_name || p.product_name || ""),
-id: null, 
-quantity: ensureNumber(p.quantity) || 0,
-size: p.size ?? null,
-unit: p.unit ?? null,
-}))
-: [];
+  const packages = Array.isArray(row.packages)
+    ? row.packages.map((p) => ({
+        product_name: ensureString(row.product_name || p.product_name || ""),
+        id: null,
+        quantity: ensureNumber(p.quantity) || 0,
+        size: p.size ?? null,
+        unit: p.unit ?? null,
+      }))
+    : [];
 
   const truck_details_obj = {};
   if (row.truck_weight != null)
@@ -945,6 +981,7 @@ unit: p.unit ?? null,
       Object.keys(truck_details_obj).length > 0 ? truck_details_obj : null,
     product_name: product_name_top || null,
     clientId: row.clientId || null,
+    rating: row.rating != null ? Number(row.rating) : null,
   };
 }
 
@@ -972,114 +1009,107 @@ async function attachChamberStockToChambers({
     }
   }
 }
-
 async function buildUsedBags(row, chamberStockMap) {
-
   const result = {};
   const resolvedName = row.product_name;
 
-const stock = Array.from(chamberStockMap.values())
-  .find(s => String(s.get("product_name")).toLowerCase() === String(resolvedName).toLowerCase());
-
-  if (!stock) throw new Error(`No chamber stock for ${resolvedName}`);
-
-  const chamberUsage = {};
-const chamberUsageOriginal = {};
-let totalRowBags = 0;
-
-for (const product of row.products) {
-  if (product.name !== resolvedName) continue;
-
-  for (const ch of product.chambers) {
-    const qty = Number(ch.quantity) || 0;
-    chamberUsageOriginal[ch.id] = (chamberUsageOriginal[ch.id] || 0) + qty;
-    totalRowBags += qty;
-  }
-}
-
-const totalPackageQty = row.packages.reduce(
-  (s, p) => s + (Number(p.quantity) || 0),
-  0
-);
-
-let remainingBags = totalRowBags;
-let remainingQty = totalPackageQty;
-
-for (let i = 0; i < row.packages.length; i++) {
-  const pkg = row.packages[i];
-
-  let pkgBags = 0;
-
-  // last package absorbs remainder (prevents bag loss)
-  if (i === row.packages.length - 1) {
-    pkgBags = remainingBags;
-  } else if (remainingQty > 0) {
-    pkgBags = Math.floor(
-      (Number(pkg.quantity) / remainingQty) * remainingBags
-    );
-  }
-
-  remainingBags -= pkgBags;
-  remainingQty -= Number(pkg.quantity);
-
-if (pkgBags <= 0) continue;
-
-const chamberUsagePkg = {};
-for (const chId of Object.keys(chamberUsageOriginal)) {
-  chamberUsagePkg[chId] = Math.floor(
-    (chamberUsageOriginal[chId] / totalRowBags) * pkgBags
+  const stock = chamberStockMap.get(
+    `${resolvedName.toLowerCase()}::${row.rating}`
   );
-}
 
-let assigned = Object.values(chamberUsagePkg).reduce((s, n) => s + n, 0);
-let diff = pkgBags - assigned;
+  if (!stock)
+    throw new Error(`No chamber stock for ${resolvedName}`);
 
-const keys = Object.keys(chamberUsagePkg);
-let idx = 0;
+  const stockJson = stock.toJSON();
 
-while (diff !== 0 && keys.length > 0) {
-  chamberUsagePkg[keys[idx % keys.length]] += diff > 0 ? 1 : -1;
-  diff += diff > 0 ? -1 : 1;
-  idx++;
-}
+  if (stockJson.category !== "packed") {
+    throw new Error("Dispatch only allowed for packed category");
+  }
 
-const firstChamberId = Object.keys(chamberUsagePkg)[0];
+  const chamberData = Array.isArray(stockJson.chamber)
+    ? stockJson.chamber
+    : [];
 
-  const chamberData = stock.get("chamber") || [];
-  const packageData = stock.get("packages") || [];
+  const packageData = Array.isArray(stockJson.packages)
+    ? stockJson.packages
+    : [];
 
-  const rating =
-    chamberData.find(c => String(c.id) === String(firstChamberId))?.rating ?? 5;
+  // ----------------------------
+  // 1️⃣ Collect total bags from chambers (PRIMARY UNIT)
+  // ----------------------------
 
-  const packetsPerBag =
-    packageData.find(p =>
-      Number(p.size) === Number(pkg.size) &&
-      String(p.unit).toLowerCase() === String(pkg.unit).toLowerCase()
-    )?.packets_per_bag
-    ||
-    chamberData?.[0]?.packets_per_bag
-    ||
-    1;
+  let totalRowBags = 0;
+  const chamberUsage = {};
 
-  const key = `${pkg.size}-${pkg.unit}-${rating}`;
+  for (const product of row.products) {
+    if (product.name !== resolvedName) continue;
 
-  if (!result[resolvedName]) result[resolvedName] = {};
+    for (const ch of product.chambers) {
+      const qty = Number(ch.quantity);
 
-  result[resolvedName][key] = {
-    totalBags: pkgBags,
-    totalPackets: pkgBags * packetsPerBag,
-    byChamber: chamberUsagePkg,
-    packet: {
-      size: Number(pkg.size),
-      unit: pkg.unit,
-      packetsPerBag
+      assertPositiveInteger(qty, "Bags", "dispatch.chambers.quantity");
+
+      chamberUsage[ch.id] = qty;
+      totalRowBags += qty;
     }
-  };
-}
-return result;
+  }
 
-}
+  if (totalRowBags <= 0) {
+    throw new Error("Dispatch must contain at least 1 bag");
+  }
 
+  // ----------------------------
+  // 2️⃣ Validate packets match bags × packetsPerBag
+  // ----------------------------
+
+  for (const pkg of row.packages) {
+    const packetsPerBag =
+      packageData.find(
+        (p) =>
+          Number(p.size) === Number(pkg.size) &&
+          String(p.unit).toLowerCase() ===
+            String(pkg.unit).toLowerCase()
+      )?.packets_per_bag;
+
+    if (!packetsPerBag) {
+      throw new Error(
+        `No packets_per_bag config for ${pkg.size}${pkg.unit}`
+      );
+    }
+
+    const expectedPackets = totalRowBags * packetsPerBag;
+    const providedPackets = Number(pkg.quantity);
+
+    assertPositiveInteger(
+      providedPackets,
+      "Packet quantity",
+      "dispatch.packages.quantity"
+    );
+
+    if (providedPackets !== expectedPackets) {
+      throw new Error(
+        `Packet mismatch. Expected ${expectedPackets}, received ${providedPackets}`
+      );
+    }
+
+    const key = `${pkg.size}-${pkg.unit}-${row.rating}`;
+
+    if (!result[resolvedName]) result[resolvedName] = {};
+
+    result[resolvedName][key] = {
+      totalBags: totalRowBags,
+      totalPackets: expectedPackets,
+      byChamber: chamberUsage,
+      packet: {
+        size: Number(pkg.size),
+        unit: pkg.unit,
+        packetsPerBag,
+      },
+    };
+  }
+
+  return result;
+}
 
 router.post(
   "/bulk-ingest",
@@ -1090,9 +1120,8 @@ router.post(
 
     try {
       const body = req.body || {};
+      // console.log("body", JSON.stringify(body, null, 2));
 
-      console.log("body", JSON.stringify(body, null, 2));
-      
       const hasDispatchOrder =
         body.dispatchOrder &&
         Array.isArray(body.dispatchOrder.rows) &&
@@ -1113,7 +1142,7 @@ router.post(
             if (s.includes("|")) return /\|/;
             return /,/;
           };
-          
+
           const parseListOfNumbers = (s) => {
             if (s == null) return [];
             const delim = chooseDelimiter(s) || /,/;
@@ -1249,9 +1278,9 @@ router.post(
         return np;
       });
 
-      const chamber_stock = (chamberRowsInput || []).map((c) =>
-        normalizeChamberStockRow(c),
-      );
+      const chamber_stock = (chamberRowsInput || [])
+  .map(normalizeChamberStockRow)
+  .filter(Boolean);
 
       const dispatch_orders = (dispatchRowsInput || []).map((d) => {
         const nd = normalizeDispatchRow(d);
@@ -1309,132 +1338,128 @@ router.post(
           .json({ error: "Validation failed", details: errors });
       }
 
-      
+      const rawMaterialIdByName = new Map();
 
-const rawMaterialIdByName = new Map();
+      if (raw_material_orders.length > 0) {
+        const neededRawNames = [
+          ...new Set(
+            raw_material_orders
+              .map((r) => trimStr(r.raw_material_name))
+              .filter(Boolean),
+          ),
+        ];
 
-if (raw_material_orders.length > 0) {
-  const neededRawNames = [
-    ...new Set(
-      raw_material_orders
-        .map((r) => trimStr(r.raw_material_name))
-        .filter(Boolean)
-    ),
-  ];
+        for (const name of neededRawNames) {
+          // const [rmRow] = await RawMaterialClient.findOrCreate({
+          //   where: { name },
+          //   defaults: { name },
+          //   transaction: t,
+          // });
+          const rmRow = await RawMaterialClient.findOne({
+            where: sequelize.where(
+              sequelize.fn("LOWER", sequelize.col("name")),
+              name.toLowerCase(),
+            ),
+            transaction: t,
+            lock: t.LOCK.UPDATE,
+          });
 
-  for (const name of neededRawNames) {
-    const [rmRow] = await RawMaterialClient.findOrCreate({
-      where: { name },
-      defaults: { name },
-      transaction: t,
-    });
+          if (!rmRow) {
+            console.log("❌ Raw material missing:", name);
+            await t.rollback();
+            return res.status(400).json({
+              error: `Raw material '${name}' does not exist. Please create it first.`,
+            });
+          }
 
-    rawMaterialIdByName.set(name, rmRow.id);
-  }
-}
-
-
-      const vendorByName = new Map(
-        vendors.map((v) => [trimStr(v.name), { ...v, name: trimStr(v.name) }]),
-      );
-
-      // if (raw_material_orders.length > 0) {
-      //   const vendorByName = new Map(
-      //     vendors.map((v) => [trimStr(v.name), { ...v, name: trimStr(v.name) }])
-      //   );
-
-      //   const neededVendors = [
-      //     ...new Set(
-      //       raw_material_orders.map((r) => trimStr(r.vendor)).filter(Boolean)
-      //     ),
-      //   ];
-
-      //     let existingVendorNames = new Set();
-      //     if (neededVendors.length) {
-      //       const existingRows = await VendorsClient.findAll({
-      //         where: { name: { [Op.in]: neededVendors } },
-      //         transaction: t,
-      //       });
-      //       existingVendorNames = new Set(existingRows.map((v) => v.name));
-      //     }
-
-      //     for (const name of neededVendors) {
-      //       if (existingVendorNames.has(name)) continue;
-      //       const v = vendorByName.get(name);
-      //       await VendorsClient.findOrCreate({
-      //         where: { name },
-      //         defaults: {
-      //           name,
-      //           alias: v?.alias ?? null,
-      //           phone: String(v?.phone ?? "0000000000"),
-      //           state: v?.state ?? "UNKNOWN",
-      //           city: v?.city ?? "UNKNOWN",
-      //           address: v?.address ?? null,
-      //           materials: Array.isArray(v?.materials) ? v.materials : [],
-      //           orders: [],
-      //         },
-      //         transaction: t,
-      //       });
-      //     }
-      //   }
+          rawMaterialIdByName.set(name, rmRow.id);
+        }
+      }
 
       const mapRmo = new Map();
       const createdRmos = [];
-for (const r of raw_material_orders) {
 
-  const vendorName = trimStr(r.vendor);
+      const neededVendors = [
+        ...new Set(
+          raw_material_orders.map((r) => trimStr(r.vendor)).filter(Boolean),
+        ),
+      ];
 
-  const [vendorRow] = await VendorsClient.findOrCreate({
-    where: { name: vendorName },
-    defaults: {
-      name: vendorName,
-      phone: "0000000000",
-      state: "UNKNOWN",
-      city: "UNKNOWN",
-      materials: [],
-      orders: [],
-    },
-    transaction: t,
-  });
+      const neededLower = neededVendors.map((v) => v.toLowerCase());
 
-  const id = uuid();
+      const existingVendors = await VendorsClient.findAll({
+        where: sequelize.where(sequelize.fn("LOWER", sequelize.col("name")), {
+          [Op.in]: neededLower,
+        }),
+        transaction: t,
+      });
 
-  const rmId = rawMaterialIdByName.get(trimStr(r.raw_material_name));
+      const vendorMap = new Map(
+        existingVendors.map((v) => [v.name.toLowerCase(), v]),
+      );
 
-const payload = {
-  ...r,
-  id,
-  raw_material_name: trimStr(r.raw_material_name),
-  raw_material_id: rmId,
-  vendor: vendorName,
-  vendor_id: vendorRow.id,
-  status: r.arrival_date ? "completed" : "pending",
-};
+      const missing = neededVendors.filter(
+        (v) => !vendorMap.has(v.toLowerCase()),
+      );
 
-  delete payload.clientId;
+      if (missing.length) {
+        console.log("❌ Missing vendors:", missing);
+        await t.rollback();
+        return res.status(400).json({
+          error: "Some vendors do not exist",
+          missingVendors: missing,
+        });
+      }
 
-  const cleanPayload = stripUndefinedDeep(payload);
+      for (const r of raw_material_orders) {
+        const vendorName = trimStr(r.vendor);
 
-  const row = await RawMaterialOrderClient.create(cleanPayload, {
-    transaction: t,
-  });
+        const vendorRow = vendorMap.get(vendorName.toLowerCase());
 
-  createdRmos.push(row.toJSON());
-if (r.clientId) mapRmo.set(r.clientId, id);
-}
+        if (!vendorRow) {
+          await t.rollback();
+          return res.status(400).json({
+            error: `Vendor '${vendorName}' does not exist. Please create vendor first.`,
+          });
+        }
 
-      const getDateKey = (iso) => (iso ? String(iso).slice(0, 10) : null);
+        const id = uuid();
+
+        const rmId = rawMaterialIdByName.get(trimStr(r.raw_material_name));
+
+        const payload = {
+          ...r,
+          id,
+          raw_material_name: trimStr(r.raw_material_name),
+          raw_material_id: rmId,
+          vendor: vendorName,
+          vendor_id: vendorRow.id,
+          status: r.arrival_date ? "completed" : "pending",
+        };
+
+        delete payload.clientId;
+
+        const cleanPayload = stripUndefinedDeep(payload);
+
+        const row = await RawMaterialOrderClient.create(cleanPayload, {
+          transaction: t,
+        });
+
+        createdRmos.push(row.toJSON());
+        if (r.clientId) mapRmo.set(r.clientId, id);
+      }
+
       const rmoByName = new Map();
       const rmoByNameAndArrivalDate = new Map();
 
       for (const r of createdRmos) {
         const name = trimStr(r.raw_material_name);
-       const arrivalIso =
-  r.arrival_date instanceof Date
-    ? r.arrival_date.toISOString()
-    : r.arrival_date;
+        const arrivalIso =
+          r.arrival_date instanceof Date
+            ? r.arrival_date.toISOString()
+            : r.arrival_date;
 
-const arrivalDateKey = arrivalIso ? arrivalIso.slice(0,10) : null;
+        const arrivalDateKey = arrivalIso ? arrivalIso.slice(0, 10) : null;
 
         if (name) {
           rmoByName.set(name, r.id); // overwrite — last one wins (changeable)
@@ -1470,7 +1495,7 @@ const arrivalDateKey = arrivalIso ? arrivalIso.slice(0,10) : null;
       const createdProds = [];
 
       if (parsedProductions.length > 0 && raw_material_orders.length > 0) {
-  for (const p of parsedProductions) {
+        for (const p of parsedProductions) {
           const id = uuid();
 
           let rawId = p.raw_material_order_id;
@@ -1512,17 +1537,6 @@ const arrivalDateKey = arrivalIso ? arrivalIso.slice(0,10) : null;
               rawId = rmoByName.get(prodRawName);
             }
           }
-
-          // if (!rawId) {
-          //   throw new Error(`Production ${p.clientId ?? ""} missing raw material link`);
-          // }
-          if (rawId) {
-            await RawMaterialOrderClient.update(
-              { production_id: id },
-              { where: { id: rawId }, transaction: t },
-            );
-          }
-
 
           const payload = normalizeProduction({
             ...p,
@@ -1573,7 +1587,7 @@ const arrivalDateKey = arrivalIso ? arrivalIso.slice(0,10) : null;
           continue;
         }
         const rating = trimStr(c.rating || "");
-        if (!rating) {
+        if (rating === undefined || rating === null) {
           chamberErrors.push({
             path: `chamber_stock[${idx}].rating`,
             error: "is required",
@@ -1582,7 +1596,10 @@ const arrivalDateKey = arrivalIso ? arrivalIso.slice(0,10) : null;
         }
 
         let existing = await ChamberStockClient.findOne({
-          where: { product_name: productName },
+          where: {
+            product_name: productName,
+            rating: Number(rating),
+          },
           transaction: t,
           lock: t.LOCK.UPDATE,
         });
@@ -1592,9 +1609,7 @@ const arrivalDateKey = arrivalIso ? arrivalIso.slice(0,10) : null;
               id: ensureString(
                 it.id || it.chamber_name || it._id || it.name,
               ).trim(),
-              quantity: ensureString(it.quantity ?? "").trim(), // bags
-              packets_per_bag: Number(it.packets_per_bag ?? 1),
-              rating: ensureString(it.rating ?? "").trim(),
+              quantity: ensureString(it.quantity ?? "").trim(),
             }))
           : [];
 
@@ -1606,9 +1621,7 @@ const arrivalDateKey = arrivalIso ? arrivalIso.slice(0,10) : null;
             product_name: productName,
             chamber: incomingChambers.map((ch) => ({
               id: ch.id,
-              quantity: ch.quantity, // bags
-              packets_per_bag: ch.packets_per_bag,
-              rating: ch.rating,
+              quantity: ch.quantity,
             })),
             category: ensureString(c.category ?? ""),
             unit: ensureString(c.unit ?? ""),
@@ -1620,7 +1633,17 @@ const arrivalDateKey = arrivalIso ? arrivalIso.slice(0,10) : null;
           });
           const asJson = row.toJSON();
           createdChamber.push(asJson);
-
+       console.log("CREATING PACKED STOCK:", {
+  product: productName,
+  rawBags: incomingChambers.reduce(
+  (s, ch) => s + Number(ch.quantity || 0),
+  0
+),
+  converted: Number(incomingChambers.reduce(
+  (s, ch) => s + Number(ch.quantity || 0),
+  0
+))
+});
           await attachChamberStockToChambers({
             chamberStockId: asJson.id,
             chamberIds: incomingChambers.map((c) => c.id),
@@ -1636,8 +1659,7 @@ const arrivalDateKey = arrivalIso ? arrivalIso.slice(0,10) : null;
           ? existingJson.chamber
           : [];
 
-        const chamberKey = (c) =>
-          `${String(c.id).trim()}::${String(c.rating || "").trim()}`;
+        const chamberKey = (c) => `${String(c.id).trim()}`;
 
         const existingById = new Map(
           existingChambers.map((it) => [chamberKey(it), { ...it }]),
@@ -1669,47 +1691,76 @@ const arrivalDateKey = arrivalIso ? arrivalIso.slice(0,10) : null;
               cur.quantity = inc.quantity != null ? inc.quantity : cur.quantity;
             }
 
-            cur.rating = inc.rating || cur.rating || "";
-
-            if (
-              cur.packets_per_bag &&
-              inc.packets_per_bag &&
-              cur.packets_per_bag !== inc.packets_per_bag
-            ) {
-              throw new Error(`Packet size mismatch for chamber ${incId}`);
-            }
-
-            cur.packets_per_bag =
-              inc.packets_per_bag ?? cur.packets_per_bag ?? 1;
-
             existingById.set(key, cur);
           } else {
             existingById.set(key, {
               id: incId,
               quantity: inc.quantity || "",
-              packets_per_bag: inc.packets_per_bag ?? 1,
-              rating: inc.rating || "",
             });
           }
         }
 
         const mergedChambers = Array.from(existingById.values());
+const totalBags = mergedChambers.reduce(
+  (s, ch) => s + Number(ch.quantity || 0),
+  0
+);
 
-        const updatedPayload = {
-          ...existingJson,
-          chamber: mergedChambers,
-          category: c.category
-            ? ensureString(c.category)
-            : existingJson.category,
-          unit: c.unit ? ensureString(c.unit) : existingJson.unit,
-        };
+let finalPackages = existingJson.packages;
 
-        delete updatedPayload.id;
+if ((c.category || "").toLowerCase() === "packed") {
 
-        await ChamberStockClient.update(updatedPayload, {
-          where: { id: existingJson.id },
-          transaction: t,
-        });
+  const sourcePackages = Array.isArray(existingJson.packages)
+    ? existingJson.packages
+    : Array.isArray(c.packages)
+      ? c.packages
+      : [];
+
+  finalPackages = sourcePackages.map((pkg, i) => {
+
+    const packetsPerBag = Number(pkg.packets_per_bag);
+
+    assertPositiveInteger(
+      packetsPerBag,
+      "packets_per_bag",
+      `chamberStock.packages[${i}]`
+    );
+
+    const computedPackets = totalBags * packetsPerBag;
+
+    assertPositiveInteger(
+      computedPackets,
+      "packages.quantity",
+      `chamberStock.packages[${i}].quantity`
+    );
+
+    return {
+      size: Number(pkg.size),
+      unit: pkg.unit,
+      packets_per_bag: packetsPerBag,
+      quantity: computedPackets,
+    };
+  });
+}
+
+const updatedPayload = {
+  ...existingJson,
+  chamber: mergedChambers,
+  packages: finalPackages,
+  category: c.category
+    ? ensureString(c.category)
+    : existingJson.category,
+  unit: c.unit
+    ? ensureString(c.unit)
+    : existingJson.unit,
+};
+
+delete updatedPayload.clientId;
+
+await ChamberStockClient.update(updatedPayload, {
+  where: { id: existingJson.id },
+  transaction: t,
+});
 
         await attachChamberStockToChambers({
           chamberStockId: existingJson.id,
@@ -1722,57 +1773,6 @@ const arrivalDateKey = arrivalIso ? arrivalIso.slice(0,10) : null;
           transaction: t,
         });
         createdChamber.push(refreshed.toJSON());
-
-        if ((c.category || "").toLowerCase() === "packed") {
-          const totalBags = incomingChambers.reduce(
-            (s, ch) => s + Number(ch.quantity || 0),
-            0,
-          );
-
-          const totalPackets = incomingChambers.reduce(
-            (sum, ch) =>
-              sum + Number(ch.quantity || 0) * Number(ch.packets_per_bag || 1),
-            0,
-          );
-
-          //       const packetsPerBag =
-          // incomingChambers[0]?.packets_per_bag ?? 1;
-
-          await PackingEventClient.create(
-            {
-              product_name: productName,
-              rating: Number(rating) || 0,
-              sku_id: uuid(),
-              sku_label: productName,
-
-              packet: {
-                size: c.packaging?.size?.value ?? null,
-                unit: c.packaging?.size?.unit ?? null,
-                packetsPerBag: null,
-              },
-
-              bags_produced: totalBags,
-              total_packets: totalPackets,
-
-              storage: incomingChambers.map((ch) => ({
-                chamberId: ch.id,
-                bagsStored: Number(ch.quantity || 0),
-              })),
-
-              //   rm_consumption: productions
-              //       .filter(p => p.product_name === productName)
-              //       .map(p => ({
-              //         raw_material_order_id: p.raw_material_order_id,
-              //         quantity_used: Number(p.quantity || 0),
-              //         unit: p.unit || "kg"
-              //       }))
-
-              rm_consumption: {},
-            },
-
-            { transaction: t },
-          );
-        }
 
         if (c.clientId) mapCs.set(c.clientId, refreshed.id);
       }
@@ -1787,75 +1787,97 @@ const arrivalDateKey = arrivalIso ? arrivalIso.slice(0,10) : null;
       }
 
       // ----------------------------------------------------
-// NOW that chamber stock exists → resolve dispatch names
-// ----------------------------------------------------
-if (hasDispatchOrder) {
-const resolveProduct = await buildProductResolver(t);
+      // NOW that chamber stock exists → resolve dispatch names
+      // ----------------------------------------------------
 
-for (const d of dispatch_orders) {
-const real = resolveProduct(d.product_name);
+      const allStocks = await ChamberStockClient.findAll({
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
 
-```
-d.product_name = real;
+      const productKeyMap = new Map();
 
-if (Array.isArray(d.products)) {
-  d.products.forEach(p => p.name = real);
+      for (const stock of allStocks) {
+        productKeyMap.set(
+          `${stock.product_name.toLowerCase()}::${stock.rating}`,
+          stock.id,
+        );
+      }
 
-  // merge duplicates after rename
-  d.products = Object.values(
-    d.products.reduce((acc, p) => {
-      if (!acc[p.name]) acc[p.name] = { ...p, quantity: 0 };
-      acc[p.name].quantity += Number(p.quantity || 0);
-      return acc;
-    }, {})
-  );
-}
+      if (hasDispatchOrder) {
+        const resolveProduct = await buildProductResolver(t);
 
-if (Array.isArray(d.packages)) {
-  d.packages.forEach(p => p.product_name = real);
-}
-```
+        for (const d of dispatch_orders) {
+          const real = resolveProduct(d.product_name);
+          d.product_name = real;
 
-}
+          if (
+            !real ||
+            !productKeyMap.has(`${real.toLowerCase()}::${d.rating}`)
+          ) {
+            await t.rollback();
+            return res.status(400).json({
+              error: `Product '${d.product_name}' not found in chamber stock`,
+            });
+          }
 
-// NOW run dispatch validation AFTER resolution
-const dispatchErrors = validateDispatch(dispatch_orders);
-if (dispatchErrors.length) {
-await t.rollback();
-return res.status(400).json({
-error: "Validation failed",
-details: dispatchErrors,
-});
-}
-}
+          if (Array.isArray(d.products)) {
+            d.products.forEach((p) => (p.name = real));
 
-let packageLookup = new Map();
-let dbById = new Map();
-let pkgIssues = [];
+            // merge duplicates after rename
+            d.products = Object.values(
+              d.products.reduce((acc, p) => {
+                if (!acc[p.name]) acc[p.name] = { ...p, quantity: 0 };
+                acc[p.name].quantity += Number(p.quantity || 0);
+                return acc;
+              }, {}),
+            );
+          }
 
-if (hasDispatchOrder) {
-  const allPackages = await PackagesClient.findAll({
-    attributes: ["id", "product_name", "types"],
-    transaction: t,
-    lock: t.LOCK.UPDATE,
-  });
+          if (Array.isArray(d.packages)) {
+            d.packages.forEach((p) => (p.product_name = real));
+          }
+        }
 
-  for (const pkg of allPackages) {
-    for (const tItem of pkg.types || []) {
-      const normalize = (s) =>
-        String(s ?? "").trim().toLowerCase();
+        const dispatchErrors = validateDispatch(dispatch_orders);
+        if (dispatchErrors.length) {
+          await t.rollback();
+          return res.status(400).json({
+            error: "Validation failed",
+            details: dispatchErrors,
+          });
+        }
+      }
 
-      const key = `${normalize(pkg.product_name)}::${normalize(tItem.size)}::${normalize(tItem.unit)}`;
-      packageLookup.set(key, pkg.id);
-    }
-  }
+      let packageLookup = new Map();
+      let dbById = new Map();
+      let pkgIssues = [];
 
-  dbById = new Map(allPackages.map((r) => [r.id, r.toJSON()]));
-}
+      if (hasDispatchOrder) {
+        const allPackages = await PackagesClient.findAll({
+          attributes: ["id", "product_name", "types"],
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+        for (const pkg of allPackages) {
+          for (const tItem of pkg.types || []) {
+            const normalize = (s) =>
+              String(s ?? "")
+                .trim()
+                .toLowerCase();
+
+            const key = `${normalize(pkg.product_name)}::${normalize(tItem.size)}::${normalize(tItem.unit)}`;
+            packageLookup.set(key, pkg.id);
+          }
+        }
+
+        dbById = new Map(allPackages.map((r) => [r.id, r.toJSON()]));
+      }
 
       const pkgKey = (id, size, unit) =>
         `${id}::${String(size).trim()}::${String(unit ?? "").trim()}`;
-      const requestedMap = new Map(); 
+      const requestedMap = new Map();
 
       for (const d of dispatch_orders) {
         if (!Array.isArray(d.packages)) continue;
@@ -1870,16 +1892,24 @@ if (hasDispatchOrder) {
           const realPackageId = packageLookup.get(lookupKey);
 
           if (!realPackageId) {
-          pkgIssues.push({
-          path: `dispatch_orders.packages`,
-          error: `No package mapping for ${p.product_name} ${p.size}${p.unit}`,
-          });
-          continue;
+            console.error("❌ Package mapping failed for:");
+            console.error("Product:", p.product_name);
+            console.error("Size:", p.size);
+            console.error("Unit:", p.unit);
+            console.error(
+              "Available package keys:",
+              Array.from(packageLookup.keys()),
+            );
+
+            pkgIssues.push({
+              path: `dispatch_orders.packages`,
+              error: `No package mapping for ${p.product_name} ${p.size}${p.unit}`,
+            });
+            continue;
           }
 
           p.id = realPackageId;
           const id = realPackageId;
-
 
           if (!id) continue;
           const size = (p.size ?? "").toString().trim();
@@ -1956,62 +1986,59 @@ if (hasDispatchOrder) {
       }
 
       // ---------------------------------------------
-// PREPARE & APPLY DISPATCH TRANSACTIONS FIRST
-// ---------------------------------------------
-if (hasDispatchOrder) {
+      // PREPARE & APPLY DISPATCH TRANSACTIONS FIRST
+      // ---------------------------------------------
+      if (hasDispatchOrder) {
+        const chamberStockMap = new Map(
+          allStocks.map((s) => [
+            `${s.product_name.toLowerCase()}::${s.rating}`,
+            s,
+          ]),
+        );
 
-  const allStocks = await ChamberStockClient.findAll({
-    transaction: t,
-    lock: t.LOCK.UPDATE,
-  });
+        for (const d of dispatch_orders) {
+          // Build ERP payload if excel didn't provide it
+          if (
+            !d.usedBagsByProduct ||
+            Object.keys(d.usedBagsByProduct).length === 0
+          ) {
+            d.usedBagsByProduct = await buildUsedBags(d, chamberStockMap);
+          }
 
-  const productKeyMap = new Map();
-
-for (const stock of allStocks) {
-  productKeyMap.set(stock.product_name.toLowerCase(), stock.id);
-}
-
-const chamberStockMap = new Map(
-  allStocks.map(s => [s.product_name, s])
-);
-
-  for (const d of dispatch_orders) {
-
-    // Build ERP payload if excel didn't provide it
-    if (!d.usedBagsByProduct || Object.keys(d.usedBagsByProduct).length === 0) {
-      d.usedBagsByProduct = await buildUsedBags(d, chamberStockMap);
-    }
-
-    await applyDispatchTransaction({
-      orderPayload: d,
-      transaction: t,
-      stocks: allStocks
-    });
-
-  }
-}
-
+          try {
+            await applyDispatchTransaction({
+              orderPayload: d,
+              transaction: t,
+              stocks: allStocks,
+            });
+          } catch (err) {
+            console.error("❌ DISPATCH TRANSACTION FAILED");
+            console.error("Product:", d.product_name);
+            console.error("Error:", err.message);
+            throw err; // keep rollback behavior
+          }
+        }
+      }
       // --- 6) Create Dispatch Orders ---
-const createdDispatch = [];
-const mapDo = new Map();
+      const createdDispatch = [];
+      const mapDo = new Map();
 
-if (hasDispatchOrder) {
-  for (const d of dispatch_orders) {
+      if (hasDispatchOrder) {
+        for (const d of dispatch_orders) {
+          const id = uuid();
+          const payload = { ...d, id };
+          delete payload.clientId;
 
-    const id = uuid();
-    const payload = { ...d, id };
-    delete payload.clientId;
+          payload.dispatched_items = d.usedBagsByProduct;
 
-    payload.dispatched_items = d.usedBagsByProduct;
+          const row = await DispatchOrdersClient.create(payload, {
+            transaction: t,
+          });
 
-    const row = await DispatchOrdersClient.create(payload, {
-      transaction: t,
-    });
-
-    createdDispatch.push(row.toJSON());
-    if (d.clientId) mapDo.set(d.clientId, id);
-  }
-}
+          createdDispatch.push(row.toJSON());
+          if (d.clientId) mapDo.set(d.clientId, id);
+        }
+      }
 
       // --- RAW MATERIAL ORDERS notifications ---
       for (const asJson of createdRmos) {
@@ -2163,20 +2190,21 @@ if (hasDispatchOrder) {
         },
       });
     } catch (err) {
-  try {
-    if (t && !t.finished) await t.rollback();
-  } catch {}
+      try {
+        if (t && !t.finished) await t.rollback();
+      } catch {}
 
-  console.error("🔥 BULK INGEST CRASH 🔥");
-  console.error(err);
-  console.error(err?.stack);
-  console.error(err?.parent);
+      console.error("🔥 BULK INGEST CRASH 🔥");
+      console.error("Message:", err.message);
+      console.error("Stack:", err.stack);
+      console.error("Parent:", err.parent);
+      console.error("SQL:", err.sql);
 
-  return res.status(500).json({
-    error: err.message,
-    stack: err.stack
-  });
-}
+      return res.status(500).json({
+        error: err.message,
+        stack: err.stack,
+      });
+    }
   }),
 );
 

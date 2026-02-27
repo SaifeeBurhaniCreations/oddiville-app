@@ -147,7 +147,7 @@ module.exports = (sequelize, Sequelize) => {
             }
 
             value.forEach((pkg, index) => {
-              const allowedKeys = ["size", "unit", "rawSize", "quantity"];
+              const allowedKeys = ["size", "unit", "rawSize", "quantity", "packets_per_bag", ];
               const keys = Object.keys(pkg);
 
               const extra = keys.filter((k) => !allowedKeys.includes(k));
@@ -161,11 +161,19 @@ module.exports = (sequelize, Sequelize) => {
                 throw new Error(`Packages[${index}].size must be numeric.`);
               }
 
-              if (pkg.quantity == null || isNaN(Number(pkg.quantity))) {
-                throw new Error(
-                  `Packages[${index}].quantity must be numeric string.`,
-                );
-              }
+             if (pkg.quantity == null || !Number.isFinite(Number(pkg.quantity))) {
+  throw new Error(
+    `Packages[${index}].quantity must be numeric.`,
+  );
+}
+              if (pkg.packets_per_bag != null) {
+  if (!Number.isFinite(Number(pkg.packets_per_bag)) ||
+      Number(pkg.packets_per_bag) <= 0) {
+    throw new Error(
+      `Packages[${index}].packets_per_bag must be a positive number.`
+    );
+  }
+}
             });
           },
         },
@@ -203,7 +211,8 @@ module.exports = (sequelize, Sequelize) => {
       },
       rating: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
+        defaultValue: null,
       },
     },
     {

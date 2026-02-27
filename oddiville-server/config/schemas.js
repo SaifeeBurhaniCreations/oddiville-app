@@ -1195,6 +1195,43 @@ const SCHEDULED_DATE_EVENT = {
     ],
 };
 
+
+  const EXPORT_PRODUCT_OPTIONS = {
+    sections: [
+      {
+        type: "title-with-details-cross",
+        data: {
+          title: "Select Product",
+        },
+      },
+      {
+        type: "productCard",
+        data: [
+          { name: "", image: "box" },
+        ],
+      },
+    ],
+    buttons: [
+      {
+        text: "Cancel",
+        variant: "outline",
+        color: "green",
+        alignment: "half",
+        disabled: false,
+        actionKey: "cancel",
+      },
+      {
+        text: "select",
+        variant: "fill",
+        color: "green",
+        alignment: "half",
+        disabled: false,
+        actionKey: "choose-export-product",
+      },
+    ],
+  }
+
+
 module.exports = {
     ORDER_READY,
     ORDER_REACHED,
@@ -1220,4 +1257,5 @@ module.exports = {
     SCHEDULED_DATE_EVENT,
     PACKING_SUMMARY,
     CHOOSE_MULTIPLE_PRODUCT,
+    EXPORT_PRODUCT_OPTIONS,
 };

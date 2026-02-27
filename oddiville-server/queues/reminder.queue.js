@@ -1,5 +1,5 @@
 const { Queue } = require("bullmq");
-const connection = require("../devops/bullmqRedis");
+const connection = require("../devops/redis");
 
 const QUEUE_NAME = "calendar-reminder";
 

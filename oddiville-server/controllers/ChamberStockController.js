@@ -145,27 +145,19 @@ router.get("/:id", async (req, res) => {
 router.patch("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-      const { product_name, chamber } = req.body;
+    const { product_name, rating, chamber } = req.body;
 
-      if (!Array.isArray(chamber) || chamber.length === 0) {
+    if (!Array.isArray(chamber) || chamber.length === 0) {
+      return res.status(400).json({
+        error: "Request body must include { chamber: [...] }",
+      });
+    }
+
+    if (rating != null && rating !== "") {
+      if (!["1", "2", "3", "4", "5"].includes(String(rating))) {
         return res.status(400).json({
-          error: "Request body must include { chamber: [...] }",
+          error: "Invalid stock rating",
         });
-      }
-
-    for (let i = 0; i < chamber.length; i++) {
-      const it = chamber[i];
-      if (!it || typeof it !== "object") {
-        return res.status(400).json({ error: `data[${i}] must be an object` });
-      }
-      if (!("id" in it)) {
-        return res.status(400).json({ error: `data[${i}].id is required` });
-      }
-      if (!("quantity" in it)) {
-        return res.status(400).json({ error: `data[${i}].quantity is required` });
-      }
-      if (!("rating" in it)) {
-        return res.status(400).json({ error: `data[${i}].rating is required` });
       }
     }
 
@@ -174,12 +166,12 @@ router.patch("/:id", async (req, res) => {
         transaction: t,
         lock: t.LOCK.UPDATE,
       });
-      
+
       if (!chamberStock) {
         return { status: 404, body: { error: "ChamberStock not found" } };
       }
 
-            if (
+      if (
         typeof product_name === "string" &&
         product_name.trim() !== "" &&
         product_name !== chamberStock.product_name
@@ -187,15 +179,12 @@ router.patch("/:id", async (req, res) => {
         chamberStock.product_name = product_name.trim();
       }
 
+      chamberStock.rating = rating ? String(rating) : "";
 
       const storedChambers = Array.isArray(chamberStock.chamber)
         ? [...chamberStock.chamber]
         : [];
 
-      if (!Array.isArray(storedChambers)) {
-        return { status: 500, body: { error: "Stored chamber field is invalid" } };
-      }
-      
       const existingIds = new Set(storedChambers.map((c) => String(c.id)));
 
       const normalized = [];
@@ -203,6 +192,7 @@ router.patch("/:id", async (req, res) => {
       for (let i = 0; i < chamber.length; i++) {
         const it = chamber[i];
         const idStr = String(it.id);
+
         if (!existingIds.has(idStr)) {
           return {
             status: 404,
@@ -218,44 +208,31 @@ router.patch("/:id", async (req, res) => {
           };
         }
 
-        const ratingStr = it.rating == null ? "" : String(it.rating);
-        if (ratingStr !== "" && !["1", "2", "3", "4", "5"].includes(ratingStr)) {
-          return {
-            status: 400,
-            body: { error: `Invalid rating for chamber '${idStr}'` },
-          };
-        }
-
         normalized.push({
           id: idStr,
           quantity: String(qtyNum),
-          rating: ratingStr,
         });
       }
-    chamberStock.chamber = normalized;
-    
-    await chamberStock.save({ transaction: t });
+
+      chamberStock.chamber = normalized;
+
+      await chamberStock.save({ transaction: t });
 
       return {
         status: 200,
         body: {
-          message: "Chamber stock replaced",
-          updatedChambers: normalized,
-          chamberStock: chamberStock.toJSON ? chamberStock.toJSON() : chamberStock,
+          message: "Chamber stock updated",
+          chamberStock: chamberStock.toJSON(),
         },
       };
-    }); 
+    });
 
     return res.status(result.status).json(result.body);
   } catch (err) {
     console.error("PATCH /:id error:", err);
-    if (err && err.name === "SequelizeValidationError") {
-      return res.status(400).json({ error: "Validation error", details: err.errors });
-    }
     return res.status(500).json({ error: "Server error" });
   }
 });
-
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;

@@ -22,6 +22,7 @@
     fillScheduledDateEventSchema,
     fillPackingSummarySchema,
     fillMultipleProductCardSchema,
+    fillExportSelectProductSchema,
   } = require("../utils/fillers");
   const { schemaMap } = require('../constants/constants');
 
@@ -50,6 +51,7 @@ const bottomSheetFillers = {
   "calendar-event-reminder": fillScheduledDateEventSchema,
   "packing-summary": fillPackingSummarySchema,
   "multiple-product-card": fillMultipleProductCardSchema,
+  "select-export-product": fillExportSelectProductSchema,
 };
 
 function getBottomSheet(ctx) {
