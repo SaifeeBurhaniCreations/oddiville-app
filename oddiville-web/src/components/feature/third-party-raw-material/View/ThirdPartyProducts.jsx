@@ -20,6 +20,11 @@ import {
 import { useChamberstock } from "../../../../hooks/chamberStock";
 import { useOtherItems } from "../../../../hooks/thirdPartyProduct";
 
+const getProductImage = (stock, otherItem) =>
+  otherItem?.sample_image ||
+  stock?.image ||
+  "/assets/img/png/fallback_img.png";
+
 const getAverageRating = (chambers = []) => {
   const ratings = chambers.map(ch => ch.rating);
 
@@ -77,6 +82,7 @@ const ExpandedChambersRow = ({ chambers }) => {
       <table className="table mb-0">
         <thead>
           <tr>
+            <th className="text-center">Image</th>
             <th className="text-center">Product</th>
             <th className="text-center">Quantity</th>
             <th className="text-center">Rating</th>
@@ -85,6 +91,13 @@ const ExpandedChambersRow = ({ chambers }) => {
         <tbody>
           {chambers.map((ch) => (
             <tr key={ch.id}>
+              <td className="d-flex justify-content-center">
+              <img
+                src={ch.sample_image}
+                className="avatar avatar-lg"
+                alt="item image"
+              />
+            </td>
               <td className="text-center">{ch.product_name || ch.id.slice(0, 10)}</td>
               <td className="text-center">{ch?.chamber?.length > 0 && ch?.chamber?.reduce((acc, cur) => acc + Number(cur.quantity), 0)}</td>
            <td className="text-center">
@@ -155,26 +168,6 @@ const resolveImage = (clientId, productIds) => {
   return "/assets/img/png/fallback_img.png";
 };
 
-  // useEffect(() => {
-  //   const fetchAll = async () => {
-  //     try {
-  //       const res = await fetchAllOrders();
-  //       dispatch(handleFetchData(res.data));
-  //     } catch {
-  //       toast.error("Failed to fetch data");
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
-
-  //   if (!otherProduct || otherProduct.length === 0) {
-  //     fetchAll();
-  //   } else {
-  //     setIsLoading(false);
-  //   }
-  // }, [dispatch, otherProduct]);
-
-
 useEffect(() => {
   const fetchAll = async () => {
     try {
@@ -228,7 +221,6 @@ useEffect(() => {
     <table className="table align-items-center mb-0">
       <thead>
         <tr className="text-center">
-          <th>Image</th>
           <th>Client</th>
           <th>Products</th>
           <th>Created</th>
@@ -239,29 +231,34 @@ useEffect(() => {
     </table>
   );
 
+  
   const renderRows = () =>
     filteredData.map((item) => {
-      const chambers = (item.products || [])
-        .map((id) => chamberStockMap[id])
-        .filter(Boolean);
+     const chambers = (item.products || [])
+  .map((productId) => {
+    const stock = chamberStockMap[productId];
+    if (!stock) return null;
+
+    const key = `${item.id}_${productId}`;
+    const otherItem = otherItemMap[key];
+  // console.log("otherItem", otherItem);
+
+    return {
+      ...stock,
+      sample_image: getProductImage(stock, otherItem),
+    };
+  })
+  .filter(Boolean);
 
       const isSingle = chambers.length === 1;
       const isMultiple = chambers.length > 1;
       const isOpen = openRowId === item.id;
 
-      const imageUrl = resolveImage(item.id, item.products);
+      // const imageUrl = resolveImage(item.id, item.products);
 
       return (
         <React.Fragment key={item.id}>
           <tr className="text-center">
-            <td>
-              <img
-                src={imageUrl}
-                className="avatar avatar-lg"
-                alt="banner"
-              />
-            </td>
-
             <td>
               <p className="fw-bold mb-0">{item.name}</p>
               <p className="text-xs text-secondary mb-0">{item.company}</p>

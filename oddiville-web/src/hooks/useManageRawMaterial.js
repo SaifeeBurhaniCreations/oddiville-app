@@ -222,13 +222,13 @@ const useManageRawMaterial = () => {
       dataPayload.append("address", submitValues.address);
       dataPayload.append("phone", submitValues.phone);
       
-      const finalProducts = productList
-      .filter(p => !p._isDeleted)
-      .map(({ _rowId, _isNew, _isDeleted, _serverId, sample_image_file, ...rest }) => ({
-        ...rest,
-        id: _serverId ?? undefined,
-        ...(sample_image_file ? { sample_image: undefined } : {}),
-      }));
+      // const finalProducts = productList
+      // .filter(p => !p._isDeleted)
+      // .map(({ _rowId, _isNew, _isDeleted, _serverId, sample_image_file, ...rest }) => ({
+      //   ...rest,
+      //   id: _serverId ?? undefined,
+      //   ...(sample_image_file ? { sample_image: undefined } : {}),
+      // }));
       
       const deletedIds = productList
       .filter(p => p._isDeleted && p._serverId)
@@ -276,7 +276,7 @@ const useManageRawMaterial = () => {
 
       }
 
-      // navigate("/raw-material-other");
+      navigate("/raw-material-other");
     } catch (error) {
       toast.error("Error while saving client.");
       console.error(error);

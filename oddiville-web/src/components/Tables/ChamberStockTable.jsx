@@ -5,6 +5,35 @@ import { updateChamberStock } from "../../services/chamberstock.service";
 import { useUpdateChamberstock } from "../../hooks/chamberStock";
 import { useNavigate } from "react-router-dom";
 
+export const formatDisplayCount = (service, quantity) => {
+  if (!service || quantity == null) return "0";
+
+  const totalQty = Number(quantity || 0);
+
+  if (service.category === "packed") {
+    return `${totalQty} bags`;
+  }
+
+  if (service.category === "material") {
+    const bagSize = Number(service.packaging?.size?.value || 0);
+    const unit = service.unit || "kg";
+
+    if (bagSize > 0) {
+      const totalBags = Math.floor(totalQty / bagSize);
+      const leftover = totalQty % bagSize;
+
+      if (leftover > 0) {
+        return `${totalBags} bags + ${leftover} ${unit} leftover`;
+      }
+
+      return `${totalBags} bags`;
+    }
+
+    return `${totalQty} ${unit}`;
+  }
+
+  return "Invalid product";
+};
 const ChamberStockTableWrapper = ({ children }) => (
   <table className="table align-items-center mb-0">
     <thead>
@@ -75,7 +104,7 @@ const DropdownLikeSpan = ({
   );
 };
 
-const ExpandedChambersRow = ({ chambers }) => {
+const ExpandedChambersRow = ({ chambers, rating, service }) => {
   if (!Array.isArray(chambers) || chambers.length === 0) {
     return (
       <div className="p-3 text-center text-secondary">No chamber data</div>
@@ -93,15 +122,19 @@ const ExpandedChambersRow = ({ chambers }) => {
           </tr>
         </thead>
         <tbody>
-          {chambers.map((ch) => (
-            <tr key={ch.id}>
-              <td className="text-start text-sm">
-                {ch.chamber_name || ch.id?.slice?.(0, 12) || "N/A"}
-              </td>
-              <td className="text-center text-sm">{ch.quantity || "0"}</td>
-              <td className="text-center text-sm">{ch.rating || "N/A"}</td>
-            </tr>
-          ))}
+          {chambers.map((ch) => {
+            const displayCount = formatDisplayCount(service, ch.quantity);
+
+            return (
+              <tr key={ch.id}>
+                <td className="text-start text-sm">
+                  {ch.chamber_name || ch.id?.slice?.(0, 12) || "N/A"}
+                </td>
+                <td className="text-center text-sm">{displayCount}</td>
+                <td className="text-center text-sm">{rating ?? "N/A"}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -112,6 +145,7 @@ const EditForm = ({ service, onCancel, onSave, saving }) => {
   const [values, setValues] = useState({
     product_name: service.product_name || "",
     category: service.category || "",
+    rating: service.rating || "",
     chamber: Array.isArray(service.chamber)
       ? service.chamber.map((c) => ({ ...c }))
       : [],
@@ -119,18 +153,19 @@ const EditForm = ({ service, onCancel, onSave, saving }) => {
 
   const [errors, setErrors] = useState({});
 
-useEffect(() => {
-  setValues({
-    product_name: service.product_name || "",
-    category: service.category || "",
-    chamber: Array.isArray(service.chamber)
-      ? service.chamber.map((c) => ({
-          ...c,
-          __originalName: c.chamber_name ?? "",
-        }))
-      : [],
-  });
-}, [service]);
+  useEffect(() => {
+    setValues({
+      product_name: service.product_name || "",
+      category: service.category || "",
+      rating: service.rating || "",
+      chamber: Array.isArray(service.chamber)
+        ? service.chamber.map((c) => ({
+            ...c,
+            __originalName: c.chamber_name ?? "",
+          }))
+        : [],
+    });
+  }, [service]);
 
   const setChamberField = (index, field, value) => {
     setValues((prev) => {
@@ -170,9 +205,6 @@ useEffect(() => {
       if (!Number.isFinite(num) || num < 0) {
         e[`chamber_${i}_quantity`] = "Quantity must be a number >= 0";
       }
-      if (c.rating && !["1", "2", "3", "4", "5"].includes(String(c.rating))) {
-        e[`chamber_${i}_rating`] = "Invalid rating";
-      }
     });
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -188,6 +220,7 @@ useEffect(() => {
 
     const payload = {
       product_name: values.product_name,
+      rating: values.rating || "",
       chamber: values.chamber.map((c) => ({
         ...c,
         quantity: String(c.quantity),
@@ -197,124 +230,119 @@ useEffect(() => {
     onSave(payload);
   };
 
-  const ratingOptions = ["", "1", "2", "3", "4", "5"];
-
   return (
     <div
       className="p-3"
       role="group"
       aria-label={`Edit ${service.product_name}`}
     >
-      <div className="mb-3">
-        <label className="form-label">Product</label>
-        <input
-          className="form-control"
-          value={values.product_name}
-    onChange={(e) =>
-      setValues((prev) => ({
-        ...prev,
-        product_name: e.target.value,
-      }))
-    }
-  />
-</div>
+      <div className="row justify-content-center">
+        <div className="col-12 col-md-8 col-lg-7">
+          {/* Product */}
+          <div className="mb-3">
+            <label className="form-label">Product</label>
+            <input
+              className="form-control"
+              value={values.product_name}
+              onChange={(e) =>
+                setValues((prev) => ({
+                  ...prev,
+                  product_name: e.target.value,
+                }))
+              }
+            />
+          </div>
 
-      <div className="mb-3">
-        <label className="form-label">Category</label>
-        <input className="form-control" value={values.category} readOnly />
-      </div>
+          {/* Category */}
+          <div className="mb-3">
+            <label className="form-label">Category</label>
+            <input
+              className="form-control"
+              value={values.category}
+              readOnly
+              disabled
+            />
+          </div>
 
-      <div className="mb-3">
-        <label className="form-label">Chambers (edit quantities only)</label>
-        <div className="border rounded p-2">
-          {values.chamber.length === 0 && (
-            <div className="text-muted">No chambers</div>
-          )}
-
-          {values.chamber.map((ch, i) => (
-            <div
-              key={ch.id || i}
-              className="d-flex gap-2 align-items-center mb-2"
+          {/* Rating */}
+          <div className="mb-3">
+            <label className="form-label">Rating</label>
+            <select
+              className="form-select"
+              value={String(values.rating ?? "")}
+              onChange={(e) =>
+                setValues((prev) => ({
+                  ...prev,
+                  rating: e.target.value,
+                }))
+              }
             >
-              <div style={{ minWidth: 200 }}>
-                <small className="text-muted d-block">Name</small>
-                <input
-                  style={{ height: 32 }}
-                  className="form-control form-control-sm"
-                  value={ch.chamber_name || ch.id}
-                  readOnly
-                />
-              </div>
+              <option value="">N/A</option>
+              {["1", "2", "3", "4", "5"].map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </div>
 
-              <div style={{ width: 180 }}>
-                <small className="text-muted d-block">Quantity</small>
-                <div className="input-group input-group-sm qty-group">
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary horizontal-rounded"
-                    onClick={() => decrement(i)}
-                    aria-label={`Decrease quantity for ${
-                      ch.chamber_name || ch.id
-                    }`}
-                  >
-                    −
-                  </button>
+          {/* Chambers Section */}
+          <div className="mb-3 mt-4">
+            <label className="form-label">
+              Chambers (edit quantities only)
+            </label>
 
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    className={`form-control text-center ${
-                      errors[`chamber_${i}_quantity`] ? "is-invalid" : ""
-                    } input-flat`}
-                    value={String(ch.quantity ?? "")}
-                    onChange={(e) => onInputChange(i, e.target.value)}
-                  />
+            <div className="border rounded p-3">
+              {values.chamber.length === 0 && (
+                <div className="text-muted">No chambers</div>
+              )}
 
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary horizontal-rounded"
-                    onClick={() => increment(i)}
-                    aria-label={`Increase quantity for ${
-                      ch.chamber_name || ch.id
-                    }`}
-                  >
-                    +
-                  </button>
-                  {errors[`chamber_${i}_quantity`] && (
-                    <div className="invalid-feedback d-block">
-                      {errors[`chamber_${i}_quantity`]}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ width: 140 }}>
-                <small className="text-muted d-block">Rating</small>
-                <select
-                  className="form-select form-select-sm"
-                  style={{ height: 32 }}
-                  aria-label={`Rating for ${ch.chamber_name || ch.id}`}
-                  value={String(ch.rating ?? "")}
-                  onChange={(e) => setChamberField(i, "rating", e.target.value)}
+              {values.chamber.map((ch, i) => (
+                <div
+                  key={ch.id || i}
+                  className="d-flex justify-content-between align-items-center mb-3 flex-wrap"
                 >
-                  <option value="">N/A</option>
-                  {ratingOptions
-                    .filter((r) => r !== "")
-                    .map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                </select>
-                {errors[`chamber_${i}_rating`] && (
-                  <div className="invalid-feedback d-block">
-                    {errors[`chamber_${i}_rating`]}
+                  <div style={{ minWidth: 200 }}>
+                    <small className="text-muted d-block">Name</small>
+                    <input
+                      className="form-control form-control-sm"
+                      value={ch.chamber_name || ch.id}
+                      readOnly
+                      disabled
+                    />
                   </div>
-                )}
-              </div>
+
+                  <div style={{ width: 200 }}>
+                    <small className="text-muted d-block">Quantity</small>
+                    <div className="input-group input-group-sm qty-group">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary horizontal-rounded"
+                        onClick={() => decrement(i)}
+                      >
+                        −
+                      </button>
+
+                      <input
+                        type="text"
+                        className="form-control text-center"
+                        value={String(ch.quantity ?? "")}
+                        onChange={(e) => onInputChange(i, e.target.value)}
+                      />
+
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary horizontal-rounded"
+                        onClick={() => increment(i)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       </div>
 
@@ -402,17 +430,17 @@ const ChamberStockTable = ({ chamberStock = [], isLoading = false }) => {
     const normalizedPayload = updatePayload.map((c) => ({
       id: c.id,
       quantity: String(c.quantity ?? "0"),
-      rating: c.rating ? String(c.rating) : "",
     }));
 
-        updateChamberstock.mutate(
-          {
-            id: serviceId,
-            data: {
-              product_name: payload.product_name,
-              chamber: normalizedPayload,
-            },
-          },
+    updateChamberstock.mutate(
+      {
+        id: serviceId,
+        data: {
+          product_name: payload.product_name,
+          rating: payload.rating || "",
+          chamber: normalizedPayload,
+        },
+      },
       {
         onSuccess: (result) => {
           navigate("/chamberstock/edit");
@@ -420,7 +448,7 @@ const ChamberStockTable = ({ chamberStock = [], isLoading = false }) => {
         onError: (error) => {
           showToast("error", "Failed to update chamberstock");
         },
-      }
+      },
     );
     // updateChamberStock({id: serviceId, data: normalizedPayload});
 
@@ -456,153 +484,164 @@ const ChamberStockTable = ({ chamberStock = [], isLoading = false }) => {
   return (
     <div ref={containerRef}>
       <ChamberStockTableWrapper>
-        {chamberStock.map((service, index) => {
-          const chambers = Array.isArray(service?.chamber)
-            ? service.chamber
-            : [];
-          const single = chambers.length === 1;
-          const nonEmptyRatings = chambers.filter(
-            (c) => c.rating && c.rating !== ""
-          );
-          const isOpen = openRowId === service.id;
-          const isEditing = editingId === service.id;
+        {chamberStock
+          .filter((stock) => stock.category !== "other")
+          .map((service, index) => {
+            const chambers = Array.isArray(service?.chamber)
+              ? service.chamber
+              : [];
+            const single = chambers.length === 1;
 
-          return (
-            <React.Fragment key={service.id || index}>
-              <tr>
-                <td>
-                  <img
-                    src={
-                      service?.image?.trim()
-                        ? service.image
-                        : "/assets/img/png/fallback_img.png"
-                    }
-                    className="avatar avatar-lg"
-                    alt={service.product_name || "banner"}
-                  />
-                </td>
+            const isOpen = openRowId === service.id;
+            const isEditing = editingId === service.id;
 
-                <td>
-                  <p className="text-xl font-weight-bold mb-0">
-                    {service.product_name}
-                  </p>
-                  <p className="text-xs text-secondary mb-0">
-                    Click Name / Quantity / Rating to view chambers
-                  </p>
-                </td>
+            const displayCount = formatDisplayCount(
+              service,
+              chambers[0]?.quantity,
+            );
 
-                {/* Chambers Name */}
-                <td className="text-center">
-                  {chambers.length === 0 ? (
-                    <span className="text-secondary text-xs font-weight-bold">
-                      N/A
-                    </span>
-                  ) : single ? (
-                    <DropdownLikeSpan
-                      onToggle={() => handleToggle(service.id)}
-                      title="View chamber details"
-                      isOpen={isOpen}
-                    >
-                      {chambers[0].chamber_name || chambers[0].id}
-                    </DropdownLikeSpan>
-                  ) : (
-                    <DropdownLikeSpan
-                      onToggle={() => handleToggle(service.id)}
-                      title="View chambers"
-                      isOpen={isOpen}
-                    >
-                      Multiple
-                    </DropdownLikeSpan>
-                  )}
-                </td>
-
-                {/* Chambers Quantity */}
-                <td className="text-center">
-                  {chambers.length === 0 ? (
-                    <span className="text-secondary text-xs font-weight-bold">
-                      N/A
-                    </span>
-                  ) : single ? (
-                    <DropdownLikeSpan
-                      onToggle={() => handleToggle(service.id)}
-                      title="View chamber quantity"
-                      isOpen={isOpen}
-                    >
-                      {chambers[0].quantity}
-                    </DropdownLikeSpan>
-                  ) : (
-                    <DropdownLikeSpan
-                      onToggle={() => handleToggle(service.id)}
-                      title="View chambers quantity"
-                      isOpen={isOpen}
-                    >
-                      Multiple
-                    </DropdownLikeSpan>
-                  )}
-                </td>
-
-                {/* Rating */}
-                <td className="text-center">
-                  {nonEmptyRatings.length === 0 ? (
-                    <span className="text-secondary text-xs font-weight-bold">
-                      N/A
-                    </span>
-                  ) : single ? (
-                    <DropdownLikeSpan
-                      onToggle={() => handleToggle(service.id)}
-                      title="View chamber rating"
-                      isOpen={isOpen}
-                    >
-                      {chambers[0].rating || "N/A"}
-                    </DropdownLikeSpan>
-                  ) : (
-                    <DropdownLikeSpan
-                      onToggle={() => handleToggle(service.id)}
-                      title="View chambers rating"
-                      isOpen={isOpen}
-                    >
-                      Multiple
-                    </DropdownLikeSpan>
-                  )}
-                </td>
-
-                {/* Actions */}
-                <td>
-                  <div className="d-flex">
-                    <button
-                      className="btn btn-link text-info px-3 mb-0"
-                      onClick={() => handleEditClick(service)}
-                      type="button"
-                    >
-                      <i className="far fa-pencil me-2" />
-                      Edit
-                    </button>
-                  </div>
-                </td>
-              </tr>
-
-              {/* Expanded panel row */}
-              {isOpen && (
+            return (
+              <React.Fragment key={service.id || index}>
                 <tr>
-                  <td colSpan={6} className="p-0">
-                    <div className="border rounded bg-white m-2">
-                      {isEditing ? (
-                        <EditForm
-                          service={service}
-                          onCancel={handleCancelEdit}
-                          onSave={(payload) => handleSave(service.id, payload)}
-                          saving={false}
-                        />
-                      ) : (
-                        <ExpandedChambersRow chambers={chambers} />
-                      )}
+                  <td>
+                    <img
+                      src={
+                        service?.image?.trim()
+                          ? service.image
+                          : "/assets/img/png/fallback_img.png"
+                      }
+                      className="avatar avatar-lg"
+                      alt={service.product_name || "banner"}
+                    />
+                  </td>
+
+                  <td>
+                    <p className="text-xl font-weight-bold mb-0">
+                      {service.product_name}
+                    </p>
+                    <p className="text-xs text-secondary mb-0">
+                      Click Name / Quantity / Rating to view chambers
+                    </p>
+                  </td>
+
+                  {/* Chambers Name */}
+                  <td className="text-center">
+                    {chambers.length === 0 ? (
+                      <span className="text-secondary text-xs font-weight-bold">
+                        N/A
+                      </span>
+                    ) : single ? (
+                      <DropdownLikeSpan
+                        onToggle={() => handleToggle(service.id)}
+                        title="View chamber details"
+                        isOpen={isOpen}
+                      >
+                        {chambers[0].chamber_name || chambers[0].id}
+                      </DropdownLikeSpan>
+                    ) : (
+                      <DropdownLikeSpan
+                        onToggle={() => handleToggle(service.id)}
+                        title="View chambers"
+                        isOpen={isOpen}
+                      >
+                        Multiple
+                      </DropdownLikeSpan>
+                    )}
+                  </td>
+
+                  {/* Chambers Quantity */}
+                  <td className="text-center">
+                    {chambers.length === 0 ? (
+                      <span className="text-secondary text-xs font-weight-bold">
+                        N/A
+                      </span>
+                    ) : single ? (
+                      <DropdownLikeSpan
+                        onToggle={() => handleToggle(service.id)}
+                        title="View chamber quantity"
+                        isOpen={isOpen}
+                      >
+                        {displayCount}
+                      </DropdownLikeSpan>
+                    ) : (
+                      <DropdownLikeSpan
+                        onToggle={() => handleToggle(service.id)}
+                        title="View chambers quantity"
+                        isOpen={isOpen}
+                      >
+                        Multiple
+                      </DropdownLikeSpan>
+                    )}
+                  </td>
+
+                  {/* Rating */}
+                  <td className="text-center">
+                    {!service.rating ? (
+                      <span className="text-secondary text-xs font-weight-bold">
+                        N/A
+                      </span>
+                    ) : single ? (
+                      <DropdownLikeSpan
+                        onToggle={() => handleToggle(service.id)}
+                        title="View chamber rating"
+                        isOpen={isOpen}
+                      >
+                        {service.rating || "N/A"}
+                      </DropdownLikeSpan>
+                    ) : (
+                      <DropdownLikeSpan
+                        onToggle={() => handleToggle(service.id)}
+                        title="View chambers rating"
+                        isOpen={isOpen}
+                      >
+                        Multiple
+                      </DropdownLikeSpan>
+                    )}
+                  </td>
+
+                  {/* Actions */}
+                  <td>
+                    <div className="d-flex">
+                      <button
+                        className="btn btn-link text-info px-3 mb-0"
+                        onClick={() => handleEditClick(service)}
+                        type="button"
+                      >
+                        <i className="far fa-pencil me-2" />
+                        Edit
+                      </button>
                     </div>
                   </td>
                 </tr>
-              )}
-            </React.Fragment>
-          );
-        })}
+
+                {/* Expanded panel row */}
+                {isOpen && (
+                  <tr>
+                    <td colSpan={6} className="p-0">
+                      <div className="border rounded bg-white m-2">
+                        {isEditing ? (
+                          <EditForm
+                            service={service}
+                            onCancel={handleCancelEdit}
+                            onSave={(payload) =>
+                              handleSave(service.id, payload)
+                            }
+                            saving={false}
+                          />
+                        ) : (
+                          <ExpandedChambersRow
+                            chambers={chambers}
+                            rating={service.rating}
+                            service={service}
+                          />
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            );
+          })}
       </ChamberStockTableWrapper>
     </div>
   );

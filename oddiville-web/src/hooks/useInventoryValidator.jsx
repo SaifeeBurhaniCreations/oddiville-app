@@ -39,41 +39,16 @@ export default function useInventoryValidator() {
           isFinite(Number(v)) ? null : "Tare weight must be a number",
       }
     },
-    3: {
-      name: "Chamber Stock",
-      requiredColumns: [
-        "product_name",
-        "category",
-        "unit",
-        "chamber_name",
-        "bags",
-        "size_value",
-        "size_unit",
-        "packets_per_bag",
-        "rating",
-      ],
-      validators: {
-        bags: (v) =>
-          v === "" || v == null
-            ? "Bags is required"
-            : isFinite(Number(v))
-              ? null
-              : "Bags must be a number",
-
-        size_value: (v) =>
-          v === "" || v == null
-            ? "Size value is required"
-            : isFinite(Number(v))
-              ? null
-              : "Size value must be a number",
-
-        packets_per_bag: (v) =>
-          v === "" || v == null
-            ? null
-            : isFinite(Number(v))
-              ? null
-              : "Packets per bag must be a number",
-      },
+3: {
+  name: "Chamber Stock",
+  requiredColumns: [
+    "product_name",
+    "category",
+    "chamber_name",
+    "size_value",
+    "size_unit",
+    "rating",
+  ],
     },
     4: {
       name: "Dispatch",
@@ -212,8 +187,99 @@ export default function useInventoryValidator() {
     });
 
     objects.forEach((rowObj, idx) => {
-
       const rowNumber = idx + 2; 
+
+if (step === 3) {
+  const categoryHeader = availableNorms[normalize("category")];
+  const bagsHeader = availableNorms[normalize("bags")];
+  const quantityHeader = availableNorms[normalize("quantity")];
+  const packetsHeader = availableNorms[normalize("packets_per_bag")];
+
+  if (categoryHeader) {
+    const categoryValue = String(rowObj[categoryHeader] || "")
+      .trim()
+      .toLowerCase();
+
+    // ===== MATERIAL =====
+    if (categoryValue === "material") {
+      const qty = rowObj[quantityHeader];
+
+      if (!qty || !isFinite(Number(qty))) {
+        errorsByColumn["quantity"] = errorsByColumn["quantity"] || {
+          column: "quantity",
+          issues: [],
+        };
+        errorsByColumn["quantity"].issues.push({
+          row: rowNumber,
+          message: "Material must have valid quantity (KG)",
+        });
+      }
+
+      if (rowObj[bagsHeader]) {
+        errorsByColumn["bags"] = errorsByColumn["bags"] || {
+          column: "bags",
+          issues: [],
+        };
+        errorsByColumn["bags"].issues.push({
+          row: rowNumber,
+          message: "Material must NOT contain bags",
+        });
+      }
+
+      if (rowObj[packetsHeader]) {
+        errorsByColumn["packets_per_bag"] =
+          errorsByColumn["packets_per_bag"] || {
+            column: "packets_per_bag",
+            issues: [],
+          };
+        errorsByColumn["packets_per_bag"].issues.push({
+          row: rowNumber,
+          message: "Material must NOT contain packets_per_bag",
+        });
+      }
+    }
+
+    // ===== PACKED =====
+    if (categoryValue === "packed") {
+      const bags = rowObj[bagsHeader];
+      const packets = rowObj[packetsHeader];
+
+      if (!bags || !isFinite(Number(bags))) {
+        errorsByColumn["bags"] = errorsByColumn["bags"] || {
+          column: "bags",
+          issues: [],
+        };
+        errorsByColumn["bags"].issues.push({
+          row: rowNumber,
+          message: "Packed product must have valid bags",
+        });
+      }
+
+      if (!packets || !isFinite(Number(packets))) {
+        errorsByColumn["packets_per_bag"] =
+          errorsByColumn["packets_per_bag"] || {
+            column: "packets_per_bag",
+            issues: [],
+          };
+        errorsByColumn["packets_per_bag"].issues.push({
+          row: rowNumber,
+          message: "Packed product must have packets_per_bag",
+        });
+      }
+
+      if (rowObj[quantityHeader]) {
+        errorsByColumn["quantity"] = errorsByColumn["quantity"] || {
+          column: "quantity",
+          issues: [],
+        };
+        errorsByColumn["quantity"].issues.push({
+          row: rowNumber,
+          message: "Packed product must NOT contain quantity",
+        });
+      }
+    }
+  }
+}
       rule.requiredColumns.forEach((reqCol) => {
         const normReq = normalize(reqCol);
         const originalHeader = availableNorms[normReq];

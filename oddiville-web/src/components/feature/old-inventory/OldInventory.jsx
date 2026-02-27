@@ -100,18 +100,18 @@ const out = { ...row };
 const td = { ...(out.truck_details || {}) };
 
 const vehicleNumber =
-out.number ??
-out.truck_number ??
-out.vehicle_no ??
-td.number ??
-td.truck_number ??
-null;
+  out.truck_number ??
+  out.number ??
+  out.vehicle_no ??
+  td.truck_number ??
+  td.number ??
+  null;
 
 if (vehicleNumber != null) {
-td.number = String(vehicleNumber).trim();
+  td.truck_number = String(vehicleNumber).trim();
 }
 
-delete td.truck_number;
+delete td.number;
 
 if (out.gross_weight != null) td.truck_weight = String(out.gross_weight);
 if (out.tare_weight != null) td.tare_weight = String(out.tare_weight);
@@ -144,16 +144,15 @@ out.truck_details = td;
 // -------------------------
 // remove ALL raw fields
 // -------------------------
-delete out.number;
-delete out.truck_number;
-delete out.vehicle_no;
-delete out.gross_weight;
-delete out.tare_weight;
-delete out.truck_driver;
-delete out.truck_agency;
-delete out.truck_phone;
-delete out.truck_type;
-delete out.driver_name;
+  delete out.number;
+  delete out.vehicle_no;
+  delete out.gross_weight;
+  delete out.tare_weight;
+  delete out.truck_driver;
+  delete out.truck_agency;
+  delete out.truck_phone;
+  delete out.truck_type;
+  delete out.driver_name;
 
 return out;
 }
@@ -231,14 +230,13 @@ return out;
         product_name,
         category,
         unit,
+        rating: rating != null ? String(rating) : "",
         packaging,
         packages,
        chamber: [
             {
               id: String(chamber_name).trim(),
               quantity: chamberQuantity,
-              packets_per_bag: packetsPerBag,
-              rating: rating != null ? String(rating) : "",
             },
           ],
 

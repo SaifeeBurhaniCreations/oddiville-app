@@ -23,9 +23,7 @@ const AddRawMaterial = () => {
 
  const { productList, chambers: filteredChambers } = productdata;
   const productIndex = Number(new URLSearchParams(location.search).get("product"));
- const {
-  getBanners
- } = bannersProps;
+
 useEffect(() => {
   if (!isNaN(productIndex)) {
     handleEditProduct(productIndex);
@@ -77,7 +75,6 @@ return (
               productList={productListWithChamberNames}
               handleEditProduct={handleEditProduct}
               handleDeleteProduct={handleDeleteProduct}
-              getBanners={getBanners}
             />
             </div>
           </div>

@@ -1,8 +1,10 @@
 import { formatDate } from "date-fns";
 
-const ProductListTable = ({ productList, handleEditProduct, handleDeleteProduct, getBanners }) => {
+const ProductListTable = ({ productList, handleEditProduct, handleDeleteProduct }) => {
     if (productList.length === 0) return null;
 
+    console.log("productList", productList);
+    
     return (    
         <div className="card mt-4">
             <div className="card-header"><h6>Products List</h6></div>
@@ -22,7 +24,14 @@ const ProductListTable = ({ productList, handleEditProduct, handleDeleteProduct,
                         {productList.map((prod, i) => (
                             <tr key={prod._rowId}>
                                 <td className="d-flex justify-content-center">
-                                    <img src={getBanners || "/assets/img/png/fallback_img.png"} alt="product" width={48} height={48} />
+                                   <img
+                                    src={prod.sample_image || "/assets/img/png/fallback_img.png"}
+                                    alt="product"
+                                    width={48}
+                                    height={48}
+                                    style={{ objectFit: "cover", borderRadius: "6px" }}
+                                    />
+
                                 </td>
                                 <td>
                                     <span className="font-weight-bold">{prod.product_name}</span>

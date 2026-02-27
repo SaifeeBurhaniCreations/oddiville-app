@@ -27,9 +27,9 @@ useEffect(() => {
   });
 }, [getBanners]);
 
-  useEffect(() => {
-    fetchBanners?.(banner.banner);
-  }, [banner.banner]);
+useEffect(() => {
+  fetchBanners?.(banner.preview);
+}, [banner.preview]);
 
 
  const updateBanner = (file) => {
