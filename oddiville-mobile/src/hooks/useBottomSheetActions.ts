@@ -562,6 +562,12 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
       
       dispatch(closeBottomSheet());
     },
+    "choose-export-product": () => {
+      if (meta?.id) {
+      }
+      
+      dispatch(closeBottomSheet());
+    },
 
     "cancel-order": () => {
       dispatch(closeBottomSheet());

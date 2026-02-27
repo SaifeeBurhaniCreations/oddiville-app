@@ -922,7 +922,7 @@ const useValidateAndOpenBottomSheet = () => {
             "Dashboard",
             "Chamber",
             "Production",
-            "Raw Material",
+            // "Raw Material",
             "Dispatch",
           ],
           key: "choose-export-type",
@@ -1170,16 +1170,16 @@ const useValidateAndOpenBottomSheet = () => {
       {
         type: "title-with-details-cross",
         data: {
-          title: "Select Chambers",
+          title: "Select Status",
         },
       },
       {
         type: "productCard",
         data: [
-          { name: "Pending", image: "clock" },
-          { name: "In-queue", image: "clock" },
-          { name: "In-progress", image: "clock" },
-          { name: "Completed", image: "clock" },
+          { name: "pending", image: "clock" },
+          { name: "in-queue", image: "clock" },
+          { name: "in-progress", image: "clock" },
+          { name: "completed", image: "clock" },
         ],
       },
     ],

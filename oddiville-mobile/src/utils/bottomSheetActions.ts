@@ -38,6 +38,8 @@ export const getBottomSheetActions = (type: BottomSheetSchemaKey): BottomSheetAc
         return ["add-vendor"];
       case "select-status":
         return ["cancel","choose-export-status"];
+      case "select-export-product":
+        return ["cancel","choose-export-product"];
       default:
         return [];
     }

@@ -98,6 +98,7 @@ const onSubmit = async () => {
     setIsLoading(false);
     return;
   }
+try {
 
   const event = await createCalendarEvent(result.data);
 
@@ -114,6 +115,10 @@ const onSubmit = async () => {
 
   resetForm();
   setSelectedDate("");
+}
+catch(error) {
+  setIsLoading(false);
+}
 };
 
     

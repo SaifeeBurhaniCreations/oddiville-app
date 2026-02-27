@@ -17,6 +17,7 @@ export interface ExportFiltersState {
   status: string[];
   vendors: string[];
   materials: string[];
+  products: string[];
 }
 
 export interface FilterComponentProps {

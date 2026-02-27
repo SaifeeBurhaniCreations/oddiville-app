@@ -27,58 +27,19 @@ const VendorPricing = ({
         return Number(q) || 0;
     };
 
-    useEffect(() => {
-        if (!values || values.length === 0) {
-            prevVendorCountRef.current = vendorCount;
-            return;
-        }
-    
-        const activeCount = Math.min(vendorCount, values.length);
-        if (activeCount === 0) {
-            prevVendorCountRef.current = vendorCount;
-            return;
-        }
-    
-        const qtyNum = (q: any) => {
-            if (q === '' || q === undefined || q === null) return 0;
-            return Number(q) || 0;
-        };
-    
-        // Check only the *active* vendors
-        const activeSlice = values.slice(0, activeCount);
-        const anyHasValueInActive = activeSlice.some(v => qtyNum(v.quantity) > 0);
-        const allEmptyInActive = activeSlice.every(v => qtyNum(v.quantity) === 0);
-    
-        if (activeCount === 1) {
+useEffect(() => {
+    if (!values || values.length === 0) return;
+
+    if (vendorCount === 1 && totalWeight > 0) {
+        if (qtyNum(values[0].quantity) === 0) {
             const updated = [...values];
-            if (qtyNum(updated[0].quantity) === 0) {
-                updated[0] = { ...updated[0], quantity: totalWeight };
-                onChangeVendors(updated);
-            }
-            prevVendorCountRef.current = vendorCount;
-            return;
-        }
-    
-        if (activeCount > 1 && allEmptyInActive) {
-            if (totalWeight < activeCount) {
-                prevVendorCountRef.current = vendorCount;
-                return;
-            }
-    
-            const updated = [...values];
-            const base = Math.floor(totalWeight / activeCount);
-            let remainder = totalWeight - base * activeCount;
-    
-            for (let i = 0; i < activeCount; i++) {
-                updated[i] = { ...updated[i], quantity: base + (remainder > 0 ? 1 : 0) };
-                if (remainder > 0) remainder--;
-            }
+            updated[0].quantity = totalWeight;
             onChangeVendors(updated);
         }
-    
-        prevVendorCountRef.current = vendorCount;
-    }, [vendorCount, totalWeight, values]);
-    
+    }
+
+}, [vendorCount, totalWeight]); 
+
     const enforceEachHasAtLeastOne = (currentValues: VendorInputState[]) => {
         const updated = [...currentValues];
         const n = updated.length;
@@ -175,40 +136,40 @@ const VendorPricing = ({
                             <PriceInput
                                 value={qtyNum(data.quantity) === 0 ? '' : String(qtyNum(data.quantity))}
                                 onChangeText={(quantity: string) => {
-                                    const updated = [...values];
-                                    if (quantity === '') {
-                                        updated[index].quantity = 0;
-                                        onChangeVendors(updated);
-                                        return;
-                                    }
+                                        const updated = [...values];
 
-                                    const newQty = Number(quantity);
-                                    if (isNaN(newQty) || newQty < 0) {
-                                        return;
-                                    }
+                                        if (quantity === '') {
+                                            updated[index].quantity = 0;
+                                            onChangeVendors(updated);
+                                            return;
+                                        }
 
-                                    const totalQtyExcludingCurrent = values.reduce((sum, v, i) => {
-                                        if (i !== index) return sum + qtyNum(v.quantity);
-                                        return sum;
-                                    }, 0);
+                                        const newQty = Number(quantity);
+                                        if (isNaN(newQty) || newQty < 0) return;
 
-                                    const remainingQty = totalWeight - totalQtyExcludingCurrent;
+                                        const totalQtyExcludingCurrent = values.reduce((sum, v, i) => {
+                                            if (i !== index) return sum + qtyNum(v.quantity);
+                                            return sum;
+                                        }, 0);
 
-                                    if (newQty > remainingQty) {
-                                        updated[index].quantity = remainingQty;
+                                        const remainingQty = totalWeight - totalQtyExcludingCurrent;
+
+                                        if (remainingQty <= 0) {
+                                            updated[index].quantity = 0;
+                                            toast.error("No quantity remaining to assign.");
+                                            onChangeVendors(updated);
+                                            return;
+                                        }
+
+                                        if (newQty > remainingQty) {
+                                            updated[index].quantity = remainingQty;
+                                            toast.error(`Only ${remainingQty} Kg left to assign.`);
+                                        } else {
+                                            updated[index].quantity = newQty;
+                                        }
+
                                         onChangeVendors(updated);
-                                        toast.error(`Only ${remainingQty} Kg left to assign. Value has been adjusted.`);
-                                    } else {
-                                        updated[index].quantity = newQty;
-                                        onChangeVendors(updated);
-                                    }
-                                }}
-                                onBlur={() => {
-                                    if (vendorCount > 1) {
-                                        const updated = enforceEachHasAtLeastOne(values);
-                                        onChangeVendors(updated);
-                                    }
-                                }}
+                                    }}
                                 placeholder="Enter qty."
                                 addonText="Kg"
                                 style={styles.flexGrow}

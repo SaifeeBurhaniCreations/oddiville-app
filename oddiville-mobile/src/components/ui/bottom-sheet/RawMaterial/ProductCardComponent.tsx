@@ -15,6 +15,7 @@ import {
 import { isAllowedIcon } from "@/src/utils/iconUtils";
 import { ICON_MAP } from "@/src/lookups/icons";
 import { ExportStatus, toggleStatus } from "@/src/redux/slices/export/export-status.slice";
+import { toggleProduct } from "@/src/redux/slices/export/export-product.slice";
 
 const toRawMaterial = (it: any): RawMaterialProps => ({
   id: it.id ?? `${it.name}-${Math.random().toString(36).slice(2, 9)}`,
@@ -37,6 +38,10 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ data }) => {
   (state: RootState) => state.exportStatus.selectedStatuses
 );
 
+const selectedProducts = useSelector(
+  (state: RootState) => state.exportProduct.selectedProduct
+);
+
   const isSelected = (name: string) => {
     if (source === "chamber") {
       return selectedChambers?.some((item) => item === name);
@@ -46,6 +51,8 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ data }) => {
       return selectedChambers?.some((item) => item === name);
     } else if (source === "export-status") {
       return selectedStatuses?.some((item) => item === name);
+    }else if (source === "export-product") {
+      return selectedProducts?.some((item) => item === name);
     } else {
       return selectedRawMaterials?.some((item) => item.name === name);
     }
@@ -67,8 +74,9 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ data }) => {
     } else if (source === "product-chamber") {
       dispatch(toggleChambers(item.name));
     } else if (source === "export-status") {
-      
       dispatch(toggleStatus(item.name as ExportStatus));
+    }else if (source === "export-product") {
+      dispatch(toggleProduct(item.name as ExportStatus));
     } else {
       const rawMaterial = toRawMaterial(item);
       dispatch(toggleRawMaterial(rawMaterial));

@@ -125,7 +125,9 @@ const AddProductsForSell = ({
   return stock.packages.map((pkg) => ({
     size: pkg.size,
     unit: pkg.unit,
-    bags: totalBags,
+    bags: Math.floor(
+  pkg.quantity / pkg.packets_per_bag
+)
   }));
 }, [stock]);
 
@@ -196,28 +198,41 @@ const groupedPackages = useMemo(() => {
     const sizeKey = `${pkg.size}-${pkg.unit}`;
     if (!selectedSizeKeys.has(sizeKey)) continue;
 
-    const selectedRating = getSelectedRating(product.id, pkg.size, pkg.unit);
+    const selectedRating = getSelectedRating(
+      product.id,
+      pkg.size,
+      pkg.unit
+    );
 
-    // DO NOT REMOVE PACKAGE
-    const chambers =
-      Number(stock.rating) === Number(selectedRating)
-        ? (stock.chambers ?? [])
-            .filter((ch) => Number(ch.bags) > 0)
-            .map((ch) => ({
-              chamberId: ch.chamberId,
-              bags: Number(ch.bags),
-            }))
-        : [];
+    if (Number(stock.rating) !== Number(selectedRating)) continue;
 
-    const totalBags = chambers.reduce((s, c) => s + c.bags, 0);
+    const chambers = (stock.chambers ?? [])
+      .filter((ch) => Number(ch.bags) > 0)
+      .map((ch) => ({
+        chamberId: ch.chamberId,
+        bags: Number(ch.bags),
+      }));
+
+    const chamberTotal = chambers.reduce((s, c) => s + c.bags, 0);
+
+    const packetLimitedBags = Math.floor(
+      Number(pkg.quantity) / Number(pkg.packets_per_bag)
+    );
+
+    const finalAvailableBags = Math.min(
+      chamberTotal,
+      packetLimitedBags
+    );
 
     result.push({
       size: pkg.size,
       unit: pkg.unit,
       rating: selectedRating,
       chambers,
-      totalBags,
-      hasStock: totalBags > 0,
+      finalAvailableBags,
+      hasStock: finalAvailableBags > 0,
+      packetsPerBag: pkg.packets_per_bag,
+      packetQuantity: pkg.quantity,
     });
   }
 
@@ -318,7 +333,17 @@ const groupedPackages = useMemo(() => {
                   const packageKey = `${pkg.size}-${pkg.unit}-${selectedRating}`;
                   const Icon = mapPackageIcon(pkg);
 
-                  const filteredChambers = pkg.chambers;
+                  let packetRemainingBags = pkg.finalAvailableBags;
+
+                const filteredChambers = pkg.chambers.map(ch => {
+                  const chamberLimit = Math.min(ch.bags, packetRemainingBags);
+                  packetRemainingBags -= chamberLimit;
+
+                  return {
+                    ...ch,
+                    bags: chamberLimit
+                  };
+                });
 
                   return (
                     <View key={packageKey} style={{ gap: 12 }}>
@@ -329,7 +354,7 @@ const groupedPackages = useMemo(() => {
                               <Icon size={28} color={getColor("green")} />
                             )}
                           </View>
-                          <B1>{`${pkg.size}${pkg.unit} (${pkg.totalBags})`}</B1>
+                          <B1>{`${pkg.size}${pkg.unit} (${pkg.finalAvailableBags})`}</B1>
                         </View>
                         <View style={styles.ratingRow}>
                           <Select

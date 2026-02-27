@@ -55,9 +55,10 @@ const ExportData = () => {
     status: [],
     vendors: [],
     materials: [],
+    products: [],
   });
 
-  // console.log("filters", filters);
+// console.log("FILTERS:", filters);
 
   useEffect(() => {
     if (!type) return;

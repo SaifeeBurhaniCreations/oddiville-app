@@ -30,7 +30,10 @@ import { useToast } from "@/src/context/ToastContext";
 import OverlayLoader from "@/src/components/ui/OverlayLoader";
 import { useQueryClient } from "@tanstack/react-query";
 import Require from "@/src/components/authentication/Require";
-
+import { RefreshControl } from "react-native-gesture-handler";
+import ActivitesFlatList from "@/src/components/ui/ActivitesFlatList";
+import EmptyState, { EmptyStateStyles } from "@/src/components/ui/EmptyState";
+import NoContractorBatchImg from "@/src/assets/images/illustrations/no-contractor-batch.png";
 
 export type OthersProductForm = {
   name: string;
@@ -241,10 +244,6 @@ const OthersProductScreen = () => {
     );
   }
 
-  // console.log("item", otherProductData);
-  // console.log("stock", stockData);
-  // console.log("chambers", stockData?.chamber);
-
   return (
     <Require admin>
       <View style={styles.pageContainer}>
@@ -264,9 +263,8 @@ const OthersProductScreen = () => {
                   bgSvg={DatabaseIcon}
                 />
               </View>
-              {/* , "Dispatch History" */}
               <Tabs
-                tabTitles={["Dispatch Entry"]}
+                tabTitles={["Dispatch Entry", "Dispatch History"]}
                 color="green"
                 style={styles.flexGrow}
               >
@@ -321,6 +319,48 @@ const OthersProductScreen = () => {
                       </PriceInput>
                     </ItemsRepeater>
                   ))}
+                </View>
+                <View
+                  style={[
+                    styles.flexGrow,
+                    styles.VStack,
+                    styles.gap8,
+                    styles.mt16,
+                  ]}
+                >
+                     {/* <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ flexGrow: 1 }}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={getColor("green", 500)}
+                />
+              }
+            >
+              {isLoading ? (
+                <OverlayLoader />
+              ) : contractorsHistory?.length > 0 ? (
+                <ActivitesFlatList
+                  style={{ paddingHorizontal: 16 }}
+                  onPress={handleContractorPress}
+                  isVirtualised={false}
+                  activities={contractorsHistory}
+                />
+              ) : (
+                <View style={EmptyStateStyles.center}>
+                  <EmptyState
+                    stateData={{
+                      title: "No contractor batches selected",
+                      description: "No Contractors yet.",
+                    }}
+                    image={NoContractorBatchImg}
+                    color="green"
+                  />
+                </View>
+              )}
+            </ScrollView> */}
                 </View>
               </Tabs>
             </View>

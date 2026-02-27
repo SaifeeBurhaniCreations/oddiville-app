@@ -66,6 +66,7 @@ export type BottomSheetActionKey =
   | "add-vendor"
   | "export-open"
   | "export-share"
+  | "choose-export-product"
   | "choose-export-status";
   
 // ButtonConfig interface

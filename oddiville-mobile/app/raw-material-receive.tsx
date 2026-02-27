@@ -227,7 +227,6 @@ useEffect(() => {
     if (!orderData || isInitialized.current) return;
 
     const truckDetails = orderData?.truck_details;
-    console.log(truckDetails);
     
     const arrivalDate = formatDateForDisplay(orderData.arrival_date);
     const quantityReceived = orderData.quantity_received?.toString() || "";

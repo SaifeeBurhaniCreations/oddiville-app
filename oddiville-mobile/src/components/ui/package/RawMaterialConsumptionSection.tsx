@@ -69,14 +69,22 @@ function useChambersByRM(
     const byRM = new Map<string, StockChamber[]>();
 
     rmUsed.forEach((stock) => {
-      const chambers: StockChamber[] = stock.chamber.map((ch) => ({
-        id: String(ch.id),
-        name: chamberNameMap.get(String(ch.id)) ?? "Unknown Chamber",
-        quantity: Number(ch.quantity) || 0,
-        rating: 0, 
-      }));
+      const key = stock.product_name;
 
-      byRM.set(stock.id, chambers); 
+if (!byRM.has(key)) {
+  byRM.set(key, []);
+}
+
+const existing = byRM.get(key)!;
+
+stock.chamber.forEach((ch) => {
+  existing.push({
+    id: String(ch.id),
+    name: chamberNameMap.get(String(ch.id)) ?? "Unknown Chamber",
+    quantity: Number(ch.quantity) || 0,
+    rating: Number(stock.rating) || 5,
+  });
+});
     });
 
     return byRM;

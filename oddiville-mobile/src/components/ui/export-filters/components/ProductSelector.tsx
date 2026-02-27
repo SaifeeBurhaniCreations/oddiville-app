@@ -11,45 +11,42 @@ import ClockIcon from "@/src/components/icons/common/ClockIcon";
 import { FilterComponentProps } from "@/src/types/export/types";
 import { setSource } from "@/src/redux/slices/bottomsheet/raw-material.slice";
 import { PRODUCTION_STATUS_OPTIONS } from "@/src/constants/productionStatus";
+import BoxIcon from "@/src/components/icons/common/BoxIcon";
 
 export const truncate = (value: any, max = 32) => {
   const text = String(value ?? "");
   return text.length > max ? text.slice(0, max) + "..." : text;
 };
 
-const StatusSelector = ({ state, setState }: FilterComponentProps) => {
+const ProductSelector = ({ state, setState }: FilterComponentProps) => {
     const dispatch = useDispatch();
 
-const selectedStatuses = useSelector(
-  (state: RootState) => state.exportStatus.selectedStatuses
+const selectedProducts = useSelector(
+  (state: RootState) => state.exportProduct.selectedProduct
 );
 
 useEffect(() => {
   setState(prev => ({
     ...prev,
-    status: Array.from(new Set(selectedStatuses))
+    products: Array.from(new Set(selectedProducts))
   }));
-}, [selectedStatuses]);
+}, [selectedProducts]);
 
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
 
   const handleSelect = () => {
-    dispatch(setSource("export-status")); 
-    validateAndSetData("nothing", "select-status");
+    dispatch(setSource("export-product")); 
+    validateAndSetData("nothing", "select-export-product");
   };
 
 const displayValue = useMemo(() => {
-  if (!selectedStatuses.length) return "";
+  if (!selectedProducts.length) return "";
 
-  const labels = selectedStatuses.map(value => {
-    return PRODUCTION_STATUS_OPTIONS.find(s => s.value === value)?.label ?? value;
-  });
-
-  const joined = labels.join(", ");
+  const joined = selectedProducts.join(", ");
   return joined.length > 32 ? joined.slice(0, 32) + "..." : joined;
-}, [selectedStatuses]);
+}, [selectedProducts]);
 
-  const placeholder = getPlaceholder("Select status", displayValue);
+  const placeholder = getPlaceholder("Select product", displayValue);
 
   return (
     <View>
@@ -60,19 +57,19 @@ const displayValue = useMemo(() => {
         onPress={handleSelect}
         showOptions={false}
       >
-        Select status
+        Select Products
       </Select>
-      {selectedStatuses?.map((status) => (
-        <View style={[styles.chamberCard, styles.borderBottom]} key={status}>
+      {selectedProducts?.map((product) => (
+        <View style={[styles.chamberCard, styles.borderBottom]} key={product}>
           <View style={styles.Hstack}>
             <View style={styles.iconWrapper}>
-              <ClockIcon color={getColor("green")} size={32} />
+              <BoxIcon color={getColor("green")} size={32} />
             </View>
 
             <View style={styles.Vstack}>
               <B1>
   {truncate(
-    PRODUCTION_STATUS_OPTIONS.find(s => s.value === status)?.label ?? status
+    product
   )}
 </B1>
             </View>
@@ -83,7 +80,7 @@ const displayValue = useMemo(() => {
   );
 };
 
-export default StatusSelector;
+export default ProductSelector;
 
 const styles = StyleSheet.create({
   chamberCard: {

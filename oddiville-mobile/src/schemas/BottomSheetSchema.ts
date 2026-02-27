@@ -1071,6 +1071,16 @@ export const SelectStatusBottomSheetConfigSchema = z.object({
   ),
   buttons: z.array(ButtonSchema).optional(),
 });
+
+export const SelectExportProductBottomSheetConfigSchema = z.object({
+  sections: z.array(
+    z.discriminatedUnion("type", [
+      TitleWithDetailsCrossSection,
+      ProductCardSection,
+    ])
+  ),
+  buttons: z.array(ButtonSchema).optional(),
+});
 // ------------------- Type Inference ------------------- //
 
 export type OrderReadyBottomSheetConfig = z.infer<
@@ -1205,6 +1215,9 @@ export type ExportDataOptionsBottomSheetConfig = z.infer<
 export type SelectStatusBottomSheetConfig = z.infer<
   typeof SelectStatusBottomSheetConfigSchema
 >;
+export type SelectselectExportProductBottomSheetConfig = z.infer<
+  typeof SelectExportProductBottomSheetConfigSchema
+>;
 
 // ------------------- Central Schema Registry ------------------- //
 export const bottomSheetSchemas = {
@@ -1245,7 +1258,7 @@ export const bottomSheetSchemas = {
   rating: RatingBottomSheetConfigSchema,
   "select-role": RoleBottomSheetConfigSchema,
   "calendar-event-scheduled": CalendarEventBottomSheetConfigSchema,
-  "scheduled-date-event": ScheduledCalendarEventBottomSheetConfigSchema,
+  "calendar-event-reminder": ScheduledCalendarEventBottomSheetConfigSchema,
   "user-action": UserActionBottomSheetConfigSchema,
   "storage-rm-rating": StorageRMRatingConfigSchema,
   "select-policies": PoliciesBottomSheetConfigSchema,
@@ -1256,6 +1269,7 @@ export const bottomSheetSchemas = {
   "choose-export-format": ChooseExportFormatBottomSheetConfigSchema,
   "export-data-options": ExportDataOptionsBottomSheetConfigSchema,
   "select-status": SelectStatusBottomSheetConfigSchema,
+  "select-export-product": SelectExportProductBottomSheetConfigSchema,
 } as const;
 
 export type BottomSheetSchemaKey = keyof typeof bottomSheetSchemas;

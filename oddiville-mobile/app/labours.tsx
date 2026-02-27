@@ -19,17 +19,14 @@ import BottomSheet from "@/src/components/ui/BottomSheet";
 import ActivitesFlatList from "@/src/components/ui/ActivitesFlatList";
 import AddSingleContractor from "@/src/components/ui/Contractor/AddSingleContractor";
 import AddMultipleContractor from "@/src/components/ui/Contractor/AddMultipleContractor";
-import Loader from "@/src/components/ui/Loader";
 
 // 4. Project hooks
 import { useAppNavigation } from "@/src/hooks/useAppNavigation";
 import {
   useFormattedContractors,
-  useContractorSummary,
   useCreateContractor,
   WorkLocation,
   FormattedContractor,
-  useContractors,
 } from "@/src/hooks/useContractor";
 
 // 5. Project constants/utilities
@@ -54,7 +51,6 @@ import {
 } from "@/src/utils/backRouteUtils";
 import { useToast } from "@/src/context/ToastContext";
 import { useAppCapabilities } from "@/src/hooks/useAppCapabilities";
-import NoAccess from "@/src/components/ui/NoAccess";
 import Require from "@/src/components/authentication/Require";
 import OverlayLoader from "@/src/components/ui/OverlayLoader";
 
@@ -89,7 +85,7 @@ const LaboursScreen = () => {
         error("Permission Denied");
         return;
       }
-      // contractorPayload should be { name, male_count, female_count, work_location? }
+
       try {
         await createContractors([
           {
@@ -118,7 +114,6 @@ const LaboursScreen = () => {
     [error, success],
   );
 
-  // Error handling
   const handleError = useCallback(
     (error: any) => {
       console.error("Contractor Screen Error:", error);
