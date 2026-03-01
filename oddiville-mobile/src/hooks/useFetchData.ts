@@ -6,7 +6,6 @@ import { socket } from "../lib/notificationSocket";
 import { rejectEmptyOrNull } from "../utils/authUtils";
 import { Lane, LaneDTO } from "../types/lanes.dto";
 import { mapLane } from "../mappers/mapLane";
-import { AxiosResponse } from "axios";
 import { LocationDTO } from "../types/location.dto";
 
 export function useLanes() {

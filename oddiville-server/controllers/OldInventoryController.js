@@ -33,12 +33,6 @@ function fmt(dateStr) {
   }
 }
 
-/**
- * ---------------------
- * Validation Requirements
- * ---------------------
- * Keep these in sync with your DB model expectations.
- */
 const REQUIRED = {
   vendor: ["name", "phone", "state", "city"],
   rmo: [
@@ -64,7 +58,7 @@ const REQUIRED = {
     "amount",
   ],
 };
-// ---------- missing helpers (REQUIRED) ----------
+
 const toDecimalOrNull = (v) => {
   if (v === "" || v === undefined || v === null) return null;
   const n = Number(v);
@@ -277,7 +271,6 @@ function normalizeDispatchTruckFields(d) {
   if (!d.truck_details.type) d.truck_details.type = "Eicher";
 }
 
-// -------- VALIDATORS ----------
 function validateVendors(vendors = []) {
   const issues = [];
   for (const [i, v] of vendors.entries()) {
@@ -376,24 +369,6 @@ function validateRMOs(rmos = []) {
   }
   return issues;
 }
-
-// function validateProductions(prods = []) {
-//   const issues = [];
-//   for (const [i, p] of prods.entries()) {
-//     for (const k of REQUIRED.production) {
-//       if (p[k] === undefined || p[k] === null || p[k] === "") {
-//         issues.push({ path: `productions[${i}].${k}`, error: "is required" });
-//       }
-//     }
-//     if (!p.raw_material_order_id && !p.raw_material_orderRef) {
-//       issues.push({
-//         path: `productions[${i}]`,
-//         error: "raw_material_order_id or raw_material_orderRef is required",
-//       });
-//     }
-//   }
-//   return issues;
-// }
 
 function validateChamberStock(items = [], allowedChambers) {
   const issues = [];

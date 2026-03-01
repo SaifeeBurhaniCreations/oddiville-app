@@ -119,16 +119,21 @@ const ProductionCompleteScreen = () => {
     refetch: lanesRefetch,
     isFetching: lanesLoading,
   } = useLanes();
+
   const formattedLanes = lanesRaw.map((lane: any) => ({
     ...lane,
     value: lane.id,
     label: lane.name,
   }));
 
-  const disabledLaneIds = formattedLanes
-    .filter((lane: any) => !!lane.production_id && lane.production_id !== id)
-    .map((lane: any) => lane.value);
-
+const disabledLaneIds = formattedLanes
+  .filter(
+    (lane: any) =>
+      lane.productionId &&
+      String(lane.productionId) !== String(id)
+  )
+  .map((lane: any) => lane.value);
+  
   const orderDetail: OrderProps = useMemo(() => {
     return {
       title: productionData?.product_name || "--",
@@ -206,7 +211,8 @@ const ProductionCompleteScreen = () => {
 
   useEffect(() => {
     if (!productionData) return;
-    setField("lane", productionData.lane || "");
+    
+    setField("lane", productionData.lane_id || "");
 
     const urls = toUrlArray(productionData.sample_images);
     setExistingImage(urls);
