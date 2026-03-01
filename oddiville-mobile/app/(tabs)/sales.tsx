@@ -8,7 +8,6 @@ import { StyleSheet, View } from "react-native";
 // 3. Project components
 import PageHeader from "@/src/components/ui/PageHeader";
 import Tabs from "@/src/components/ui/Tabs";
-import Loader from "@/src/components/ui/Loader";
 import Modal from "@/src/components/ui/modals/Modal";
 import Alert from "@/src/components/ui/Alert";
 import Input from "@/src/components/ui/Inputs/Input";

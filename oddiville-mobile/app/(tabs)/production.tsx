@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import BottomSheet from "@/src/components/ui/BottomSheet";
@@ -47,6 +47,7 @@ const productionCards: ItemCardData[] = useMemo(() => {
     (c) => c.mode === "production-completed"
   );
 
+const [isOpening, setIsOpening] = useState(false);
 
   const loading = productionFetching || lanesFetching
 

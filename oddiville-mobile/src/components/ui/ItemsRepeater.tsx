@@ -2,9 +2,9 @@ import { StyleSheet, View } from "react-native";
 import React, { ReactNode } from "react";
 import { getColor } from "@/src/constants/colors";
 import { B2, H5 } from "../typography/Typography";
-import { formatWeight } from "@/src/utils/common";
 import CustomImage from "./CustomImage";
-import noProductImage from '@/src/assets/images/fallback/colourful/product.png';
+import noProductImage from "@/src/assets/images/fallback/colourful/product.png";
+import Accordian from "./Accordian";
 
 const ItemsRepeater = ({
   description,
@@ -12,23 +12,39 @@ const ItemsRepeater = ({
   children,
   showToast,
   noValue = false,
+  noImage = false,
+  accodian,
   ...props
 }: {
-  description: string;
+  description?: string;
   title: string;
   noValue?: boolean;
+  noImage?: boolean;
   children?: ReactNode;
+  accodian?: {
+    open: boolean;
+    onPress: () => void;
+  };
   showToast?: (type: "success" | "error" | "info", message: string) => void;
 }) => {
   return (
     <View style={styles.card} {...props}>
       <View style={styles.cardHeader}>
         <View style={styles.Hstack}>
-                        <CustomImage borderRadius={8} width={32} height={32} src={noProductImage} />
-        <H5 color={getColor("light")}>{title}</H5>
-
-                    </View>
-        {!noValue && <B2 color={getColor("light")}>{formatWeight(Number(description))}</B2>}
+          {!noImage && (
+            <CustomImage
+              borderRadius={8}
+              width={32}
+              height={32}
+              src={noProductImage}
+            />
+          )}
+          <H5 color={getColor("light")}>{title}</H5>
+        </View>
+        {!noValue && <B2 color={getColor("light")}>{description}</B2>}
+        {accodian && (
+          <Accordian open={accodian.open} onPress={accodian.onPress} />
+        )}
       </View>
 
       <View style={styles.cardBody}>{children}</View>
@@ -73,9 +89,9 @@ const styles = StyleSheet.create({
     borderColor: getColor("green", 100),
     paddingBottom: 16,
   },
-      Hstack: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8
-    },
+  Hstack: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
 });

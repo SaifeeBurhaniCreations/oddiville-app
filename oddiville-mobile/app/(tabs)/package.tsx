@@ -45,6 +45,7 @@ import { clearRatings } from "@/src/redux/slices/bottomsheet/storage.slice";
 import PackingSummarySection from "@/src/components/ui/package/PackingSummarySection";
 import { useCreatePacking } from "@/src/hooks/packing/useGetPackedItemsToday";
 import { useQueryClient } from "@tanstack/react-query";
+import { useOverlayLoader } from "@/src/context/OverlayLoaderContext";
 
 // 6. Project types
 
@@ -53,11 +54,13 @@ const PackageScreen = () => {
   const selectedRawMaterials = useSelector(
     (state: RootState) => state.product.rawMaterials,
   );
+  // dispatch
+  const dispatch = useDispatch();
 
   // custom hooks
   const toast = useToast();
-  const dispatch = useDispatch();
   const form = usePackingForm({ validateOnChange: true });
+  const loader = useOverlayLoader();
 
   const { chamberStock } = useChamberStockByName(selectedRawMaterials);
 
@@ -105,6 +108,12 @@ const PackageScreen = () => {
     const t = setTimeout(() => setShowTooltip(false), 2000);
     return () => clearTimeout(t);
   }, [showTooltip]);
+
+
+  useEffect(() => {
+    loader.bind(isLoading || isPending);
+  }, [isLoading, isPending]);
+
 
   // functions
   const onSubmit = async (data: any) => {
@@ -301,7 +310,6 @@ const PackageScreen = () => {
           </Tabs>
         </View>
         <BottomSheet color="green" />
-        {isLoading && isPending && <OverlayLoader />}
       </View>
     </KeyboardAvoidingView>
   );

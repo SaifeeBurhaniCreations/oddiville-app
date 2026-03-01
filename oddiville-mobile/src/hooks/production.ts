@@ -137,6 +137,8 @@ export function useStartProduction() {
     onSuccess: (createdProduction) => {
       if (!createdProduction?.id) return;
 
+      queryClient.invalidateQueries({ queryKey: ["production"] });
+      
       queryClient.setQueryData<Production[]>(["production"], (old = []) => {
         const exists = old.some((p) => p.id === createdProduction.id);
         if (exists)

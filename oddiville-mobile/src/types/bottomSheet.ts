@@ -693,6 +693,7 @@ export interface TruckFullDetailsComponentProps {
     agency: string;
     date_title: string;
     arrival_date: string;
+    phone: string;
     driverImage: string;
   };
   color: "red" | "green" | "blue" | "yellow";

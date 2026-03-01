@@ -1,4 +1,3 @@
-// src/screens/SupervisorWorkerDetailsScreen.tsx
 import React, { useMemo, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 
@@ -34,11 +33,6 @@ const columns: TableColumn<WorkerRow>[] = [
   { key: 'countFemale', label: 'Female', flex: 1 },
 ]
 
-
-/* ---------------------------------- */
-/* SCREEN */
-/* ---------------------------------- */
-
 const SupervisorWorkerDetailsScreen = () => {
   const { wId, mode = 'multiple' } = useParams(
     'labours-details',
@@ -68,10 +62,6 @@ const SupervisorWorkerDetailsScreen = () => {
     isLoading: summaryLoading,
   } = useContractorSummary()
 
-  /* ---------------------------------- */
-  /* SINGLE MODE CARD */
-  /* ---------------------------------- */
-
   const workerDetailSingle: OrderProps | null = useMemo(() => {
     if (!singleContractor) return null
 
@@ -97,10 +87,6 @@ const SupervisorWorkerDetailsScreen = () => {
       identifier: 'order-ready',
     }
   }, [singleContractor])
-
-  /* ---------------------------------- */
-  /* TABLE DATA */
-  /* ---------------------------------- */
 
 const singleTableData: WorkerRow[] = useMemo(() => {
   if (!workLocations) return []
@@ -205,10 +191,6 @@ const multipleTables = useMemo(() => {
 }
 
 export default SupervisorWorkerDetailsScreen
-
-/* ---------------------------------- */
-/* STYLES */
-/* ---------------------------------- */
 
 const styles = StyleSheet.create({
   pageContainer: {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Linking } from 'react-native';
 import { getColor } from '@/src/constants/colors';
 import { B3, B4, H5, H6 } from '@/src/components/typography/Typography';
 import { TruckFullDetailsComponentProps } from "@/src/types";
@@ -10,8 +10,11 @@ import ActionButton from '../Buttons/ActionButton';
 import fallbackDriver from "@/src/assets/images/fallback/driver-fallback.png"
 const TruckFullDetailsComponent: React.FC<TruckFullDetailsComponentProps> = ({ data }) => {
 
-    const { title, driverName, number, type, arrival_date, date_title, agency, driverImage } = data;
+    const { title, driverName, number, type, arrival_date, date_title, agency, phone: pohneNumber } = data;
 
+    const call = () => {
+        Linking.openURL(`tel:${pohneNumber}`);
+    };
     return (
         <View style={[styles.column, styles.detailsBorder]}>
             <B3 color={getColor("yellow", 700)} style={{ textTransform: "uppercase" }}>
@@ -32,7 +35,7 @@ const TruckFullDetailsComponent: React.FC<TruckFullDetailsComponentProps> = ({ d
                         <Tag size='xl'>{type}</Tag>
                     </View>
                     <View style={styles.justifyCenter}>
-                        <ActionButton variant='outline' icon={PhoneIcon} />
+                        <ActionButton variant='outline' icon={PhoneIcon} onPress={call} />
                     </View>
                 </View>
             </View>

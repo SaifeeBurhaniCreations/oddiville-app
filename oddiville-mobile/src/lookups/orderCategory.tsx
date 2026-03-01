@@ -6,6 +6,7 @@ import { ActivityProps, DispatchOrder } from "@/src/types";
 import { formatTimeDifference } from "@/src/utils/common";
 import { differenceInDays, formatDate, isValid as isValidDate } from "date-fns";
 import { getColor } from "../constants/colors";
+import { OrderStatus } from "../hooks/dispatchOrder";
 
 const safeFormatDate = (date: any, format: string = "dd-MM-yy"): string => {
   if (!date) return "N/A";
@@ -49,11 +50,13 @@ export const formatOrder = {
   upcoming: (order: DispatchOrder): ActivityProps => ({
     id: order.id,
     itemId: order.id,
+    category: order.status, 
     title: order.customer_name || "Unknown Customer",
     sideDetails: {
       name: "Products",
       value: Array.isArray(order.products) ? order.products?.length : 0,
-      icon: <BoxIcon size={16} />,
+      // icon: <BoxIcon size={16} />,
+      iconKey: "box"
     },
     bottomDetails: [
       // {
@@ -64,7 +67,8 @@ export const formatOrder = {
       {
         name: "Est Dis",
         value: safeFormatDate(order.est_delivered_date),
-        icon: <CalandarCheckIcon size={16} />,
+        // icon: <CalandarCheckIcon size={16} />,
+        iconKey: "calendarCheck"
       },
     ],
     extra_details: [order.address || "No address provided"],
@@ -74,17 +78,20 @@ export const formatOrder = {
   inProgress: (order: DispatchOrder): ActivityProps => {
     const daysLeft = safeDateDifference(
       order.est_delivered_date,
-      order.dispatch_date
+      new Date()
     );
+
     return {
       id: order.id,
       itemId: order.id,
+      category: order.status, 
       title: order.customer_name || "Unknown Customer",
       dateDifference: `${Math.max(0, daysLeft)} days left`,
       sideDetails: {
         name: "Products",
         value: Array.isArray(order.products) ? order.products?.length : 0,
-        icon: <BoxIcon size={16} />,
+        // icon: <BoxIcon size={16} />,
+        iconKey: "box"
       },
       bottomDetails: [
         // {
@@ -95,17 +102,20 @@ export const formatOrder = {
         {
           name: "Est Dis",
           value: safeFormatDate(order.est_delivered_date),
-          icon: <CalandarCheckIcon size={16} />,
+          // icon: <CalandarCheckIcon size={16} />,
+          iconKey: "calendarCheck"
         },
       ],
       dispatchDetails: [
         {
           value: safeFormatDate(order.dispatch_date),
-          icon: <WarehouseIcon color={getColor("light")} />,
+          // icon: <WarehouseIcon color={getColor("light")} />,
+          iconKey: "warehouse"
         },
         {
           value: safeFormatDate(order.est_delivered_date),
-          icon: <StoreIcon color={getColor("green", 200)} />,
+          // icon: <StoreIcon color={getColor("green", 200)} />,
+          iconKey: "store"
         },
       ],
       extra_details: [order.address || "No address provided"],
@@ -143,32 +153,24 @@ export const formatOrder = {
       id: order.id,
       itemId: order.id,
       identifier: null,
+      category: order.status as OrderStatus,
       title: order.customer_name || "Unknown Customer",
       dateDifference: timeTaken,
       sideDetails: {
         name: "Products",
         value: Array.isArray(order.products) ? order.products?.length : 0,
-        icon: <BoxIcon size={16} />,
+        iconKey: "box",
       },
-      // bottomDetails: [
-      //   // {
-      //   //   name: "Amount",
-      //   //   value: order.amountLabel ? order.amountLabel : `${formatAmount(Number(order.amount), { unit: "rs" })}`,
-      //   // },
-      //   {
-      //     name: "Est Dis",
-      //     value: safeFormatDate(order.delivered_date),
-      //     icon: <CalandarCheckIcon size={16} />,
-      //   },
-      // ],
       dispatchDetails: [
         {
           value: safeFormatDate(order.dispatch_date),
-          icon: <WarehouseIcon color={getColor("light")} />,
+          // icon: <WarehouseIcon color={getColor("light")} />,
+          iconKey: "warehouse"
         },
         {
           value: safeFormatDate(order.delivered_date),
-          icon: <StoreIcon color={getColor("light")} />,
+          // icon: <StoreIcon color={getColor("light")} />,
+          iconKey: "store"
         },
       ],
       params: { orderId: order.id },

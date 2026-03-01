@@ -252,6 +252,7 @@ types.push({ size: normalizeSize(size), unit: normalizeUnit(unit), quantity: kg.
 });
 
 router.patch("/:id/increase-quantity", async (req, res) => {
+
   const t = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -279,8 +280,9 @@ const addedKg = (numericQty * tare) / 1000;
 types[index].quantity =
   (parseFloat(types[index].quantity) + addedKg).toFixed(3);
 
-    pkg.types = types;
-    await pkg.save({ transaction: t });
+pkg.setDataValue("types", types);
+pkg.changed("types", true);
+await pkg.save({ transaction: t });
 
     const chamber = await ChambersClient.findOne({
       where: { chamber_name: pkg.chamber_name },

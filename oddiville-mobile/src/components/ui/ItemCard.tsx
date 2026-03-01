@@ -1,5 +1,5 @@
 import { StyleSheet, TouchableOpacity, View } from "react-native";
-import React from "react";
+import React, { useEffect } from "react";
 import { ItemCardData } from "@/src/types/cards";
 import { B3, B4, C1, H3 } from "../typography/Typography";
 import { getColor } from "@/src/constants/colors";
@@ -14,6 +14,7 @@ import useValidateAndOpenBottomSheet from "@/src/hooks/useValidateAndOpenBottomS
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/src/redux/store";
 import { updateBottomSheetMeta } from "@/src/redux/slices/bottomsheet.slice";
+import { useOverlayLoader } from "@/src/context/OverlayLoaderContext";
 
 const ItemCard = ({
   id,
@@ -29,11 +30,21 @@ const ItemCard = ({
   onActionPress,
 }: ItemCardData) => {
   const { goTo } = useAppNavigation();
+  const loader = useOverlayLoader();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const dispatch = useDispatch();
   const bottomSheetMeta = useSelector(
     (state: RootState) => state.bottomSheet.meta,
   );
+const { isVisible } = useSelector(
+  (state: RootState) => state.bottomSheet
+);
+
+  useEffect(() => {
+  if (isVisible) {
+    loader.hide();
+  }
+}, [isVisible]);
 
   const handlePress = () => {
     switch (mode) {
@@ -42,10 +53,12 @@ const ItemCard = ({
         break;
 
       case "production-completed":
+        loader.show();
         validateAndSetData(id ?? "", "production-completed");
         break;
 
       case "packing":
+        loader.show();
         validateAndSetData(
           JSON.stringify({
             product: meta?.product,

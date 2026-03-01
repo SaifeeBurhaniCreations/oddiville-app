@@ -16,11 +16,11 @@ function mapProductListSection(section, filler) {
       return {
         ...fp,
         title: fp.name || "",
-        image: "box",
-        description: skus.length
-          ? skus.map(s => `${s.size}${s.unit} • ★ ${fp.rating}`).join(", ")
-          : "",
-        weight: totalBags ? `${totalBags} bags` : "",
+        image: fp.image || "",
+        // description: skus.length
+        //   ? skus.map(s => `${s.size}${s.unit} • ★ ${fp.rating}`).join(", ")
+        //   : "",
+        weight: totalBags ? `total: ${totalBags} bags` : "",
       };
     });
 
@@ -39,11 +39,11 @@ function mapProductListSection(section, filler) {
       ...product,
       ...fp,
       title: fp.name || product.title || "",
-      image: "box",
-      description: skus.length
-        ? skus.map(s => `${s.size}${s.unit} • ★ ${product.rating}`).join(", ")
-        : "",
-      weight: totalBags ? `${totalBags} bags` : "",
+      image: fp.image || "",
+      // description: skus.length
+      //   ? skus.map(s => `${s.size}${s.unit} • ★ ${product.rating}`).join(", ")
+      //   : "",
+      weight: totalBags ? `total: ${totalBags} bags` : "",
     };
   });
 }

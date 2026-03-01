@@ -43,6 +43,7 @@ export interface PackageItemLocal {
   rawSize?: string;
   dry_item_id?: string | null;
   quantity: string;
+  packets_per_bag: number;
 }
 export interface ChamberStock {
   id: string;

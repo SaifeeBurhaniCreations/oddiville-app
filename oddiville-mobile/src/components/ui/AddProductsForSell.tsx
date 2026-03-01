@@ -204,14 +204,16 @@ const groupedPackages = useMemo(() => {
       pkg.unit
     );
 
-    if (Number(stock.rating) !== Number(selectedRating)) continue;
 
-    const chambers = (stock.chambers ?? [])
-      .filter((ch) => Number(ch.bags) > 0)
-      .map((ch) => ({
-        chamberId: ch.chamberId,
-        bags: Number(ch.bags),
-      }));
+const chambers = (stock.chambers ?? [])
+  .filter((ch) => 
+    Number(ch.bags) > 0 &&
+    Number(stock.rating) === Number(selectedRating)
+  )
+  .map((ch) => ({
+    chamberId: ch.chamberId,
+    bags: Number(ch.bags),
+  }));
 
     const chamberTotal = chambers.reduce((s, c) => s + c.bags, 0);
 

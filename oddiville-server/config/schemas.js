@@ -69,7 +69,7 @@ const ORDER_READY = {
                 products: [
                     {
                         title: "",
-                        image: "box",
+                        image: "",
                         description: "",
                         weight: "",
 
@@ -173,10 +173,11 @@ const ORDER_SHIPPED = {
                 date_title: "Est. Delivered date",
                 arrival_date: "",
                 agency: "",
+                phone: "",
             },
         },
         {
-            type: "product-list-accordian",
+            type: "product-list",
             data: {
                 label: "Products",
                 detailView: {
@@ -186,7 +187,7 @@ const ORDER_SHIPPED = {
                 products: [
                     {
                         title: "",
-                        image: "box",
+                        image: "",
                         description: "",
                         weight: "",
 
@@ -298,6 +299,7 @@ const ORDER_REACHED = {
                 date_title: "Arrival date",
                 arrival_date: "",
                 agency: "",
+                phone: "",
             },
         },
         {

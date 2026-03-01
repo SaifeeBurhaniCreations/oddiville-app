@@ -88,12 +88,12 @@ router.post("/", upload.single("challan"), async (req, res) => {
 
     const truck = await truckDetailClient.create(
       {
-        agency_name,
-        driver_name,
-        phone,
-        number,
-        type,
-        size,
+        agency_name: agency_name.trim(),
+        driver_name: driver_name.trim(),
+        phone: phone.trim(),
+        number: number.trim(),
+        type: type.trim(),
+        size: size.trim(),
         challan: challanUrl,
         arrival_date: parsedArrivalDate,
         isMyTruck: parsedIsMyTruck,

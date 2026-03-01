@@ -44,6 +44,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import * as IntentLauncher from "expo-intent-launcher";
 import { useToast } from "@/src/context/ToastContext";
+import { useOverlayLoader } from "../context/OverlayLoaderContext";
 
 type BottomSheetActionResult = boolean | void;
 type BottomSheetAction = () =>
@@ -72,7 +73,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const updateOrder = useUpdateOrder();
   const completeProduction = useCompleteProduction();
   const { data: chambers } = useChamber();
-
+const loader = useOverlayLoader();
   const { product } = useSelector((state: RootState) => state.storeProduct);
 
   const { data: chambersY } = useChamber();
@@ -122,8 +123,8 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
   const packageQuantityForm = useGlobalFormValidator<AddPackageQuantityForm>(
     "add-package-quantity",
   );
-  const { errors: storeErrors } =
-    useGlobalFormValidator<StoreChambersForm>("store-chambers");
+  // const { errors: storeErrors } =
+  //   useGlobalFormValidator<StoreChambersForm>("store-chambers");
 
   // const storeQuantityForm =
   //   useGlobalFormValidator<StoreMaterialForm>("store-product");
@@ -309,8 +310,10 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
     "add-package-quantity": async () => {
       try {
         dispatch(setIsLoadingPackage(true));
+        loader.show();
 
         const { weight, id } = packages;
+
         if (!id) return;
 
         const { number, unit } = splitValueAndUnit(weight);
@@ -335,6 +338,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
           {
             onSuccess: () => {
               packageQuantityForm.resetForm();
+              loader.hide();
             },
           },
         );
@@ -470,6 +474,7 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
         console.warn("No order ID provided for order-reached action");
         return;
       }
+      loader.show();
       try {
         updateOrder.mutate(
           {
@@ -482,14 +487,17 @@ export const useBottomSheetActions = (meta?: { id: string; type: string }) => {
           {
             onSuccess: (result) => {
               dispatch(closeBottomSheet());
+              loader.hide();
             },
             onError: (error) => {
               console.log("error in updateOrder");
+              loader.hide();
             },
           },
         );
       } catch (error: any) {
         console.log("error in order-reached", error.message);
+        loader.hide();
       }
     },
 

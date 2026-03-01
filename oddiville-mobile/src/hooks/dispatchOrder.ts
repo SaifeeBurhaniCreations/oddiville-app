@@ -5,57 +5,77 @@ import { socket } from "../lib/notificationSocket";
 import { rejectEmptyOrNull } from "../utils/authUtils";
 import { OrderStorageForm } from "@/app/create-orders";
 
-export interface DispatchOrderPackage {
-    quantity: string;
-    size: number;
-    stored_quantity: number;
-    unit: string;
-}
+export type OrderStatus =
+  | "pending"
+  | "in-progress"
+  | "completed";
 
 export interface DispatchOrderProduct {
-    name: string;
-    chambers: {
-        id: string;
-        name: string;
-        stored_quantity: number | string;
-        quantity: number | string;
-    }[];
+  id: string;
+  product_name: string;
+  image: string | null;
+  rating: number;
 }
 
 export interface DispatchTruckDetails {
-    agency_name: string;
-    driver_name: string;
-    number: string;
-    phone: string;
-    type: string;
+  challan: string | null;
+  truck_type: string | null;
+  driver_name: string | null;
+  tare_weight: number | null;
+  truck_phone: string | null;
+  truck_number: string | null;
+  truck_weight: number | null;
+  truck_agency_name: string | null;
 }
+
+export interface PacketInfo {
+  size: number;
+  unit: string;
+  packetsPerBag: number;
+}
+
+export interface DispatchedItemSKU {
+  packet: PacketInfo;
+  byChamber: Record<string, number>;
+  totalBags: number;
+  totalPackets: number;
+}
+
+export type DispatchedItems = Record<
+  string, 
+  Record<
+    string, 
+    DispatchedItemSKU
+  >
+>;
 
 export interface DispatchOrderData {
-    id: string;
-    status: "pending" | "dispatched" | "completed" | "in-progress" | string;
-    customer_name: string;
-    address: string;
-    city: string;
-    state: string;
-    country: string;
-    phone: string;
-    amount: number;
-    amountLabel?: string;
-    createdAt: string | Date;
-    updatedAt: string | Date;
-    dispatch_date: string | Date;
-    est_delivered_date: string | Date;
-    delivered_date: string | Date | null;
-    products: DispatchOrderProduct[];
-    sample_images: string[];
-    truck_details: DispatchTruckDetails | null;
+  id: string;
+  customer_name: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
 
-    total_quantity: number;
-    unit: string;
-    package: any;
+  status: OrderStatus;
+
+  dispatch_date: string | null;
+  est_delivered_date: string | null;
+  delivered_date: string | null;
+
+  products: DispatchOrderProduct[];
+
+  sample_images: string[] | null;
+
+  amount: number;
+
+  truck_details: DispatchTruckDetails;
+
+  dispatched_items: DispatchedItems;
+
+  createdAt: string;
+  updatedAt: string;
 }
-
-const CHAMBER_STOCK_KEY = ["chamber-stock"];
 
 export function useOrders() {
     const queryClient = useQueryClient();

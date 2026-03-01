@@ -210,6 +210,7 @@ const TruckFullDetailsSection = z.object({
     type: z.string(),
     agency: z.string(),
     arrival_date: z.string(),
+    phone: z.string(),
     driverImage: z.string(),
   }),
 });
@@ -715,7 +716,7 @@ export const OrderShippedBottomSheetConfigSchema = z.object({
       HeaderSection,
       ProductDtailsSection,
       TruckFullDetailsSection,
-      ProductListAccoridanSection,
+      ProductListSection,
     ])
   ),
   buttons: z.array(ButtonSchema).optional(),
@@ -1072,6 +1073,16 @@ export const SelectStatusBottomSheetConfigSchema = z.object({
   buttons: z.array(ButtonSchema).optional(),
 });
 
+export const SelectDispatchStatusBottomSheetConfigSchema = z.object({
+  sections: z.array(
+    z.discriminatedUnion("type", [
+      TitleWithDetailsCrossSection,
+      ProductCardSection,
+    ])
+  ),
+  buttons: z.array(ButtonSchema).optional(),
+});
+
 export const SelectExportProductBottomSheetConfigSchema = z.object({
   sections: z.array(
     z.discriminatedUnion("type", [
@@ -1269,6 +1280,7 @@ export const bottomSheetSchemas = {
   "choose-export-format": ChooseExportFormatBottomSheetConfigSchema,
   "export-data-options": ExportDataOptionsBottomSheetConfigSchema,
   "select-status": SelectStatusBottomSheetConfigSchema,
+  "select-dispatch-status": SelectDispatchStatusBottomSheetConfigSchema,
   "select-export-product": SelectExportProductBottomSheetConfigSchema,
 } as const;
 

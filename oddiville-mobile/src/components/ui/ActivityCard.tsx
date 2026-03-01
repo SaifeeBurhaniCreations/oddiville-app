@@ -53,7 +53,7 @@ const ActivityCard = ({
     extraData,
     metaData,
     category,
-    color: statusColor = "red",
+    headerColor,
   } = activity;
 
   useEffect(() => {
@@ -122,7 +122,7 @@ const ActivityCard = ({
           <View style={styles.cardHeader}>
             {type && (
               <B5
-                color={getColor(statusColor ?? "red", 700)}
+                color={getColor(color ?? "red", 700)}
                 style={{ textTransform: "uppercase" }}
               >
                 {type}
@@ -139,7 +139,7 @@ const ActivityCard = ({
 
           <View style={styles.cardHeaderLayout}>
             <View style={styles.cardHeaderMain}>
-              <H2 color={getColor(color, 700)}>{title}</H2>
+              <H2 color={getColor(headerColor ?? color, 700)}>{title}</H2>
               {!read ? (
                 <Tag color={tagColor} size="sm">
                   New
@@ -154,7 +154,6 @@ const ActivityCard = ({
             </View>
             {sideDetails && (
               <View style={styles.detailRow}>
-
                 {SideDetailsIconComponent && <SideDetailsIconComponent />}
 
                 <H5>{sideDetails.name}:</H5>
@@ -176,6 +175,16 @@ const ActivityCard = ({
                   detail && detail.iconKey && detail.iconKey in ICON_MAP
                     ? ICON_MAP[detail.iconKey as IconKey]
                     : null;
+
+                const isWarehouse = detail.iconKey === "warehouse";
+                const isCompletedStore =
+                  category === "completed" && detail.iconKey === "store";
+
+                const iconColor =
+                  isWarehouse || isCompletedStore
+                    ? getColor("light")
+                    : getColor("green", 700);
+
                 return (
                   <React.Fragment key={idx}>
                     <View style={styles.helperItem}>
@@ -187,7 +196,9 @@ const ActivityCard = ({
                               styles.dispatchIconActive,
                             ]}
                           >
-                            {DetailsIconComponent && <DetailsIconComponent />}
+                            {DetailsIconComponent && (
+                              <DetailsIconComponent color={iconColor} />
+                            )}
                           </View>
                           <B5 color={getColor("green", 700)}>{detail.value}</B5>
                         </>
@@ -202,7 +213,9 @@ const ActivityCard = ({
                                 : styles.dispatchIconActive,
                             ]}
                           >
-                            {DetailsIconComponent && <DetailsIconComponent />}
+                            {DetailsIconComponent && (
+                              <DetailsIconComponent color={iconColor} />
+                            )}
                           </View>
                         </>
                       )}
@@ -219,7 +232,7 @@ const ActivityCard = ({
                       </View>
                     )}
                   </React.Fragment>
-                )
+                );
               })}
             </View>
           )}
@@ -243,7 +256,7 @@ const ActivityCard = ({
                       <View style={styles.separator} />
                     )}
                   </React.Fragment>
-                )
+                );
               })}
             </View>
           )}

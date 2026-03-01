@@ -111,16 +111,8 @@ function buildOrderSchemas({ order, chambers, currentUser, packages }) {
     products: mapOrderProducts(order),
   };
 
-  console.log("order ready", JSON.stringify({
-      ...base,
-      "Product Details": getProductDetailsSection(
-        order,
-        productDetails,
-        totalQuantity,
-        { key: "created", value: currentUser?.name ?? "N/A" },
-      ),
-    }, null, 2));
-  
+  const truck = order?.truck_details ?? {};
+
   return {
     "order-ready": {
       ...base,
@@ -140,15 +132,17 @@ function buildOrderSchemas({ order, chambers, currentUser, packages }) {
         totalQuantity,
         { key: "shipped", value: currentUser?.name ?? "N/A" },
       ),
+
       "Truck Details": {
-        driverName: order?.truck_details?.driver_name ?? "",
-        driverImage: order?.truck_details?.driver_image ?? "",
-        number: order?.truck_details?.number ?? "",
-        type: order?.truck_details?.type ?? "",
+        driverName: truck.driver_name ?? "",
+        driverImage: truck.driver_image ?? "",
+        number: truck.truck_number ?? "",
+        type: truck.truck_type ?? "",
         arrival_date: order?.est_delivered_date
           ? customDateFormatter(order.est_delivered_date)
           : "",
-        agency: order?.truck_details?.agency_name ?? "",
+        agency: truck.truck_agency_name ?? "",
+        phone: truck.truck_phone ?? "",
       },
     },
 
@@ -160,15 +154,16 @@ function buildOrderSchemas({ order, chambers, currentUser, packages }) {
         totalQuantity,
         { key: "reached", value: "" },
       ),
-       "Truck Detail": {
-        driverName: order?.truck_details?.driver_name ?? "",
-        driverImage: order?.truck_details?.driver_image ?? "",
-        number: order?.truck_details?.number ?? "",
-        type: order?.truck_details?.type ?? "",
+
+      "Truck Details": {
+        driverName: truck.driver_name ?? "",
+        driverImage: truck.driver_image ?? "",
+        number: truck.truck_number ?? "",
+        type: truck.truck_type ?? "",
         arrival_date: order?.est_delivered_date
           ? customDateFormatter(order.est_delivered_date)
           : "",
-        agency: order?.truck_details?.agency_name ?? "",
+        agency: truck.truck_agency_name ?? "",
       },
     },
   };
@@ -443,15 +438,14 @@ function buildWorkerSchemas({ contractors }) {
           { label: "Male", key: "countMale", flex: 1 },
           { label: "Female", key: "countFemale", flex: 1 },
         ],
-    tableBody:
-      contractor?.work_location
-        ?.filter((loc) => !loc.notNeeded)
-        ?.map((loc) => ({
-          location: loc?.name,
-          countMale: loc?.maleCount ?? loc?.countMale ?? loc?.count ?? 0,
-          countFemale: loc?.femaleCount ?? loc?.countFemale ?? 0,
-        })) || [],
-
+        tableBody:
+          contractor?.work_location
+            ?.filter((loc) => !loc.notNeeded)
+            ?.map((loc) => ({
+              location: loc?.name,
+              countMale: loc?.maleCount ?? loc?.countMale ?? loc?.count ?? 0,
+              countFemale: loc?.femaleCount ?? loc?.countFemale ?? 0,
+            })) || [],
       })),
     },
 
@@ -480,19 +474,19 @@ function buildWorkerSchemas({ contractors }) {
           ],
         },
       ],
-table: {
-  tableHeader: [
-    { label: "Locations", key: "location" },
-    { label: "Male", key: "countMale" },
-    { label: "Female", key: "countFemale" },
-  ],
-  tableBody:
-    contractors[0]?.work_location?.map((loc) => ({
-      location: loc?.name,
-      countMale: loc?.maleCount || 0,
-      countFemale: loc?.femaleCount || 0,
-    })) || [],
-},
+      table: {
+        tableHeader: [
+          { label: "Locations", key: "location" },
+          { label: "Male", key: "countMale" },
+          { label: "Female", key: "countFemale" },
+        ],
+        tableBody:
+          contractors[0]?.work_location?.map((loc) => ({
+            location: loc?.name,
+            countMale: loc?.maleCount || 0,
+            countFemale: loc?.femaleCount || 0,
+          })) || [],
+      },
     },
   };
 }
@@ -688,13 +682,15 @@ function buildUISchemas({
     },
 
     "select-export-product": {
-       title: "Choose products",
+      title: "Choose products",
 
-      productCard: chamberStocks.filter(stock => stock.category === "packed").map((stock) => ({
-        name: stock?.product_name || "Unnamed",
-        image: "box"
-      })),
-    }
+      productCard: chamberStocks
+        .filter((stock) => stock.category === "packed")
+        .map((stock) => ({
+          name: stock?.product_name || "Unnamed",
+          image: "box",
+        })),
+    },
   };
 }
 

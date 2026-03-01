@@ -336,42 +336,49 @@ const ProductionCompleteScreen = () => {
     return formData;
   }, []);
 
-  const saved = async () => {
-    const result = validateForm();
-    if (!result.success) return;
+const saved = async () => {
+  const result = validateForm();
+  if (!result.success) return;
 
-    const formData = buildFormData(result.data);
+  const formData = buildFormData(result.data);
 
-    updateProduction.mutate(
-      { id: id!, data: formData },
-      {
-        onSuccess: () => {
-          setHasUnsavedChanges(false);
-          goTo("production");
-          resetForm();
-        },
-        onError: () => {
-          toast.error("Failed to update production");
-        },
+  // if queued → we start it here
+  if (isQueued) {
+    formData.append("status", "in-progress");
+    formData.append("start_time", new Date().toISOString());
+  }
+
+  updateProduction.mutate(
+    { id: id!, data: formData },
+    {
+      onSuccess: () => {
+        setHasUnsavedChanges(false);
+        goTo("production");
+        resetForm();
       },
-    );
-  };
+      onError: () => {
+        toast.error("Failed to update production");
+      },
+    },
+  );
+};
 
-  const isStarted = productionData?.start_time !== null;
+const isQueued = productionData?.status === "in-queue";
+const isStarted = productionData?.status === "in-progress";
+const isCompleted = productionData?.status === "completed";
 
-  const canStart = !isStarted;
+const canStart = isQueued;
+const canSave =
+  isStarted &&
+  hasUnsavedChanges &&
+  !updateProduction.isPending &&
+  !productionLoading;
 
-  const canSave =
-    isStarted &&
-    hasUnsavedChanges &&
-    !updateProduction.isPending &&
-    !productionLoading;
-
-  const canComplete =
-    isStarted &&
-    !hasUnsavedChanges &&
-    !updateProduction.isPending &&
-    !productionLoading;
+const canComplete =
+  isStarted &&
+  !hasUnsavedChanges &&
+  !updateProduction.isPending &&
+  !productionLoading;
 
   const backRoute = resolveBackRoute(
     caps.access,
@@ -441,7 +448,10 @@ const ProductionCompleteScreen = () => {
         <View style={styles.buttonContainer}>
           <Button
             onPress={saved}
-            disabled={updateProduction.isPending || (!canStart && !canSave)}
+           disabled={
+  updateProduction.isPending ||
+  (!canStart && !canSave)
+}
             variant="outline"
           >
             {updateProduction.isPending

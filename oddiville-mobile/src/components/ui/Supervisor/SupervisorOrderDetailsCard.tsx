@@ -48,9 +48,9 @@ const SupervisorOrderDetailsCard = ({
 }: SupervisorOrderCardProps) => {
   const { data } = useOrders();
   const filteredData = data?.filter(
-    (item) => item.customer_name === order.title
+    (item) => item.customer_name === order.title,
   );
-  const pohneNumber = filteredData?.[0]?.phone;
+  const pohneNumber = filteredData?.[0]?.truck_details.truck_phone;
 
   const call = () => {
     Linking.openURL(`tel:${pohneNumber}`);
@@ -87,12 +87,12 @@ const SupervisorOrderDetailsCard = ({
 
               {order?.sideIconKey && (
                 <Pressable style={[styles.sideIcon]} onPress={call}>
-                  {order?.sideIconKey && (
+                  {order?.sideIconKey &&
                     (() => {
                       const Icon = ICON_MAP[order.sideIconKey];
-                      return <Icon />;
-                    })()
-                  )}
+
+                      return <Icon color={getColor("green", 700)} />;
+                    })()}
                 </Pressable>
               )}
             </View>
@@ -119,9 +119,9 @@ const SupervisorOrderDetailsCard = ({
         {(order.name || order.address) && (
           <View>
             {order.name && <H6>{order.name}</H6>}
-            {order.address && (
+            {(order.address && order.city && order.state && order.country) && (
               <C1 color={getColor("green", 400)}>
-                {order.address} Bijju bhaiya
+                {order.address}, {order.city}, {order.state}, {order.country}
               </C1>
             )}
           </View>
@@ -154,41 +154,46 @@ const SupervisorOrderDetailsCard = ({
 
       {order.helperDetails && order.helperDetails?.length > 0 && (
         <View style={styles.helperSection}>
-          {order.helperDetails.map((h, idx) => (
-            <React.Fragment key={idx}>
-              <View style={styles.helperItem}>
-                {(() => {
-                  const Icon = h.iconKey ? ICON_MAP[h.iconKey] : null;
+          {order.helperDetails.map((h, idx) => {
+            const Icon =
+              h.iconKey && ICON_MAP[h.iconKey as keyof typeof ICON_MAP];
 
-                  return Icon && <Icon />;
-                })()}
-                <View style={styles.keyValue}>
-                  <H6 style={{ flexWrap: "wrap" }} color={getColor("light")}>
-                    {h.name}:
-                  </H6>
-                  <B4 style={{ flexWrap: "wrap" }} color={getColor("light")}>
-                    {h.value}
-                  </B4>
+            return (
+              <React.Fragment key={idx}>
+                <View style={styles.helperItem}>
+                  <View style={styles.dispatchIcon}>
+                    {Icon ? <Icon color={getColor("green", 700)} /> : null}
+                  </View>
+                  <View style={styles.keyValue}>
+                    <H6 style={{ flexWrap: "wrap" }} color={getColor("light")}>
+                      {h.name}:
+                    </H6>
+                    <B4 style={{ flexWrap: "wrap" }} color={getColor("light")}>
+                      {h.value}
+                    </B4>
+                  </View>
                 </View>
-              </View>
-              {order.helperDetails && idx < order.helperDetails?.length - 1 && (
-                <View style={styles.helperDivider} />
-              )}
-            </React.Fragment>
-          ))}
+                {order.helperDetails &&
+                  idx < order.helperDetails?.length - 1 && (
+                    <View style={styles.helperDivider} />
+                  )}
+              </React.Fragment>
+            );
+          })}
         </View>
       )}
       {order.dispatchDetails && order.dispatchDetails?.length > 0 && (
         <View style={styles.dispatchSection}>
-          {order.dispatchDetails.map((h, idx) => (
+          {order.dispatchDetails.map((h, idx) => {
+  const Icon = h.iconKey ? ICON_MAP[h.iconKey] : null;
+            return (
             <React.Fragment key={idx}>
               <View style={styles.helperItem}>
                 {idx % 2 === 0 ? (
                   <React.Fragment>
-                    <View style={[styles.dispatchIcon]}> {(() => {
-                      const Icon = h.iconKey ? ICON_MAP[h.iconKey] : null;
-                      return Icon && <Icon />;
-                    })()}</View>
+                    <View style={[styles.dispatchIcon]}>
+                      {Icon && <Icon />}
+                    </View>
                     <B5 style={{ flexWrap: "wrap" }} color={getColor("light")}>
                       {h.value}
                     </B5>
@@ -198,10 +203,9 @@ const SupervisorOrderDetailsCard = ({
                     <B5 style={{ flexWrap: "wrap" }} color={getColor("light")}>
                       {h.value}
                     </B5>
-                      <View style={[styles.dispatchIcon]}> {(() => {
-                        const Icon = h.iconKey ? ICON_MAP[h.iconKey] : null;
-                        return Icon && <Icon />;
-                      })()}</View>
+                    <View style={[styles.dispatchIcon]}>
+                      {Icon && <Icon />}
+                    </View>
                   </React.Fragment>
                 )}
               </View>
@@ -218,7 +222,8 @@ const SupervisorOrderDetailsCard = ({
                   </View>
                 )}
             </React.Fragment>
-          ))}
+          )
+          })}
         </View>
       )}
     </View>
@@ -332,11 +337,11 @@ const styles = StyleSheet.create({
   },
   dispatchIcon: {
     padding: 4,
-    borderRadius: "50%",
     backgroundColor: getColor("light", 100),
     flexDirection: "row",
-    height: 25,
-    width: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 999,
   },
   dispatchDateLayout: {
     flexDirection: "row",

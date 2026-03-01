@@ -120,7 +120,6 @@ router.post("/create", safeRoute(async (req, res) => {
       const productUsage = usedBagsByProduct[productId];
       const productName = productId.split("::")[0];
 
-      // Group by rating first
       const usageByRating = {};
 
       for (const packageKey of Object.keys(productUsage)) {
@@ -286,13 +285,11 @@ router.patch("/status/:id", async (req, res) => {
       });
     }
 
-    // Find the order
     const order = await orderClient.findByPk(id);
     if (!order) {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    // Update only the status
     await order.update({ status });
 
     const description = [`${order.products.length} Products`];
@@ -330,7 +327,7 @@ router.patch("/status/:id", async (req, res) => {
   }
 });
 
-router.patch("/update/:id", upload.any(), async (req, res) => {
+router.patch("/update/:id", upload.any(), safeRoute(async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
@@ -341,6 +338,8 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
       await t.rollback();
       return res.status(404).json({ error: "Order not found" });
     }
+
+    // throw new Error("Debug stop here");
 
     const updatableFields = [
       "customer_name",
@@ -429,12 +428,16 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
             return res
               .status(400)
               .json({ error: "Invalid JSON format for truck_details" });
-          }
+          } 
 
           updatedData.truck_details = {
-            ...(order.truck_details || {}),
-            ...truckDetails,
-          };
+                ...(order.truck_details || {}),
+                truck_agency_name: truckDetails.agency_name,
+                driver_name: truckDetails.driver_name,
+                truck_phone: truckDetails.phone,
+                truck_type: truckDetails.type,
+                truck_number: truckDetails.number,
+              };
         } else if (field === "products") {
           updatedData.products =
             typeof req.body.products === "string"
@@ -449,10 +452,11 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
     const products = updatedData.products || order.products || [];
 
     let truck = null;
-    if (updatedData.truck_details?.number) {
+    if (updatedData.truck_details?.truck_number) {
       truck = await truckClient.findOne(
-        { where: { number: updatedData.truck_details.number } },
-        { transaction: t },
+        { where: { number: updatedData.truck_details.truck_number },
+        transaction: t,
+       },
       );
 
       if (!truck) {
@@ -480,6 +484,7 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
     }
 
     await order.update(updatedData, { transaction: t });
+    await order.reload({ transaction: t });
 
     if (truck) {
       if (truck.isMyTruck && truck.active) {
@@ -518,7 +523,7 @@ router.patch("/update/:id", upload.any(), async (req, res) => {
     console.error("Error updating dispatch order:", error?.message || error);
     return res.status(500).json({ error: "Internal server error" });
   }
-});
+}));
 
 // Delete a dispatch order
 router.delete("/delete/:id", async (req, res) => {

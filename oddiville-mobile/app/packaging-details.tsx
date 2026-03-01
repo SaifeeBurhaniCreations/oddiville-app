@@ -1,5 +1,5 @@
 // 1. React and React Native core
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 // 2. Third-party dependencies
@@ -55,6 +55,7 @@ import PaperRollIcon from "@/src/components/icons/packaging/PaperRollIcon";
 import BagIcon from "@/src/components/icons/packaging/BagIcon";
 import BigBagIcon from "@/src/components/icons/packaging/BigBagIcon";
 import OverlayLoader from "@/src/components/ui/OverlayLoader";
+import { useOverlayLoader } from "@/src/context/OverlayLoaderContext";
 
 export const PACKAGE_ICON_MAP: Record<
   PackageIconKey,
@@ -117,20 +118,35 @@ const PackagingDetailsScreen = () => {
       const tare = getTareWeight("pouch", sizeValue, sizeUnit);
       const packetCount = tare > 0 ? Math.floor((qtyKg * 1000) / tare) : 0;
 
-      return {
-        ...pkg,
-        quantityKg: qtyKg,
-        displayQuantity: String(packetCount),
-      };
+const iconKey = mapPackageIconKey({
+  size: sizeValue,
+  unit: sizeUnit,
+});
+
+return {
+  weight: pkg.weight,
+  quantity: pkg.quantity,
+  disabled: pkg.disabled ?? false,
+  iconKey,
+  quantityKg: qtyKg,
+  displayQuantity: String(packetCount),
+};
     });
   }, [packages]);
 
-  const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
+const loader = useOverlayLoader();
+
+  const isLoading = isLoadingPackageSize || isLoadingPackage || packageLoading;
+
+  useEffect(() => {
+   loader.bind(isLoading)
+  }, [isLoadingPackageSize, isLoadingPackage, packageLoading]);
 
   const handleOpen = (id: string) => {
     const match = packages?.find((pkg) => pkg.weight === id);
+
     if (!match) return;
 
     const { value, unit } = parseWeightBoth(match.weight);
@@ -140,16 +156,17 @@ const PackagingDetailsScreen = () => {
     const packetCount = tare > 0 ? Math.floor((qtyKg * 1000) / tare) : 0;
 
     dispatch(
-      setPackageSize({
-        ...match,
-        iconKey: mapPackageIconKey({
-          size: value,
-          unit,
-          // rawSize: match.weight,
-        }),
-        id: packageId,
-      }),
-    );
+  setPackageSize({
+    weight: match.weight,
+    quantity: match.quantity,
+    id: packageId,
+    iconKey: mapPackageIconKey({
+      size: value,
+      unit,
+    }),
+     disabled: match.disabled ?? false,
+  }),
+);
 
     const fillPackage = {
       sections: [
@@ -183,16 +200,12 @@ const PackagingDetailsScreen = () => {
       ],
     };
 
-    setIsLoading(true);
     validateAndSetData(id, "fill-package", fillPackage);
-    setIsLoading(false);
   };
 
   const handleOpenAddNewSize = () => {
     dispatch(setCurrentProductId(packageId));
-    setIsLoading(true);
     validateAndSetData(`${packageId}:${packageName}`, "add-package");
-    setIsLoading(false);
   };
 
   const emptyStateData = getEmptyStateData("packaging-details");
@@ -231,7 +244,7 @@ const PackagingDetailsScreen = () => {
                   {pair.map((item, i) => (
                     <View key={i} style={styles.cardWrapper}>
                       <PackagingSizeCard
-                        icon={item.icon ? item.icon : BagIcon}
+                        icon={PACKAGE_ICON_MAP[item.iconKey as PackageIconKey] || BagIcon}
                         weight={item.weight || ""}
                         quantity={item.displayQuantity || ""}
                         disabled={item.disabled || false}
@@ -249,9 +262,7 @@ const PackagingDetailsScreen = () => {
         </View>
 
         <BottomSheet color="green" />
-        {(isLoadingPackageSize || isLoadingPackage || packageLoading) && (
-          <OverlayLoader />
-        )}
+       
       </View>
     </View>
   );

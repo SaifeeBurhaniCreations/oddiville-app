@@ -84,29 +84,31 @@ router.post("/create", async (req, res) => {
       });
     }
 
-    // ---- sanitize payload ----
-    const payload = contractors.map((c) => ({
-      name: normalize(c.name),
-      male_count: Math.max(0, Number(c.male_count || 0)),
-      female_count: Math.max(0, Number(c.female_count || 0)),
-      work_date: today(),
-     work_location: c.work_location.map((loc) => ({
-      name: loc.name ?? "",
-      maleCount: Math.max(0, Number(loc.maleCount || 0)),
-      femaleCount: Math.max(0, Number(loc.femaleCount || 0)),
-    })),
-    }));
+    const payload = contractors.map((c) => {
+      const workLocations = c.work_location.map((loc) => ({
+        name: loc.name ?? "",
+        maleCount: Math.max(0, Number(loc.maleCount || 0)),
+        femaleCount: Math.max(0, Number(loc.femaleCount || 0)),
+  }));
 
-for (const c of payload) {
-  const locationMale = c.work_location.reduce((s, l) => s + l.maleCount, 0);
-  const locationFemale = c.work_location.reduce((s, l) => s + l.femaleCount, 0);
+  const locationMale = workLocations.reduce(
+    (s, l) => s + l.maleCount,
+    0
+  );
 
-  if (locationMale !== c.male_count || locationFemale !== c.female_count) {
-    return res.status(400).json({
-      error: "Location totals do not match contractor totals",
-    });
-  }
-}
+  const locationFemale = workLocations.reduce(
+    (s, l) => s + l.femaleCount,
+    0
+  );
+
+  return {
+    name: normalize(c.name),
+    male_count: locationMale,
+    female_count: locationFemale,
+    work_date: today(),
+    work_location: workLocations,
+  };
+});
 
     // ---- transaction ----
     const created = await Contractor.sequelize.transaction(async (t) => {

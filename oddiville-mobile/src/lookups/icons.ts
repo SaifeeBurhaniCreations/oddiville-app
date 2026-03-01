@@ -1,31 +1,33 @@
-import CashIcon from "@/src/components/icons/page/CashIcon";
-import DatabaseIcon from "@/src/components/icons/page/DatabaseIcon";
-import BoxIcon from "@/src/components/icons/common/BoxIcon";
-import PhoneIcon from "@/src/components/icons/common/PhoneIcon";
-import WarehouseIcon from "@/src/components/icons/page/WarehouseIcon";
-import StoreIcon from "@/src/components/icons/common/StoreIcon";
-import UserIcon from "@/src/components/icons/page/UserIcon";
-import TruckIcon from "@/src/components/icons/page/TruckIcon";
-import MaleIcon from "../components/icons/common/MaleIcon";
-import FemaleIcon from "../components/icons/common/FemaleIcon";
-import ClockIcon from "../components/icons/common/ClockIcon";
+  import CashIcon from "@/src/components/icons/page/CashIcon";
+  import DatabaseIcon from "@/src/components/icons/page/DatabaseIcon";
+  import BoxIcon from "@/src/components/icons/common/BoxIcon";
+  import PhoneIcon from "@/src/components/icons/common/PhoneIcon";
+  import WarehouseIcon from "@/src/components/icons/page/WarehouseIcon";
+  import StoreIcon from "@/src/components/icons/common/StoreIcon";
+  import UserIcon from "@/src/components/icons/page/UserIcon";
+  import TruckIcon from "@/src/components/icons/page/TruckIcon";
+  import MaleIcon from "../components/icons/common/MaleIcon";
+  import FemaleIcon from "../components/icons/common/FemaleIcon";
+  import ClockIcon from "../components/icons/common/ClockIcon";
 
-import { IconProps } from "@/src/types";
-import Calendar12Icon from "../components/icons/page/Calendar12Icon";
+  import { IconProps } from "@/src/types";
+  import Calendar12Icon from "../components/icons/page/Calendar12Icon";
+  import CalandarCheckIcon from "../components/icons/page/calandarCheck";
 
-export const ICON_MAP = {
-  cash: CashIcon,
-  database: DatabaseIcon,
-  box: BoxIcon,
-  phone: PhoneIcon,
-  warehouse: WarehouseIcon,
-  store: StoreIcon,
-  user: UserIcon,
-  truck: TruckIcon,
-  male: MaleIcon,
-  female: FemaleIcon,
-  clock: ClockIcon,
-  calendar: Calendar12Icon,
-} as const satisfies Record<string, React.FC<IconProps>>;
+  export const ICON_MAP = {
+    cash: CashIcon,
+    database: DatabaseIcon,
+    box: BoxIcon,
+    phone: PhoneIcon,
+    warehouse: WarehouseIcon,
+    store: StoreIcon,
+    user: UserIcon,
+    truck: TruckIcon,
+    male: MaleIcon,
+    female: FemaleIcon,
+    clock: ClockIcon,
+    calendar: Calendar12Icon,
+    calendarCheck: CalandarCheckIcon,
+  } as const satisfies Record<string, React.FC<IconProps>>;
 
-export type IconKey = keyof typeof ICON_MAP;
+  export type IconKey = keyof typeof ICON_MAP;

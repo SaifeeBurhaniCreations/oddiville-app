@@ -7,7 +7,7 @@ import {
   Platform,
   Pressable,
 } from "react-native";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 // 2. Third-party dependencies
 
@@ -15,7 +15,6 @@ import { useEffect, useMemo, useState } from "react";
 import PageHeader from "@/src/components/ui/PageHeader";
 import BottomSheet from "@/src/components/ui/BottomSheet";
 import Tabs from "@/src/components/ui/Tabs";
-import OverlayLoader from "@/src/components/ui/OverlayLoader";
 import ProductContextSection from "@/src/components/ui/package/ProductContextSection";
 import PackingListingSection from "@/src/components/ui/package/PackingListingSection";
 // 4. Project hooks
@@ -45,24 +44,28 @@ import { clearRatings } from "@/src/redux/slices/bottomsheet/storage.slice";
 import PackingSummarySection from "@/src/components/ui/package/PackingSummarySection";
 import { useCreatePacking } from "@/src/hooks/packing/useGetPackedItemsToday";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAppCapabilities } from "@/src/hooks/useAppCapabilities";
-import NoAccess from "@/src/components/ui/NoAccess";
-import Require from "@/src/components/authentication/Require";
+import {
+  AppCapabilities,
+  useAppCapabilities,
+} from "@/src/hooks/useAppCapabilities";
+import { useOverlayLoader } from "@/src/context/OverlayLoaderContext";
+import StockTabComponent from "@/src/components/ui/package/StockTabComponent";
 
 // 6. Project types
 
 const PackageScreen = () => {
-  const caps = useAppCapabilities();
-
   // selectors
   const selectedRawMaterials = useSelector(
     (state: RootState) => state.product.rawMaterials,
   );
+  //dispatch
+  const dispatch = useDispatch();
 
   // custom hooks
   const toast = useToast();
-  const dispatch = useDispatch();
+  const caps = useAppCapabilities();
   const form = usePackingForm({ validateOnChange: true });
+  const loader = useOverlayLoader();
 
   const { chamberStock } = useChamberStockByName(selectedRawMaterials);
 
@@ -81,6 +84,7 @@ const PackageScreen = () => {
   const [isCurrentProduct, setIsCurrentProduct] = useState<boolean>(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [overPackMap, setOverPackMap] = useState<Record<string, boolean>>({});
+  const [packingSession, setPackingSession] = useState(0);
 
   // derived variable
   const disableButton = Object.values(overPackMap).some(Boolean);
@@ -110,6 +114,10 @@ const PackageScreen = () => {
     return () => clearTimeout(t);
   }, [showTooltip]);
 
+  useEffect(() => {
+    loader.bind(isLoading || isPending);
+  }, [isLoading, isPending]);
+
   // functions
   const onSubmit = async (data: any) => {
     dispatch(setFinalDraft(data));
@@ -123,6 +131,8 @@ const PackageScreen = () => {
         dispatch(resetPackageSizes());
         dispatch(clearChambers());
         dispatch(clearRatings());
+
+        setPackingSession((prev) => prev + 1);
 
         queryClient.invalidateQueries({
           queryKey: ["packageName", data.product.productName],
@@ -165,7 +175,7 @@ const PackageScreen = () => {
       const kgPerBag = getRmKgPerBag(rm.packaging);
 
       const usedBags = Object.values(
-        form.values.rmInputs?.[rm.product_name] || {},
+        form.values.rmInputs?.[rm.id] || {},
       ).reduce((s, v) => s + Number(v || 0), 0);
 
       return sum + usedBags * kgPerBag;
@@ -184,10 +194,8 @@ const PackageScreen = () => {
     if (rmKgUsed === 0) return false;
     if (packedKg === 0) return false;
 
-    // float-safe comparison
     if (Math.abs(rmKgUsed - packedKg) > 0.001) return false;
 
-    // ensure every SKU is stored in chambers
     for (const plan of form.values.packagingPlan) {
       if (!plan.storage || plan.storage.length === 0) return false;
     }
@@ -203,117 +211,78 @@ const PackageScreen = () => {
   const isSubmitDisabled =
     isPending || disableButton || !isFormStructurallyValid;
 
+  const canEdit = caps.package.edit;
+  const canView = caps.package.view;
+
+  const tabsConfig = [];
+
+  if (canEdit) {
+    tabsConfig.push(
+      {
+        title: "Stock",
+        content: (
+          <StockTabComponent
+            form={form}
+            rm={rm}
+            rmUsed={rmUsed}
+            isCurrentProduct={isCurrentProduct}
+            setIsCurrentProduct={setIsCurrentProduct}
+            isLoading={isLoading}
+            setIsLoading={setIsLoading}
+            isPending={isPending}
+            disableButton={disableButton}
+            isSubmitDisabled={isSubmitDisabled}
+            submitDisabledReason={submitDisabledReason}
+            showTooltip={showTooltip}
+            setShowTooltip={setShowTooltip}
+            onSubmit={onSubmit}
+            handleOverPackChange={handleOverPackChange}
+            packingSession={packingSession}
+          />
+        ),
+      },
+      {
+        title: "Packing material",
+        content: (
+          <PackingListingSection
+            searchText={searchText}
+            setSearchText={setSearchText}
+            setIsLoading={setIsLoading}
+          />
+        ),
+      },
+    );
+  }
+
+  if (canView || canEdit) {
+    tabsConfig.push({
+      title: "Daily packing",
+      content: <PackingSummarySection />,
+    });
+  }
+
   return (
-    <Require view="package">
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-      >
-        <View style={styles.pageContainer}>
-          <PageHeader page={"Packing"} />
-          <View style={styles.wrapper}>
-            <Tabs
-              tabTitles={["Stock", "Packing material", "Daily packing"]}
-              color="green"
-              style={styles.flexGrow}
-            >
-              <View style={{ flex: 1 }}>
-                <ScrollView
-                  keyboardShouldPersistTaps="handled"
-                  contentContainerStyle={{ flexGrow: 1, paddingBottom: 56 }}
-                >
-                  <View style={styles.storageColumn}>
-                    <ProductContextSection
-                      setIsLoading={setIsLoading}
-                      form={form}
-                      setIsCurrentProduct={setIsCurrentProduct}
-                    />
-                    <RawMaterialConsumptionSection
-                      setIsLoading={setIsLoading}
-                      isCurrentProduct={isCurrentProduct}
-                      form={form}
-                      rm={rm}
-                      rmUsed={rmUsed}
-                    />
-                    <PackingSKUSection
-                      setIsLoading={setIsLoading}
-                      isCurrentProduct={isCurrentProduct}
-                      form={form}
-                      onOverPackChange={handleOverPackChange}
-                      rmUsed={rmUsed}
-                    />
-
-                    {!isCurrentProduct && (
-                      <View style={EmptyStateStyles.center}>
-                        <EmptyState stateData={emptyStateData} />
-                      </View>
-                    )}
-                  </View>
-                </ScrollView>
-                <View style={{ paddingHorizontal: 16 }}>
-                  <View>
-                    <Pressable
-                      disabled={isSubmitDisabled || isPending}
-                      onPress={() => {
-                        if (disableButton) {
-                          setShowTooltip(true);
-                          toast.error("Not enough packets in stock");
-                          return;
-                        }
-                        if (isSubmitDisabled) {
-                          setShowTooltip(true);
-                          toast.error(
-                            submitDisabledReason || "Form is invalid",
-                          );
-                          return;
-                        }
-
-                        const result = form.validateForm();
-
-                        if (!result.success) {
-                          setShowTooltip(true);
-                          const firstError = Object.values(result.errors)[0];
-                          toast.error(firstError);
-                          return;
-                        }
-
-                        onSubmit(result.data);
-                      }}
-                    >
-                      <Button
-                        variant="fill"
-                        interactive={false}
-                        disableUi={isSubmitDisabled}
-                        disabled={isPending || disableButton}
-                      >
-                        Pack product
-                      </Button>
-                    </Pressable>
-
-                    {showTooltip && submitDisabledReason && (
-                      <View style={styles.tooltip}>
-                        <B4 style={styles.tooltipText}>
-                          {submitDisabledReason}
-                        </B4>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </View>
-              <PackingListingSection
-                searchText={searchText}
-                setSearchText={setSearchText}
-                setIsLoading={setIsLoading}
-              />
-              <PackingSummarySection />
-            </Tabs>
-          </View>
-          <BottomSheet color="green" />
-          {isLoading && isPending && <OverlayLoader />}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    >
+      <View style={styles.pageContainer}>
+        <PageHeader page={"Packing"} />
+        <View style={styles.wrapper}>
+          <Tabs
+            tabTitles={tabsConfig.map((t) => t.title)}
+            color="green"
+            style={styles.flexGrow}
+          >
+            {tabsConfig.map((tab, index) => (
+              <React.Fragment key={index}>{tab.content}</React.Fragment>
+            ))}
+          </Tabs>
         </View>
-      </KeyboardAvoidingView>
-    </Require>
+        <BottomSheet color="green" />
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 

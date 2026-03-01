@@ -46,12 +46,17 @@ class PackingService {
 
       // throw new Error("Debug stop here");
 
-      if (sku.totalPacketsProduced !==
-          sku.bagsProduced * sku.packet.packetsPerBag) {
-        throw new Error("Packet/bag mismatch in packing plan");
-      }
-
       for (const sku of packagingPlan) {
+
+        if (
+          sku.totalPacketsProduced !==
+          sku.bagsProduced * sku.packet.packetsPerBag
+        ) {
+          throw new Error(
+            `Packet/bag mismatch for SKU ${sku.skuLabel}`
+          );
+        }
+
         const event = await PackingEvent.create(
           {
             product_name: product.productName,
@@ -64,7 +69,7 @@ class PackingService {
             storage: sku.storage,
             rm_consumption: rmConsumption,
           },
-          { transaction: t },
+          { transaction: t }
         );
 
         events.push(event);
@@ -73,7 +78,7 @@ class PackingService {
           product.productName,
           product.finalRating,
           sku,
-          t,
+          t
         );
       }
 

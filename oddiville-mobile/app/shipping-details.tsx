@@ -20,7 +20,7 @@ import Tag from '@/src/components/ui/Tag';
 // 4. Project hooks
 import { useAppNavigation } from '@/src/hooks/useAppNavigation';
 import { useParams } from '@/src/hooks/useParams';
-import { DispatchOrderProduct, useOrderById, useUpdateOrder } from '@/src/hooks/dispatchOrder';
+import { useOrderById, useUpdateOrder } from '@/src/hooks/dispatchOrder';
 import { useTrucks } from '@/src/hooks/truck';
 
 // 5. Project constants/utilities
@@ -244,12 +244,14 @@ const ShippingDetailsForm = () => {
                             !truckLoading && truckData && truckData?.length > 0 ? truckData?.map((truck, index: number) => {
                                 const truckCapacity = Number(truck.size);
                                const rawRemaining = truckCapacity - totalProductWeight;
+                               
                             const remaining = Math.max(0, rawRemaining);
                             const isOverWeight = rawRemaining < 0;
 
                                 return (
                                     <TouchableOpacity
                                         activeOpacity={0.8}
+                                        key={truck.id}
                                         style={[
                                             styles.container,
                                             isOverWeight && { opacity: 0.5 }

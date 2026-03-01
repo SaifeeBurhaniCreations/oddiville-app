@@ -45,6 +45,7 @@ import packingDraftReducer from "./slices/packingDraft.slice";
 import exportDataReducer from "./slices/export/exportFilters.slice";
 import exportStatusReducer from "./slices/export/export-status.slice";
 import exportProductReducer from "./slices/export/export-product.slice";
+import exportDispatchStatusReducer from "./slices/export/export-dispatch-status.slice";
 
 export const store = configureStore({
   reducer: {
@@ -92,6 +93,7 @@ export const store = configureStore({
     packingDraft: packingDraftReducer,
     exportData: exportDataReducer,
      exportStatus: exportStatusReducer,
+     exportDispatchStatus: exportDispatchStatusReducer,
      exportProduct: exportProductReducer,
   },
 });

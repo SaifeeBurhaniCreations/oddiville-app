@@ -92,11 +92,11 @@ function buildUpdatedFields({
     sample_images: allImages,
     updatedAt: new Date(),
   };
-  if (!start_time || start_time === null) fields.start_time = new Date();
+
   if (lane_id) fields.lane_id = lane_id;
-  if (currentProductionStatus !== "in-progress") {
-    fields.status = "in-progress";
-  }
+  // if (currentProductionStatus !== "in-progress") {
+  //   fields.status = "in-progress";
+  // }
   return fields;
 }
 
@@ -128,10 +128,18 @@ async function createAndSendProductionCompleteNotification(
   chambers
 ) {
   const { id, product_name, recovery, unit } = productionData;
-  const description = [
-    `${recovery}${unit}`,
-    chambers?.map((ch) => ch?.chamber_name).join(", "),
-  ]?.filter(Boolean);
+
+  const chamberNames = chambers
+  ?.map((ch) => ch?.chamber_name)
+  .filter(Boolean)
+  .join(", ");
+
+const description = [
+  `${recovery}${unit}`,
+  chamberNames?.length > 33
+    ? chamberNames.slice(0, 33) + "..."
+    : chamberNames,
+].filter(Boolean);
 
   // Send notification
   dispatchAndSendNotification({

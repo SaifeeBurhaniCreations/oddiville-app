@@ -17,7 +17,7 @@ import {
   removeThirdPartyProduct,
 } from "@/services/ThirdPartyProductService";
 
-import { useChamberstock } from "../../../../hooks/chamberStock";
+import { useChambers, useChamberstock } from "../../../../hooks/chamberStock";
 import { useOtherItems } from "../../../../hooks/thirdPartyProduct";
 
 const getProductImage = (stock, otherItem) =>
@@ -25,55 +25,11 @@ const getProductImage = (stock, otherItem) =>
   stock?.image ||
   "/assets/img/png/fallback_img.png";
 
-const getAverageRating = (chambers = []) => {
-  const ratings = chambers.map(ch => ch.rating);
+const ExpandedChambersRow = ({ data, chamberMap }) => {
 
-  const hasTextRating = ratings.some(r => isNaN(Number(r)));
-
-  if (hasTextRating) {
-    return ratings[0];
-  }
-
-  const validRatings = ratings
-    .map(r => Number(r))
-    .filter(r => Number.isInteger(r) && r >= 1 && r <= 5);
-
-  if (validRatings.length === 0) return null;
-
-  const avg = validRatings.reduce((sum, r) => sum + r, 0) / validRatings.length;
-  return Math.round(avg * 10) / 10;
-};
-
-const StarRating = ({ value }) => {
-  if (typeof value === "string" && isNaN(Number(value))) {
-    return <span className="text-secondary">{value}</span>;
-  }
-
-  const num = Number(value);
-
-  if (!isNaN(num) && num >= 1 && num <= 5) {
-    const fullStars = Math.floor(num);
-    const hasHalfStar = num % 1 >= 0.5;
-
+  if (!data || data.length === 0) {
     return (
-      <span style={{ whiteSpace: "nowrap" }}>
-        {[1, 2, 3, 4, 5].map((star) => {
-          if (star <= fullStars) return <span key={star} style={{ color: "#f4c150" }}>★</span>;
-          if (star === fullStars + 1 && hasHalfStar) return <span key={star} style={{ color: "#f4c150" }}>☆</span>;
-          return <span key={star} style={{ color: "#e0e0e0" }}>★</span>;
-        })}
-      </span>
-    );
-  }
-
-  return <span className="text-secondary">No rating</span>;
-};
-
-const ExpandedChambersRow = ({ chambers }) => {
-
-  if (!chambers || chambers.length === 0) {
-    return (
-      <div className="p-3 text-center text-secondary">No chamber data</div>
+      <div className="p-3 text-center text-secondary">No Product data</div>
     );
   }
 
@@ -85,11 +41,12 @@ const ExpandedChambersRow = ({ chambers }) => {
             <th className="text-center">Image</th>
             <th className="text-center">Product</th>
             <th className="text-center">Quantity</th>
-            <th className="text-center">Rating</th>
+            <th className="text-center">Chamber</th>
+            <th className="text-center">Dispatch Date</th>
           </tr>
         </thead>
         <tbody>
-          {chambers.map((ch) => (
+          {data.map((ch) => (
             <tr key={ch.id}>
               <td className="d-flex justify-content-center">
               <img
@@ -100,9 +57,18 @@ const ExpandedChambersRow = ({ chambers }) => {
             </td>
               <td className="text-center">{ch.product_name || ch.id.slice(0, 10)}</td>
               <td className="text-center">{ch?.chamber?.length > 0 && ch?.chamber?.reduce((acc, cur) => acc + Number(cur.quantity), 0)}</td>
-           <td className="text-center">
-              <StarRating value={getAverageRating(ch.chamber)} />
+          <td className="text-center">
+              {ch?.chamber?.length > 0
+                ? ch.chamber
+                    .map((c) => chamberMap[c.id] || c.id.slice(0, 6))
+                    .join(", ")
+                : "N/A"}
             </td>
+           <td className="text-center">
+  {ch.est_dispatch_date
+    ? formatDate(ch.est_dispatch_date)
+    : "N/A"}
+</td>
             </tr>
           ))}
         </tbody>
@@ -135,6 +101,15 @@ const { data: otherItems = [], refetch: refetchOtherItems } = useOtherItems();
     return map;
   }, [chamberStockList]);
 
+const { data: chamberList = [] } = useChambers();
+
+const chamberMap = useMemo(() => {
+  const map = {};
+  chamberList.forEach((c) => {
+    map[c.id] = c.chamber_name;
+  });
+  return map;
+}, [chamberList]);
 
 const otherItemMap = useMemo(() => {
   const map = {};
@@ -148,25 +123,6 @@ useEffect(() => {
   refetchOtherItems?.();
   refetchChamberStock?.();
 }, [location.key]);
-
-
-const resolveImage = (clientId, productIds) => {
-  
-  if (!Array.isArray(productIds) || productIds.length === 0) {
-    return "/assets/img/png/fallback_img.png";
-  }
-
-  for (const pid of productIds) {
-    const key = `${clientId}_${pid}`;
-    const item = otherItemMap[key];
-
-    if (item?.sample_image) {
-      return item.sample_image;
-    }
-  }
-
-  return "/assets/img/png/fallback_img.png";
-};
 
 useEffect(() => {
   const fetchAll = async () => {
@@ -223,7 +179,7 @@ useEffect(() => {
         <tr className="text-center">
           <th>Client</th>
           <th>Products</th>
-          <th>Created</th>
+          <th>Warehoused date</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -241,11 +197,11 @@ useEffect(() => {
 
     const key = `${item.id}_${productId}`;
     const otherItem = otherItemMap[key];
-  // console.log("otherItem", otherItem);
-
+ 
     return {
       ...stock,
       sample_image: getProductImage(stock, otherItem),
+      est_dispatch_date: otherItem?.est_dispatch_date || null,
     };
   })
   .filter(Boolean);
@@ -309,7 +265,7 @@ useEffect(() => {
           {isOpen && (
             <tr>
               <td colSpan={5} className="p-0">
-                <ExpandedChambersRow chambers={chambers} />
+                <ExpandedChambersRow data={chambers} chamberMap={chamberMap} />
               </td>
             </tr>
           )}

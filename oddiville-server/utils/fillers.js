@@ -482,7 +482,7 @@ function fillOrderReadySchema(schema, filler) {
             }
         }
 
-        // 🟦 PRODUCTS LIST — deeply merge only if field is still empty
+        // 🟦 PRODUCTS LIST 
         if (section.type === "product-list") {
             mapProductListSection(section, filler);
         }
@@ -518,14 +518,18 @@ function fillOrderShippedSchema(schema, filler) {
 
 
         if (section.type === "truck-full-details" && typeof section.data === "object") {
-            const truckData = filler['Truck Detail']
-            section.data.title = 'Truck Detail'
+            const truckData =
+                filler['Truck Details'] ||
+                filler['Truck Detail'] ||
+                {};
+            section.data.title = 'Truck Details'
             section.data.driverName = truckData?.driverName
             section.data.driverImage = truckData?.driverImage
             section.data.number = truckData?.number
             section.data.type = truckData?.type
             section.data.arrival_date = truckData?.arrival_date
             section.data.agency = truckData?.agency
+            section.data.phone = truckData?.phone
         }
 
         // 🟦 DATA (Product Details)
@@ -565,15 +569,15 @@ function fillOrderShippedSchema(schema, filler) {
             }
         }
 
-        // 🟦 PRODUCTS LIST — deeply merge only if field is still empty
+        // 🟦 PRODUCTS LIST 
                 if (
-            section.type === "product-list-accordian") {
+            section.type === "product-list") {
             mapProductListSection(section, filler);
             }
 
     }
 
-    // 🟦 BUTTONS — deeply merge only if field is still empty
+    // 🟦 BUTTONS 
     if (buttons && Array.isArray(buttons)) {
         const fillerButtons = filler["buttons"];
         if (Array.isArray(fillerButtons)) {
@@ -603,8 +607,11 @@ function fillOrderReachedSchema(schema, filler) {
 
 
         if (section.type === "truck-full-details" && typeof section.data === "object") {
-            const truckData = filler['Truck Detail']
-            section.data.title = 'Truck Detail'
+            const truckData =
+                filler['Truck Details'] ||
+                filler['Truck Detail'] ||
+                {};
+            section.data.title = 'Truck Details'
             section.data.driverName = truckData?.driverName
             section.data.driverImage = truckData?.driverImage
             section.data.number = truckData?.number
@@ -865,63 +872,62 @@ function fillScheduledDateEventSchema(schema, filler) {
 
     return updatedSchema;
 }
-
 function fillMultipleProductCardSchema(schema, filler) {
-    const updatedSchema = JSON.parse(JSON.stringify(schema));
+  const updatedSchema = JSON.parse(JSON.stringify(schema));
 
-    const { packingEvents = [], chamberStocks = [] } = filler;
+  const { packingEvents = [] } = filler;
 
-    for (const section of updatedSchema.sections) {
+  for (const section of updatedSchema.sections) {
 
-        // 🟦 HEADER
-        if (section.type === "title-with-details-cross") {
-            section.data.title = filler.title || "Choose products";
-        }
-        // 🟦 MULTIPLE PRODUCT CARD
-        if (section.type === "multiple-product-card") {
-            const productMap = new Map();
-
-            for (const event of packingEvents) {
-                const key = `${event.product_name}::${event.sku_id}`;
-
-                if (!productMap.has(key)) {
-                    productMap.set(key, {
-                        id: key,
-                        product_name: event.product_name,
-                        rating: 5,
-                        image: null,
-                        description: "",
-                        isChecked: false,
-                        packages: [],
-                        chambers: [],
-                    });
-                }
-
-                const product = productMap.get(key);
-
-                product.packages.push({
-                    rawSize: `${event.packet.size}${event.packet.unit}`,
-                    size: Number(event.packet.size),
-                    unit: event.packet.unit,
-                    quantity: String(event.bags_produced),
-                });
-
-                event.storage?.forEach(s => {
-                    product.chambers.push({
-                        id: s.chamberId,
-                        quantity: String(s.bagsStored ?? 0),
-                        rating: "5",
-                    });
-                });
-            }
-
-            section.data = Array.from(productMap.values());
-        }
+    if (section.type === "title-with-details-cross") {
+      section.data.title = filler.title || "Choose products";
     }
 
-    return updatedSchema;
-}
+    if (section.type === "multiple-product-card") {
 
+      const productMap = new Map();
+
+      for (const event of packingEvents) {
+
+        const key = event.product_name;   // ✅ FIXED
+
+        if (!productMap.has(key)) {
+          productMap.set(key, {
+            id: key,
+            product_name: event.product_name,
+            rating: event.rating ?? 5,
+            image: null,
+            description: "",
+            isChecked: false,
+            packages: [],
+            chambers: [],
+          });
+        }
+
+        const product = productMap.get(key);
+
+        product.packages.push({
+          rawSize: `${event.packet.size}${event.packet.unit}`,
+          size: Number(event.packet.size),
+          unit: event.packet.unit,
+          quantity: String(event.bags_produced),
+        });
+
+        event.storage?.forEach((s) => {
+          product.chambers.push({
+            id: s.chamberId,
+            quantity: String(s.bagsStored ?? 0),
+            rating: String(event.rating ?? 5),
+          });
+        });
+      }
+
+      section.data = Array.from(productMap.values());
+    }
+  }
+
+  return updatedSchema;
+}
 
 function fillExportSelectProductSchema(schema, filler) {
     filler = filler || {};

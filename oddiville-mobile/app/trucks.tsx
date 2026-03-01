@@ -10,7 +10,6 @@ import Button from '@/src/components/ui/Buttons/Button';
 import SearchWithFilter from '@/src/components/ui/Inputs/SearchWithFilter';
 import BackButton from '@/src/components/ui/Buttons/BackButton';
 import TruckFlatList from '@/src/components/ui/TruckComps/TruckFlatList';
-import Loader from '@/src/components/ui/Loader';
 
 // 4. Project hooks
 import { useAppNavigation } from '@/src/hooks/useAppNavigation';
@@ -32,6 +31,8 @@ import { TRUCKS_BACK_ROUTES, resolveBackRoute, resolveDefaultRoute } from '@/src
 import { useAppCapabilities } from '@/src/hooks/useAppCapabilities';
 import { useToast } from '@/src/context/ToastContext';
 import Require from '@/src/components/authentication/Require';
+import { useOverlayLoader } from '@/src/context/OverlayLoaderContext';
+import { useEffect, useMemo } from 'react';
 
 const formatTruckData = (truckData: TruckDetailsProps[]): TruckProps[] => {
     return truckData.map((truck) => ({
@@ -53,17 +54,23 @@ const formatTruckData = (truckData: TruckDetailsProps[]): TruckProps[] => {
 const TrucksScreen = () => {
   const caps = useAppCapabilities();
   const toast = useToast();
-
+    const loader = useOverlayLoader();
     const { goTo } = useAppNavigation()
     const { data: trucksData, isLoading: trucksLoading } = useTrucks();
 
-    const formattedTrucks = trucksData ? formatTruckData(trucksData) : [];
-        
+const formattedTrucks = useMemo(() => {
+  return trucksData ? formatTruckData(trucksData) : [];
+}, [trucksData]);
+
     const backRoute = resolveBackRoute(
     caps.access,
     TRUCKS_BACK_ROUTES,
     resolveDefaultRoute(caps.access)
     );
+
+    useEffect(() => {
+        loader.bind(trucksLoading)
+    }, [trucksLoading]);
 
     return (
          <Require view="trucks">
@@ -77,7 +84,7 @@ const TrucksScreen = () => {
                 <Button
                     variant='outline'
                     onPress={() => {
-                        !caps.trucks.edit ? 
+                        caps.trucks.edit ? 
                         goTo('truck-create')
                         : 
                         toast.error('Permission Denied')
@@ -98,13 +105,6 @@ const TrucksScreen = () => {
                     />
                 </View>
             </View>
-            {trucksLoading && (
-                <View style={styles.overlay}>
-                    <View style={styles.loaderContainer}>
-                        <Loader />
-                    </View>
-                </View>
-            )}
         </View>
         </Require>
     )
@@ -129,11 +129,6 @@ const styles = StyleSheet.create({
     },
     flexGrow: {
         flex: 1,
-    },
-    overlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: getColor('green', 500, 0.05),
-        zIndex: 2,
     },
     content: {
         flexDirection: "column",

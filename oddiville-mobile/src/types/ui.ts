@@ -21,6 +21,7 @@ import { TextInput } from "react-native";
 import { DispatchOrderData } from "../hooks/dispatchOrder";
 import { PackageItemLocal as DispatchPackageItem } from "@/src/hooks/useChamberStock"
 import { SearchRegistryKey } from "../utils/searchRegistyUtil";
+import { ICON_MAP } from "../lookups/icons";
 export interface TagProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   color?: "red" | "green" | "blue" | "yellow";
@@ -152,6 +153,7 @@ const DetailsPropsSchema = z.object({
       "male",
       "female",
       "calendar",
+      "calendarCheck",
     ])
     .optional(),
 });
@@ -165,54 +167,14 @@ export const BottomSheetSchemaKeyEnum = z.enum(
 const SupervisorCardDetailsSchema = z.object({
   name: z.string().optional(),
   value: z.union([z.string(), z.number()]),
-  iconKey: z
-    .enum([
-      "cash",
-      "database",
-      "box",
-      "phone",
-      "warehouse",
-      "store",
-      "user",
-      "truck",
-      "male",
-      "female",
-      "calendar",
-    ])
-    .optional(),
+  iconKey: z.enum(
+    Object.keys(ICON_MAP) as [keyof typeof ICON_MAP, ... (keyof typeof ICON_MAP)[]]
+  ).optional(),
 });
 
 export type SupervisorCardDetailsProps = z.infer<
   typeof SupervisorCardDetailsSchema
 >;
-
-export const ActivityPropsSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  dateDifference: z.string().optional(),
-  description: z.string().optional(),
-  read: z.boolean().optional(),
-  extraData: z.record(z.any()).optional(),
-  type: z.string().optional(),
-  sideDetails: DetailsPropsSchema.optional(),
-  dateDescription: z.string().optional(),
-  bottomDetails: z.array(DetailsPropsSchema).optional(),
-  badgeText: z.string().optional(),
-  createdAt: z.date().optional(),
-  extra_details: z.array(z.string()),
-  buttons: z.array(ActionButtonConfigSchema).optional(),
-  href: RootStackParamListSchema.optional(),
-  identifier: BottomSheetSchemaKeyEnum.nullable(),
-  dispatchDetails: z.array(SupervisorCardDetailsSchema).optional(),
-  params: z.any().optional(),
-
-  //   not confirm
-  data: z.any().optional(),
-});
-
-// export type ActivityProps = z.infer<typeof ActivityPropsSchema>;
-
-// export const activityPropsTypeMap: { [x: string]: PrimitiveType | null | undefined } = schemaToTypeMap(ActivityPropsSchema);
 
 export interface ActivityProps {
   id: string;
@@ -236,8 +198,9 @@ export interface ActivityProps {
   data?: any;
   metaData?: any;
   params?: any;
-  category?: "informative" | "actionable" | "today";
+  category?: "informative" | "actionable" | "today" | "in-progress" | "completed" | "pending";
   color?: "red" | "yellow" | "green" | null;
+  headerColor?: "green" | "red";
 }
 
 export type SearchActivityAction =
@@ -302,6 +265,9 @@ export interface OrderProps {
   details?: SupervisorCardDetailsProps[];
   buttons?: ButtonType[];
   address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
   rating?: number;
   href?: keyof RootStackParamList;
   helperDetails?: SupervisorCardDetailsProps[];
@@ -835,6 +801,7 @@ export interface OtherClientHistory {
   product_id: string;
   chamber_id: string;
   deduct_quantity: number;
+  add_quantity: number;
   remaining_quantity: number;
   createdAt: string;
   updatedAt: string;

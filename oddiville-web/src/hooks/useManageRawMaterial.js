@@ -7,7 +7,6 @@ import { useOtherProductById, useOtherItems } from "@/hooks/thirdPartyProduct";
 import { useFormValidator } from "@/lib/custom_library/formValidator/useFormValidator";
 import { create, modify } from "@/services/ThirdPartyProductService";
 import { fetchChamber } from "@/services/DryChamberService";
-import { handleModifyData, handlePostData } from "@/redux/WorkLocationSlice";
 import {
   initialClientValues,
   initialNewProductState,
@@ -211,9 +210,6 @@ const useManageRawMaterial = () => {
     setIsLoading(true);
     
     try {
-      /* =====================
-      1️⃣ UPDATE DATA ONLY
-      ===================== */
       const submitValues = validationResult.data;
       const dataPayload = new FormData();
       
@@ -221,22 +217,13 @@ const useManageRawMaterial = () => {
       dataPayload.append("company", submitValues.company);
       dataPayload.append("address", submitValues.address);
       dataPayload.append("phone", submitValues.phone);
-      
-      // const finalProducts = productList
-      // .filter(p => !p._isDeleted)
-      // .map(({ _rowId, _isNew, _isDeleted, _serverId, sample_image_file, ...rest }) => ({
-      //   ...rest,
-      //   id: _serverId ?? undefined,
-      //   ...(sample_image_file ? { sample_image: undefined } : {}),
-      // }));
-      
+   
       const deletedIds = productList
       .filter(p => p._isDeleted && p._serverId)
       .map(p => p._serverId);
       
       dataPayload.append("deleted_products", JSON.stringify(deletedIds));
       
-      // dataPayload.append("products", JSON.stringify(finalProducts));
       
       let visibleIndex = 0;
 

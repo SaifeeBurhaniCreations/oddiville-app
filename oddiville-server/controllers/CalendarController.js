@@ -1,10 +1,11 @@
 const router = require("express").Router();
-const { parse, format } = require("date-fns");
+const { format } = require("date-fns");
 const { Calendar: calendarClient } = require("../models");
 const {
   dispatchAndSendNotification,
 } = require("../utils/dispatchAndSendNotification");
 const reminderQueue = require("../queues/reminder.queue");
+
 router.post("/", async (req, res) => {
   const io = req.app.get("io");
 
@@ -35,11 +36,19 @@ router.post("/", async (req, res) => {
     id: event.id,
   });
 
-  const eventDateTime = parse(
-    `${event.scheduled_date} ${event.start_time}`,
-    "yyyy-MM-dd hh:mm a",
-    new Date()
-  );
+const scheduledDate = new Date(event.scheduled_date);
+
+const year = scheduledDate.getFullYear();
+const month = String(scheduledDate.getMonth() + 1).padStart(2, "0");
+const day = String(scheduledDate.getDate()).padStart(2, "0");
+
+const datePart = `${year}-${month}-${day}`;
+
+const eventDateTime = new Date(`${datePart} ${event.start_time}`);
+
+if (isNaN(eventDateTime.getTime())) {
+  console.log("❌ Invalid Date Construction");
+}
 
   const now = Date.now();
 
@@ -50,21 +59,21 @@ router.post("/", async (req, res) => {
 console.log("delay24h:", delay24h);
 console.log("delay1h:", delay1h);
 
-  if (delay24h > 0) {
-    await reminderQueue.add(
-      "send-reminder",
-      { eventId: event.id, hoursBefore: 24 },
-      { jobId: `reminder-24h:${event.id}`, delay: delay24h }
-    );
-  }
+ if (delay24h > 0) {
+  await reminderQueue.add(
+    "send-reminder",
+    { eventId: event.id, hoursBefore: 24 },
+    { jobId: `reminder-24h-${event.id}`, delay: delay24h }
+  );
+}
 
-  if (delay1h > 0) {
-    await reminderQueue.add(
-      "send-reminder",
-      { eventId: event.id, hoursBefore: 1 },
-      { jobId: `reminder-1h:${event.id}`, delay: delay1h }
-    );
-  }
+if (delay1h > 0) {
+  await reminderQueue.add(
+    "send-reminder",
+    { eventId: event.id, hoursBefore: 1 },
+    { jobId: `reminder-1h-${event.id}`, delay: delay1h }
+  );
+}
 
   io.emit("calendar:created", event);
 

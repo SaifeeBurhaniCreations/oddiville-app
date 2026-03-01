@@ -276,27 +276,26 @@ export function useAddPackageType() {
       };
     }) => {
       const response = await addPackageType({ id, data });
-      return response.data as Package;
+      return response.data.pkg as Package;
     },
 
-    // onSuccess: (updatedPackage) => {
-    //   if (!updatedPackage?.id) return;
+    
+    onSuccess: (updatedPackage) => {
+      if (!updatedPackage?.id) return;
 
-    //   socket.emit("package-id:send", updatedPackage);
+      queryClient.setQueryData(
+        ["packages"],
+        (old: Package[] = []) =>
+          old.map((pkg) =>
+            pkg.id === updatedPackage.id ? updatedPackage : pkg
+          )
+      );
 
-    //   queryClient.setQueryData(
-    //     ["packages"],
-    //     (old: Package[] = []) =>
-    //       old.map((pkg) =>
-    //         pkg.id === updatedPackage.id ? updatedPackage : pkg
-    //       )
-    //   );
-
-    //   queryClient.setQueryData(
-    //     ["package", updatedPackage.id],
-    //     updatedPackage
-    //   );
-    // },
+      queryClient.setQueryData(
+        ["package", updatedPackage.id],
+        updatedPackage
+      );
+    },
   });
 }
 
@@ -315,27 +314,27 @@ export function useIncreasePackageQuantity() {
         quantity: string;
       };
     }) => {
+
       const response = await updatePackageQuantity({ id, data });
-      return response.data as Package;
+      return response.data.pkg as Package;
     },
 
-    // onSuccess: (updatedPackage) => {
-    //   if (!updatedPackage?.id) return;
+    onSuccess: (updatedPackage) => {
+      if (!updatedPackage?.id) return;
 
-    //   socket.emit("package-id:send", updatedPackage);
+      socket.emit("package-id:send", updatedPackage);
 
-    //   queryClient.setQueryData(
-    //     ["packages"],
-    //     (old: Package[] = []) =>
-    //       old.map((pkg) =>
-    //         pkg.id === updatedPackage.id ? updatedPackage : pkg
-    //       )
-    //   );
+      queryClient.setQueryData(
+        ["packages"],
+        (old: Package[] = []) =>
+          old.map((pkg) =>
+            pkg.id === updatedPackage.id ? updatedPackage : pkg
+          )
+      );
 
-    //   queryClient.setQueryData(
-    //     ["package", updatedPackage.id],
-    //     updatedPackage
-    //   );
-    // },
+   queryClient.invalidateQueries({
+  queryKey: ["package", updatedPackage.id],
+});
+    },
   });
 }

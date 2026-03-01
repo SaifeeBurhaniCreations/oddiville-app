@@ -36,7 +36,6 @@ type StockChamber = {
   id: string;
   name: string;
   quantity: number;
-  rating: number;
 };
 
 type ChambersByRM = Map<string, StockChamber[]>;
@@ -69,7 +68,7 @@ function useChambersByRM(
     const byRM = new Map<string, StockChamber[]>();
 
     rmUsed.forEach((stock) => {
-      const key = stock.product_name;
+      const key = stock.id;
 
 if (!byRM.has(key)) {
   byRM.set(key, []);
@@ -82,7 +81,6 @@ stock.chamber.forEach((ch) => {
     id: String(ch.id),
     name: chamberNameMap.get(String(ch.id)) ?? "Unknown Chamber",
     quantity: Number(ch.quantity) || 0,
-    rating: Number(stock.rating) || 5,
   });
 });
     });
@@ -219,7 +217,7 @@ const RawMaterialConsumptionSection = ({
         rmId: rm.id,
         chambers: rm.chamber.map((ch) => ({
           chamberId: String(ch.id),
-          rating: Number(ch.rating) || 5,
+          rating: Number(rm.rating) || 5,
         })),
       })),
     [rmUsed],
@@ -269,13 +267,16 @@ const RawMaterialConsumptionSection = ({
             );
           }
 
-            if ((ratingByRM[rm.id]?.rating ?? rm.rating ?? 5) !==         selectedRating) {
-                  return null;
-                }
+          const rmChambers = chambersByRM.get(rm.id) || [];
 
-              const rmChambers = chambersByRM.get(rm.id) || [];
-              const visibleChambers = filterVisibleChambers(rmChambers);
+        const filterRating = ratingByRM[rm.id]?.rating;
+        const currentRating = rm.rating ?? 5;
 
+        let visibleChambers = filterVisibleChambers(rmChambers);
+
+        if (filterRating && currentRating !== filterRating) {
+          visibleChambers = [];
+        }
 
           const isChambersEmpty = visibleChambers.length === 0;
 

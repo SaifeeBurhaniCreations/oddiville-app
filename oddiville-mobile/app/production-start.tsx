@@ -466,10 +466,6 @@ const ProductionStartScreen = () => {
                     </View>
                 </View>
             </ScrollView>
-   
-
-            {/* Loading overlay */}
-            {isLoading && <OverlayLoader />}
         </View>
     );
 };
@@ -511,16 +507,6 @@ const styles = StyleSheet.create({
     },
     p16: {
         padding: 16,
-    },
-    overlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-        zIndex: 999,
-    },
-    loaderContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     errorContainer: {
         flex: 1,

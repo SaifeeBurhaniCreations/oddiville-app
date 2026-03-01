@@ -10,6 +10,7 @@ export type sourceEnum =
   | "product-chamber"
   | "export-chamber"
   | "export-product"
+  | "export-dispatch-status"
   | "export-status";
 interface RawMaterialState {
   selectedRawMaterials: RawMaterialProps[];

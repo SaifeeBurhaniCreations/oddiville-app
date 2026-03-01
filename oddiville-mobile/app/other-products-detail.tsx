@@ -6,11 +6,7 @@ import { useParams } from "@/src/hooks/useParams";
 import { useEffect, useMemo, useState } from "react";
 import DatabaseIcon from "@/src/components/icons/page/DatabaseIcon";
 import { formatDate } from "date-fns";
-import {
-  ChamberData,
-  OrderProps,
-  OtherClientHistory,
-} from "@/src/types";
+import { ChamberData, OrderProps, OtherClientHistory } from "@/src/types";
 import SupervisorOrderDetailsCard from "@/src/components/ui/Supervisor/SupervisorOrderDetailsCard";
 import Tabs from "@/src/components/ui/Tabs";
 import { useFormValidator } from "@/src/sbc/form";
@@ -21,10 +17,8 @@ import {
   useOthersProductsById,
   useUpdateOtherProduct,
 } from "@/src/hooks/othersProducts";
-import { formatWeight } from "@/src/utils/common";
 import ItemsRepeater from "@/src/components/ui/ItemsRepeater";
 import { useChamberById } from "@/src/hooks/useChambers";
-import Loader from "@/src/components/ui/Loader";
 import PriceInput from "@/src/components/ui/Inputs/PriceInput";
 import { useToast } from "@/src/context/ToastContext";
 import OverlayLoader from "@/src/components/ui/OverlayLoader";
@@ -59,11 +53,7 @@ type StockChamber = {
 };
 
 const sumRecordValues = (obj: Record<string, number> | undefined) =>
-  Object.values(obj || {}).reduce(
-    (sum: number, val: number) => sum + val,
-    0
-  );
-
+  Object.values(obj || {}).reduce((sum: number, val: number) => sum + val, 0);
 
 const OthersProductScreen = () => {
   const { data } = useParams("other-products-detail", "data");
@@ -88,18 +78,17 @@ const OthersProductScreen = () => {
   const { data: otherProductData } = useOthersProductsById(otherProduct.id);
 
   const { data: stockData } = useOtherProductStockById(
-    otherProductData?.product_id
+    otherProductData?.product_id,
   );
 
-  const { data: otherProductHistoryRaw = [] } = useOtherProductHistoryById(
-    otherProductData?.id
-  );
-
-  const otherProductHistory = (otherProductHistoryRaw ??
-    []) as OtherClientHistory[];
+  const {
+    data: otherProductHistoryRaw = [],
+    refetch: refetchOtherProductHistory,
+    isLoading: refreshing,
+  } = useOtherProductHistoryById(otherProductData?.id);
 
   const productIds: string[] | undefined = otherProduct?.chambers?.map(
-    (product) => product?.id
+    (product) => product?.id,
   );
 
   const queryIds = productIds ?? null;
@@ -108,19 +97,53 @@ const OthersProductScreen = () => {
 
   const chamberMap: Record<string, ChamberData> = useMemo(() => {
     if (!chamberData || !Array.isArray(chamberData)) return {};
-    return chamberData.reduce((acc, chamber) => {
-      acc[chamber.id] = chamber;
-      return acc;
-    }, {} as Record<string, ChamberData>);
+    return chamberData.reduce(
+      (acc, chamber) => {
+        acc[chamber.id] = chamber;
+        return acc;
+      },
+      {} as Record<string, ChamberData>,
+    );
   }, [chamberData]);
+
+  const otherProductHistory = (otherProductHistoryRaw ??
+    []) as OtherClientHistory[];
+
+  const otherProductActivities = useMemo(() => {
+    if (!otherProductHistory?.length) return [];
+
+    return otherProductHistory
+      .map((entry) => {
+        const addQty = Number(entry.add_quantity || 0);
+        const subQty = Number(entry.deduct_quantity || 0);
+
+        const isAdd = addQty > 0;
+
+        const quantity = isAdd ? addQty : subQty;
+
+        const chamberName =
+          chamberMap?.[entry.chamber_id]?.chamber_name ?? "Unknown Chamber";
+
+        return {
+          id: entry.id,
+          itemId: entry.product_id,
+          title: `${isAdd ? "+" : "-"} ${quantity} kg`,
+          type: chamberName,
+          createdAt: entry.createdAt ? new Date(entry.createdAt) : new Date(),
+          extra_details: [`Remaining: ${entry.remaining_quantity} kg`],
+          identifier: null,
+          headerColor: isAdd ? ("green" as const) : ("red" as const),
+        };
+      })
+      .reverse();
+  }, [otherProductHistory, chamberMap]);
 
   const totalQuantity = useMemo(() => {
     if (!stockData?.chamber) return 0;
 
     return stockData.chamber.reduce(
-      (sum: number, ch: StockChamber) =>
-        sum + Number(ch.quantity || 0),
-      0
+      (sum: number, ch: StockChamber) => sum + Number(ch.quantity || 0),
+      0,
     );
   }, [stockData?.chamber]);
 
@@ -131,7 +154,7 @@ const OthersProductScreen = () => {
       description: [
         {
           name: "Quantity",
-          value: `${formatWeight(totalQuantity)}`,
+          value: `${totalQuantity} kg`,
           iconKey: "database",
         },
       ],
@@ -146,7 +169,11 @@ const OthersProductScreen = () => {
         },
       ],
     };
-  }, [otherProductData?.product_name, otherProductData?.company, totalQuantity]);
+  }, [
+    otherProductData?.product_name,
+    otherProductData?.company,
+    totalQuantity,
+  ]);
 
   const { values, setField, errors, resetForm, validateForm, isValid } =
     useFormValidator<OthersProductForm>(
@@ -165,7 +192,7 @@ const OthersProductScreen = () => {
       {
         validateOnChange: true,
         debounce: 300,
-      }
+      },
     );
 
   const totalAdd = sumRecordValues(values.add_quantity);
@@ -218,30 +245,38 @@ const OthersProductScreen = () => {
         },
       },
       {
-        onSuccess: (res) => {
-          setIsLoading(false);
-          toast.success("Quantity updated successfully");
+        onSuccess: (res, { othersItemId, id }) => {
+          const { stock, item } = res;
 
+          //Update STOCK query correctly
+          queryClient.invalidateQueries({
+            queryKey: ["other-product-stock", item.product_id],
+          });
+
+          //Update product details
           queryClient.setQueryData(
-            ["other-product-stock-by-id", otherProductData.product_id],
-            res.stock
+            ["others-product-by-id", othersItemId],
+            (old: any) => {
+              if (!old) return old;
+              return {
+                ...old,
+                chambers: stock.chamber,
+                stored_quantity: item.stored_quantity,
+              };
+            },
           );
-
-          resetForm();
         },
         onError: (error) => {
           setIsLoading(false);
           toast.error("Failed to update quantity");
           console.error("Update error", error);
         },
-      }
+      },
     );
   };
 
   if (!otherProductData) {
-    return (
-      <OverlayLoader />
-    );
+    return <OverlayLoader />;
   }
 
   return (
@@ -280,9 +315,10 @@ const OthersProductScreen = () => {
                     <ItemsRepeater
                       key={chamber.id}
                       title={
-                        chamberMap[chamber.id]?.chamber_name ?? "Unknown Chamber"
+                        chamberMap[chamber.id]?.chamber_name ??
+                        "Unknown Chamber"
                       }
-                      description={chamber.quantity}
+                      description={chamber.quantity + " kg"}
                     >
                       <PriceInput
                         value={String(values.add_quantity?.[chamber.id] ?? "")}
@@ -328,39 +364,39 @@ const OthersProductScreen = () => {
                     styles.mt16,
                   ]}
                 >
-                     {/* <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ flexGrow: 1 }}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  tintColor={getColor("green", 500)}
-                />
-              }
-            >
-              {isLoading ? (
-                <OverlayLoader />
-              ) : contractorsHistory?.length > 0 ? (
-                <ActivitesFlatList
-                  style={{ paddingHorizontal: 16 }}
-                  onPress={handleContractorPress}
-                  isVirtualised={false}
-                  activities={contractorsHistory}
-                />
-              ) : (
-                <View style={EmptyStateStyles.center}>
-                  <EmptyState
-                    stateData={{
-                      title: "No contractor batches selected",
-                      description: "No Contractors yet.",
-                    }}
-                    image={NoContractorBatchImg}
-                    color="green"
-                  />
-                </View>
-              )}
-            </ScrollView> */}
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ flexGrow: 1 }}
+                    refreshControl={
+                      <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={refetchOtherProductHistory}
+                        tintColor={getColor("green", 500)}
+                      />
+                    }
+                  >
+                    {isLoading ? (
+                      <OverlayLoader />
+                    ) : otherProductActivities?.length > 0 ? (
+                      <ActivitesFlatList
+                        style={{ paddingHorizontal: 16 }}
+                        onPress={() => {}}
+                        isVirtualised={false}
+                        activities={otherProductActivities}
+                      />
+                    ) : (
+                      <View style={EmptyStateStyles.center}>
+                        <EmptyState
+                          stateData={{
+                            title: "No dispatch history yet",
+                            description: "No transactions recorded.",
+                          }}
+                          image={NoContractorBatchImg}
+                          color="green"
+                        />
+                      </View>
+                    )}
+                  </ScrollView>
                 </View>
               </Tabs>
             </View>

@@ -4,7 +4,6 @@ const {
   RawMaterialOrder: rawMaterialOrderClient,
   Chambers: chambersClient,
 } = require("../models");
-const safeRedis = require("../utils/safeRedis");
 
 const {
   parseExistingImages,
@@ -29,7 +28,6 @@ const upload = require("../middlewares/upload");
 router.post("/", upload.single("sample_image"), async (req, res) => {
   try {
     const io = req.app.get("io");
-    const redis = req.app.get("redis");
 
     const {
       product_name,
@@ -64,9 +62,9 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
     if (!raw_material_id) {
       return res.status(400).json({ error: "Raw material ID is required." });
     }
-    if (!start_time) {
-      return res.status(400).json({ error: "Start time is required." });
-    }
+    // if (!start_time) {
+    //   return res.status(400).json({ error: "Start time is required." });
+    // }
 
     if (
       !batch_code ||
@@ -137,12 +135,6 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
       supervisor,
     });
 
-    await safeRedis(redis, (r) =>
-      r.set(`production:save:${newProduction.id}`, "1")
-    );
-
-    const isStarted = true;
-
     const productionDetails = {
       title: "START PRODUCTION",
       timestamp: new Date().toISOString(),
@@ -156,11 +148,10 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
       notes: newProduction.notes,
       sample_image: newProduction.sample_image,
       date: new Date().toDateString(),
-      isStarted,
     };
 
     io.emit("production:status-changed", productionDetails);
-    return res.status(201).json({ ...newProduction, isStarted });
+    return res.status(201).json(newProduction);
   } catch (error) {
     console.error(
       "Error during adding Material to production:",
@@ -190,7 +181,6 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
-  const redis = req.app.get("redis");
 
   try {
     const production = await productionClient.findOne({ where: { id } });
@@ -198,13 +188,8 @@ router.get("/:id", async (req, res) => {
     if (!production) {
       return res.status(404).json({ error: "Production not found" });
     }
-    const raw = await safeRedis(redis, (r) => r.get(`production:save:${id}`));
-
-    const isStarted = raw === "1";
-
     return res.status(200).json({
       ...production.dataValues,
-      isStarted,
     });
   } catch (error) {
     console.error("Error during fetching Production:", error?.message || error);
@@ -239,7 +224,6 @@ router.patch("/:id", upload.array("sample_images"), async (req, res) => {
   const { id } = req.params;
   const { lane, existing_sample_images, ...otherFields } = req.body;
   const files = req.files;
-  const redis = req.app.get("redis");
 
   let newImages = [];
 
@@ -249,7 +233,6 @@ router.patch("/:id", upload.array("sample_images"), async (req, res) => {
     const allImages = [...existingImages, ...newImages];
 
     const currentProduction = await fetchProductionOrFail(id);
-const oldLaneId = currentProduction.lane_id;
     const laneRecord = lane ? await validateLaneAssignment(lane, id) : null;
 
     const updatedFields = buildUpdatedFields({
@@ -260,26 +243,22 @@ const oldLaneId = currentProduction.lane_id;
       currentProductionStatus: currentProduction.status,
     });
 
-    if (updatedFields?.start_time != null) {
-      await createAndSendProductionStartNotification(
-        currentProduction,
-        laneRecord?.name
-      );
-    }
+    // if (updatedFields?.start_time != null) {
+    //   await createAndSendProductionStartNotification(
+    //     currentProduction,
+    //     laneRecord?.name
+    //   );
+    // }
 
     const updatedProduction = await updateProductionRecord(id, updatedFields);
     if (!updatedProduction) {
       return res.status(404).json({ error: "Production not found" });
     }
 
-    await safeRedis(redis, (r) => r.set(`production:save:${id}`, "1"));
-
     return res.status(200).json({
       ...updatedProduction.dataValues,
-      isStarted: true,
     });
   } catch (error) {
-    // ✅ SAFE CLEANUP
     if (newImages.length) {
       for (const img of newImages) {
         if (img?.key) {
@@ -301,10 +280,8 @@ const oldLaneId = currentProduction.lane_id;
 
 router.patch("/start/:id", upload.single("sample_image"), async (req, res) => {
   const { id } = req.params;
-  const redis = req.app.get("redis");
 
   const {
-    status,
     start_time,
     rating,
     sample_quantity,
@@ -318,61 +295,47 @@ router.patch("/start/:id", upload.single("sample_image"), async (req, res) => {
       return res.status(404).json({ error: "Production not found" });
     }
 
-    if (!status || !["in-queue", "in-progress"].includes(status)) {
+    if (production.status === "completed") {
       return res.status(400).json({
-        error: "Invalid status. Allowed: in-queue, in-progress",
+        error: "Completed production cannot be started again.",
       });
     }
 
-    if (production.status === "in-progress" && status === "in-progress") {
-      return res.status(400).json({ error: "Production already started" });
+    if (production.status !== "in-queue") {
+      return res.status(400).json({
+        error: `Cannot start production from status '${production.status}'.`,
+      });
     }
 
     let laneRecord = null;
-if (status === "in-progress" && production.lane_id) {
-  laneRecord = await validateLaneAssignment(production.lane_id, id);
-}
+    if (production.lane_id) {
+      laneRecord = await validateLaneAssignment(production.lane_id, id);
+    }
 
     const updatedFields = {
-      status,
+      status: "in-progress", 
       rating: rating ? Number(rating) : production.rating,
       supervisor: supervisor ?? production.supervisor,
       updatedAt: new Date(),
       ...otherFields,
+      start_time: start_time ? new Date(start_time) : new Date(),
     };
-
-    if (status === "in-progress") {
-      updatedFields.start_time = start_time ? new Date(start_time) : new Date();
-
-      try {
-        await createAndSendProductionStartNotification(
-          production,
-          laneRecord?.name
-        );
-      } catch (e) {
-        console.warn("Start notification failed:", e.message);
-      }
-    }
 
     const oldImageKey = production.sample_image?.key || null;
     let newSampleImage = null;
 
     if (req.file) {
-      try {
-        const uploaded = await uploadToS3({
-          file: req.file,
-          folder: "production",
-        });
-        if (!uploaded?.url || !uploaded?.key) {
-          return res
-            .status(500)
-            .json({ error: "Failed to upload sample image" });
-        }
-        newSampleImage = uploaded;
-        updatedFields.sample_image = newSampleImage;
-      } catch (e) {
-        return res.status(500).json({ error: "Sample image upload failed" });
+      const uploaded = await uploadToS3({
+        file: req.file,
+        folder: "production",
+      });
+
+      if (!uploaded?.url || !uploaded?.key) {
+        return res.status(500).json({ error: "Failed to upload sample image" });
       }
+
+      newSampleImage = uploaded;
+      updatedFields.sample_image = newSampleImage;
     }
 
     if (sample_quantity && Number(sample_quantity) > 0) {
@@ -380,46 +343,38 @@ if (status === "in-progress" && production.lane_id) {
       updatedFields.quantity = Math.max(newQty, 0);
     }
 
-    if (production.raw_material_order_id) {
-      try {
-        await rawMaterialOrderClient.update(
-          {
-            sample_quantity: Number(sample_quantity || 0),
-            sample_image: newSampleImage ?? production.sample_image,
-            rating: rating !== undefined ? Number(rating) : production.rating,
-          },
-          { where: { id: production.raw_material_order_id } }
-        );
-      } catch (e) {
-        console.warn("RawMaterialOrder update failed:", e.message);
-      }
-    }
-
     const [updatedCount, updatedRows] = await productionClient.update(
       updatedFields,
-      {
-        where: { id },
-        returning: true,
-      }
+      { where: { id }, returning: true }
     );
 
     if (!updatedCount) {
       return res.status(404).json({ error: "Failed to update production" });
     }
 
-    if (newSampleImage && oldImageKey) {
-      try {
-        await deleteFromS3(oldImageKey);
-      } catch (e) {
-        console.warn("Failed to cleanup old image:", e.message);
-      }
+    const updatedProduction = updatedRows[0];
+
+    if (production.raw_material_order_id) {
+      await rawMaterialOrderClient.update(
+        {
+          sample_quantity: Number(sample_quantity || 0),
+          sample_image: newSampleImage ?? production.sample_image,
+          rating: rating !== undefined ? Number(rating) : production.rating,
+        },
+        { where: { id: production.raw_material_order_id } }
+      );
     }
 
-    await safeRedis(redis, r =>
-      r.set(`production:save:${id}`, "1")
+    if (newSampleImage && oldImageKey) {
+      await deleteFromS3(oldImageKey);
+    }
+
+    await createAndSendProductionStartNotification(
+      updatedProduction,
+      laneRecord?.name
     );
 
-    return res.status(200).json(updatedRows[0].dataValues);
+    return res.status(200).json(updatedProduction.dataValues);
   } catch (err) {
     const { normalizeError } = require("../utils/normalizeError");
     const { status, message } = normalizeError(err);
@@ -430,7 +385,6 @@ if (status === "in-progress" && production.lane_id) {
 router.patch("/complete/:id", async (req, res) => {
   const productionId = req.params.id;
   const io = req.app.get("io");
-  const redis = req.app.get("redis");
 
   const {
     end_time,
@@ -562,12 +516,6 @@ if (production.lane_id) {
       io.emit("production:completed", productionCompleteDetails);
     } catch (emitErr) {
       console.warn("Socket emit failed:", emitErr);
-    }
-
-    try {
-      await safeRedis(redis, (r) => r.del(`production:save:${productionId}`));
-    } catch (rerr) {
-      console.warn("Redis cleanup failed:", rerr);
     }
 
     if (typeof createAndSendProductionCompleteNotification === "function") {
