@@ -153,6 +153,7 @@ const ProductionCompleteScreen = () => {
                 "MMM d, yyyy",
               )
             : "--",
+      iconKey: "calendar"
         },
         {
           name: "Arrival",
@@ -162,6 +163,7 @@ const ProductionCompleteScreen = () => {
                 "MMM d, yyyy",
               )
             : "--",
+      iconKey: "calendar"
         },
       ],
     };
@@ -455,12 +457,8 @@ const canComplete =
             variant="outline"
           >
             {updateProduction.isPending
-              ? isStarted
-                ? "Saving..."
-                : "Starting..."
-              : isStarted
-                ? "Save"
-                : "Start"}
+              ? "Saving..."
+              :"Save"}
           </Button>
           <Button
             onPress={openBottomSheet}

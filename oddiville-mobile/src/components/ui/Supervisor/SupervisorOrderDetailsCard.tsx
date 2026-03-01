@@ -173,10 +173,14 @@ const SupervisorOrderDetailsCard = ({
                     </B4>
                   </View>
                 </View>
-                {order.helperDetails &&
+                {/* {order.helperDetails &&
                   idx < order.helperDetails?.length - 1 && (
                     <View style={styles.helperDivider} />
-                  )}
+                  )} */}
+                {/* {order.helperDetails &&
+                  idx < order.helperDetails?.length - 1 && (
+                    <View style={styles.seprator} />
+                  )} */}
               </React.Fragment>
             );
           })}
@@ -256,10 +260,10 @@ const styles = StyleSheet.create({
   },
   titleColumn: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
     width: "100%",
-    alignItems: "center",
   },
   sepratorRow: {
     flexDirection: "row",
@@ -294,14 +298,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  helperSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-evenly",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    gap: 12,
-  },
   dispatchSection: {
     flexDirection: "row",
     alignItems: "center",
@@ -310,10 +306,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     gap: 4,
   },
+  helperSection: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 12,
+  },
   helperItem: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 8,
+    minWidth: 20,
   },
   helperDivider: {
     width: 1,
@@ -355,4 +359,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1.5,
     borderColor: getColor("green", 100),
   },
+  seprator: {
+    width: "100%",
+    height: 1,
+    backgroundColor: getColor("green", 200)
+  }
 });

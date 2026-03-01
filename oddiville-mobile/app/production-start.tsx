@@ -183,10 +183,12 @@ const ProductionStartScreen = () => {
                 {
                     name: "Order",
                     value: formatDateSafely(orderDate),
+      iconKey: "calendar"
                 },
                 {
                     name: "Arrival",
                     value: formatDateSafely(arrivalDate),
+      iconKey: "calendar"
                 },
             ],
         };

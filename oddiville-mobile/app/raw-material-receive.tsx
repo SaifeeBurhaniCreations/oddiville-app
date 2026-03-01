@@ -100,10 +100,12 @@ const formatOrder = (order: any): OrderProps => ({
     {
       name: "Order",
       value: formatDateForDisplay(order?.order_date),
-    },
+      iconKey: "calendar"
+          },
     {
       name: "Arrival",
       value: formatDateForDisplay(order?.arrival_date),
+      iconKey: "calendar"
     },
   ],
   href: "raw-material-receive",
@@ -111,8 +113,8 @@ const formatOrder = (order: any): OrderProps => ({
 });
 
 const SupervisorRawMaterialDetailsScreen = () => {
-      const toast = useToast();
-const caps = useAppCapabilities();
+  const toast = useToast();
+  const caps = useAppCapabilities();
 
   const [loading, setLoading] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
@@ -173,14 +175,14 @@ const caps = useAppCapabilities();
             message: "Tare weight must be 0 or greater!",
           },
         ],
-       quantity_received: [
-        { type: "required", message: "Quantity received is required!" },
-        {
-          type: "custom",
-          validate: (value) => parseWeight(value) > 0,
-          message: "Quantity must be greater than 0",
-        },
-      ],
+        quantity_received: [
+          { type: "required", message: "Quantity received is required!" },
+          {
+            type: "custom",
+            validate: (value) => parseWeight(value) > 0,
+            message: "Quantity must be greater than 0",
+          },
+        ],
 
         challan: [{ type: "required", message: "Challan is required!" }],
 
@@ -195,7 +197,14 @@ const caps = useAppCapabilities();
         driver_name: [
           { type: "required", message: "Driver name is required!" },
         ],
-        bags: [],
+        bags: [
+          {
+            type: "custom",
+            validate: (value) =>
+              value === "" || /^[1-9]\d*$/.test(value),
+            message: "Bags must be a positive whole number",
+          },
+        ],
       },
       {
         validateOnChange: true,
@@ -210,12 +219,12 @@ const caps = useAppCapabilities();
     return net > 0 ? net : 0;
   }, [values.truck_weight, values.tare_weight]);
 
-useEffect(() => {
-  if (!values.truck_weight || !values.tare_weight) return;
+  useEffect(() => {
+    if (!values.truck_weight || !values.tare_weight) return;
 
-  const net = parseWeight(values.truck_weight) - parseWeight(values.tare_weight);
-  setField("quantity_received", net > 0 ? net.toString() : "0");
-}, [values.truck_weight, values.tare_weight]);
+    const net = parseWeight(values.truck_weight) - parseWeight(values.tare_weight);
+    setField("quantity_received", net > 0 ? net.toString() : "0");
+  }, [values.truck_weight, values.tare_weight]);
 
   const isWeightLogicValid = useMemo(() => {
     const truckWeight = parseWeight(values.truck_weight);
@@ -227,7 +236,7 @@ useEffect(() => {
     if (!orderData || isInitialized.current) return;
 
     const truckDetails = orderData?.truck_details;
-    
+
     const arrivalDate = formatDateForDisplay(orderData.arrival_date);
     const quantityReceived = orderData.quantity_received?.toString() || "";
 
@@ -239,12 +248,12 @@ useEffect(() => {
       : "";
     const truckNumber = truckDetails?.truck_number
       ? truckDetails.truck_number.toString()
-      : ""; 
+      : "";
     const driverName = truckDetails?.driver_name
       ? truckDetails.driver_name.toString()
       : "";
 
-      const bagsStr =
+    const bagsStr =
       orderData.bags !== undefined && orderData.bags !== null
         ? String(orderData.bags)
         : "";
@@ -314,31 +323,31 @@ useEffect(() => {
   //   }
   // };
 
-const validateWeights = (): boolean => {
-  const truckWeight = parseWeight(values.truck_weight);
-  const tareWeight = parseWeight(values.tare_weight);
-  const bagsCount = parseWeight(values.bags || "0");
-  const quantityReceived = parseWeight(values.quantity_received);
+  const validateWeights = (): boolean => {
+    const truckWeight = parseWeight(values.truck_weight);
+    const tareWeight = parseWeight(values.tare_weight);
+    const bagsCount = parseWeight(values.bags || "0");
+    const quantityReceived = parseWeight(values.quantity_received);
 
-  if (truckWeight <= tareWeight) {
-    toast.error("Truck gross weight must be greater than tare weight!");
-    return false;
-  }
+    if (truckWeight <= tareWeight) {
+      toast.error("Truck gross weight must be greater than tare weight!");
+      return false;
+    }
 
-  const netWeight = truckWeight - tareWeight;
+    const netWeight = truckWeight - tareWeight;
 
-  const minAllowed = quantityReceived * 0.9;
+    const minAllowed = quantityReceived * 0.9;
 
-  if (netWeight < minAllowed) {
-toast.error(
-  `Truck net weight must be greater than zero
+    if (netWeight < minAllowed) {
+      toast.error(
+        `Truck net weight must be greater than zero
 `
-);
-    return false;
-  }
+      );
+      return false;
+    }
 
-  return true;
-};
+    return true;
+  };
 
   const onSubmit = async (skipValidation = false) => {
     if (loading || updateRawMaterialOrder.isPending) return;
@@ -375,9 +384,9 @@ toast.error(
       formData.append("truck_number", result.data.truck_number);
       formData.append("driver_name", result.data.driver_name);
 
-const bagsCount = parseWeight(result.data.bags || "0");
+      const bagsCount = parseWeight(result.data.bags || "0");
 
-formData.append("bags", bagsCount.toString());
+      formData.append("bags", bagsCount.toString());
 
       formData.append(
         "quantity_received",
@@ -457,7 +466,7 @@ formData.append("bags", bagsCount.toString());
             console.error("Update error:", error);
             toast.error(
               error?.message ||
-                "Failed to update raw material order. Please try again!"
+              "Failed to update raw material order. Please try again!"
             );
           },
         }
@@ -491,7 +500,7 @@ formData.append("bags", bagsCount.toString());
   }, [orderData?.arrival_date]);
 
   const backRoute = resolveBackRoute(caps.access, PURCHASE_BACK_ROUTES, resolveDefaultRoute(caps.access));
-  
+
   if (isFetching) {
     return (
       <View style={styles.loadingContainer}>
@@ -510,7 +519,7 @@ formData.append("bags", bagsCount.toString());
             <B5 color={getColor("red", 600)}>
               Failed to load order details. Please try again.
             </B5>
-            <Button variant="outline" onPress={() => goTo(backRoute)}> 
+            <Button variant="outline" onPress={() => goTo(backRoute)}>
               Go Back
             </Button>
           </View>
@@ -538,295 +547,300 @@ formData.append("bags", bagsCount.toString());
 
   return (
     <Require edit="purchase">
-    <View style={styles.pageContainer}>
-      <PageHeader page={"Raw Material"} />
-      <View style={styles.wrapper}>
-        <BackButton label="Raw material receive" backRoute={backRoute} />
+      <View style={styles.pageContainer}>
+        <PageHeader page={"Raw Material"} />
+        <View style={styles.wrapper}>
+          <BackButton label="Raw material receive" backRoute={backRoute} />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.keyboardAvoidingView}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-        >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.keyboardAvoidingView}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
           >
-            <View style={styles.innerWrapper}>
-              {formattedOrder && (
-                <SupervisorOrderDetailsCard order={formattedOrder} />
-              )}
-
-              {shouldShowTruckDetails && (
-                <TruckWeightCard
-                  title={`${netWeightKg.toFixed(2)}`}
-                  description="Net weight (verification only)"
-                />
-              )}
-
-              {!isWeightLogicValid &&
-                values.truck_weight &&
-                values.tare_weight && (
-                  <View style={styles.warningContainer}>
-                    <B5 color={getColor("light", 400)}>
-                      ⚠️ Truck weight cannot be less than tare weight
-                    </B5>
-                  </View>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.innerWrapper}>
+                {formattedOrder && (
+                  <SupervisorOrderDetailsCard order={formattedOrder} />
                 )}
 
-              <View style={styles.titleWithDataInputs}>
-                <FormField
-  name="quantity_received"
-  form={{ values, setField, errors }}
->
-  {({ value, error }) => (
-    <Input
-      value={value}
-      onChangeText={() => { /* no-op, controlled by bags/weights */ }}
-      placeholder="Enter received quantity"
-      error={touched.quantity_received ? error : undefined}
-      keyboardType="numeric"
-      disabled={true}          // ALWAYS disabled – auto calculated
-      addonText="kg"
-      mask="addon"
-      post
-    >
-      Quantity received
-    </Input>
-  )}
-</FormField>
+                {shouldShowTruckDetails && (
+                  <TruckWeightCard
+                    title={`${netWeightKg.toFixed(2)}`}
+                    description="Net weight (verification only)"
+                  />
+                )}
 
-<FormField
-  name="bags"
-  form={{ values, setField, errors }}
->
-  {({ value, onChange, error }) => (
-    <Input
-      value={value}
-      onChangeText={(text: string) => {
-        // allow only numbers
-        const cleaned = text.replace(/[^\d]/g, "");
-        setField("bags", cleaned);
-        setTouched((t) => ({ ...t, bags: true }));
-      }}
-      onBlur={() =>
-        setTouched((t) => ({ ...t, bags: true }))
-      }
-      placeholder="Enter number of bags"
-      error={touched.bags ? error : undefined}
-      keyboardType="number-pad"
-      disabled={!!isEditable}
-      addonText="bags"
-      mask="addon"
-      post
-    >
-      Number of bags (optional)
-    </Input>
-  )}
-</FormField>
-
-
-
-                <FormField
-                  name="arrival_date"
-                  form={{ values, setField, errors }}
-                >
-                  {({ value, onChange, error }) => (
-                    <Input
-                      value={value}
-                      onChangeText={(text: string) => {
-                        setField("arrival_date", text);
-                        setTouched((t) => ({ ...t, arrival_date: true }));
-                      }}
-                      onBlur={() =>
-                        setTouched((t) => ({ ...t, arrival_date: true }))
-                      }
-                      placeholder="Select arrival date"
-                      error={touched.arrival_date ? error : undefined}
-                      disabled={!!isEditable}
-                      mask="date"
-                      post
-                    >
-                      Arrival date
-                    </Input>
+                {!isWeightLogicValid &&
+                  values.truck_weight &&
+                  values.tare_weight && (
+                    <View style={styles.warningContainer}>
+                      <B5 color={getColor("light", 400)}>
+                        ⚠️ Truck weight cannot be less than tare weight
+                      </B5>
+                    </View>
                   )}
-                </FormField>
 
-                <B5 color={getColor("yellow", 700)} style={styles.sectionTitle}>
-                  TRUCK DETAILS
-                </B5>
+                <View style={styles.titleWithDataInputs}>
+                  <FormField
+                    name="quantity_received"
+                    form={{ values, setField, errors }}
+                  >
+                    {({ value, error }) => (
+                      <Input
+                        value={value}
+      onChangeText={() => { }}
+                        placeholder="Enter received quantity"
+                        error={touched.quantity_received ? error : undefined}
+                        keyboardType="numeric"
+      disabled={true}  
+                        addonText="kg"
+                        mask="addon"
+                        post
+                      >
+                        Quantity received
+                      </Input>
+                    )}
+                  </FormField>
 
-                <FormField
-                  name="truck_weight"
-                  form={{ values, setField, errors }}
-                >
-                  {({ value, onChange, error }) => (
-                    <Input
-                      value={value}
-                      onChangeText={(text: string) => {
-                        setField("truck_weight", text);
-                        setTouched((t) => ({ ...t, truck_weight: true }));
-                      }}
-                      onBlur={() =>
-                        setTouched((t) => ({ ...t, truck_weight: true }))
-                      }
-                      placeholder="Enter truck gross weight in kg"
-                      error={touched.truck_weight ? error : undefined}
-                      keyboardType="numeric"
-                      disabled={!!isEditable}
-                      addonText="kg"
-                      mask="addon"
-                      post
-                    >
-                      Gross weight
-                    </Input>
-                  )}
-                </FormField>
+                  <FormField
+                    name="bags"
+                    form={{ values, setField, errors }}
+                  >
+                    {({ value, onChange, error }) => (
+                      <Input
+                        value={value}
+                        onChangeText={(text: string) => {
+                          // remove non-digits
+                          let cleaned = text.replace(/[^\d]/g, "");
 
-                <FormField
-                  name="tare_weight"
-                  form={{ values, setField, errors }}
-                >
-                  {({ value, onChange, error }) => (
-                    <Input
-                      value={value}
-                      onChangeText={(text: string) => {
-                        setField("tare_weight", text);
-                        setTouched((t) => ({ ...t, tare_weight: true }));
-                      }}
-                      onBlur={() =>
-                        setTouched((t) => ({ ...t, tare_weight: true }))
-                      }
-                      error={touched.tare_weight ? error : undefined}
-                      keyboardType="numeric"
-                      disabled={!!isEditable}
-                      addonText="kg"
-                      mask="addon"
-                      post
-                      tooltipText={{
-                        title: "Tare Weight",
-                        description:
-                          "Net Weight(empty truck) = Gross Weight - Tare Weight",
-                      }}
-                      showTooltip
-                      placeholder="Enter empty truck weight in kg"
-                    >
-                      Tare weight
-                    </Input>
-                  )}
-                </FormField>
+                          // remove leading zeros (but allow single zero)
+                          cleaned = cleaned.replace(/^0+(?=\d)/, "");
 
-                <FormField
-                  name="truck_number"
-                  form={{ values, setField, errors }}
-                >
-                  {({ value, onChange, error }) => (
-                    <Input
-                      value={value}
-                      onChangeText={(text: string) => {
-                        setField("truck_number", text);
-                        setTouched((t) => ({ ...t, truck_number: true }));
-                      }}
-                      onBlur={() =>
-                        setTouched((t) => ({ ...t, truck_number: true }))
-                      }
-                      error={touched.truck_number ? error : undefined}
-                      disabled={!!isEditable}
-                      post
-                      placeholder="Enter truck number"
-                    >
-                      Truck number
-                    </Input>
-                  )}
-                </FormField>
+                          setField("bags", cleaned);
+                          setTouched((t) => ({ ...t, bags: true }));
+                        }}
+                        onBlur={() =>
+                          setTouched((t) => ({ ...t, bags: true }))
+                        }
+                        placeholder="Enter number of bags"
+                        error={touched.bags ? error : undefined}
+                        keyboardType="number-pad"
+                        disabled={!!isEditable}
+                        addonText="bags"
+                        maxLength={5}
+                        mask="addon"
+                        post
+                      >
+                        Number of bags (optional)
+                      </Input>
+                    )}
+                  </FormField>
 
-                <FormField
-                  name="driver_name"
-                  form={{ values, setField, errors }}
-                >
-                  {({ value, onChange, error }) => (
-                    <Input
-                      value={value}
-                      onChangeText={(text: string) => {
-                        setField("driver_name", text);
-                        setTouched((t) => ({ ...t, driver_name: true }));
-                      }}
-                      onBlur={() =>
-                        setTouched((t) => ({ ...t, driver_name: true }))
-                      }
-                      error={touched.driver_name ? error : undefined}
-                      disabled={!!isEditable}
-                      placeholder="Enter driver name"
-                    >
-                      Driver name
-                    </Input>
-                  )}
-                </FormField>
 
-                <FormField name="challan" form={{ values, setField, errors }}>
-                  {({ value, onChange, error }) => (
-                    <SimpleFileUpload
-                      fileState={[value, onChange]}
-                      error={error}
-                      disabled={!!isEditable}
-                      onlyPhoto
-                      both
-                    />
-                  )}
-                </FormField>
+
+                  <FormField
+                    name="arrival_date"
+                    form={{ values, setField, errors }}
+                  >
+                    {({ value, onChange, error }) => (
+                      <Input
+                        value={value}
+                        onChangeText={(text: string) => {
+                          setField("arrival_date", text);
+                          setTouched((t) => ({ ...t, arrival_date: true }));
+                        }}
+                        onBlur={() =>
+                          setTouched((t) => ({ ...t, arrival_date: true }))
+                        }
+                        placeholder="Select arrival date"
+                        error={touched.arrival_date ? error : undefined}
+                        disabled={!!isEditable}
+                        mask="date"
+                        post
+                      >
+                        Arrival date
+                      </Input>
+                    )}
+                  </FormField>
+
+                  <B5 color={getColor("yellow", 700)} style={styles.sectionTitle}>
+                    TRUCK DETAILS
+                  </B5>
+
+                  <FormField
+                    name="truck_weight"
+                    form={{ values, setField, errors }}
+                  >
+                    {({ value, onChange, error }) => (
+                      <Input
+                        value={value}
+                        onChangeText={(text: string) => {
+                          setField("truck_weight", text);
+                          setTouched((t) => ({ ...t, truck_weight: true }));
+                        }}
+                        onBlur={() =>
+                          setTouched((t) => ({ ...t, truck_weight: true }))
+                        }
+                        placeholder="Enter truck gross weight in kg"
+                        error={touched.truck_weight ? error : undefined}
+                        keyboardType="numeric"
+                        disabled={!!isEditable}
+                        addonText="kg"
+                        mask="addon"
+                        post
+                      >
+                        Gross weight
+                      </Input>
+                    )}
+                  </FormField>
+
+                  <FormField
+                    name="tare_weight"
+                    form={{ values, setField, errors }}
+                  >
+                    {({ value, onChange, error }) => (
+                      <Input
+                        value={value}
+                        onChangeText={(text: string) => {
+                          setField("tare_weight", text);
+                          setTouched((t) => ({ ...t, tare_weight: true }));
+                        }}
+                        onBlur={() =>
+                          setTouched((t) => ({ ...t, tare_weight: true }))
+                        }
+                        error={touched.tare_weight ? error : undefined}
+                        keyboardType="numeric"
+                        disabled={!!isEditable}
+                        addonText="kg"
+                        mask="addon"
+                        post
+                        tooltipText={{
+                          title: "Tare Weight",
+                          description:
+                            "Net Weight(empty truck) = Gross Weight - Tare Weight",
+                        }}
+                        showTooltip
+                        placeholder="Enter empty truck weight in kg"
+                      >
+                        Tare weight
+                      </Input>
+                    )}
+                  </FormField>
+
+                  <FormField
+                    name="truck_number"
+                    form={{ values, setField, errors }}
+                  >
+                    {({ value, onChange, error }) => (
+                      <Input
+                        value={value}
+                        onChangeText={(text: string) => {
+                          setField("truck_number", text);
+                          setTouched((t) => ({ ...t, truck_number: true }));
+                        }}
+                        onBlur={() =>
+                          setTouched((t) => ({ ...t, truck_number: true }))
+                        }
+                        error={touched.truck_number ? error : undefined}
+                        disabled={!!isEditable}
+                        post
+                        placeholder="Enter truck number"
+                      >
+                        Truck number
+                      </Input>
+                    )}
+                  </FormField>
+
+                  <FormField
+                    name="driver_name"
+                    form={{ values, setField, errors }}
+                  >
+                    {({ value, onChange, error }) => (
+                      <Input
+                        value={value}
+                        onChangeText={(text: string) => {
+                          setField("driver_name", text);
+                          setTouched((t) => ({ ...t, driver_name: true }));
+                        }}
+                        onBlur={() =>
+                          setTouched((t) => ({ ...t, driver_name: true }))
+                        }
+                        error={touched.driver_name ? error : undefined}
+                        disabled={!!isEditable}
+                        placeholder="Enter driver name"
+                      >
+                        Driver name
+                      </Input>
+                    )}
+                  </FormField>
+
+                  <FormField name="challan" form={{ values, setField, errors }}>
+                    {({ value, onChange, error }) => (
+                      <SimpleFileUpload
+                        fileState={[value, onChange]}
+                        error={error}
+                        disabled={!!isEditable}
+                        onlyPhoto
+                        both
+                      />
+                    )}
+                  </FormField>
+                </View>
               </View>
+            </ScrollView>
+
+            <View style={styles.buttonContainer}>
+              <Button
+                variant="fill"
+                disabled={
+                  !isValid ||
+                  loading ||
+                  updateRawMaterialOrder.isPending ||
+                  isEditable ||
+                  !isWeightLogicValid
+                }
+                onPress={() => onSubmit()}
+              >
+                {loading || updateRawMaterialOrder.isPending
+                  ? "Processing..."
+                  : "Confirm Arrival"}
+              </Button>
             </View>
-          </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
 
-          <View style={styles.buttonContainer}>
-            <Button
-              variant="fill"
-              disabled={
-                !isValid ||
-                loading ||
-                updateRawMaterialOrder.isPending ||
-                isEditable ||
-                !isWeightLogicValid
-              }
-              onPress={() => onSubmit()}
-            >
-              {loading || updateRawMaterialOrder.isPending
-                ? "Processing..."
-                : "Confirm Arrival"}
-            </Button>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
+        {(loading || updateRawMaterialOrder.isPending) && <OverlayLoader />}
 
-      {(loading || updateRawMaterialOrder.isPending) && <OverlayLoader />}
-
-      <Modal
-        showPopup={showDiscardModal}
-        setShowPopup={setShowDiscardModal}
-        modalData={{
-          title: "Discard changes?",
-          description:
-            "Are you sure you want to discard all the changes? This action cannot be undone.",
-          buttons: [
-            {
-              label: "Cancel",
-              variant: "outline",
-              action: () => setShowDiscardModal(false),
-            },
-            {
-              label: "Discard",
-              variant: "fill",
-              action: () => {
-                resetForm();
-                setHasUnsavedChanges(false);
-                goTo("purchase");
+        <Modal
+          showPopup={showDiscardModal}
+          setShowPopup={setShowDiscardModal}
+          modalData={{
+            title: "Discard changes?",
+            description:
+              "Are you sure you want to discard all the changes? This action cannot be undone.",
+            buttons: [
+              {
+                label: "Cancel",
+                variant: "outline",
+                action: () => setShowDiscardModal(false),
               },
-            },
-          ],
-        }}
-      />
-    </View>
+              {
+                label: "Discard",
+                variant: "fill",
+                action: () => {
+                  resetForm();
+                  setHasUnsavedChanges(false);
+                  goTo("purchase");
+                },
+              },
+            ],
+          }}
+        />
+      </View>
     </Require>
   );
 };

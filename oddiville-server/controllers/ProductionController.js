@@ -295,13 +295,9 @@ router.patch("/start/:id", upload.single("sample_image"), async (req, res) => {
       return res.status(404).json({ error: "Production not found" });
     }
 
-    if (production.status === "completed") {
-      return res.status(400).json({
-        error: "Completed production cannot be started again.",
-      });
-    }
+    const allowedStatuses = ["pending", "in-queue", "in-progress"];
 
-    if (production.status !== "in-queue") {
+    if (!allowedStatuses.includes(production.status)) {
       return res.status(400).json({
         error: `Cannot start production from status '${production.status}'.`,
       });
