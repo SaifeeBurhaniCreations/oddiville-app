@@ -9,8 +9,6 @@ import StarIcon from "@/src/components/icons/page/StarIcon";
 import PaperRollIcon from "@/src/components/icons/packaging/PaperRollIcon";
 import EventIcon from "../../icons/packaging/EventIcon";
 
-// ---------------- ICON MAP ----------------
-
 const iconMap = {
   box: BoxIcon,
   roll: PaperRollIcon,
@@ -47,7 +45,6 @@ const isNormalMetric = (
 ): metric is NormalMetric =>
   "value" in metric;
 
-// ---------------- COMPONENT ----------------
 
 const PackageSummaryMetricsComponent = ({
   data,
@@ -63,17 +60,18 @@ const PackageSummaryMetricsComponent = ({
         </B3>
 
         <View style={styles.ratingRow}>
-          {
+           <EventIcon color={getColor("green", 700)} size={16} />
+          
+          {/* {
             isEventMode ? <EventIcon color={getColor("green", 700)} size={16} /> : <StarIcon color={getColor("green", 700)} size={16} />
           }
-          
+           */}
           <B4>Events: {data.rating}</B4>
         </View>
       </View>
 
       {/* METRICS */}
       {data.metrics.map((metric) => {
-        // -------- SKU SUMMARY CARD (PRODUCT MODE) --------
         if (isSkuSummaryMetric(metric)) {
           return (
             <View style={styles.card} key={metric.id}>
@@ -83,22 +81,24 @@ const PackageSummaryMetricsComponent = ({
                 <BoxIcon size={16} color={getColor("green", 700)} />
                 <B3>Bags:</B3>
                   <View style={styles.kvRow}>
-                    <B4>{metric.bags} bags</B4>
+                    <B4>{metric.bags}</B4>
                   </View>
               </View>
+                <View style={styles.helperDivider} />
+
                 <View style={styles.kvRow}>
                     <PaperRollIcon size={16} color={getColor("green", 700)} />
                   <B3>Packets:</B3>
                   <View style={styles.kvRow}>
-                    <B4>{metric.packets} packets</B4>
+                    <B4>{metric.packets}</B4>
                   </View>
                 </View>
+                
               </View>
             </View>
           );
         }
 
-        // -------- NORMAL METRIC CARD --------
         if (isNormalMetric(metric)) {
           const Icon = metric.icon
             ? iconMap[metric.icon]
@@ -126,8 +126,6 @@ const PackageSummaryMetricsComponent = ({
 };
 
 export default PackageSummaryMetricsComponent;
-
-// ---------------- STYLES ----------------
 
 const styles = StyleSheet.create({
   container: {
@@ -172,5 +170,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     marginTop: 4,
+  },
+  helperDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: getColor("green", 300),
   },
 });

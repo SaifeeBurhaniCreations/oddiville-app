@@ -254,11 +254,33 @@ const PackageScreen = () => {
     );
   }
 
-  if (canView || canEdit) {
+  if (canEdit) {
     tabsConfig.push({
       title: "Daily packing",
       content: <PackingSummarySection />,
     });
+  }
+
+  if (!canEdit && !canView) {
+    return <View style={EmptyStateStyles.center}><EmptyState stateData={getEmptyStateData("packaging-details")} /></View>;
+  }
+
+  if (!canEdit && canView) {
+    return (
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+      >
+        <View style={styles.pageContainer}>
+          <PageHeader page={"Packing"} />
+          <View style={styles.wrapper}>
+            <PackingSummarySection />
+          </View>
+          <BottomSheet color="green" />
+        </View>
+      </KeyboardAvoidingView>
+    );
   }
 
   return (

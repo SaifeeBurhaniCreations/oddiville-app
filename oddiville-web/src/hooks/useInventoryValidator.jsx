@@ -53,6 +53,7 @@ export default function useInventoryValidator() {
     4: {
       name: "Dispatch",
       requiredColumns: [
+        "order_id",
         "customer_name",
         "address",
         "state",
@@ -66,6 +67,8 @@ export default function useInventoryValidator() {
         "dispatch_quantity",
         "package_size",
         "package_unit",
+        "rating",
+        "package_quantity",
         "gross_weight",
         "tare_weight",
         "truck_number",

@@ -9,7 +9,7 @@ const {
 } = require("../services/applyDispatchTransaction");
 const safeRoute = require("../sbc/utils/safeRoute/index");
     const { assertPositiveInteger } = require("../utils/inventoryInvariants");
-
+const { getTareWeight } = require("../constants/tareWeight")
 const {
   sequelize,
   RawMaterial: RawMaterialClient,
@@ -885,13 +885,26 @@ normalized.packages = row.packages.map((p, i) => {
 
 function normalizeDispatchRow(row) {
   row = row && typeof row === "object" ? row : {};
-
+  
   const products = Array.isArray(row.products)
-    ? row.products.map((p) => ({
+    ? row.products.map((p) => {
+      let quantity = ensureNumber(p.quantity);
+
+      if (!quantity && Array.isArray(p.chambers)) {
+        quantity = p.chambers.reduce(
+          (s, ch) => s + (Number(ch.quantity) || 0),
+          0
+        );
+      }
+
+      quantity = quantity || 0;
+      return ({
         name: ensureString(p.name),
-        quantity: ensureNumber(p.quantity) || 0,
+        quantity: ensureNumber(quantity) || 0,
         chambers: Array.isArray(p.chambers) ? p.chambers : [],
-      }))
+        rating: row.rating != null ? Number(row.rating) : 5,
+      })
+    })
     : row.product_name
       ? [
           {
@@ -911,7 +924,7 @@ function normalizeDispatchRow(row) {
     ? row.packages.map((p) => ({
         product_name: ensureString(row.product_name || p.product_name || ""),
         id: null,
-        quantity: ensureNumber(p.quantity) || 0,
+      quantity: ensureNumber(p.quantity) ?? null,
         size: p.size ?? null,
         unit: p.unit ?? null,
       }))
@@ -1043,7 +1056,8 @@ async function buildUsedBags(row, chamberStockMap) {
 
   for (const product of row.products) {
     if (product.name !== resolvedName) continue;
-
+    console.log("LOOKING FOR:", product.name, product.rating);
+    console.log("FOUND STOCK:", stock);
     for (const ch of product.chambers) {
       const qty = Number(ch.quantity);
 
@@ -1086,6 +1100,14 @@ async function buildUsedBags(row, chamberStockMap) {
       "dispatch.packages.quantity"
     );
 
+    console.log("------ DISPATCH DEBUG ------");
+    console.log("Product:", resolvedName);
+    console.log("Total Bags:", totalRowBags);
+    console.log("Packets Per Bag:", packetsPerBag);
+    console.log("Expected Packets:", expectedPackets);
+    console.log("Provided Packets:", providedPackets);
+    console.log("----------------------------");
+
     if (providedPackets !== expectedPackets) {
       throw new Error(
         `Packet mismatch. Expected ${expectedPackets}, received ${providedPackets}`
@@ -1121,7 +1143,6 @@ router.post(
     try {
       const body = req.body || {};
       // console.log("body", JSON.stringify(body, null, 2));
-
       const hasDispatchOrder =
         body.dispatchOrder &&
         Array.isArray(body.dispatchOrder.rows) &&
@@ -1135,6 +1156,11 @@ router.post(
 
       if (dispatchBlock && Array.isArray(dispatchBlock.rows)) {
         dispatchBlock.rows = dispatchBlock.rows.map((row) => {
+          console.log("DISPATCH RAW ROW:", JSON.stringify(row, null, 2));
+          if (Array.isArray(row.products) && row.products.length > 0) {
+            return row;
+          }
+
           const chooseDelimiter = (s) => {
             if (!s || typeof s !== "string") return null;
             if (s.includes(", ")) return /,\s+/;
@@ -1263,6 +1289,49 @@ router.post(
           : []
         : [];
 
+      let groupedDispatchRows = dispatchRowsInput;
+
+      if (hasDispatchOrder && Array.isArray(dispatchRowsInput)) {
+        const grouped = {};
+
+        for (const row of dispatchRowsInput) {
+          const key = row.order_id;
+
+          if (!grouped[key]) {
+            grouped[key] = {
+              ...row,
+              products: [],
+              packages: [],
+            };
+          }
+          if (
+            grouped[key] &&
+            (
+              grouped[key].address !== row.address ||
+              grouped[key].city !== row.city ||
+              grouped[key].state !== row.state
+            )
+          ) {
+            throw new Error(`Order ${key} has conflicting delivery details`);
+          }
+
+          grouped[key].products.push({
+            name: row.product_name,
+            quantity:
+              row.products?.[0]?.quantity ??
+              row.product_quantity ??
+              0,
+            chambers: row.products?.[0]?.chambers || [],
+          });
+
+          if (Array.isArray(row.packages)) {
+            grouped[key].packages.push(...row.packages);
+          }
+        }
+
+        groupedDispatchRows = Object.values(grouped);
+      }
+
       const rawMaterialChallanTop = rawMaterialBlock.challan || null;
       const dispatchChallanTop = dispatchBlock.challan || null;
 
@@ -1282,7 +1351,7 @@ router.post(
   .map(normalizeChamberStockRow)
   .filter(Boolean);
 
-      const dispatch_orders = (dispatchRowsInput || []).map((d) => {
+      const dispatch_orders = (groupedDispatchRows || []).map((d) => {
         const nd = normalizeDispatchRow(d);
         if (
           (!nd.truck_details || !nd.truck_details.challan) &&
@@ -1665,6 +1734,10 @@ router.post(
           existingChambers.map((it) => [chamberKey(it), { ...it }]),
         );
 
+        console.log("Merging chamber for:", productName);
+        console.log("Incoming chambers:", incomingChambers);
+        console.log("Existing chambers:", existingChambers);
+
         const MERGE_STRATEGY = "SUM_QUANTITY";
 
         for (const inc of incomingChambers) {
@@ -1790,10 +1863,18 @@ await ChamberStockClient.update(updatedPayload, {
       // NOW that chamber stock exists → resolve dispatch names
       // ----------------------------------------------------
 
+
       const allStocks = await ChamberStockClient.findAll({
         transaction: t,
         lock: t.LOCK.UPDATE,
       });
+
+            console.log("===== FINAL STOCK BEFORE DISPATCH =====");
+      for (const stock of allStocks) {
+        console.log(stock.product_name, stock.chamber, stock.packages);
+      }
+      console.log("========================================");
+
 
       const productKeyMap = new Map();
 
@@ -1808,8 +1889,12 @@ await ChamberStockClient.update(updatedPayload, {
         const resolveProduct = await buildProductResolver(t);
 
         for (const d of dispatch_orders) {
+          console.log("🚚 APPLYING DISPATCH", JSON.stringify(d, null, 2));
+
           const real = resolveProduct(d.product_name);
           d.product_name = real;
+          console.log("DISPATCH KEY:", `${real.toLowerCase()}::${d.rating}`);
+          console.log("AVAILABLE KEYS:", Array.from(productKeyMap.keys()));
 
           if (
             !real ||
@@ -1959,20 +2044,29 @@ await ChamberStockClient.update(updatedPayload, {
             continue;
           }
 
-          const avail = Number(match.quantity);
-          if (!Number.isFinite(avail)) {
-            pkgIssues.push({
-              path: `dispatch_orders.packages`,
-              error: `Package '${id}' has invalid stored quantity for size='${size}', unit='${unit}'`,
-            });
-            continue;
+          const storedKg = Number(match.quantity);
+          if (!Number.isFinite(storedKg) || storedKg < 0) {
+            throw new Error("Invalid stored package quantity");
           }
 
-          if (avail < totalRequested) {
-            pkgIssues.push({
-              path: `dispatch_orders.packages`,
-              error: `Package '${id}' insufficient for size='${size}', unit='${unit}': requested ${totalRequested}, available ${avail}`,
-            });
+          const storedGrams = Math.round(storedKg * 1000);
+
+          const tareWeightGrams = getTareWeight("pouch", Number(size), unit);
+
+          const maxPackets = Math.floor(storedGrams / tareWeightGrams);
+
+          if (maxPackets < totalRequested) {
+            console.log("------ EMPTY PACKET DEBUG ------");
+            console.log("Package ID:", id);
+            console.log("Stored KG:", storedKg);
+            console.log("Stored Grams:", storedGrams);
+            console.log("Tare Weight (g):", tareWeightGrams);
+            console.log("Max Packets:", maxPackets);
+            console.log("Requested:", totalRequested);
+            console.log("--------------------------------");
+            throw new Error(
+              `Insufficient empty packets: requested ${totalRequested}, available ${maxPackets}`
+            );
           }
         }
 
@@ -2025,7 +2119,7 @@ await ChamberStockClient.update(updatedPayload, {
 
       if (hasDispatchOrder) {
         for (const d of dispatch_orders) {
-          const id = uuid();
+          const id = d.order_id || uuid();
           const payload = { ...d, id };
           delete payload.clientId;
 

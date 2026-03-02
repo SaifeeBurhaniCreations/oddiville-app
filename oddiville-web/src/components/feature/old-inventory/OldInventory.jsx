@@ -6,16 +6,27 @@ import { useState } from "react";
   // import ImageUploader from "../../Shared/oldInventory/ImageUploader";
   import ExcelUploader from "../../Shared/oldInventory/ExcelUploader";
   import { bulkIngest } from "../../../services/oldInventory.service";
+import { useChambers } from "../../../hooks/chamberStock";
+import { useMemo } from "react";
 
   export default function OldInventory() {
     const { validateExcel } = useInventoryValidator();
-
+    const { data: chambers } = useChambers(); 
     const [parsedPreview, setParsedPreview] = useState([]);
     const [challan, setChallan] = useState({
       rawMaterial: { in: [], out: [] },
       dispatch: { in: [], out: [] },
     });
 
+    const chamberMap = useMemo(() => {
+      
+      const map = {};
+      chambers?.forEach(c => {
+        map[c.chamber_name.trim().toLowerCase()] = c.id;
+      });
+      return map;
+    }, [chambers]);
+    
     const [fullData, setFullData] = useState({
       rawMaterial: null,
       vendor: null,
@@ -72,6 +83,7 @@ import { useState } from "react";
           }
 
           const normalizedRows = normalizeRowsForStep(mappedRows, stepKey);
+          console.log("FRONTEND DISPATCH:", normalizedRows);
 
           if (!previewSet) {
             const headers = Object.keys(normalizedRows[0] || {});
@@ -244,99 +256,90 @@ return out;
 
       return normalized;
     }
+    function normalizeDispatchFields(rows = []) {
+      const ordersMap = {};
 
-function normalizeDispatchFields(rows = []) {
-  const ordersMap = {};
+      rows.forEach((row) => {
+        const {
+          customer_name,
+          address,
+          state,
+          country,
+          city,
+          status,
+          est_delivered_date,
+          amount,
+          product_name,
+          chamber_id,
+          dispatch_quantity,
+          package_size,
+          package_unit,
+          package_quantity,
+        } = row;
 
-  rows.forEach((row) => {
-    const {
-      customer_name,
-      address,
-      state,
-      country,
-      city,
-      status,
-      est_delivered_date,
-      amount,
-      product_name,
-      chamber_id,
-      dispatch_quantity,
-      package_size,
-      package_unit,
-    } = row;
+        const orderKey = row.order_id;
 
-    const orderKey = `${customer_name}-${est_delivered_date}`;
+        if (!ordersMap[orderKey]) {
+          ordersMap[orderKey] = {
+            order_id: row.order_id,
+            customer_name,
+            address,
+            state,
+            country,
+            city,
+            status: status || "pending",
+            est_delivered_date,
+            rating: Number(row.rating),  
+            amount: Number(amount || 0),
+            products: [],
+            packages: [],
+            truck_details: normalizeTruckFields(row, "dispatch").truck_details,
+          };
+        }
 
-    if (!ordersMap[orderKey]) {
-      ordersMap[orderKey] = {
-        customer_name,
-        address,
-        state,
-        country,
-        city,
-        status: status || "pending",
-        est_delivered_date,
-        amount: Number(amount || 0),
-        products: [],
-        usedBagsByProduct: {},
-        truck_details: normalizeTruckFields(row, "dispatch").truck_details,
-      };
-    }
+        const order = ordersMap[orderKey];
 
-    const order = ordersMap[orderKey];
+        // ---- Products (bags only) ----
+        let existingProduct = order.products.find(
+          (p) => p.name === product_name
+        );
 
-    // products
-    let existingProduct = order.products.find((p) => p.name === product_name);
-    if (!existingProduct) {
-      existingProduct = { name: product_name, chambers: [] };
-      order.products.push(existingProduct);
-    }
+        if (!existingProduct) {
+          existingProduct = { name: product_name, chambers: [] };
+          order.products.push(existingProduct);
+        }
 
-    existingProduct.chambers.push({
-      id: String(chamber_id).trim(),
-      quantity: Number(dispatch_quantity),
-    });
+        const chamberUUID =
+          chamberMap[String(chamber_id).trim().toLowerCase()];
 
-    // packets tracking
-    const pkgKey = `${package_size}-${package_unit}`;
-    if (!order.usedBagsByProduct[product_name])
-      order.usedBagsByProduct[product_name] = {};
+        if (!chamberUUID) {
+          throw new Error(`Invalid chamber name: ${chamber_id}`);
+        }
 
-    if (!order.usedBagsByProduct[product_name][pkgKey]) {
-      order.usedBagsByProduct[product_name][pkgKey] = {
-        totalPackets: 0,
-        byChamber: {},
-      };
-    }
-
-    const qty = Number(dispatch_quantity || 0);
-    order.usedBagsByProduct[product_name][pkgKey].totalPackets += qty;
-    order.usedBagsByProduct[product_name][pkgKey].byChamber[chamber_id] =
-      (order.usedBagsByProduct[product_name][pkgKey].byChamber[chamber_id] || 0) + qty;
-  });
-
-  // NOW build packages (after aggregation)
-  Object.values(ordersMap).forEach(order => {
-    order.packages = [];
-
-    Object.entries(order.usedBagsByProduct).forEach(([product, sizes]) => {
-      Object.entries(sizes).forEach(([key, data]) => {
-        const [size, unit] = key.split("-");
-        order.packages.push({
-          id: product,
-          size,
-          unit,
-          quantity: Number(data.totalPackets || 0)
+        existingProduct.chambers.push({
+          id: chamberUUID,
+          quantity: Number(dispatch_quantity),
         });
+
+        const alreadyExists = order.packages.some(
+          (p) =>
+            String(p.size) === String(package_size) &&
+            String(p.unit) === String(package_unit)
+        );
+
+        if (!alreadyExists) {
+          order.packages.push({
+            size: package_size,
+            unit: package_unit,
+            quantity: Number(package_quantity),
+          });
+        }
+
+        order.product_name = product_name;
       });
-    });
 
-    order.product_name = order.products[0]?.name || "";
-  });
-
-  return Object.values(ordersMap);
-}
-
+      return Object.values(ordersMap);
+    }
     function normalizeRowsForStep(mappedRows = [], stepKey = 1) {
       if (!Array.isArray(mappedRows)) return mappedRows;
 
