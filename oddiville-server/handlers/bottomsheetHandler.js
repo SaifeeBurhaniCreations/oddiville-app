@@ -14,11 +14,13 @@ const {
 const { Op } = require("sequelize");
 
 const { isValidUUID } = require("../utils/auth");
-const { loadProductionBundle } = require("../utils/bottomsheet/productionBundle");
+const {
+  loadProductionBundle,
+} = require("../utils/bottomsheet/productionBundle");
 
-let Country = require('country-state-city').Country;
-let State = require('country-state-city').State;
-let City = require('country-state-city').City;
+let Country = require("country-state-city").Country;
+let State = require("country-state-city").State;
+let City = require("country-state-city").City;
 
 async function handlePackingSummary(ctx) {
   let parsed;
@@ -82,7 +84,7 @@ async function handlePackingSummary(ctx) {
     return;
   }
 
-  const last = events[0]
+  const last = events[0];
 
   if (mode === "event") {
     ctx.packingSummary = {
@@ -100,7 +102,7 @@ async function handlePackingSummary(ctx) {
       rawMaterials: [],
     };
 
-    return; 
+    return;
   }
 
   if (mode === "sku") {
@@ -111,10 +113,10 @@ async function handlePackingSummary(ctx) {
     });
 
     const chamberNameMap = new Map(
-      chambersList.map(c => [c.id, c.chamber_name])
+      chambersList.map((c) => [c.id, c.chamber_name]),
     );
     for (const e of events) {
-      e.storage?.forEach(s => {
+      e.storage?.forEach((s) => {
         const key = s.chamberId;
 
         if (!chamberMap.has(key)) {
@@ -180,7 +182,7 @@ async function handlePackingSummary(ctx) {
         ? e.createdAt
         : lastEventAt;
 
-    e.storage?.forEach(s => {
+    e.storage?.forEach((s) => {
       const key = s.chamberId;
 
       if (!chamberMap.has(key)) {
@@ -192,7 +194,7 @@ async function handlePackingSummary(ctx) {
       }
 
       chamberMap.get(key).bagsStored += Number(
-        s.bagsStored ?? s.bags ?? s.quantity ?? 0
+        s.bagsStored ?? s.bags ?? s.quantity ?? 0,
       );
     });
 
@@ -223,22 +225,23 @@ const handlers = {
 
   "add-product": async (ctx) => {
     const data = await PackageClient.findAll();
-    ctx.productNames = data.map(v => v.dataValues.product_name);
+    ctx.productNames = data.map((v) => v.dataValues.product_name);
   },
 
-  "country": async (ctx) => {
+  country: async (ctx) => {
     ctx.countries = Country.getAllCountries();
   },
 
-  "state": async (ctx) => {
-    ctx.states = State
-      .getStatesOfCountry(ctx.id)
-      .map(s => ({ name: s.name, isoCode: s.isoCode }));
+  state: async (ctx) => {
+    ctx.states = State.getStatesOfCountry(ctx.id).map((s) => ({
+      name: s.name,
+      isoCode: s.isoCode,
+    }));
   },
 
-  "city": async (ctx) => {
+  city: async (ctx) => {
     const [state, country] = ctx.id.split(":");
-    ctx.cities = City.getCitiesOfState(country, state).map(c => c.name);
+    ctx.cities = City.getCitiesOfState(country, state).map((c) => c.name);
   },
 
   "add-raw-material": async (ctx) => {
@@ -255,14 +258,16 @@ const handlers = {
 
   "raw-material-ordered": async (ctx) => {
     if (isValidUUID(ctx.id)) {
-      ctx.rawMaterialOrder = await RawMaterialOrderClient.findOne({ where: { id: ctx.id } }) || {};
+      ctx.rawMaterialOrder =
+        (await RawMaterialOrderClient.findOne({ where: { id: ctx.id } })) || {};
       ctx.vendors = await VendorClient.findAll();
     }
   },
 
   "raw-material-reached": async (ctx) => {
     if (isValidUUID(ctx.id)) {
-      ctx.rawMaterialOrder = await RawMaterialOrderClient.findOne({ where: { id: ctx.id } }) || {};
+      ctx.rawMaterialOrder =
+        (await RawMaterialOrderClient.findOne({ where: { id: ctx.id } })) || {};
       ctx.vendors = await VendorClient.findAll();
     }
   },
@@ -270,24 +275,27 @@ const handlers = {
   "order-ready": async (ctx) => {
     if (isValidUUID(ctx.id)) {
       ctx.dispatchOrder =
-        (await DispatchOrderClient.findOne({ where: { id: ctx.id } }))?.dataValues || {};
+        (await DispatchOrderClient.findOne({ where: { id: ctx.id } }))
+          ?.dataValues || {};
     }
   },
 
   "order-shipped": async (ctx) => {
     if (isValidUUID(ctx.id)) {
       ctx.dispatchOrder =
-        (await DispatchOrderClient.findOne({ where: { id: ctx.id } }))?.dataValues || {};
+        (await DispatchOrderClient.findOne({ where: { id: ctx.id } }))
+          ?.dataValues || {};
     }
   },
 
   "order-reached": async (ctx) => {
     if (isValidUUID(ctx.id)) {
       ctx.dispatchOrder =
-        (await DispatchOrderClient.findOne({ where: { id: ctx.id } }))?.dataValues || {};
+        (await DispatchOrderClient.findOne({ where: { id: ctx.id } }))
+          ?.dataValues || {};
     }
   },
-  
+
   "production-start": loadProductionBundle,
 
   "production-completed": loadProductionBundle,
@@ -297,7 +305,7 @@ const handlers = {
   "worker-multiple": async (ctx) => {
     const dataIds = ctx.id
       ?.split(",")
-      .map(i => i.trim())
+      .map((i) => i.trim())
       .filter(isValidUUID);
 
     if (!dataIds.length) return;
@@ -306,7 +314,7 @@ const handlers = {
       where: { id: dataIds },
     });
 
-    ctx.contractors = contractors.map(c => c.dataValues);
+    ctx.contractors = contractors.map((c) => c.dataValues);
   },
 
   "calendar-event-scheduled": async (ctx) => {
@@ -316,7 +324,8 @@ const handlers = {
       (await CalendarClient.findOne({ where: { id: ctx.id } })) || {};
   },
 
-  "scheduled-date-event": async (ctx) => {
+  "calendar-event-reminder": async (ctx) => {
+
     if (!isValidUUID(ctx.id)) return;
 
     ctx.calendarEvent =
@@ -332,7 +341,6 @@ const handlers = {
   },
 
   "multiple-product-card": async (ctx) => {
-    
     const packingEvents = await PackingEventClient.findAll({
       order: [["createdAt", "DESC"]],
     });
@@ -344,7 +352,6 @@ const handlers = {
   },
 
   "select-export-product": async (ctx) => {
-    
     const packingEvents = await PackingEventClient.findAll({
       order: [["createdAt", "DESC"]],
     });
@@ -354,7 +361,6 @@ const handlers = {
     ctx.packingEvents = packingEvents;
     ctx.chamberStocks = chamberStocks;
   },
-
 };
 
-module.exports = { handlers }
+module.exports = { handlers };

@@ -26,8 +26,12 @@ async function rebuildChamberItems(chamberId, transaction=null) {
 // CREATE
 router.post("/", upload.single("sample_image"), async (req, res) => {
   try {
-    const {
+const {
+  item_type = "dry",
   item_name,
+  product_name,
+  sku_size,
+  sku_unit,
   warehoused_date,
   description,
   quantity,
@@ -36,12 +40,27 @@ router.post("/", upload.single("sample_image"), async (req, res) => {
   unit_weight_grams
 } = req.body;
 
-    if (!item_name || !warehoused_date || !chamber_id || !unit?.trim()) {
-      return res.status(400).json({ error: "item_name, date, chamber and unit required." });
-    }
+    if (!item_type || !warehoused_date || !chamber_id || !unit?.trim()) {
+  return res.status(400).json({ error: "Missing required fields." });
+}
+
+if (item_type === "dry" && !item_name) {
+  return res.status(400).json({ error: "Dry item requires item_name." });
+}
+
+if (item_type === "packaging") {
+  if (!product_name || !sku_size || !sku_unit) {
+    return res.status(400).json({
+      error: "Packaging requires product_name, sku_size and sku_unit."
+    });
+  }
+}
 
     const normalizedUnit = normalize(unit);
-const normalizedName = normalize(item_name);
+const normalizedItemType = normalize(item_type);
+const normalizedName = item_name ? normalize(item_name) : null;
+const normalizedProduct = product_name ? normalize(product_name) : null;
+const normalizedSkuUnit = sku_unit ? normalize(sku_unit) : null;
 
 const numericQty = Number(quantity);
 if (!Number.isFinite(numericQty) || numericQty <= 0)
@@ -81,10 +100,13 @@ if (COUNTABLE_UNITS.includes(normalizedUnit)) {
 
     const existing = await DryWarehousesClient.findOne({
       where: {
+        item_type: normalizedItemType,
         item_name: normalizedName,
+        product_name: normalizedProduct,
+        sku_size: sku_size || null,
+        sku_unit: normalizedSkuUnit,
         chamber_id: chamber.id,
         unit: normalizedUnit
-
       }
     });
 
@@ -119,8 +141,12 @@ if (existingWeight !== incomingWeight) {
     let newItem;
 
     try {
-      newItem = await DryWarehousesClient.create({
+newItem = await DryWarehousesClient.create({
+  item_type: normalizedItemType,
   item_name: normalizedName,
+  product_name: normalizedProduct,
+  sku_size: sku_size || null,
+  sku_unit: normalizedSkuUnit,
   warehoused_date: parsedDate,
   description,
   quantity: numericQty,
@@ -138,10 +164,14 @@ if (existingWeight !== incomingWeight) {
 
   const retry = await DryWarehousesClient.findOne({
     where: {
-      item_name: normalizedName,
-      chamber_id: chamber.id,
-      unit: normalizedUnit
-    }
+  item_type: normalizedItemType,
+  item_name: normalizedName,
+  product_name: normalizedProduct,
+  sku_size: sku_size || null,
+  sku_unit: normalizedSkuUnit,
+  chamber_id: chamber.id,
+  unit: normalizedUnit
+}
   });
 
 const retryIncomingWeight = COUNTABLE_UNITS.includes(normalizedUnit)
@@ -317,17 +347,46 @@ router.put("/:id", async (req, res) => {
         return res.status(400).json({ error: "Target chamber does not exist" });
     }
 
-    if (req.body.item_name && normalize(req.body.item_name) !== existingItem.item_name) {
+    const isStructureChanged =
+  req.body.item_type !== undefined ||
+  req.body.item_name !== undefined ||
+  req.body.product_name !== undefined ||
+  req.body.sku_size !== undefined ||
+  req.body.sku_unit !== undefined;
+
+if (isStructureChanged) {
+      if (
+      req.body.unit &&
+      req.body.unit !== existingItem.unit &&
+      Number(existingItem.quantity) > 0
+    ) {
+      return res.status(400).json({
+        error: "Cannot change unit while stock exists"
+      });
+    }
 
       const duplicate = await DryWarehousesClient.findOne({
-        where: {
-          item_name: normalize(req.body.item_name),
-          chamber_id: newChamberId ?? existingItem.chamber_id,
-          unit: req.body.unit ? normalize(req.body.unit).toLowerCase() : existingItem.unit
-        }
+       where: {
+  item_type: req.body.item_type ?? existingItem.item_type,
+  item_name: req.body.item_name
+    ? normalize(req.body.item_name)
+    : existingItem.item_name,
+  product_name: req.body.product_name
+    ? normalize(req.body.product_name)
+    : existingItem.product_name,
+  sku_size: req.body.sku_size ?? existingItem.sku_size,
+  sku_unit: req.body.sku_unit
+    ? normalize(req.body.sku_unit)
+    : existingItem.sku_unit,
+  unit: req.body.unit
+    ? normalize(req.body.unit)
+    : existingItem.unit,
+  chamber_id: newChamberId ?? existingItem.chamber_id,
+}
       });
 
-if (duplicate) {
+
+if (duplicate && duplicate.id !== existingItem.id) {
 
 await duplicate.increment("quantity", { by: existingItem.quantity });
 
@@ -345,16 +404,6 @@ await rebuildChamberItems(existingItem.chamber_id);
 
     }
 
-    if (
-      req.body.unit &&
-      req.body.unit !== existingItem.unit &&
-      Number(existingItem.quantity) > 0
-    ) {
-      return res.status(400).json({
-        error: "Cannot change unit while stock exists"
-      });
-    }
-
     const allowed = {};
 
     if (req.body.item_name !== undefined)
@@ -363,10 +412,18 @@ await rebuildChamberItems(existingItem.chamber_id);
     if (req.body.description !== undefined)
       allowed.description = req.body.description;
 
-    // if (req.body.quantity !== undefined)
-    //   allowed.quantity = Number(req.body.quantity) || 0;
+    if (req.body.item_type !== undefined)
+      allowed.item_type = normalize(req.body.item_type);
 
-    // use adjsut route 
+    if (req.body.product_name !== undefined)
+      allowed.product_name = normalize(req.body.product_name);
+
+    if (req.body.sku_size !== undefined)
+      allowed.sku_size = req.body.sku_size;
+
+    if (req.body.sku_unit !== undefined)
+      allowed.sku_unit = normalize(req.body.sku_unit);
+
     if (req.body.quantity !== undefined)
       return res.status(400).json({
         error: "Direct quantity editing not allowed. Use stock adjustment."
@@ -379,6 +436,16 @@ await rebuildChamberItems(existingItem.chamber_id);
     allowed.chamber_id = newChamberId ?? existingItem.chamber_id;
 
 let count, updatedItem;
+
+if (
+  req.body.item_type &&
+  normalize(req.body.item_type) !== existingItem.item_type &&
+  Number(existingItem.quantity) > 0
+) {
+  return res.status(400).json({
+    error: "Cannot change item type while stock exists"
+  });
+}
 
 try {
   const result = await DryWarehousesClient.update(allowed, {

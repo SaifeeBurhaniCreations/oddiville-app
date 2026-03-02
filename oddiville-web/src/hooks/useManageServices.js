@@ -9,17 +9,22 @@ import {
     remove as removeService,
 } from "@/services/DryChamberService";
 import { handleFetchData, handleRemoveData } from "@/redux/ServiceDataSlice";
+import { useChamberstock } from "./chamberStock";
 
 const useManageServices = () => {
     const [showModal, setShowModal] = useState(false);
     const [selectedService, setSelectedService] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [filteredData, setFilteredData] = useState([]);
+    const [structuredData, setStructuredData] = useState([]);
 
     const dispatch = useDispatch();
     const serviceData = useSelector((state) => state.ServiceDataSlice.data);
     const chambers = useSelector((state) => state.ServiceDataSlice.chamber);
-
+    const {data: chamberStock, isLoading: chamberStockLoading } = useChamberstock();
+    const chamberStockMap = new Map();
+    chamberStock?.forEach((item) => {
+        chamberStockMap.set(item.product_name, item.image);
+    });
    
     useEffect(() => {
         const fetchAll = async () => {
@@ -49,65 +54,112 @@ const useManageServices = () => {
     }, [dispatch, serviceData?.length]);
 
    
-    useEffect(() => {
-        setFilteredData(groupDryItems(serviceData));
-        if (serviceData) {
-            setIsLoading(false);
-        }
-    }, [serviceData]);
-
-const groupDryItems = (data) => {
-    const map = new Map();
-
-    data.forEach((item) => {
-        
-        let key = undefined;
-        if(item.product_name) {
-            key = `${item.product_name}_${item.size}_${item.unit}`;
-        } else {
-            key = `${item.item_name}_${item.id}`;
-        }
-
-        if (!map.has(key)) {
-            map.set(key, {
-                groupKey: key,
-                product_name: item.product_name ? item.product_name : item.item_name,
-                size: item.size,
-                unit: item.unit,
-                warehouse_date: item.warehoused_date,
-                ratings: [],
-            });
-        }
-
-        map.get(key).ratings.push({
-            rating: item.rating,
-            quantity: item.quantity,
-            chamber_name: item.chamber_name,
-            id: item.id,
-        });
-    });
-
-    const result = Array.from(map.values());
-
-    result.forEach(group => {
-        group.ratings.sort((a, b) => Number(b.rating) - Number(a.rating));
-    });
-
-    return result;
-};
-
-const handleFilter = (chamberName) => {
-    if (chamberName === "All") {
-        setFilteredData(groupDryItems(serviceData));
+useEffect(() => {
+    if (!serviceData || serviceData.length === 0) {
+        setStructuredData([]);
+        setIsLoading(false);
         return;
     }
 
-    const filtered = serviceData.filter((item) => {
-        if (!item?.chamber_name) return false;
-        return item.chamber_name === chamberName;
-    });
+    setStructuredData(groupStructuredDryItems(serviceData));
+    setIsLoading(false);
 
-    setFilteredData(groupDryItems(filtered));
+}, [serviceData]);
+
+const groupStructuredDryItems = (data) => {
+    const packagingMap = new Map();
+    const dryMap = new Map();
+
+    data.forEach((item) => {
+        if (item.item_type === "packaging") {
+            const productKey = item.product_name;
+            const image = chamberStockMap.get(productKey);
+            
+            const skuKey = `${item.sku_size}_${item.sku_unit}`;
+
+            if (!packagingMap.has(productKey)) {
+                packagingMap.set(productKey, {
+                    type: "packaging",
+                    product: productKey,
+                    image,
+                    skuMap: new Map(),
+                });
+            }
+
+            const productGroup = packagingMap.get(productKey);
+
+            if (!productGroup.skuMap.has(skuKey)) {
+                productGroup.skuMap.set(skuKey, {
+                    skuKey,
+                    size: Number(item.sku_size),
+                    unit: item.sku_unit,
+                    ratings: [],
+                });
+            }
+
+            productGroup.skuMap.get(skuKey).ratings.push({
+                quantity: item.quantity,
+                chamber_name: item.chamber_name,
+                id: item.id,
+            });
+
+        } else if (item.item_type === "dry") {
+
+            const dryKey = item.item_name;
+
+            if (!dryMap.has(dryKey)) {
+                dryMap.set(dryKey, {
+                    type: "dry",
+                    item_name: dryKey,
+                    ratings: [],
+                });
+            }
+
+            dryMap.get(dryKey).ratings.push({
+                quantity: item.quantity,
+                chamber_name: item.chamber_name,
+                id: item.id,
+            });
+        }
+    });
+const packagingResult = Array.from(packagingMap.values()).map(product => {
+    const skus = Array.from(product.skuMap.values());
+
+    const totalQty = skus.reduce((acc, sku) => {
+        const skuTotal = sku.ratings.reduce(
+            (sum, r) => sum + Number(r.quantity || 0),
+            0
+        );
+        return acc + skuTotal;
+    }, 0);
+
+    return {
+        type: "packaging",
+        product: product.product,
+        image: product.image,
+        skus,
+        totalQuantity: totalQty,
+    };
+});
+
+    const dryResult = Array.from(dryMap.values());
+
+    return [...packagingResult, ...dryResult];
+};
+
+const handleFilter = (chamberName) => {
+    if (!serviceData) return;
+
+    if (chamberName === "All") {
+        setStructuredData(groupStructuredDryItems(serviceData));
+        return;
+    }
+
+    const filtered = serviceData.filter((item) =>
+        item?.chamber_name === chamberName
+    );
+
+    setStructuredData(groupStructuredDryItems(filtered));
 };
 
 const handleDelete = async () => {
@@ -139,14 +191,13 @@ const handleDeleteClick = (ratingLot) => {
 
     return {
         isLoading,
-        filteredData,
+        structuredData,
         chambers,
         showModal,
         selectedService,
         handleFilter,
         handleDeleteClick,
         handleDelete,
-        handleDeleteClick,
         setShowModal,
     };
 };

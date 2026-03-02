@@ -2,6 +2,7 @@
 import { NavLink } from "react-router-dom";
 import Spinner from "@/components/Spinner/Spinner"; 
 import { formatDate } from "@/util/formatDate"; 
+import { useState } from "react";
 
 const formatKg = (val) => Number(Number(val || 0).toFixed(2));
 
@@ -11,9 +12,8 @@ const TableWrapper = ({ children }) => (
             <tr>
                 <th>Image</th>
                 <th>Item Name</th>
-                <th className="text-center">Chamber</th>
                 <th className="text-center">Quantity</th>
-                <th className="text-center">Created Date</th>
+                <th className="text-center">SKU</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -21,23 +21,109 @@ const TableWrapper = ({ children }) => (
     </table>
 );
 
-const renderTableRows = (filteredData, handleDeleteClick) => {
+
+const PackagingRow = ({ group, handleDeleteClick }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
+      <tr>
+        <td>
+          <img
+            src={group.image || "/assets/img/png/fallback_img.png"}
+            className="avatar avatar-lg"
+            alt="item"
+          />
+        </td>
+
+        <td>
+          <p className="text-sm font-weight-bold mb-0">
+            {group.product}
+          </p>
+        </td>
+
+        <td className="text-center">—</td>
+
+        <td className="text-center">
+          {group.skus.length} SKUs
+        </td>
+
+        <div className="d-flex, align-items-center">
+          <button
+            className="btn btn-link text-info text-gradient px-3 mb-0"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            {isOpen ? "Hide" : "View"}
+          </button>
+                        <button
+                            className="btn btn-link text-danger text-gradient px-3 mb-0"
+                            onClick={() => handleDeleteClick(rating)}
+                        >
+                            <i className="far fa-trash-alt me-2" />
+                            Delete
+                        </button>
+        </div>
+      </tr>
+
+      {isOpen && (
+        <tr>
+          <td colSpan={6} className="p-0">
+            <ExpandedSKUList skus={group.skus} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+};
+
+const ExpandedSKUList = ({ skus }) => {
+  return (
+    <div className="p-3 border">
+      <table className="table mb-0">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th className="text-center">Quantity</th>
+            <th className="text-center">Chambers</th>
+          </tr>
+        </thead>
+        <tbody>
+          {skus.map((sku) => {
+            const totalQty = sku.ratings.reduce(
+              (sum, r) => sum + Number(r.quantity || 0),
+              0
+            );
+
+            const chambers = sku.ratings
+              .map((r) => r.chamber_name)
+              .join(", ");
+
+            return (
+              <tr key={sku.skuKey}>
+                <td>{sku.size} {sku.unit}</td>
+                <td className="text-center">
+                  {formatKg(totalQty)} Kg
+                </td>
+                <td className="text-center">
+                  {chambers || "N/A"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const renderTableRows = (structuredData, handleDeleteClick) => {
     const rows = [];
 
-    filteredData.forEach((group, groupIndex) => {
+structuredData.forEach((group) => {
 
-        // rows.push(
-        //     <tr key={`group-${groupIndex}`} className="table-secondary">
-        //         <td colSpan={6}>
-        //             <strong>
-        //                 {group.product_name} ({group.size} {group.unit})
-        //             </strong>
-        //         </td>
-        //     </tr>
-        // );
+    if (group.type === "dry") {
 
-        // RATING ROWS
-        group.ratings.forEach((rating, ratingIndex) => {
+        group.ratings.forEach((rating) => {
             rows.push(
                 <tr key={rating.id}>
                     <td>
@@ -50,11 +136,8 @@ const renderTableRows = (filteredData, handleDeleteClick) => {
 
                     <td>
                         <p className="text-sm font-weight-bold mb-0">
-                            {group.product_name} ({group.size} {group.unit})
+                            {group.item_name}
                         </p>
-                        {/* <p className="text-sm font-weight-bold mb-0">
-                            ⭐ Rating {rating.rating}
-                        </p> */}
                     </td>
 
                     <td className="text-center">
@@ -64,30 +147,26 @@ const renderTableRows = (filteredData, handleDeleteClick) => {
                     <td className="text-center">
                         {formatKg(rating.quantity)} Kg
                     </td>
-
-                    <td className="text-center">
-                        {formatDate(group.warehouse_date) ?? "—"}
-                    </td>
-
-                    <td>
-                        <button
-                            className="btn btn-link text-danger text-gradient px-3 mb-0"
-                            onClick={() => handleDeleteClick(rating)}
-                        >
-                            <i className="far fa-trash-alt me-2" />
-                            Delete
-                        </button>
-                    </td>
                 </tr>
             );
         });
-    });
 
+    } else if (group.type === "packaging") {
+
+  rows.push(
+  <PackagingRow
+    key={group.product}
+    group={group}
+    handleDeleteClick={handleDeleteClick}
+  />
+);
+    }
+});
     return rows;
 };
 
 
-const ServiceTable = ({ filteredData, isLoading, handleDeleteClick }) => {
+const ServiceTable = ({ filteredData, structuredData, isLoading, handleDeleteClick }) => {
     
     // Loading State
     if (isLoading) {
@@ -104,7 +183,7 @@ const ServiceTable = ({ filteredData, isLoading, handleDeleteClick }) => {
     }
     
     // No Data State
-    if (filteredData.length === 0) {
+    if (structuredData.length === 0) {
         return (
             <TableWrapper>
                 <tr>
@@ -118,7 +197,7 @@ const ServiceTable = ({ filteredData, isLoading, handleDeleteClick }) => {
 
     return (
         <TableWrapper>
-            {renderTableRows(filteredData, handleDeleteClick)}
+            {renderTableRows(structuredData, handleDeleteClick)}
         </TableWrapper>
     );
 };

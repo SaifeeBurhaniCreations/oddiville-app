@@ -55,6 +55,7 @@ const bottomSheetFillers = {
 };
 
 function getBottomSheet(ctx) {
+
   const fillerSchema = getFillerSchema(ctx);
 
   const fillFn = bottomSheetFillers[ctx.type];

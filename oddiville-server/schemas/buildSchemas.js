@@ -551,6 +551,46 @@ function buildCalendarSchemas({ calendarEvent }) {
     createdAt: calendarEvent.createdAt ?? "N/A",
   };
 
+  console.log({
+    "calendar-event-scheduled": {
+      ...base,
+      "Event Details": [
+        {
+          label: "Title",
+          value: calendarEvent.product_name,
+        },
+        {
+          label: "Description",
+          value: calendarEvent.work_area,
+        },
+      ],
+    },
+
+    "calendar-event-reminder": {
+      ...base,
+      "Event Details": [
+        {
+          label: "Product",
+          value: calendarEvent.product_name,
+        },
+        {
+          label: "Area",
+          value: calendarEvent.work_area,
+        },
+      ],
+      "Time Details": [
+        {
+          label: "Start Time",
+          value: calendarEvent.start_time,
+        },
+        {
+          label: "End Time",
+          value: calendarEvent.end_time,
+        },
+      ],
+    },
+  });
+  
   return {
     "calendar-event-scheduled": {
       ...base,
@@ -566,7 +606,7 @@ function buildCalendarSchemas({ calendarEvent }) {
       ],
     },
 
-    "scheduled-date-event": {
+    "calendar-event-reminder": {
       ...base,
       "Event Details": [
         {

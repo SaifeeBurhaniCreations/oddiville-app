@@ -10,6 +10,7 @@ const Services = () => {
     const {
         isLoading,
         filteredData,
+        structuredData,
         chambers,
         showModal,
         selectedService,
@@ -58,6 +59,7 @@ const Services = () => {
                             <div className="table-responsive p-0">
                                 <ServiceTable
                                     filteredData={filteredData}
+                                    structuredData={structuredData}
                                     isLoading={isLoading}
                                     handleDeleteClick={handleDeleteClick}
                                 />

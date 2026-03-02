@@ -161,6 +161,10 @@ const loader = useOverlayLoader();
       ? "No chamber data available"
       : undefined;
 
+const chambersMap = new Map(
+  chambers?.map((chamber) => [chamber.chamber_name, chamber.id])
+);
+
   const actions: Record<string, BottomSheetAction> = {
     "add-raw-material": () => {
       if (!meta?.id) {
@@ -202,7 +206,7 @@ const loader = useOverlayLoader();
         const { image, packageImage, clearImages } = useImageStore.getState();
 
         const formData = new FormData();
-
+        
         // ---- fields ----
         formData.append("product_name", product_name);
         formData.append("chamber_name", chamber_name);
