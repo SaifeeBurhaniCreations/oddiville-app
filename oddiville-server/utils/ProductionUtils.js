@@ -69,12 +69,28 @@ async function fetchProductionOrFail(id) {
   return prod;
 }
 
-async function validateLaneAssignment(laneId, productionId) {
-  const laneRecord = await lanesClient.findOne({ where: { id: laneId } });
-  if (!laneRecord) throwHttpError("Lane not found", 404);
+async function validateLaneAssignment(
+  laneId,
+  productionId,
+  transaction
+) {
+  const laneRecord = await lanesClient.findOne({
+    where: { id: laneId },
+    transaction,
+    lock: true,
+  });
 
-  if (laneRecord.production_id && laneRecord.production_id !== productionId) {
-    throwHttpError("Lane already assigned to another production", 400);
+  if (!laneRecord)
+    throwHttpError("Lane not found", 404);
+
+  if (
+    laneRecord.production_id &&
+    laneRecord.production_id !== productionId
+  ) {
+    throwHttpError(
+      "Lane already assigned to another production",
+      400
+    );
   }
 
   return laneRecord;

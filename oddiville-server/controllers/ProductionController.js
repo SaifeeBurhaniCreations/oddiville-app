@@ -3,6 +3,7 @@ const {
   Production: productionClient,
   RawMaterialOrder: rawMaterialOrderClient,
   Chambers: chambersClient,
+  Lanes: lanesClient,
 } = require("../models");
 
 const {
@@ -222,6 +223,7 @@ router.delete("/:id", async (req, res) => {
 
 router.patch("/:id", upload.array("sample_images"), async (req, res) => {
   const { id } = req.params;
+  const io = req.app.get("io");
   const { lane, existing_sample_images, ...otherFields } = req.body;
   const files = req.files;
 
@@ -234,7 +236,7 @@ router.patch("/:id", upload.array("sample_images"), async (req, res) => {
 
     const currentProduction = await fetchProductionOrFail(id);
     const laneRecord = lane ? await validateLaneAssignment(lane, id) : null;
-
+ 
     const updatedFields = buildUpdatedFields({
       otherFields,
       allImages,
@@ -243,17 +245,33 @@ router.patch("/:id", upload.array("sample_images"), async (req, res) => {
       currentProductionStatus: currentProduction.status,
     });
 
-    // if (updatedFields?.start_time != null) {
-    //   await createAndSendProductionStartNotification(
-    //     currentProduction,
-    //     laneRecord?.name
-    //   );
-    // }
-
     const updatedProduction = await updateProductionRecord(id, updatedFields);
+
     if (!updatedProduction) {
-      return res.status(404).json({ error: "Production not found" });
-    }
+  return res.status(404).json({ error: "Production not found" });
+}
+
+if (
+  currentProduction.lane_id &&
+  String(currentProduction.lane_id) !== String(lane)
+) {
+  await lanesClient.update(
+    { production_id: null },
+    { where: { id: currentProduction.lane_id } }
+  );
+}
+
+if (lane) {
+  await lanesClient.update(
+    { production_id: id },
+    { where: { id: lane } }
+  );
+}
+const allLanes = await lanesClient.findAll();
+
+io.emit("lanes:receive", {
+  lanes: allLanes,
+});
 
     return res.status(200).json({
       ...updatedProduction.dataValues,
@@ -278,105 +296,148 @@ router.patch("/:id", upload.array("sample_images"), async (req, res) => {
   }
 });
 
-router.patch("/start/:id", upload.single("sample_image"), async (req, res) => {
-  const { id } = req.params;
+router.patch(
+  "/start/:id",
+  upload.single("sample_image"),
+  async (req, res) => {
+    const { id } = req.params;
 
-  const {
-    start_time,
-    rating,
-    sample_quantity,
-    supervisor,
-    ...otherFields
-  } = req.body;
+    const {
+      start_time,
+      rating,
+      sample_quantity,
+      supervisor,
+      ...otherFields
+    } = req.body;
+    const transaction = await sequelize.transaction();
+    
+    try {
+      const production = await productionClient.findByPk(id, { transaction });
 
-  try {
-    const production = await productionClient.findByPk(id);
-    if (!production) {
-      return res.status(404).json({ error: "Production not found" });
-    }
-
-    const allowedStatuses = ["pending", "in-queue", "in-progress"];
-
-    if (!allowedStatuses.includes(production.status)) {
-      return res.status(400).json({
-        error: `Cannot start production from status '${production.status}'.`,
-      });
-    }
-
-    let laneRecord = null;
-    if (production.lane_id) {
-      laneRecord = await validateLaneAssignment(production.lane_id, id);
-    }
-
-    const updatedFields = {
-      status: "in-progress", 
-      rating: rating ? Number(rating) : production.rating,
-      supervisor: supervisor ?? production.supervisor,
-      updatedAt: new Date(),
-      ...otherFields,
-      start_time: start_time ? new Date(start_time) : new Date(),
-    };
-
-    const oldImageKey = production.sample_image?.key || null;
-    let newSampleImage = null;
-
-    if (req.file) {
-      const uploaded = await uploadToS3({
-        file: req.file,
-        folder: "production",
-      });
-
-      if (!uploaded?.url || !uploaded?.key) {
-        return res.status(500).json({ error: "Failed to upload sample image" });
+      if (!production) {
+        await transaction.rollback();
+        return res.status(404).json({ error: "Production not found" });
       }
 
-      newSampleImage = uploaded;
-      updatedFields.sample_image = newSampleImage;
-    }
+      const allowedStatuses = ["pending", "in-queue", "in-progress"];
 
-    if (sample_quantity && Number(sample_quantity) > 0) {
-      const newQty = Number(production.quantity) - Number(sample_quantity);
-      updatedFields.quantity = Math.max(newQty, 0);
-    }
+      if (!allowedStatuses.includes(production.status)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          error: `Cannot start production from status '${production.status}'.`,
+        });
+      }
 
-    const [updatedCount, updatedRows] = await productionClient.update(
-      updatedFields,
-      { where: { id }, returning: true }
-    );
+      let laneRecord = null;
+      if (production.lane_id) {
+        laneRecord = await validateLaneAssignment(
+          production.lane_id,
+          id,
+          transaction
+        );
+      }
 
-    if (!updatedCount) {
-      return res.status(404).json({ error: "Failed to update production" });
-    }
+      const updatedFields = {
+        status: "in-progress",
+        rating: rating ? Number(rating) : production.rating,
+        supervisor: supervisor ?? production.supervisor,
+        updatedAt: new Date(),
+        ...otherFields,
+        start_time: start_time ? new Date(start_time) : new Date(),
+      };
 
-    const updatedProduction = updatedRows[0];
+      const oldImageKey = production.sample_image?.key || null;
+      let newSampleImage = null;
 
-    if (production.raw_material_order_id) {
-      await rawMaterialOrderClient.update(
-        {
-          sample_quantity: Number(sample_quantity || 0),
-          sample_image: newSampleImage ?? production.sample_image,
-          rating: rating !== undefined ? Number(rating) : production.rating,
-        },
-        { where: { id: production.raw_material_order_id } }
+      if (req.file) {
+        const uploaded = await uploadToS3({
+          file: req.file,
+          folder: "production",
+        });
+
+        if (!uploaded?.url || !uploaded?.key) {
+          await transaction.rollback();
+          return res.status(500).json({
+            error: "Failed to upload sample image",
+          });
+        }
+
+        newSampleImage = uploaded;
+        updatedFields.sample_image = newSampleImage;
+      }
+
+      if (sample_quantity && Number(sample_quantity) > 0) {
+        const newQty =
+          Number(production.quantity) - Number(sample_quantity);
+        updatedFields.quantity = Math.max(newQty, 0);
+      }
+
+      const [updatedCount, updatedRows] =
+        await productionClient.update(updatedFields, {
+          where: { id },
+          returning: true,
+          transaction,
+        });
+
+      if (!updatedCount) {
+        await transaction.rollback();
+        return res.status(404).json({
+          error: "Failed to update production",
+        });
+      }
+
+      const updatedProduction = updatedRows[0];
+
+      if (production.lane_id) {
+        await lanesClient.update(
+          { production_id: id },
+          {
+            where: { id: production.lane_id },
+            transaction,
+          }
+        );
+      }
+
+      if (production.raw_material_order_id) {
+        await rawMaterialOrderClient.update(
+          {
+            sample_quantity: Number(sample_quantity || 0),
+            sample_image:
+              newSampleImage ?? production.sample_image,
+            rating:
+              rating !== undefined
+                ? Number(rating)
+                : production.rating,
+          },
+          {
+            where: { id: production.raw_material_order_id },
+            transaction,
+          }
+        );
+      }
+
+      await transaction.commit();
+
+      if (newSampleImage && oldImageKey) {
+        await deleteFromS3(oldImageKey);
+      }
+
+      await createAndSendProductionStartNotification(
+        updatedProduction,
+        laneRecord?.name
       );
+
+      return res.status(200).json(updatedProduction.dataValues);
+    } catch (err) {
+      await transaction.rollback();
+
+      const { normalizeError } = require("../utils/normalizeError");
+      const { status, message } = normalizeError(err);
+
+      return res.status(status).json({ error: message });
     }
-
-    if (newSampleImage && oldImageKey) {
-      await deleteFromS3(oldImageKey);
-    }
-
-    await createAndSendProductionStartNotification(
-      updatedProduction,
-      laneRecord?.name
-    );
-
-    return res.status(200).json(updatedProduction.dataValues);
-  } catch (err) {
-    const { normalizeError } = require("../utils/normalizeError");
-    const { status, message } = normalizeError(err);
-    return res.status(status).json({ error: message });
   }
-});
+);
 
 router.patch("/complete/:id", async (req, res) => {
   const productionId = req.params.id;
