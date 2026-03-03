@@ -15,6 +15,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/src/redux/store";
 import { updateBottomSheetMeta } from "@/src/redux/slices/bottomsheet.slice";
 import { useOverlayLoader } from "@/src/context/OverlayLoaderContext";
+import { useAppCapabilities } from "@/src/hooks/useAppCapabilities";
 
 const ItemCard = ({
   id,
@@ -31,6 +32,8 @@ const ItemCard = ({
 }: ItemCardData) => {
   const { goTo } = useAppNavigation();
   const loader = useOverlayLoader();
+  const caps = useAppCapabilities();
+  const canEditProduction = caps.production.edit;
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const dispatch = useDispatch();
   const bottomSheetMeta = useSelector(
@@ -45,6 +48,23 @@ const { isVisible } = useSelector(
     loader.hide();
   }
 }, [isVisible]);
+
+  const canAccessCard = () => {
+    switch (mode) {
+      case "production":
+      case "default":
+        return caps.production.edit;
+
+      case "production-completed":
+        return caps.production.edit; 
+
+      case "packing":
+        return caps.package.edit;
+
+      default:
+        return false;
+    }
+  };
 
   const handlePress = () => {
     switch (mode) {
@@ -223,7 +243,8 @@ const { isVisible } = useSelector(
   /* ---------------- RENDER ---------------- */
 
   return (
-    <TouchableOpacity style={[styles.container, style]} onPress={handlePress}>
+    <TouchableOpacity style={[styles.container, style]} onPress={canAccessCard() ? handlePress : undefined}
+      activeOpacity={canAccessCard() ? 0.2 : 1}>
       {BackgroundIcon && (
         <View style={styles.backgroundIcon}>
           <BackgroundIcon size={60} />

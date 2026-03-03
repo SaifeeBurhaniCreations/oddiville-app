@@ -14,7 +14,7 @@ export const formatDisplayCount = (service, quantity) => {
     return `${totalQty} bags`;
   }
 
-  if (service.category === "material") {
+  if (service.category === "bulk") {
     const bagSize = Number(service.packaging?.size?.value || 0);
     const unit = service.unit || "kg";
 

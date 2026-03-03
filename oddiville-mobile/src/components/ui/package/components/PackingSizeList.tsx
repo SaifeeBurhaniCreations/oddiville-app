@@ -202,14 +202,21 @@ const PackingSizeList = ({
                     </Pressable>
                 </View>
             </View>
-            <Input
-                placeholder="Enter packet per bag"
-                keyboardType="numeric"
-                value={String(packetsPerBag ?? "")}
-                onChangeText={(text: string) =>
-                    onChangeInput(packageKey, "packetsPerBag", Number(text))
-                }
-            />
+           <Input
+    placeholder="Enter packet per bag"
+    keyboardType="numeric"
+    value={packetsPerBag?.toString() ?? ""}
+    onChangeText={(text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, "");
+
+        if (cleaned === "") {
+            onChangeInput(packageKey, "packetsPerBag", undefined);
+            return;
+        }
+
+        onChangeInput(packageKey, "packetsPerBag", Number(cleaned));
+    }}
+/>
             {skuError && <B4 color={getColor("red")}>{skuError}</B4>}
             {chamberOptions.map((chamber) => (
                 <ChamberRow

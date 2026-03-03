@@ -43,6 +43,7 @@ import {
 } from "@/src/hooks/vendor";
 import OverlayLoader from "@/src/components/ui/OverlayLoader";
 import { useToast } from "@/src/context/ToastContext";
+import { useOverlayLoader } from "@/src/context/OverlayLoaderContext";
 
 interface buttonProps {
   variant: "fill" | "outline";
@@ -63,6 +64,7 @@ const VendorCreateScreen = () => {
   const toast = useToast();
   const { validateAndSetData } = useValidateAndOpenBottomSheet();
   const updateVendor = useUpdateVendor();
+  const loader = useOverlayLoader();
   const selected = useSelector(
     (state: RootState) => state.rawMaterial.selectedRawMaterials,
   );
@@ -149,6 +151,9 @@ const VendorCreateScreen = () => {
   );
 
   useEffect(() => {
+    loader.bind(isLoading || isFetchingVendor);
+  }, [isLoading || isFetchingVendor]);
+  useEffect(() => {
     const current = values?.materials ?? [];
     const next = selected?.map((v) => (typeof v === "string" ? v : v?.name));
 
@@ -221,7 +226,7 @@ const VendorCreateScreen = () => {
             name: m,
             detailByRating: [],
             rating: "",
-            category: "material",
+            category: "bulk",
             chambers: [],
           })),
         ),
@@ -537,7 +542,6 @@ const VendorCreateScreen = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Deactivation Confirmation Modal */}
       {modalContent && (
         <Modal
           showPopup={deactivate}
@@ -546,7 +550,6 @@ const VendorCreateScreen = () => {
         />
       )}
       <BottomSheet color="green" />
-      {(isLoading || isFetchingVendor) && <OverlayLoader />}
     </View>
   );
 };

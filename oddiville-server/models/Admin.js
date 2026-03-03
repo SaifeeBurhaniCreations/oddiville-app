@@ -44,7 +44,7 @@ module.exports = (sequelize, Sequelize) => {
       },
       policies: {
         type: Sequelize.ARRAY(
-          Sequelize.ENUM("purchase-view", "purchase-edit", "production", "package", "sales-view", "sales-edit", "trucks", "labours")
+          Sequelize.ENUM("purchase-view", "purchase-edit", "production", "package-view", "package-edit", "sales-view", "sales-edit", "trucks", "labours")
         ),
         allowNull: true,
       },

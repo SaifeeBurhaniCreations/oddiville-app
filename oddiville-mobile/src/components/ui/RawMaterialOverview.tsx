@@ -38,7 +38,7 @@ const RawMaterialOverview = () => {
     if (!stockData) return [];
 
     return stockData
-      .filter((value: StockDataItem) => value.category === "material")
+      .filter((value: StockDataItem) => value.category === "bulk")
       .map((value: StockDataItem, idx: number) => {
         const totalQuantity = randInt(500, 15000);
         const randomTotal = [20000, 50000, 30000, 27000, 15500];

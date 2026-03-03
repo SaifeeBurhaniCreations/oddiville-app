@@ -50,12 +50,12 @@ const TitleWithCheckboxComponent: React.FC<TitleWithCheckboxProps> = ({
         {
           id: "all",
           product_name: "All",
-          category: "material",
+          category: "bulk",
           image: "",
           unit: "",
           chamber: [],
         },
-      ].filter((value: StockDataItem) => value.category === "material"),
+      ].filter((value: StockDataItem) => value.category === "bulk"),
       "product_name",
     ),
     "chamber:detailed:Category": Array.from(
@@ -67,12 +67,12 @@ const TitleWithCheckboxComponent: React.FC<TitleWithCheckboxProps> = ({
         {
           id: "all",
           product_name: "All",
-          category: "material",
+          category: "bulk",
           image: "",
           unit: "",
           chamber: [],
         },
-      ].filter((value: StockDataItem) => value.category === "material"),
+      ].filter((value: StockDataItem) => value.category === "bulk"),
       "product_name",
     ),
   };

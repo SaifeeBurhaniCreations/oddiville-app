@@ -49,7 +49,7 @@ export interface ChamberStock {
   id: string;
   product_name: string;
   image?: string | null;
-  category: "material" | "other" | "packed";
+  category: "bulk" | "other" | "packed";
   unit: string;
   rating: number | string;
 
@@ -100,6 +100,8 @@ export function useChamberStockById(id: string | null) {
 
 export function useChamberStockByName(names: string[]) {
     const { data: chamberStock, refetch, isFetching } = useChamberStock();
+    chamberStock?.map((item) => console.log(item));
+    
     return { chamberStock: chamberStock?.filter((item) => names.includes(item.product_name)), refetch, isFetching };
 }
 

@@ -61,7 +61,7 @@ router.get("/all", async (req, res) => {
 router.get("/all/materials", async (req, res) => {
   try {
     const chamberStock = await chamberStockClient.findAll({
-      where: { category: "material" },
+      where: { category: "bulk" },
     });
     res.status(200).json(chamberStock);
   } catch (error) {

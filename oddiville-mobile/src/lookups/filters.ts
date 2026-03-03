@@ -36,8 +36,8 @@ export const filterHandlers: Record<
 
     const cat = (item.category ?? "").toLowerCase();
 
-    if (subKey === "Material") {
-      return cat === "material";
+    if (subKey === "Bulk") {
+      return cat === "bulk";
     }
 
     if (subKey === "Others") {

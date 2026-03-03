@@ -192,7 +192,7 @@ static async deductRawMaterialStock(rmConsumption, transaction) {
     const stock = await ChamberStock.findOne({
       where: {
         id: rmId,
-        category: "material",
+        category: "bulk",
         rating
       },
       transaction,
@@ -246,15 +246,9 @@ static async deductPackaging(packagingPlan, productName, t) {
 
   let simulatedTypes = JSON.parse(JSON.stringify(pkgRow.types));
 
-  const pouchRequirements = {};
   const plasticRequirements = {};
 
   for (const sku of packagingPlan) {
-
-    const itemName = `${productName}:${sku.packet.size}${sku.packet.unit}`;
-
-    pouchRequirements[itemName] =
-      (pouchRequirements[itemName] || 0) + sku.totalPacketsProduced;
 
     const tare = getTareWeight({
       type: "pouch",
@@ -269,21 +263,36 @@ static async deductPackaging(packagingPlan, productName, t) {
       (plasticRequirements[plasticKey] || 0) + usedKg;
   }
 
-  for (const [itemName, totalRequired] of Object.entries(pouchRequirements)) {
+  for (const sku of packagingPlan) {
 
     const dry = await DryWarehouse.findOne({
-      where: { item_name: itemName, unit: "pcs" },
+      where: {
+        item_type: "packaging",
+        product_name: productName.toLowerCase(),
+        sku_size: String(sku.packet.size),
+        sku_unit: sku.packet.unit.toLowerCase(),
+        unit: "pcs"
+      },
       transaction: t,
       lock: Sequelize.Transaction.LOCK.UPDATE,
     });
 
     if (!dry)
-      throw new Error(`Pouch stock not found for ${itemName}`);
+      throw new Error(
+        `Pouch stock not found for ${productName} ${sku.packet.size}${sku.packet.unit}`
+      );
 
-    if (Number(dry.quantity) < totalRequired)
-      throw new Error(`Insufficient pouches for ${itemName}`);
+    if (Number(dry.quantity) < sku.totalPacketsProduced)
+      throw new Error(
+        `Insufficient pouches for ${productName} ${sku.packet.size}${sku.packet.unit}`
+      );
+
+    dry.quantity = Number(dry.quantity) - sku.totalPacketsProduced;
+
+    await dry.save({ transaction: t });
   }
 
+  /* 🔥 PLASTIC DEDUCTION */
   simulatedTypes = simulatedTypes.map(tp => {
 
     const key = `${tp.size}${tp.unit}`;
@@ -300,22 +309,9 @@ static async deductPackaging(packagingPlan, productName, t) {
     };
   });
 
-  for (const [itemName, totalRequired] of Object.entries(pouchRequirements)) {
-
-    const dry = await DryWarehouse.findOne({
-      where: { item_name: itemName, unit: "pcs" },
-      transaction: t,
-      lock: Sequelize.Transaction.LOCK.UPDATE,
-    });
-
-    dry.quantity = Number(dry.quantity) - totalRequired;
-    await dry.save({ transaction: t });
-  }
-
   pkgRow.types = simulatedTypes;
   await pkgRow.save({ transaction: t });
 }
-
 }
 
 module.exports = PackingService;

@@ -208,7 +208,7 @@ router.post("/", async (req, res) => {
 
     for (const raw of rawProducts) {
       const rawStock = await ChamberStockClient.findOne({
-        where: { product_name: raw.product_name, category: "material" },
+        where: { product_name: raw.product_name, category: "bulk" },
         transaction: t,
         lock: t.LOCK.UPDATE,
       });

@@ -8,8 +8,7 @@ const {
   applyDispatchTransaction,
 } = require("../services/applyDispatchTransaction");
 const safeRoute = require("../sbc/utils/safeRoute/index");
-    const { assertPositiveInteger } = require("../utils/inventoryInvariants");
-
+const { assertPositiveInteger } = require("../utils/inventoryInvariants");
 const {
   sequelize,
   RawMaterial: RawMaterialClient,
@@ -798,61 +797,56 @@ function normalizeChamberStockRow(row) {
       : [],
   };
 
-  if (category === "material") {
+  if (category === "bulk") {
     normalized.packaging = row.packaging || null;
   }
 
-if (
-  category === "packed" &&
-  Array.isArray(row.packages) &&
-  Array.isArray(row.chamber)
-) {
-row.chamber.forEach((ch, i) => {
-  assertPositiveInteger(
-    ch.quantity,
-    "Bags",
-    `chamber[${i}].quantity`
-  );
-});
+  if (
+    category === "packed" &&
+    Array.isArray(row.packages) &&
+    Array.isArray(row.chamber)
+  ) {
+    row.chamber.forEach((ch, i) => {
+      assertPositiveInteger(ch.quantity, "Bags", `chamber[${i}].quantity`);
+    });
 
-row.packages.forEach((p, i) => {
-  assertPositiveInteger(
-    p.packets_per_bag,
-    "packets_per_bag",
-    `packages[${i}].packets_per_bag`
-  );
-});
+    row.packages.forEach((p, i) => {
+      assertPositiveInteger(
+        p.packets_per_bag,
+        "packets_per_bag",
+        `packages[${i}].packets_per_bag`,
+      );
+    });
     const totalBags = Array.isArray(row.chamber)
-  ? row.chamber.reduce((s, ch) => s + Number(ch.quantity || 0), 0)
-  : 0;
+      ? row.chamber.reduce((s, ch) => s + Number(ch.quantity || 0), 0)
+      : 0;
 
-normalized.packages = row.packages.map((p, i) => {
-  if (!p.packets_per_bag)
-  throw new Error("packets_per_bag is required for packed category");
-  const packetsPerBag = Number(p.packets_per_bag || 1);
+    normalized.packages = row.packages.map((p, i) => {
+      if (!p.packets_per_bag)
+        throw new Error("packets_per_bag is required for packed category");
+      const packetsPerBag = Number(p.packets_per_bag || 1);
 
-  assertPositiveInteger(
-    packetsPerBag,
-    "packets_per_bag",
-    `packages[${i}].packets_per_bag`
-  );
+      assertPositiveInteger(
+        packetsPerBag,
+        "packets_per_bag",
+        `packages[${i}].packets_per_bag`,
+      );
 
-  const computedPackets = totalBags * packetsPerBag;
+      const computedPackets = totalBags * packetsPerBag;
 
-  assertPositiveInteger(
-    computedPackets,
-    "packages.quantity",
-    `packages[${i}].quantity`
-  );
+      assertPositiveInteger(
+        computedPackets,
+        "packages.quantity",
+        `packages[${i}].quantity`,
+      );
 
-  return {
-    size: Number(p.size),
-    unit: ensureString(p.unit),
-    packets_per_bag: packetsPerBag,
-    quantity: computedPackets,
-  };
-});
-
+      return {
+        size: Number(p.size),
+        unit: ensureString(p.unit),
+        packets_per_bag: packetsPerBag,
+        quantity: computedPackets,
+      };
+    });
   }
 
   return normalized;
@@ -862,11 +856,24 @@ function normalizeDispatchRow(row) {
   row = row && typeof row === "object" ? row : {};
 
   const products = Array.isArray(row.products)
-    ? row.products.map((p) => ({
-        name: ensureString(p.name),
-        quantity: ensureNumber(p.quantity) || 0,
-        chambers: Array.isArray(p.chambers) ? p.chambers : [],
-      }))
+    ? row.products.map((p) => {
+        let quantity = ensureNumber(p.quantity);
+
+        if (!quantity && Array.isArray(p.chambers)) {
+          quantity = p.chambers.reduce(
+            (s, ch) => s + (Number(ch.quantity) || 0),
+            0,
+          );
+        }
+
+        quantity = quantity || 0;
+        return {
+          name: ensureString(p.name),
+          quantity: ensureNumber(quantity) || 0,
+          chambers: Array.isArray(p.chambers) ? p.chambers : [],
+          rating: row.rating != null ? Number(row.rating) : 5,
+        };
+      })
     : row.product_name
       ? [
           {
@@ -886,7 +893,7 @@ function normalizeDispatchRow(row) {
     ? row.packages.map((p) => ({
         product_name: ensureString(row.product_name || p.product_name || ""),
         id: null,
-        quantity: ensureNumber(p.quantity) || 0,
+        quantity: ensureNumber(p.quantity) ?? null,
         size: p.size ?? null,
         unit: p.unit ?? null,
       }))
@@ -985,15 +992,17 @@ async function attachChamberStockToChambers({
   }
 }
 async function buildUsedBags(row, chamberStockMap) {
+  console.log("🧮 BUILD USED BAGS");
+  console.log("Row:", JSON.stringify(row, null, 2));
+
   const result = {};
   const resolvedName = row.product_name;
 
   const stock = chamberStockMap.get(
-    `${resolvedName.toLowerCase()}::${row.rating}`
+    `${resolvedName.toLowerCase()}::${row.rating}`,
   );
 
-  if (!stock)
-    throw new Error(`No chamber stock for ${resolvedName}`);
+  if (!stock) throw new Error(`No chamber stock for ${resolvedName}`);
 
   const stockJson = stock.toJSON();
 
@@ -1001,9 +1010,7 @@ async function buildUsedBags(row, chamberStockMap) {
     throw new Error("Dispatch only allowed for packed category");
   }
 
-  const chamberData = Array.isArray(stockJson.chamber)
-    ? stockJson.chamber
-    : [];
+  const chamberData = Array.isArray(stockJson.chamber) ? stockJson.chamber : [];
 
   const packageData = Array.isArray(stockJson.packages)
     ? stockJson.packages
@@ -1018,7 +1025,6 @@ async function buildUsedBags(row, chamberStockMap) {
 
   for (const product of row.products) {
     if (product.name !== resolvedName) continue;
-
     for (const ch of product.chambers) {
       const qty = Number(ch.quantity);
 
@@ -1038,18 +1044,14 @@ async function buildUsedBags(row, chamberStockMap) {
   // ----------------------------
 
   for (const pkg of row.packages) {
-    const packetsPerBag =
-      packageData.find(
-        (p) =>
-          Number(p.size) === Number(pkg.size) &&
-          String(p.unit).toLowerCase() ===
-            String(pkg.unit).toLowerCase()
-      )?.packets_per_bag;
+    const packetsPerBag = packageData.find(
+      (p) =>
+        Number(p.size) === Number(pkg.size) &&
+        String(p.unit).toLowerCase() === String(pkg.unit).toLowerCase(),
+    )?.packets_per_bag;
 
     if (!packetsPerBag) {
-      throw new Error(
-        `No packets_per_bag config for ${pkg.size}${pkg.unit}`
-      );
+      throw new Error(`No packets_per_bag config for ${pkg.size}${pkg.unit}`);
     }
 
     const expectedPackets = totalRowBags * packetsPerBag;
@@ -1058,12 +1060,14 @@ async function buildUsedBags(row, chamberStockMap) {
     assertPositiveInteger(
       providedPackets,
       "Packet quantity",
-      "dispatch.packages.quantity"
+      "dispatch.packages.quantity",
     );
+    console.log("Expected Packets:", expectedPackets);
+    console.log("Provided Packets:", providedPackets);
 
     if (providedPackets !== expectedPackets) {
       throw new Error(
-        `Packet mismatch. Expected ${expectedPackets}, received ${providedPackets}`
+        `Packet mismatch. Expected ${expectedPackets}, received ${providedPackets}`,
       );
     }
 
@@ -1089,14 +1093,12 @@ async function buildUsedBags(row, chamberStockMap) {
 router.post(
   "/bulk-ingest",
   safeRoute(async (req, res) => {
-    const productions = [];
     const t = await sequelize.transaction();
     const notificationJobs = [];
 
     try {
       const body = req.body || {};
       // console.log("body", JSON.stringify(body, null, 2));
-
       const hasDispatchOrder =
         body.dispatchOrder &&
         Array.isArray(body.dispatchOrder.rows) &&
@@ -1110,6 +1112,10 @@ router.post(
 
       if (dispatchBlock && Array.isArray(dispatchBlock.rows)) {
         dispatchBlock.rows = dispatchBlock.rows.map((row) => {
+          if (Array.isArray(row.products) && row.products.length > 0) {
+            return row;
+          }
+
           const chooseDelimiter = (s) => {
             if (!s || typeof s !== "string") return null;
             if (s.includes(", ")) return /,\s+/;
@@ -1238,6 +1244,44 @@ router.post(
           : []
         : [];
 
+      let groupedDispatchRows = dispatchRowsInput;
+
+      if (hasDispatchOrder && Array.isArray(dispatchRowsInput)) {
+        const grouped = {};
+
+        for (const row of dispatchRowsInput) {
+          const key = row.order_id;
+
+          if (!grouped[key]) {
+            grouped[key] = {
+              ...row,
+              products: [],
+              packages: [],
+            };
+          }
+          if (
+            grouped[key] &&
+            (grouped[key].address !== row.address ||
+              grouped[key].city !== row.city ||
+              grouped[key].state !== row.state)
+          ) {
+            throw new Error(`Order ${key} has conflicting delivery details`);
+          }
+
+          grouped[key].products.push({
+            name: row.product_name,
+            quantity: row.products?.[0]?.quantity ?? row.product_quantity ?? 0,
+            chambers: row.products?.[0]?.chambers || [],
+          });
+
+          if (Array.isArray(row.packages)) {
+            grouped[key].packages.push(...row.packages);
+          }
+        }
+
+        groupedDispatchRows = Object.values(grouped);
+      }
+
       const rawMaterialChallanTop = rawMaterialBlock.challan || null;
       const dispatchChallanTop = dispatchBlock.challan || null;
 
@@ -1254,10 +1298,10 @@ router.post(
       });
 
       const chamber_stock = (chamberRowsInput || [])
-  .map(normalizeChamberStockRow)
-  .filter(Boolean);
+        .map(normalizeChamberStockRow)
+        .filter(Boolean);
 
-      const dispatch_orders = (dispatchRowsInput || []).map((d) => {
+      const dispatch_orders = (groupedDispatchRows || []).map((d) => {
         const nd = normalizeDispatchRow(d);
         if (
           (!nd.truck_details || !nd.truck_details.challan) &&
@@ -1325,11 +1369,6 @@ router.post(
         ];
 
         for (const name of neededRawNames) {
-          // const [rmRow] = await RawMaterialClient.findOrCreate({
-          //   where: { name },
-          //   defaults: { name },
-          //   transaction: t,
-          // });
           const rmRow = await RawMaterialClient.findOne({
             where: sequelize.where(
               sequelize.fn("LOWER", sequelize.col("name")),
@@ -1475,7 +1514,6 @@ router.post(
 
           let rawId = p.raw_material_order_id;
 
-          // 1️⃣ FIRST try clientId mapping (same excel file relation)
           if (
             !rawId &&
             p.raw_material_orderRef &&
@@ -1484,7 +1522,6 @@ router.post(
             rawId = mapRmo.get(p.raw_material_orderRef);
           }
 
-          // 2️⃣ fallback: match by name+date from same upload
           if (!rawId) {
             const prodRawName = trimStr(
               p.raw_material_name || p.rawMaterialName || "",
@@ -1502,7 +1539,6 @@ router.post(
             }
           }
 
-          // 3️⃣ last fallback ONLY if importing single production manually
           if (!rawId) {
             const prodRawName = trimStr(
               p.raw_material_name || p.rawMaterialName || "",
@@ -1608,17 +1644,7 @@ router.post(
           });
           const asJson = row.toJSON();
           createdChamber.push(asJson);
-       console.log("CREATING PACKED STOCK:", {
-  product: productName,
-  rawBags: incomingChambers.reduce(
-  (s, ch) => s + Number(ch.quantity || 0),
-  0
-),
-  converted: Number(incomingChambers.reduce(
-  (s, ch) => s + Number(ch.quantity || 0),
-  0
-))
-});
+
           await attachChamberStockToChambers({
             chamberStockId: asJson.id,
             chamberIds: incomingChambers.map((c) => c.id),
@@ -1645,7 +1671,6 @@ router.post(
         for (const inc of incomingChambers) {
           const incId = String(inc.id || "").trim();
           if (!incId) {
-            // skip invalid incoming chamber entry; we could also choose to create a new chamber with generated id
             continue;
           }
 
@@ -1676,66 +1701,76 @@ router.post(
         }
 
         const mergedChambers = Array.from(existingById.values());
-const totalBags = mergedChambers.reduce(
-  (s, ch) => s + Number(ch.quantity || 0),
-  0
-);
+        const totalBags = mergedChambers.reduce(
+          (s, ch) => s + Number(ch.quantity || 0),
+          0,
+        );
 
-let finalPackages = existingJson.packages;
+        console.log("📦 CHAMBER MERGE START");
+        console.log("Product:", productName);
+        console.log("Existing Chambers:", existingChambers);
+        console.log("Incoming Chambers:", incomingChambers);
+        console.log("Merged Chambers:", mergedChambers);
+        console.log("Total Bags:", totalBags);
 
-if ((c.category || "").toLowerCase() === "packed") {
+        let finalPackages = existingJson.packages;
 
-  const sourcePackages = Array.isArray(existingJson.packages)
-    ? existingJson.packages
-    : Array.isArray(c.packages)
-      ? c.packages
-      : [];
+        if ((c.category || "").toLowerCase() === "packed") {
+          const sourcePackages = Array.isArray(existingJson.packages)
+            ? existingJson.packages
+            : Array.isArray(c.packages)
+              ? c.packages
+              : [];
 
-  finalPackages = sourcePackages.map((pkg, i) => {
+          finalPackages = sourcePackages.map((pkg, i) => {
+            const packetsPerBag = Number(pkg.packets_per_bag);
 
-    const packetsPerBag = Number(pkg.packets_per_bag);
+            assertPositiveInteger(
+              packetsPerBag,
+              "packets_per_bag",
+              `chamberStock.packages[${i}]`,
+            );
 
-    assertPositiveInteger(
-      packetsPerBag,
-      "packets_per_bag",
-      `chamberStock.packages[${i}]`
-    );
+            const computedPackets = totalBags * packetsPerBag;
 
-    const computedPackets = totalBags * packetsPerBag;
+            console.log("📦 PACKAGE RECALCULATION");
+            console.log("Packets per bag:", packetsPerBag);
+            console.log("Total Bags:", totalBags);
+            console.log("Computed Packets:", computedPackets);
 
-    assertPositiveInteger(
-      computedPackets,
-      "packages.quantity",
-      `chamberStock.packages[${i}].quantity`
-    );
+            assertPositiveInteger(
+              computedPackets,
+              "packages.quantity",
+              `chamberStock.packages[${i}].quantity`,
+            );
 
-    return {
-      size: Number(pkg.size),
-      unit: pkg.unit,
-      packets_per_bag: packetsPerBag,
-      quantity: computedPackets,
-    };
-  });
-}
+            return {
+              size: Number(pkg.size),
+              unit: pkg.unit,
+              packets_per_bag: packetsPerBag,
+              quantity: computedPackets,
+            };
+          });
+        }
 
-const updatedPayload = {
-  ...existingJson,
-  chamber: mergedChambers,
-  packages: finalPackages,
-  category: c.category
-    ? ensureString(c.category)
-    : existingJson.category,
-  unit: c.unit
-    ? ensureString(c.unit)
-    : existingJson.unit,
-};
+        const updatedPayload = {
+          ...existingJson,
+          chamber: mergedChambers,
+          packages: finalPackages,
+          category: c.category
+            ? ensureString(c.category)
+            : existingJson.category,
+          unit: c.unit ? ensureString(c.unit) : existingJson.unit,
+        };
 
-delete updatedPayload.clientId;
+        delete updatedPayload.clientId;
 
-await ChamberStockClient.update(updatedPayload, {
-  where: { id: existingJson.id },
-  transaction: t,
-});
+        await ChamberStockClient.update(updatedPayload, {
+          where: { id: existingJson.id },
+          transaction: t,
+        });
+        console.log("📝 Updating ChamberStock with:");
+        console.log(JSON.stringify(updatedPayload, null, 2));
 
         await attachChamberStockToChambers({
           chamberStockId: existingJson.id,
@@ -1773,8 +1808,10 @@ await ChamberStockClient.update(updatedPayload, {
       const productKeyMap = new Map();
 
       for (const stock of allStocks) {
+        const normalizeKey = (s) => String(s).toLowerCase().replace(/\s+/g, "");
+
         productKeyMap.set(
-          `${stock.product_name.toLowerCase()}::${stock.rating}`,
+          `${normalizeKey(stock.product_name)}::${stock.rating}`,
           stock.id,
         );
       }
@@ -1786,10 +1823,16 @@ await ChamberStockClient.update(updatedPayload, {
           const real = resolveProduct(d.product_name);
           d.product_name = real;
 
-          if (
-            !real ||
-            !productKeyMap.has(`${real.toLowerCase()}::${d.rating}`)
-          ) {
+          const normalizeKey = (s) =>
+            String(s).toLowerCase().replace(/\s+/g, "");
+
+          const rating = d.rating ?? 5;
+
+          console.log("Dispatch product:", d.product_name);
+          console.log("Rating:", rating);
+          console.log("Available keys:", Array.from(productKeyMap.keys()));
+
+          if (!real || !productKeyMap.has(`${normalizeKey(real)}::${rating}`)) {
             await t.rollback();
             return res.status(400).json({
               error: `Product '${d.product_name}' not found in chamber stock`,
@@ -1799,7 +1842,6 @@ await ChamberStockClient.update(updatedPayload, {
           if (Array.isArray(d.products)) {
             d.products.forEach((p) => (p.name = real));
 
-            // merge duplicates after rename
             d.products = Object.values(
               d.products.reduce((acc, p) => {
                 if (!acc[p.name]) acc[p.name] = { ...p, quantity: 0 };
@@ -1901,78 +1943,88 @@ await ChamberStockClient.update(updatedPayload, {
         }
       }
 
-      if (hasDispatchOrder && requestedMap.size > 0) {
-        for (const {
-          id,
-          size,
-          unit,
-          totalRequested,
-        } of requestedMap.values()) {
-          const row = dbById.get(id);
-          if (!row) {
-            pkgIssues.push({
-              path: `dispatch_orders.packages`,
-              error: `Package id '${id}' not found`,
-            });
-            continue;
-          }
+      // if (hasDispatchOrder && requestedMap.size > 0) {
+      //   for (const {
+      //     id,
+      //     size,
+      //     unit,
+      //     totalRequested,
+      //   } of requestedMap.values()) {
+      //     const row = dbById.get(id);
+      //     if (!row) {
+      //       pkgIssues.push({
+      //         path: `dispatch_orders.packages`,
+      //         error: `Package id '${id}' not found`,
+      //       });
+      //       continue;
+      //     }
 
-          const types = Array.isArray(row.types) ? row.types : [];
-          const normalize = (s) =>
-            s == null ? "" : String(s).trim().toLowerCase();
-          const match = types.find((tItem) => {
-            const tSize = normalize(tItem?.size);
-            const tUnit = normalize(tItem?.unit);
-            return tSize === normalize(size) && tUnit === normalize(unit);
-          });
+      //     const types = Array.isArray(row.types) ? row.types : [];
+      //     const normalize = (s) =>
+      //       s == null ? "" : String(s).trim().toLowerCase();
+      //     const match = types.find((tItem) => {
+      //       const tSize = normalize(tItem?.size);
+      //       const tUnit = normalize(tItem?.unit);
+      //       return tSize === normalize(size) && tUnit === normalize(unit);
+      //     });
 
-          if (!match) {
-            pkgIssues.push({
-              path: `dispatch_orders.packages`,
-              error: `Package '${id}' does not have a type with size='${size}' and unit='${unit}'`,
-            });
-            continue;
-          }
+      //     if (!match) {
+      //       pkgIssues.push({
+      //         path: `dispatch_orders.packages`,
+      //         error: `Package '${id}' does not have a type with size='${size}' and unit='${unit}'`,
+      //       });
+      //       continue;
+      //     }
 
-          const avail = Number(match.quantity);
-          if (!Number.isFinite(avail)) {
-            pkgIssues.push({
-              path: `dispatch_orders.packages`,
-              error: `Package '${id}' has invalid stored quantity for size='${size}', unit='${unit}'`,
-            });
-            continue;
-          }
+      //     const storedKg = Number(match.quantity);
+      //     if (!Number.isFinite(storedKg) || storedKg < 0) {
+      //       throw new Error("Invalid stored package quantity");
+      //     }
 
-          if (avail < totalRequested) {
-            pkgIssues.push({
-              path: `dispatch_orders.packages`,
-              error: `Package '${id}' insufficient for size='${size}', unit='${unit}': requested ${totalRequested}, available ${avail}`,
-            });
-          }
-        }
+      //     const storedGrams = Math.round(storedKg * 1000);
 
-        if (pkgIssues.length) {
-          await t.rollback();
-          return res.status(400).json({
-            error: "Validation failed - invalid or insufficient packages/types",
-            details: pkgIssues,
-          });
-        }
-      }
+      //     const tareWeightGrams = getTareWeight({
+      //       type: "pouch",
+      //       size: Number(size),
+      //       unit,
+      //     });
+
+      //     const maxPackets = Math.floor(storedGrams / tareWeightGrams);
+      //     console.log(maxPackets, totalRequested);
+      //     if (maxPackets < totalRequested) {
+
+      //       throw new Error(
+      //         `Insufficient empty packets: requested ${totalRequested}, available ${maxPackets}`
+      //       );
+      //     }
+      //   }
+
+      //   if (pkgIssues.length) {
+      //     await t.rollback();
+      //     return res.status(400).json({
+      //       error: "Validation failed - invalid or insufficient packages/types",
+      //       details: pkgIssues,
+      //     });
+      //   }
+      // }
 
       // ---------------------------------------------
       // PREPARE & APPLY DISPATCH TRANSACTIONS FIRST
       // ---------------------------------------------
       if (hasDispatchOrder) {
+        const freshStocks = await ChamberStockClient.findAll({
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
         const chamberStockMap = new Map(
-          allStocks.map((s) => [
+          freshStocks.map((s) => [
             `${s.product_name.toLowerCase()}::${s.rating}`,
             s,
           ]),
         );
 
         for (const d of dispatch_orders) {
-          // Build ERP payload if excel didn't provide it
           if (
             !d.usedBagsByProduct ||
             Object.keys(d.usedBagsByProduct).length === 0
@@ -1981,16 +2033,22 @@ await ChamberStockClient.update(updatedPayload, {
           }
 
           try {
+            console.log("🚚 APPLY DISPATCH START");
+            console.log("Order:", JSON.stringify(d, null, 2));
+
             await applyDispatchTransaction({
               orderPayload: d,
               transaction: t,
-              stocks: allStocks,
+              stocks: freshStocks,
             });
+
+            console.log("✅ DISPATCH SUCCESS");
           } catch (err) {
-            console.error("❌ DISPATCH TRANSACTION FAILED");
+            console.error("❌ DISPATCH FAILED");
             console.error("Product:", d.product_name);
-            console.error("Error:", err.message);
-            throw err; // keep rollback behavior
+            console.error("Message:", err.message);
+            console.error("Stack:", err.stack);
+            throw err;
           }
         }
       }
@@ -2000,7 +2058,7 @@ await ChamberStockClient.update(updatedPayload, {
 
       if (hasDispatchOrder) {
         for (const d of dispatch_orders) {
-          const id = uuid();
+          const id = d.order_id || uuid();
           const payload = { ...d, id };
           delete payload.clientId;
 
@@ -2036,59 +2094,6 @@ await ChamberStockClient.update(updatedPayload, {
           }),
         );
       }
-
-      // --- PRODUCTIONS notifications & updates ---
-      // for (const prod of createdProds) {
-      //   const status = (prod.status || "").toLowerCase();
-
-      //   let laneName = null;
-      //   if (prod.lane) {
-      //     try {
-      //       const laneRec = await validateLaneAssignment(prod.lane, prod.id);
-      //       laneName = laneRec?.name || null;
-      //     } catch (_) {}
-      //   }
-
-      //   // if (status === "in-progress" && laneName) {
-      //   //   const description = [
-      //   //     prod.product_name,
-      //   //     `${prod.quantity}${prod.unit || ""}`,
-      //   //   ];
-      //   //   notificationJobs.push(() =>
-      //   //     dispatchAndSendNotification({
-      //   //       type: "lane-occupied",
-      //   //       title: laneName,
-      //   //       id: prod.id,
-      //   //       description,
-      //   //     })
-      //   //   );
-      //   // }
-
-      //   // if (status === "completed" && laneName) {
-      //   //   notificationJobs.push(() =>
-      //   //     dispatchAndSendNotification({
-      //   //       type: "lane-empty",
-      //   //       title: laneName,
-      //   //       id: prod.id,
-      //   //     })
-      //   //   );
-      //   // }
-
-      //   // if (status === "in-progress") {
-      //   //   notificationJobs.push(() =>
-      //   //     createAndSendProductionStartNotification(prod, laneName || "--")
-      //   //   );
-      //   // }
-
-      //   // if (status === "completed") {
-      //   //   notificationJobs.push(() =>
-      //   //     createAndSendProductionCompleteNotification(
-      //   //       prod,
-      //   //       allowedChambersSnapshot
-      //   //     )
-      //   //   );
-      //   // }
-      // }
 
       // --- DISPATCH ORDERS notifications ---
       if (hasDispatchOrder) {

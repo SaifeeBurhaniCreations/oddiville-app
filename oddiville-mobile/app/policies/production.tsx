@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import BottomSheet from "@/src/components/ui/BottomSheet";
@@ -21,18 +21,14 @@ import RefreshableContent from "@/src/components/ui/RefreshableContent";
 import { mapProductionToItemCards } from "@/src/utils/mappers/mappers.utils";
 import ItemCardList from "@/src/components/ui/ItemCardList";
 import { useLanes } from "@/src/hooks/useFetchData";
-import NoAccess from "@/src/components/ui/NoAccess";
-import Button from "@/src/components/ui/Buttons/Button";
-import { H3 } from "@/src/components/typography/Typography";
-import { useAppCapabilities } from "@/src/hooks/useAppCapabilities";
-import Require from "@/src/components/authentication/Require";
+import { useOverlayLoader } from "@/src/context/OverlayLoaderContext";
 
 const ProductionScreen = () => {
   const { goTo } = useAppNavigation();
-  const caps = useAppCapabilities();
 
-  const { data: productionData, isFetching, refetch } = useProduction();
-const { data: lanes } = useLanes();
+  const { data: productionData, isFetching: productionFetching, refetch } = useProduction();
+const { data: lanes, isFetching: lanesFetching } = useLanes();
+  const loader = useOverlayLoader();
 
 const productionCards: ItemCardData[] = useMemo(() => {
   if (!productionData || !lanes) return [];
@@ -51,6 +47,12 @@ const productionCards: ItemCardData[] = useMemo(() => {
     (c) => c.mode === "production-completed"
   );
 
+  const loading = productionFetching || lanesFetching
+
+useEffect(() => {
+  loader.bind(loading);
+}, [loading]);
+
   const renderSearch = () => (
     <View style={styles.searchinputWrapper}>
       <SearchWithFilter
@@ -64,8 +66,7 @@ const productionCards: ItemCardData[] = useMemo(() => {
   );
 
   return (
-   <Require view="production">
-     <View style={styles.pageContainer}>
+    <View style={styles.pageContainer}>
       <PageHeader page="Production" />
 
       <View style={styles.wrapper}>
@@ -75,7 +76,7 @@ const productionCards: ItemCardData[] = useMemo(() => {
             {renderSearch()}
             <RefreshableContent
               isEmpty={pendingAndQueue.length === 0}
-              refreshing={isFetching}
+              refreshing={productionFetching}
               onRefresh={refetch}
               emptyComponent={
                 <View style={styles.emptyStateWrapper}>
@@ -99,7 +100,7 @@ const productionCards: ItemCardData[] = useMemo(() => {
             {renderSearch()}
             <RefreshableContent
               isEmpty={inProgressCards.length === 0}
-              refreshing={isFetching}
+              refreshing={productionFetching}
               onRefresh={refetch}
               emptyComponent={
                 <View style={styles.emptyStateWrapper}>
@@ -122,7 +123,7 @@ const productionCards: ItemCardData[] = useMemo(() => {
             {renderSearch()}
             <RefreshableContent
               isEmpty={completedCards.length === 0}
-              refreshing={isFetching}
+              refreshing={productionFetching}
               onRefresh={refetch}
               emptyComponent={
                 <View style={styles.emptyStateWrapper}>
@@ -142,16 +143,9 @@ const productionCards: ItemCardData[] = useMemo(() => {
 
         </Tabs>
       </View>
-
       <BottomSheet color="green" />
 
-      {isFetching && (
-        <View style={styles.overlay}>
-          <Loader />
-        </View>
-      )}
     </View>
-   </Require>
   );
 };
 

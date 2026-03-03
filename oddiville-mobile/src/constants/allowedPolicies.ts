@@ -1,1 +1,1 @@
-export const allowedPolicies = ["purchase-view", "purchase-edit", "production", "package", "sales-view", "sales-edit", "trucks", "labours"];
+export const allowedPolicies = ["purchase-view", "purchase-edit", "production", "package-view", "package-edit", "sales-view", "sales-edit", "trucks", "labours"];

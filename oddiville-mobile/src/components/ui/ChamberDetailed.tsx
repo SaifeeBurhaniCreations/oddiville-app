@@ -127,7 +127,7 @@ const ChamberDetailed = ({
       .map((item) => {
 
         const isOtherCategory = item.category === "other";
-        const isMaterialCategory = item.category === "material";
+        const isMaterialCategory = item.category === "bulk";
         const isPackedCategory = item.category === "packed";
 
         const chamberEntries = item.chamber.filter(

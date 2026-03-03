@@ -82,7 +82,7 @@ if (orderedRows.length && orderedRows[0].category) {
 
   const categories = new Set(orderedRows.map(r => r.category));
 
-  if (categories.size === 1 && categories.has("material")) {
+  if (categories.size === 1 && categories.has("bulk")) {
     allKeys = allKeys.filter(k => !["sku_size", "sku_quantity"].includes(k));
   }
 
@@ -145,7 +145,7 @@ const chamberMap = Object.fromEntries(
 
   const rmRows = [];
 
-const materialStocks = stocks.filter(s => s.category === "material");
+const materialStocks = stocks.filter(s => s.category === "bulk");
 
 const materialStockMap = Object.fromEntries(
   materialStocks.map(s => [s.id, s.product_name])

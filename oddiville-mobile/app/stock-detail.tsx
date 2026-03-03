@@ -46,7 +46,7 @@ const StockDetail = () => {
   const materialBlock = useMemo(() => {
     if (!chamberStock || !chamberId) return null;
 
-    const materialStocks = chamberStock.filter((s) => s.category === "material");
+    const materialStocks = chamberStock.filter((s) => s.category === "bulk");
 
     const blocks = materialStocks
       .map((stock) => {
@@ -81,7 +81,7 @@ const looseKg = bagSizeKg > 0 ? +(chamberKg % bagSizeKg).toFixed(2) : 0;
             <ChamberCard
               id={stock.id}
               name={`${chamberBags} ${packaging.type}${looseKg ? ` (+ ${looseKg} kg)` : ""}`}
-              category="material"
+              category="bulk"
               description={`${chamberKg} kg`}
               plainDescription
               onPressOverride={() => {}}

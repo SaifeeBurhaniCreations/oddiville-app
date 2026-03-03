@@ -17,7 +17,7 @@ const CATEGORY_UI: Record<
 > = {
   other: { color: "blue", Icon: ShopIcon },
   packed: { color: "yellow", Icon: ShopIcon },
-  material: { color: "green", Icon: StarIcon },
+  bulk: { color: "green", Icon: StarIcon },
 };
 
 function normalizeRating(rating?: string) {

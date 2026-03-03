@@ -21,8 +21,8 @@ function packagingWhere({ product_name, size, unit, chamber_id }) {
     product_name,
     sku_size: normalizeSize(size),
     sku_unit: normalizeUnit(unit),
-    chamber_id,
-    unit: "pcs"
+    // chamber_id,
+    unit: "pcs",
   };
 }
 
@@ -55,10 +55,7 @@ router.get("/product/:productName", async (req, res) => {
   try {
     const { productName } = req.params;
 
-    if (
-      !productName ||
-      productName === "Select product"
-    ) {
+    if (!productName || productName === "Select product") {
       return res.status(400).json({
         error: "Invalid product name",
       });
@@ -70,20 +67,17 @@ router.get("/product/:productName", async (req, res) => {
     });
 
     if (!pkg) {
-      return res.status(404).json({ error: "No packages found for this product." });
+      return res
+        .status(404)
+        .json({ error: "No packages found for this product." });
     }
 
     return res.status(200).json(pkg);
-
   } catch (error) {
-    console.error(
-      "Error fetching packages by product_name:",
-      error.message
-    );
+    console.error("Error fetching packages by product_name:", error.message);
     return res.status(500).json({ error: "Internal server error." });
   }
 });
-
 
 // GET package by ID
 router.get("/:id", async (req, res) => {
@@ -111,7 +105,8 @@ router.post(
     try {
       let { product_name, raw_materials, types, chamber_name } = req.body;
 
-      if (typeof raw_materials === "string") raw_materials = JSON.parse(raw_materials);
+      if (typeof raw_materials === "string")
+        raw_materials = JSON.parse(raw_materials);
       if (typeof types === "string") types = JSON.parse(types);
 
       product_name = normalizeProduct(product_name);
@@ -119,43 +114,73 @@ router.post(
 
       /* ---------- SAVE ORIGINAL POUCH COUNTS ---------- */
       const pouchCounts = {};
-      types.forEach(tp => {
+      types.forEach((tp) => {
         const key = `${String(tp.size).trim()}${String(tp.unit).trim().toLowerCase()}`;
         pouchCounts[key] = Number(tp.quantity);
       });
 
       /* ---------- CONVERT TO KG FOR PLASTIC ---------- */
-      types = types.map(tp => {
-        const tare = getTareWeight({ type: "pouch", size: tp.size, unit: tp.unit });
+      types = types.map((tp) => {
+        const tare = getTareWeight({
+          type: "pouch",
+          size: tp.size,
+          unit: tp.unit,
+        });
         const kg = (Number(tp.quantity) * tare) / 1000;
-        return { size: normalizeSize(tp.size), unit: normalizeUnit(tp.unit), quantity: kg.toFixed(3) };
+        return {
+          size: normalizeSize(tp.size),
+          unit: normalizeUnit(tp.unit),
+          quantity: kg.toFixed(3),
+        };
       });
 
       if (req.files?.image?.[0])
-        uploadedImage = await uploadToS3({ file: req.files.image[0], folder: "packages" });
+        uploadedImage = await uploadToS3({
+          file: req.files.image[0],
+          folder: "packages",
+        });
 
       if (req.files?.package_image?.[0])
-        uploadedPackageImage = await uploadToS3({ file: req.files.package_image[0], folder: "packages" });
+        uploadedPackageImage = await uploadToS3({
+          file: req.files.package_image[0],
+          folder: "packages",
+        });
 
       const result = await sequelize.transaction(async (t) => {
+        const pkg = await Packages.create(
+          {
+            product_name,
+            raw_materials,
+            types,
+            chamber_name,
+            image: uploadedImage && {
+              url: uploadedImage.url,
+              key: uploadedImage.key,
+            },
+            package_image: uploadedPackageImage && {
+              url: uploadedPackageImage.url,
+              key: uploadedPackageImage.key,
+            },
+          },
+          { transaction: t },
+        );
 
-        const pkg = await Packages.create({
-          product_name,
-          raw_materials,
-          types,
-          chamber_name,
-          image: uploadedImage && { url: uploadedImage.url, key: uploadedImage.key },
-          package_image: uploadedPackageImage && { url: uploadedPackageImage.url, key: uploadedPackageImage.key },
-        }, { transaction: t });
-
-        const chamber = await ChambersClient.findOne({ where: { chamber_name }, transaction: t });
+        const chamber = await ChambersClient.findOne({
+          where: { chamber_name },
+          transaction: t,
+        });
         if (!chamber) throw new Error("Chamber not found");
 
         for (const tp of types) {
           const key = `${String(tp.size).trim()}${String(tp.unit).trim().toLowerCase()}`;
           const count = pouchCounts[key] || 0;
           const [dryItem, created] = await DryWarehouseClient.findOrCreate({
-            where: packagingWhere({ product_name, size: tp.size, unit: tp.unit, chamber_id: chamber.id }),
+            where: packagingWhere({
+              product_name,
+              size: tp.size,
+              unit: tp.unit,
+              chamber_id: chamber.id,
+            }),
             defaults: {
               item_type: "packaging",
               product_name,
@@ -166,10 +191,14 @@ router.post(
               chamber_id: chamber.id,
               quantity: count,
               unit: "pcs",
-              unit_weight_grams: getTareWeight({ type: "pouch", size: tp.size, unit: tp.unit })
+              unit_weight_grams: getTareWeight({
+                type: "pouch",
+                size: tp.size,
+                unit: tp.unit,
+              }),
             },
             transaction: t,
-            lock: t.LOCK.UPDATE
+            lock: t.LOCK.UPDATE,
           });
 
           if (!created) {
@@ -178,15 +207,19 @@ router.post(
           }
         }
 
-        if (uploadedImage?.url) {
-          await ChamberStockClient.upsert(
-            {
-              product_name,
-              image: uploadedImage.url,
-            },
-            { transaction: t }
+        const existingStock = await ChamberStockClient.findOne({
+          where: { product_name },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+        if (existingStock) {
+          await existingStock.update(
+            { image: uploadedImage.url },
+            { transaction: t },
           );
         }
+
         return pkg;
       });
 
@@ -195,7 +228,7 @@ router.post(
       console.error(err);
       res.status(500).json({ error: err.message });
     }
-  }
+  },
 );
 
 router.patch("/:id/add-type", async (req, res) => {
@@ -210,35 +243,49 @@ router.patch("/:id/add-type", async (req, res) => {
     const numericQty = parseFloat(quantity);
     if (isNaN(numericQty)) throw new Error("Invalid quantity");
 
-    const pkg = await Packages.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
+    const pkg = await Packages.findByPk(id, {
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
     if (!pkg) throw new Error("Package not found");
 
     let types = Array.isArray(pkg.types) ? [...pkg.types] : [];
 
-    const exists = types.find(t =>
-      normalizeSize(t.size) === normalizeSize(size) &&
-      normalizeUnit(t.unit) === normalizeUnit(unit)
+    const exists = types.find(
+      (t) =>
+        normalizeSize(t.size) === normalizeSize(size) &&
+        normalizeUnit(t.unit) === normalizeUnit(unit),
     );
 
-    if (exists) throw new Error("Type already exists. Use increase-quantity route.");
+    if (exists)
+      throw new Error("Type already exists. Use increase-quantity route.");
 
     const tare = getTareWeight({ type: "pouch", size, unit });
     const kg = (numericQty * tare) / 1000;
 
-    types.push({ size: normalizeSize(size), unit: normalizeUnit(unit), quantity: kg.toFixed(3) });
+    types.push({
+      size: normalizeSize(size),
+      unit: normalizeUnit(unit),
+      quantity: kg.toFixed(3),
+    });
 
     pkg.types = types;
     await pkg.save({ transaction: t });
 
     const chamber = await ChambersClient.findOne({
       where: { chamber_name: pkg.chamber_name },
-      transaction: t
+      transaction: t,
     });
 
     if (!chamber) throw new Error("Chamber not found");
 
     const [dryItem, created] = await DryWarehouseClient.findOrCreate({
-      where: packagingWhere({ product_name, size, unit, chamber_id: chamber.id }),
+      where: packagingWhere({
+        product_name,
+        size,
+        unit,
+        chamber_id: chamber.id,
+      }),
       defaults: {
         item_type: "packaging",
         product_name: pkg.product_name,
@@ -249,10 +296,10 @@ router.patch("/:id/add-type", async (req, res) => {
         chamber_id: chamber.id,
         quantity: numericQty,
         unit: "pcs",
-        unit_weight_grams: getTareWeight({ type: "pouch", size, unit })
+        unit_weight_grams: getTareWeight({ type: "pouch", size, unit }),
       },
       transaction: t,
-      lock: t.LOCK.UPDATE
+      lock: t.LOCK.UPDATE,
     });
 
     if (!created) {
@@ -262,7 +309,6 @@ router.patch("/:id/add-type", async (req, res) => {
 
     await t.commit();
     return res.json({ success: true, pkg, dryItem });
-
   } catch (err) {
     await t.rollback();
     return res.status(400).json({ error: err.message });
@@ -270,7 +316,6 @@ router.patch("/:id/add-type", async (req, res) => {
 });
 
 router.patch("/:id/increase-quantity", async (req, res) => {
-
   const t = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -282,21 +327,27 @@ router.patch("/:id/increase-quantity", async (req, res) => {
     const numericQty = parseFloat(quantity);
     if (isNaN(numericQty)) throw new Error("Invalid quantity");
 
-    const pkg = await Packages.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
+    const pkg = await Packages.findByPk(id, {
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
     if (!pkg) throw new Error("Package not found");
 
     let types = Array.isArray(pkg.types) ? [...pkg.types] : [];
 
-    const index = types.findIndex(t => normalizeSize(t.size) === normalizeSize(size) &&
-      normalizeUnit(t.unit) === normalizeUnit(unit)
+    const index = types.findIndex(
+      (t) =>
+        normalizeSize(t.size) === normalizeSize(size) &&
+        normalizeUnit(t.unit) === normalizeUnit(unit),
     );
     if (index === -1) throw new Error("Type not found");
 
     const tare = getTareWeight({ type: "pouch", size, unit });
     const addedKg = (numericQty * tare) / 1000;
 
-    types[index].quantity =
-      (parseFloat(types[index].quantity) + addedKg).toFixed(3);
+    types[index].quantity = (
+      parseFloat(types[index].quantity) + addedKg
+    ).toFixed(3);
 
     pkg.setDataValue("types", types);
     pkg.changed("types", true);
@@ -304,7 +355,7 @@ router.patch("/:id/increase-quantity", async (req, res) => {
 
     const chamber = await ChambersClient.findOne({
       where: { chamber_name: pkg.chamber_name },
-      transaction: t
+      transaction: t,
     });
 
     if (!chamber) throw new Error("Chamber not found");
@@ -314,7 +365,7 @@ router.patch("/:id/increase-quantity", async (req, res) => {
         product_name: pkg.product_name,
         size,
         unit,
-        chamber_id: chamber.id
+        chamber_id: chamber.id,
       }),
       defaults: {
         item_type: "packaging",
@@ -325,10 +376,10 @@ router.patch("/:id/increase-quantity", async (req, res) => {
         chamber_id: chamber.id,
         quantity: 0,
         unit: "pcs",
-        unit_weight_grams: getTareWeight({ type: "pouch", size, unit })
+        unit_weight_grams: getTareWeight({ type: "pouch", size, unit }),
       },
       transaction: t,
-      lock: t.LOCK.UPDATE
+      lock: t.LOCK.UPDATE,
     });
 
     dryItem.quantity = Number(dryItem.quantity) + numericQty;
@@ -336,7 +387,6 @@ router.patch("/:id/increase-quantity", async (req, res) => {
 
     await t.commit();
     return res.json({ success: true, pkg, dryItem });
-
   } catch (err) {
     await t.rollback();
     return res.status(400).json({ error: err.message });
@@ -348,29 +398,31 @@ router.delete("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const pkg = await Packages.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
+    const pkg = await Packages.findByPk(id, {
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
     if (!pkg) throw new Error("Package not found");
     const chamber = await ChambersClient.findOne({
       where: { chamber_name: pkg.chamber_name },
-      transaction: t
+      transaction: t,
     });
     if (!chamber) throw new Error("Chamber not found");
     for (const tp of pkg.types || []) {
-
       const dry = await DryWarehouseClient.findOne({
         where: packagingWhere({
           product_name: pkg.product_name,
           size: tp.size,
           unit: tp.unit,
-          chamber_id: chamber.id
+          chamber_id: chamber.id,
         }),
         transaction: t,
-        lock: t.LOCK.UPDATE
+        lock: t.LOCK.UPDATE,
       });
 
       if (dry && Number(dry.quantity) > 0) {
         throw new Error(
-          `Cannot delete package. Stock still exists for ${tp.size}${tp.unit}`
+          `Cannot delete package. Stock still exists for ${tp.size}${tp.unit}`,
         );
       }
 
@@ -379,9 +431,9 @@ router.delete("/delete/:id", async (req, res) => {
           product_name: pkg.product_name,
           size: tp.size,
           unit: tp.unit,
-          chamber_id: chamber.id
+          chamber_id: chamber.id,
         }),
-        transaction: t
+        transaction: t,
       });
     }
 
@@ -393,7 +445,6 @@ router.delete("/delete/:id", async (req, res) => {
 
     await t.commit();
     res.json({ message: "Package deleted safely" });
-
   } catch (err) {
     await t.rollback();
     res.status(400).json({ error: err.message });
@@ -404,29 +455,36 @@ router.patch("/replace/type/:id", async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const { id } = req.params;
-    const { size, unit, actual_quantity, reason = "manual adjustment" } = req.body;
+    const {
+      size,
+      unit,
+      actual_quantity,
+      reason = "manual adjustment",
+    } = req.body;
 
-    if (actual_quantity == null)
-      throw new Error("actual_quantity required");
+    if (actual_quantity == null) throw new Error("actual_quantity required");
 
-    const pkg = await Packages.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
+    const pkg = await Packages.findByPk(id, {
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
     if (!pkg) throw new Error("Package not found");
 
-      const chamber = await ChambersClient.findOne({
-        where: { chamber_name: pkg.chamber_name },
-        transaction: t
-      });
-      if (!chamber) throw new Error("Chamber not found");
+    const chamber = await ChambersClient.findOne({
+      where: { chamber_name: pkg.chamber_name },
+      transaction: t,
+    });
+    if (!chamber) throw new Error("Chamber not found");
 
     const dry = await DryWarehouseClient.findOne({
       where: packagingWhere({
         product_name: pkg.product_name,
         size,
         unit,
-        chamber_id: chamber.id
+        chamber_id: chamber.id,
       }),
       transaction: t,
-      lock: t.LOCK.UPDATE
+      lock: t.LOCK.UPDATE,
     });
 
     if (!dry) throw new Error("Dry warehouse entry missing");
@@ -436,12 +494,13 @@ router.patch("/replace/type/:id", async (req, res) => {
     const diff = physicalQty - systemQty;
 
     let types = Array.isArray(pkg.types) ? [...pkg.types] : [];
-    const index = types.findIndex(t => normalizeSize(t.size) === normalizeSize(size) &&
-      normalizeUnit(t.unit) === normalizeUnit(unit)
+    const index = types.findIndex(
+      (t) =>
+        normalizeSize(t.size) === normalizeSize(size) &&
+        normalizeUnit(t.unit) === normalizeUnit(unit),
     );
 
-    if (index === -1)
-      throw new Error("SKU not found in package");
+    if (index === -1) throw new Error("SKU not found in package");
 
     const tare = getTareWeight({ type: "pouch", size, unit });
     const kg = (physicalQty * tare) / 1000;
@@ -459,9 +518,8 @@ router.patch("/replace/type/:id", async (req, res) => {
       message: "Stock adjusted",
       before: systemQty,
       after: physicalQty,
-      change: diff
+      change: diff,
     });
-
   } catch (err) {
     await t.rollback();
     res.status(400).json({ error: err.message });
@@ -474,24 +532,27 @@ router.patch("/delete/type/:id", async (req, res) => {
     const { id } = req.params;
     const { size, unit } = req.body;
 
-    const pkg = await Packages.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
+    const pkg = await Packages.findByPk(id, {
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
     if (!pkg) throw new Error("Package not found");
 
     const chamber = await ChambersClient.findOne({
-  where: { chamber_name: pkg.chamber_name },
-  transaction: t
-});
-if (!chamber) throw new Error("Chamber not found");
+      where: { chamber_name: pkg.chamber_name },
+      transaction: t,
+    });
+    if (!chamber) throw new Error("Chamber not found");
 
     const dry = await DryWarehouseClient.findOne({
       where: packagingWhere({
         product_name: pkg.product_name,
         size,
         unit,
-        chamber_id: chamber.id
+        chamber_id: chamber.id,
       }),
       transaction: t,
-      lock: t.LOCK.UPDATE
+      lock: t.LOCK.UPDATE,
     });
 
     if (dry && Number(dry.quantity) > 0)
@@ -500,37 +561,41 @@ if (!chamber) throw new Error("Chamber not found");
     const used = await ChamberStockClient.findAll({
       where: { product_name: pkg.product_name },
       transaction: t,
-      lock: t.LOCK.UPDATE
+      lock: t.LOCK.UPDATE,
     });
 
-    const usedAnywhere = used.some(stock =>
-      stock.packages?.some(p =>
-        normalizeSize(p.size) === normalizeSize(size) &&
-        normalizeUnit(p.unit) === normalizeUnit(unit)
-      )
+    const usedAnywhere = used.some((stock) =>
+      stock.packages?.some(
+        (p) =>
+          normalizeSize(p.size) === normalizeSize(size) &&
+          normalizeUnit(p.unit) === normalizeUnit(unit),
+      ),
     );
 
     if (usedAnywhere)
       throw new Error("Cannot delete SKU already used in production history");
 
-    pkg.types = pkg.types.filter(t => !(normalizeSize(t.size) === normalizeSize(size) &&
-      normalizeUnit(t.unit) === normalizeUnit(unit)
-    ));
+    pkg.types = pkg.types.filter(
+      (t) =>
+        !(
+          normalizeSize(t.size) === normalizeSize(size) &&
+          normalizeUnit(t.unit) === normalizeUnit(unit)
+        ),
+    );
     await pkg.save({ transaction: t });
 
- await DryWarehouseClient.destroy({
-  where: packagingWhere({
-    product_name: pkg.product_name,
-    size,
-    unit,
-    chamber_id: chamber.id
-  }),
-  transaction: t
-});
+    await DryWarehouseClient.destroy({
+      where: packagingWhere({
+        product_name: pkg.product_name,
+        size,
+        unit,
+        chamber_id: chamber.id,
+      }),
+      transaction: t,
+    });
 
     await t.commit();
     res.json(pkg);
-
   } catch (err) {
     await t.rollback();
     res.status(400).json({ error: err.message });
@@ -538,7 +603,6 @@ if (!chamber) throw new Error("Chamber not found");
 });
 
 module.exports = router;
-
 
 // await Packages.destroy({
 //   where: {},

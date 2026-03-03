@@ -19,7 +19,7 @@ const ChamberCardContainer = (props: ChamberCardProps) => {
       return;
     }
 
-    if (category === "material") {
+    if (category === "bulk") {
       goTo("stock-detail", { product_name: name });
       return;
     }

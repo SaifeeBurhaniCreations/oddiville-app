@@ -15,7 +15,7 @@ module.exports = (sequelize, Sequelize) => {
         type: Sequelize.STRING,
       },
       category: {
-        type: Sequelize.STRING,
+        type: Sequelize.ENUM("bulk", "packed", "other"),
         allowNull: false,
       },
       unit: {
@@ -79,7 +79,7 @@ module.exports = (sequelize, Sequelize) => {
               value.forEach((pkg, i) => validateOne(pkg, i));
             }
 
-            if (this.category === "material") {
+            if (this.category === "bulk") {
               if (Array.isArray(value)) {
                 throw new Error(
                   "Packaging must be an object for material items.",

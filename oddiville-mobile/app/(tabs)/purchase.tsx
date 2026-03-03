@@ -144,13 +144,13 @@ const PurchaseScreen = () => {
     [completedUnique, formatOrder]
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      refetchRM();
-      refetchCompleted();
-      refetchVendor();
-    }, [])
-  );
+useFocusEffect(
+  useCallback(() => {
+    refetchRM();
+    refetchCompleted();
+    refetchVendor();
+  }, [refetchRM, refetchCompleted, refetchVendor])
+);
 
 
   const emptyStateData = getEmptyStateData("no-order-pending");

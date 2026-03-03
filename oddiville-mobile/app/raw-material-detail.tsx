@@ -55,7 +55,7 @@ const RawMaterialDetail = () => {
                   rating={"6.0"}
                   detailByRating={[{ rating: "4.0", quantity: "643" }]}
                   color="green"
-                  category="material"
+                  category="bulk"
                   quantity={name}
                   href="raw-material-detail"
                   disabled={false}
@@ -71,7 +71,7 @@ const RawMaterialDetail = () => {
           rating="4.0"
           detailByRating={[{ rating: "4.0", quantity: "643" }]}
           color="green"
-          category="material"
+          category="bulk"
           quantity="643"
           href="raw-material-detail" 
           disabled={false}

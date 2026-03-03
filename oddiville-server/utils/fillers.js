@@ -752,6 +752,8 @@ function fillPackingSummarySchema(schema, filler, meta) {
                 continue;
             }
 
+            console.log("filler.skuSummary", JSON.stringify(filler.skuSummary, null, 2));
+            
             // 🟢 MODE HANDLING
             switch (mode) {
                 case PACKING_MODES.EVENT:
@@ -764,7 +766,7 @@ function fillPackingSummarySchema(schema, filler, meta) {
 
                 case PACKING_MODES.SKU:
                     
-                    section.data.title = "Storage by chamber";
+                    section.data.title = "Listing by chamber";
 
                     section.data.metrics = (filler.chambers || []).map((c, index) => ({
                         id: String(c.id ?? index),
@@ -776,10 +778,9 @@ function fillPackingSummarySchema(schema, filler, meta) {
                     break;
 
                 case PACKING_MODES.PRODUCT:
-                    section.data.title = "Product summary";
+                    section.data.title = "Listing by SKU";
 
                     section.data.metrics = [
-                        // 🔹 NORMAL METRIC (events)
                         {
                             id: "events",
                             label: "Packing events",
@@ -788,12 +789,11 @@ function fillPackingSummarySchema(schema, filler, meta) {
                             icon: "clock",
                         },
 
-                        // 🔹 SKU SUMMARY METRICS
                         ...(filler.skuSummary || []).map((sku) => ({
-                            id: sku.sku,              
-                            label: sku.sku,        
-                            type: "sku-summary",      
-                            bags: sku.totalBags,     
+                            id: sku.sku,
+                            label: `${sku.sku} | ${sku.chamberName ?? ""}`,
+                            type: "sku-summary",
+                            bags: sku.totalBags,
                             packets: sku.totalPackets
                         })),
                     ];

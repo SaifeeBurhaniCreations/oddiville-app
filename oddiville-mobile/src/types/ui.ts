@@ -443,7 +443,7 @@ export interface RawMaterialProps {
   detailByRating?: RawMaterialDetailByRatingProps[];
   rating?: string;
   color?: "red" | "blue" | "green" | "yellow";
-  category: "other" | "material" | "packed";
+  category: "other" | "bulk" | "packed";
   quantity?: string;
   href?: keyof RootStackParamList;
   disabled?: boolean;
@@ -766,7 +766,7 @@ export type chamberProps = {
   rating: string;
 };
 export type OtherItemsProps = {
-  category: "other" | "material";
+  category: "other" | "bulk";
   id: string;
   chambers: chamberProps[];
   product_name: string;
@@ -784,7 +784,7 @@ export interface StockItem {
   id: string;
   product_name: string;
   unit: string;
-  category: "other" | "material";
+  category: "other" | "bulk";
   chamber?: ChamberEntry[];
 }
 

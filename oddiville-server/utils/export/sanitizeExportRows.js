@@ -125,7 +125,7 @@
         clean[key] = value ?? STRING_DEFAULTS[key];
       }
           
-      else if (key === "packages" && plain.category === "material") {
+      else if (key === "packages" && plain.category === "bulk") {
       continue;
       }
           
@@ -192,7 +192,7 @@
       }
 
       // Stock packaging (material)
-      else if (key === "packaging" && value && plain.category === "material") {
+      else if (key === "packaging" && value && plain.category === "bulk") {
         if (value.size) {
           clean.pack_type = value.type ?? null;
           clean.pack_size = `${value.size.value} ${value.size.unit}`;
@@ -251,7 +251,7 @@
     clean[key] = value;
   }
 
-  if (plain.category === "material") {
+  if (plain.category === "bulk") {
     if (!("sku_size" in clean)) clean.sku_size = "Not Applicable";
     if (!("sku_quantity" in clean)) clean.sku_quantity = "Not Applicable";
   }

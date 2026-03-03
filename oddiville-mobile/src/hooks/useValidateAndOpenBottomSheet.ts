@@ -1050,8 +1050,12 @@
               description: "Convert materials into frozen goods",
             },
             {
-              name: "Package",
-              description: "Pack and label products for delivery",
+              name: "Package-view",
+              description: "see pacakges summary and stock",
+            },
+            {
+              name: "Package-edit",
+              description: "add/edit and view packages",
             },
             { name: "Sales-view", description: "View sales" },
             { name: "Sales-edit", description: "Edit sales" },

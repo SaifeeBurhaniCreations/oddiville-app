@@ -272,7 +272,7 @@ async function updateChamberStocks(
   let stock = await chamberStockClient.findOne({
     where: {
       product_name,
-      category: "material",
+      category: "bulk",
       rating: productionRating
     },
     transaction: opts.tx,
@@ -283,7 +283,7 @@ async function updateChamberStocks(
     stock = await chamberStockClient.create(
       {
         product_name,
-        category: "material",
+        category: "bulk",
         rating: productionRating,
         unit,
         packaging: incomingPackaging,

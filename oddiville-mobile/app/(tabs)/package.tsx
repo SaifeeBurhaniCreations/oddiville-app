@@ -65,6 +65,7 @@ const PackageScreen = () => {
   const { chamberStock } = useChamberStockByName(selectedRawMaterials);
 
   const rmUsed = useMemo(() => chamberStock ?? [], [chamberStock]);
+console.log("rmUsed", rmUsed);
 
   const rm = useRawMaterialConsumption(rmUsed);
 

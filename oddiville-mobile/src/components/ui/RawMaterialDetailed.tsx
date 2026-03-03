@@ -74,7 +74,7 @@ const RawMaterialDetailed = () => {
     if (!chamberData?.id || !stockData?.length) return [];
 
     return stockData
-      ?.filter((value: StockDataItem) => value.category === "material")
+      ?.filter((value: StockDataItem) => value.category === "bulk")
       ?.map((item) => {
         const matchingChamberData = item.chamber?.filter(
           (entry) => entry.id === chamberData.id,

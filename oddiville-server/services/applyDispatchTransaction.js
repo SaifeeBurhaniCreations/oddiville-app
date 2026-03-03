@@ -48,33 +48,21 @@ console.log("DEBUG usedBagsByProduct:", JSON.stringify(usedBagsByProduct, null, 
           `Package configuration missing for ${productName} ${packet.size}${packet.unit}`
         );
 
-        assertPositiveInteger(
+assertPositiveInteger(
   totalBags,
   "Dispatch bags",
   `dispatch.usedBagsByProduct.${productName}`
 );
 
-assertPositiveInteger(
-  packet.packetsPerBag,
-  "packetsPerBag",
-  `dispatch.packet`
+const totalAvailableBags = stock.chamber.reduce(
+  (s, ch) => s + Number(ch.quantity || 0),
+  0
 );
 
-      const packetsToDeduct =
-  Number(totalBags) * Number(pkg.packets_per_bag);
+if (totalAvailableBags < totalBags) {
+  throw new Error(`Insufficient bags for ${productName}`);
+}
 
-      if (Number(pkg.quantity) < packetsToDeduct)
-        throw new Error(`Insufficient packets for ${productName}`);
-
-      pkg.quantity =
-        Number(pkg.quantity) - packetsToDeduct;
-
-        assertPositiveInteger(
-  packetsToDeduct,
-  "packetsToDeduct",
-  `dispatch.packets`
-);
-      // Chamber deduction
       for (const chamberId of Object.keys(byChamber)) {
 
         const bagsToDeduct = Number(byChamber[chamberId]);
@@ -102,6 +90,13 @@ assertPositiveInteger(
 pkg.quantity = remainingTotalBags * Number(pkg.packets_per_bag);
     }
 
-    await stock.save({ transaction });
+try {
+  stock.changed("chamber", true);
+  stock.changed("packages", true);
+  await stock.save({ transaction });
+} catch (err) {
+  console.error("SAVE FAILED:", err.message);
+  throw err;
+}
   }
 }

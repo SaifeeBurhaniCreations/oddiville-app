@@ -55,10 +55,6 @@ if (isNaN(eventDateTime.getTime())) {
   const delay24h = eventDateTime.getTime() - now - 24 * 60 * 60 * 1000;
   const delay1h = eventDateTime.getTime() - now - 1 * 60 * 60 * 1000;
 
-  console.log("eventDateTime:", eventDateTime);
-console.log("delay24h:", delay24h);
-console.log("delay1h:", delay1h);
-
  if (delay24h > 0) {
   await reminderQueue.add(
     "send-reminder",
