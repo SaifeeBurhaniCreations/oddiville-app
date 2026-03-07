@@ -125,7 +125,6 @@ const ChamberDetailed = ({
     return flatStockData
       .filter((item) => item.chamber?.some((c) => c.id === chamberData.id))
       .map((item) => {
-
         const isOtherCategory = item.category === "other";
         const isMaterialCategory = item.category === "bulk";
         const isPackedCategory = item.category === "packed";
@@ -134,75 +133,70 @@ const ChamberDetailed = ({
           (c) => c.id === chamberData.id,
         );
 
-let totalKg = 0;
-let totalBags = 0;
+        let totalKg = 0;
+        let totalBags = 0;
 
-// PACKED CATEGORY
-if (isPackedCategory && Array.isArray(item.packages)) {
+        // PACKED CATEGORY
+        if (isPackedCategory && Array.isArray(item.packages)) {
+          totalBags = item.packages.reduce((sum, pkg) => {
+            return (
+              sum +
+              Math.floor(Number(pkg.quantity) / Number(pkg.packets_per_bag))
+            );
+          }, 0);
 
-  totalBags = item.packages.reduce((sum, pkg) => {
-    return sum + Math.floor(
-      Number(pkg.quantity) / Number(pkg.packets_per_bag)
-    );
-  }, 0);
+          totalKg = item.packages.reduce((sum, pkg) => {
+            const sizeKg =
+              pkg.unit === "kg" ? Number(pkg.size) : Number(pkg.size) / 1000;
 
-  totalKg = item.packages.reduce((sum, pkg) => {
-    const sizeKg =
-      pkg.unit === "kg"
-        ? Number(pkg.size)
-        : Number(pkg.size) / 1000;
+            return sum + Number(pkg.quantity) * sizeKg;
+          }, 0);
+        }
 
-    return sum + Number(pkg.quantity) * sizeKg;
-  }, 0);
-}
+        // MATERIAL CATEGORY
+        else if (isMaterialCategory) {
+          totalKg = chamberEntries.reduce(
+            (sum, c) => sum + Number(c.quantity || 0),
+            0,
+          );
 
-// MATERIAL CATEGORY
-else if (isMaterialCategory) {
+          let bagSize = 0;
 
-  totalKg = chamberEntries.reduce(
-    (sum, c) => sum + Number(c.quantity || 0),
-    0
-  );
+          if (
+            item.packaging &&
+            !Array.isArray(item.packaging) &&
+            item.packaging.size?.unit === "kg"
+          ) {
+            bagSize = Number(item.packaging.size.value);
+          }
+          totalBags = bagSize > 0 ? Math.floor(totalKg / bagSize) : 0;
+        } else {
+          const avgKgPerBag =
+            Array.isArray(item.packages) && item.packages.length > 0
+              ? item.packages.reduce((sum, pkg) => {
+                  const sizeKg =
+                    pkg.unit === "kg"
+                      ? Number(pkg.size)
+                      : pkg.unit === "gm"
+                        ? Number(pkg.size) / 1000
+                        : 0;
 
-let bagSize = 0;
+                  return sum + sizeKg * pkg.packets_per_bag;
+                }, 0)
+              : 0;
 
-if (
-  item.packaging &&
-  !Array.isArray(item.packaging) &&
-  item.packaging.size?.unit === "kg"
-) {
-  bagSize = Number(item.packaging.size.value);
-}
-  totalBags = bagSize > 0 ? Math.floor(totalKg / bagSize) : 0;
-}
+          totalKg = totalBags * avgKgPerBag;
 
-else {
- const avgKgPerBag =
-  Array.isArray(item.packages) && item.packages.length > 0
-    ? item.packages.reduce((sum, pkg) => {
-        const sizeKg =
-          pkg.unit === "kg"
-            ? Number(pkg.size)
-            : pkg.unit === "gm"
-            ? Number(pkg.size) / 1000
-            : 0;
-
-        return sum + sizeKg * pkg.packets_per_bag;
-      }, 0)
-    : 0;
-
-totalKg = totalBags * avgKgPerBag;
-
-  totalBags = 0;
-}
+          totalBags = 0;
+        }
         const disabled = totalKg <= 0;
 
         const matchedPackageImage =
           packageImageMap[normalize(item.product_name)] || "";
 
-          const ratingValue = item.rating;
+        const ratingValue = item.rating;
 
-       const ratingDisplay =
+        const ratingDisplay =
           ratingValue != null
             ? `★ ${ratingValue}`
             : isOtherCategory
@@ -230,20 +224,20 @@ totalKg = totalBags * avgKgPerBag;
                 ? require("@/src/assets/images/fallback/others-stock-fallback.png")
                 : require("@/src/assets/images/fallback/chamber-stock-fallback.png");
 
-            const formattedKg =
-              totalKg % 1 === 0
-                ? String(totalKg)
-                : totalKg.toFixed(2).replace(/\.?0+$/, "");
-                
-                let description = "";
+        const formattedKg =
+          totalKg % 1 === 0
+            ? String(totalKg)
+            : totalKg.toFixed(2).replace(/\.?0+$/, "");
 
-if (isPackedCategory) {
-  description = `${totalBags} Bags | ${formattedKg} kg`;
-} else if (isMaterialCategory) {
-  description = `${formattedKg} kg (${totalBags} Bags)`;
-} else {
-  description = `${formattedKg} ${item.unit}`;
-}
+        let description = "";
+
+        if (isPackedCategory) {
+          description = `${totalBags} Bags | ${formattedKg} kg`;
+        } else if (isMaterialCategory) {
+          description = `${totalBags} Bags | ${formattedKg} kg`;
+        } else {
+          description = `${formattedKg} ${item.unit}`;
+        }
         return {
           id: item.id,
           name: item.product_name,
